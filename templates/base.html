@@ -21,6 +21,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/style.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/calendar.css') }}"
+    />
   </head>
   <body>
     {% include 'partials/header.html' %}
@@ -29,6 +33,7 @@
     </main>
     
       {% include 'partials/footer.html' %}
+      <script src="{{ url_for('static', filename='js/header.js') }}" defer></script>
       {% block scripts %}{% endblock %}
   </body>
 </html>

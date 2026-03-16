@@ -1,0 +1,78 @@
+#home-calendar {
+  width: 100%;
+  border: 1px solid #C5C7CB;
+  background-color: #FFFFFF;
+  padding: 0.75rem;
+  box-sizing: border-box;
+}
+
+#home-calendar-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+#home-calendar-month-label {
+  margin: 0;
+  text-align: center;
+  font-size: 1.1rem;
+  color: #1B263B;
+}
+
+#home-calendar-prev,
+#home-calendar-next {
+  border: 1px solid #1B263B;
+  background-color: #F8F9FA;
+  color: #1B263B;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#home-calendar-prev:hover,
+#home-calendar-next:hover {
+  background-color: #DDE3EA;
+}
+
+#home-calendar-weekdays,
+#home-calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+}
+
+#home-calendar-weekdays {
+  margin-bottom: 0.25rem;
+  color: #1B263B;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.home-calendar-day {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px solid #D1D5DB;
+  background-color: #F8F9FA;
+  color: #1B263B;
+  cursor: pointer;
+}
+
+.home-calendar-day:hover {
+  background-color: #E6EBF2;
+}
+
+.home-calendar-day.is-selected {
+  background-color: #000000;
+  color: #F8F9FA;
+  border-color: #000000;
+}
+
+.home-calendar-day.is-empty {
+  border-color: transparent;
+  background-color: transparent;
+  cursor: default;
+}

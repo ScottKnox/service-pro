@@ -1,7 +1,18 @@
 <header id="header">
   <div id="header-container">
     <h1>Steady Work</h1>
-    <nav aria-label="Main navigation">
+    <button
+      id="mobile-nav-toggle"
+      type="button"
+      aria-expanded="false"
+      aria-controls="header-navigation"
+      aria-label="Open navigation menu"
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <nav id="header-navigation" aria-label="Main navigation">
       <ul id="header-nav">
         <li><a href="{{ url_for('home') }}">Home</a></li>
         <li><a href="#">Customers</a></li>
