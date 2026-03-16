@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}Service Pro{% endblock %}</title>
+    <title>{% block title %}Steady Work{% endblock %}</title>
     <link
       rel="preconnect"
       href="https://fonts.googleapis.com"
@@ -27,6 +27,8 @@
     <main>
       {% block content %}{% endblock %}
     </main>
-    {% block scripts %}{% endblock %}
+    
+      {% include 'partials/footer.html' %}
+      {% block scripts %}{% endblock %}
   </body>
 </html>

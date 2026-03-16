@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Home | Service Pro{% endblock %}
+{% block title %}Home | Steady Work{% endblock %}
 
 {% block content %}
 	<div id="main-container">
@@ -97,6 +97,43 @@
 						<div>Sat</div>
 					</div>
 					<div id="home-calendar-days" aria-label="Calendar days"></div>
+				</div>
+			</div>
+		</div>
+
+		<div id="home-latest-row">
+			<div class="home-latest-column">
+				<h2>Invoices Ready</h2>
+				<div id="home-invoices-list">
+					<a class="home-invoice-cell" href="#">03/01/2026 - Gateway Cafe</a>
+					<a class="home-invoice-cell" href="#">02/28/2026 - Austin Sanders</a>
+				</div>
+				<div class="home-latest-action">
+					<a class="home-latest-action-link" href="#">View All Invoices</a>
+				</div>
+				
+			</div>
+			<div class="home-latest-column">
+				<h2>Payments Due</h2>
+				<div id="home-payments-due-list">
+					<a class="home-payment-cell" href="#">03/18/2026 - Gateway Cafe - $500.00</a>
+					<a class="home-payment-cell" href="#">03/25/2026 - Austin Sanders - $300.00</a>
+				</div>
+				<div class="home-latest-action">
+					<a class="home-latest-action-link" href="#">View All Payments Due</a>
+				</div>
+			</div>
+			<div class="home-latest-column">
+				<h2>Outstanding Estimates</h2>
+				<div id="home-outstanding-estimates-list">
+					<a class="home-estimate-cell" href="#">03/10/2026 - Gateway Cafe <br/> System Replacement -$1,200.00</a>
+					<a class="home-estimate-cell" href="#">03/12/2026 - Austin Sanders <br/> Premium Maintenacne Plan - $800.00</a>
+					<a class="home-estimate-cell" href="#">03/12/2026 - Mr. Blankfort <br/> Filter Changes - $30.00</a>
+					<a class="home-estimate-cell" href="#">03/12/2026 - Jane Doe <br/> HVAC Inspection - $150.00</a>
+					<a class="home-estimate-cell" href="#">03/12/2026 - John Smith <br/> AC Repair - $200.00</a>
+				</div>
+				<div class="home-latest-action">
+					<a class="home-latest-action-link" href="#">View All Outstanding Estimates</a>
 				</div>
 			</div>
 		</div>
