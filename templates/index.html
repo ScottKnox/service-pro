@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Home | Service Pro{% endblock %}
+
+{% block content %}
+	<div id="main-container">
+		<div class="home-scheduling-row">
+			<div class="home-jobs-column">
+				<h2>Today's Jobs</h2>
+				<div id="home-jobs-asignee">
+					<span>Assigned to:</span>
+					<div id="home-jobs-assignee-options">
+						<label>
+							<input type="checkbox" name="home-jobs-assignee" value="scott-knox" checked />
+							Scott Knox
+						</label>
+						<label>
+							<input type="checkbox" name="home-jobs-assignee" value="daniel-essary" />
+							Daniel Essary
+						</label>
+						<label>
+							<input type="checkbox" name="home-jobs-assignee" value="andrew-crowder" />
+							Andrew Crowder
+						</label>
+						<label>
+							<input type="checkbox" name="home-jobs-assignee" value="richard-essary" />
+							Richard Essary
+						</label>
+					</div>
+				</div>
+                
+				<div id="home-jobs-list">
+					<a class="home-job" href="#">
+						<div class="home-job-top-row">
+							<div class="home-job-cell">03/15/2026 @ 2:30 PM - Scott Knox Assigned</div>
+						</div>
+						<div class="home-job-bottom-row">
+							<div class="home-job-cell">Standard Maintenace Plan - Jim Stafford</div>
+						</div>
+					</a>
+					<a class="home-job" href="#">
+						<div class="home-job-top-row">
+							<div class="home-job-cell">03/15/2026 @ 2:30 PM - Scott Knox Assigned</div>
+						</div>
+						<div class="home-job-bottom-row">
+							<div class="home-job-cell">Replace Blower Motor - Bill Gails</div>
+						</div>
+					</a>
+					<a class="home-job" href="#">
+						<div class="home-job-top-row">
+							<div class="home-job-cell">03/15/2026 @ 2:30 PM - Scott Knox Assigned</div>
+						</div>
+						<div class="home-job-bottom-row">
+							<div class="home-job-cell">Filter Replacement - Wooten Apartments</div>
+						</div>
+					</a>
+                    <a class="home-job" href="#">
+						<div class="home-job-top-row">
+							<div class="home-job-cell">03/15/2026 @ 2:30 PM - Scott Knox Assigned</div>
+						</div>
+						<div class="home-job-bottom-row">
+							<div class="home-job-cell">Filter Replacement - Wooten Apartments</div>
+						</div>
+					</a>
+                    <a class="home-job" href="#">
+						<div class="home-job-top-row">
+							<div class="home-job-cell">03/15/2026 @ 2:30 PM - Scott Knox Assigned</div>
+						</div>
+						<div class="home-job-bottom-row">
+							<div class="home-job-cell">Filter Replacement - Wooten Apartments</div>
+						</div>
+					</a>
+				</div>
+				<div id="home-jobs-pages">
+					<span>Page:</span>
+					<a class="is-active" href="#">1</a>
+					<a href="#">2</a>
+					<a href="#">3</a>
+				</div>
+                
+			</div>
+			<div class="home-schedule-column">
+				<h2>Schedule</h2>
+				<div id="home-calendar">
+					<div id="home-calendar-header">
+						<button id="home-calendar-prev" type="button" aria-label="Previous month">&lt;</button>
+						<h3 id="home-calendar-month-label">Month Year</h3>
+						<button id="home-calendar-next" type="button" aria-label="Next month">&gt;</button>
+					</div>
+					<div id="home-calendar-weekdays">
+						<div>Sun</div>
+						<div>Mon</div>
+						<div>Tue</div>
+						<div>Wed</div>
+						<div>Thu</div>
+						<div>Fri</div>
+						<div>Sat</div>
+					</div>
+					<div id="home-calendar-days" aria-label="Calendar days"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+{% endblock %}
+
+{% block scripts %}
+	<script src="{{ url_for('static', filename='js/home.js') }}" defer></script>
+{% endblock %}
