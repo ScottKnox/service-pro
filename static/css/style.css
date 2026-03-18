@@ -269,29 +269,34 @@ p {
   gap: 0.75rem;
 }
 
-#home-jobs-pages {
+#home-jobs-pages,
+.list-pages {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
 
-#home-jobs-pages span {
+#home-jobs-pages span,
+.list-pages span {
   color: #1B263B;
   font-weight: 600;
 }
 
-#home-jobs-pages a {
+#home-jobs-pages a,
+.list-pages a {
   color: #1B263B;
   text-decoration: none;
   font-weight: 600;
 }
 
-#home-jobs-pages a.is-active {
+#home-jobs-pages a.is-active,
+.list-pages a.is-active {
   text-decoration: underline;
 }
 
-#home-jobs-pages a:hover {
+#home-jobs-pages a:hover,
+.list-pages a:hover {
   color: #0077B6;
 }
 
@@ -338,6 +343,503 @@ p {
 
 .home-schedule-column h2 {
   text-align: center;
+}
+
+#manage-customers-header,
+#manage-jobs-header {
+  width: 100%;
+  min-height: 220px;
+  padding: 0 0.75rem 0.75rem;
+  box-sizing: border-box;
+}
+
+#manage-customers-header h1,
+#manage-jobs-header h1 {
+  margin: 0 -0.75rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  text-align: center;
+  background-color: #1B263B;
+  color: #F8F9FA;
+  font-family: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+#customers-controls-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.customers-controls-left h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  color: #1B263B;
+}
+
+#customers-search-form {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+#customers-search-input {
+  width: 100%;
+  max-width: 560px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #C5C7CB;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: #FFFFFF;
+  color: #1B263B;
+}
+
+#customers-search-input:focus {
+  outline: 2px solid #5FA3D3;
+  outline-offset: 1px;
+  border-color: #5FA3D3;
+}
+
+#customers-search-form button {
+  padding: 0.55rem 0.95rem;
+  border: 1px solid #1B263B;
+  border-radius: 4px;
+  background-color: #1B263B;
+  color: #F8F9FA;
+  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#customers-search-form button:hover {
+  background-color: #27364F;
+  border-color: #27364F;
+}
+
+.customers-controls-right {
+  display: flex;
+  align-items: end;
+}
+
+.customers-controls-right a {
+  display: inline-block;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid #C5C7CB;
+  border-radius: 4px;
+  background-color: #FFFFFF;
+  color: #1B263B;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.customers-controls-right a:hover {
+  background-color: #F1F5F9;
+  border-color: #A9B0BA;
+}
+
+#all-customers-title-row {
+  margin-top: 1.5rem;
+}
+
+#all-customers-title-row h2 {
+  margin: 0;
+  text-align: center;
+  color: #1B263B;
+  font-size: 1.5rem;
+}
+
+#customers-list-header-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.15fr 1.6fr 1fr 0.65fr;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid #C5C7CB;
+  background-color: #E9EEF4;
+  color: #1B263B;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+#customers-list-header-row div {
+  min-width: 0;
+  text-align: center;
+  padding-right: 0.5rem;
+  border-right: 1px solid #C5C7CB;
+}
+
+#customers-list-header-row div:last-child {
+  padding-right: 0;
+  border-right: none;
+}
+
+.customers-list-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.15fr 1.6fr 1fr 0.65fr;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.75rem;
+  border-left: 1px solid #C5C7CB;
+  border-right: 1px solid #C5C7CB;
+  border-bottom: 1px solid #C5C7CB;
+  background-color: #FFFFFF;
+  color: #1B263B;
+  text-decoration: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  font-size: 0.95rem;
+}
+
+.customers-list-row:nth-of-type(even) {
+  background-color: #F8FAFC;
+}
+
+.customers-list-row:hover {
+  background-color: #F1F5F9;
+}
+
+.customers-list-row div {
+  min-width: 0;
+  text-align: left;
+  padding-right: 0.5rem;
+  border-right: 1px solid #E0E4EA;
+}
+
+.customers-list-row div:last-child {
+  padding-right: 0;
+  border-right: none;
+}
+
+#add-customer-panel,
+#create-job-panel {
+  width: 100%;
+  padding: 0 0.75rem 0.75rem;
+  box-sizing: border-box;
+}
+
+#add-customer-panel h1,
+#create-job-panel h1 {
+  margin: 0 -0.75rem 0;
+  padding: 0.5rem 0.75rem;
+  text-align: center;
+  background-color: #1B263B;
+  color: #F8F9FA;
+  font-family: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+#breadcrumb {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #C5C7CB;
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+}
+
+#breadcrumb ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+#breadcrumb li + li::before {
+  content: "/";
+  margin: 0 0.45rem;
+  color: #808080;
+}
+
+#breadcrumb a {
+  color: #1B263B;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+#breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+#breadcrumb li[aria-current="page"] {
+  color: #808080;
+}
+
+#add-customer-form,
+#create-job-form {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #C5C7CB;
+  background-color: #FFFFFF;
+}
+
+.create-job-form-section-header {
+  margin: 0.25rem 0 0;
+  padding-bottom: 0.4rem;
+  color: #1B263B;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-bottom: 1px solid #D1D5DB;
+}
+
+.add-customer-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.add-customer-form-row--single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: calc(50% - 0.5rem);
+}
+
+.add-customer-form-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.add-customer-form-field label {
+  color: #1B263B;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.add-customer-form-field input,
+.add-customer-form-field select,
+.add-customer-form-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #C5C7CB;
+  border-radius: 4px;
+  background-color: #FFFFFF;
+  color: #1B263B;
+  font-size: 1rem;
+}
+
+.add-customer-form-field input:focus,
+.add-customer-form-field select:focus,
+.add-customer-form-field textarea:focus {
+  outline: 2px solid #5FA3D3;
+  outline-offset: 1px;
+  border-color: #5FA3D3;
+}
+
+.add-customer-form-field textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+#add-customer-form-actions,
+#create-job-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+#add-customer-form-actions button,
+#create-job-form-actions button {
+  padding: 0.65rem 1.1rem;
+  border: 1px solid #1B263B;
+  border-radius: 4px;
+  background-color: #1B263B;
+  color: #F8F9FA;
+  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#add-customer-form-actions button:hover,
+#create-job-form-actions button:hover {
+  background-color: #27364F;
+  border-color: #27364F;
+}
+
+#view-customer-panel {
+  width: 100%;
+  padding: 0 0.75rem 0.75rem;
+  box-sizing: border-box;
+}
+
+#view-customer-panel h1 {
+  margin: 0 -0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
+  text-align: center;
+  background-color: #1B263B;
+  color: #F8F9FA;
+  font-family: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+#view-customer-actions {
+  border: 1px solid #C5C7CB;
+  background-color: #FFFFFF;
+  margin-bottom: 1rem;
+}
+
+#view-customer-actions-header {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #C5C7CB;
+  background-color: #E9EEF4;
+  color: #1B263B;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+#view-customer-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.75rem;
+}
+
+#view-customer-actions-row a {
+  display: inline-block;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid #1B263B;
+  border-radius: 4px;
+  background-color: #1B263B;
+  color: #F8F9FA;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+#view-customer-actions-row a:hover {
+  background-color: #27364F;
+  border-color: #27364F;
+}
+
+#view-customer-details {
+  margin-top: 0.5rem;
+}
+
+#view-customer-details > h2 {
+  margin: 0 0 0.75rem;
+  color: #1B263B;
+}
+
+.view-customer-section-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #808080;
+}
+
+#view-customer-account-columns {
+  margin-top: 1rem;
+}
+
+.view-customer-section-column {
+  padding: 0 0.75rem 0.75rem;
+}
+
+.view-customer-section-column:first-child {
+  border-right: 1px solid #F8F9FA;
+}
+
+.view-customer-section-column > h3 {
+  text-align: center;
+  background-color: #1B263B;
+  color: #F8F9FA;
+  margin: 0 -0.75rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+}
+
+#view-customer-details-list,
+#view-customer-account-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+  padding: 0.25rem 0;
+}
+
+.view-customer-detail-item {
+  padding: 0;
+}
+
+.view-customer-detail-item h4 {
+  margin: 0 0 0.2rem;
+  color: #1B263B;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.view-customer-detail-item p {
+  margin: 0;
+  color: #1B263B;
+  font-size: 1.25rem;
+}
+
+#view-customer-estimates-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.view-customer-card-link,
+.view-customer-estimate-item {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #C5C7CB;
+  background-color: #FFFFFF;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.view-customer-card-link h4,
+.view-customer-estimate-item h4 {
+  margin: 0 0 0.2rem;
+  color: #1B263B;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.view-customer-card-link p,
+.view-customer-estimate-item p {
+  margin: 0;
+  color: #1B263B;
+  font-size: 1rem;
+}
+
+.view-customer-jobs-list,
+.view-customer-payments-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.view-customer-card-link:hover,
+.view-customer-estimate-item:hover {
+  background-color: #F1F5F9;
+  border-color: #A9B0BA;
+}
+
+@media (max-width: 768px) {
+  .view-customer-section-row {
+    grid-template-columns: 1fr;
+  }
+
+  #view-customer-details-list {
+    grid-template-columns: 1fr;
+  }
+
+  .view-customer-section-column:first-child {
+    border-right: 0;
+    border-bottom: 1px solid #F8F9FA;
+  }
 }
 
 /* Footer styles */
@@ -442,7 +944,69 @@ p {
   #home-latest-row {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   }
+
+  #customers-controls-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .customers-controls-right {
+    justify-content: flex-start;
+  }
+
+  #customers-list-header-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .customers-list-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .add-customer-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .add-customer-form-row--single {
+    max-width: none;
+  }
+
+  #add-customer-form-actions,
+  #create-job-form-actions {
+    justify-content: flex-start;
+  }
 }
+
+@media (max-width: 768px) {
+  #header-container,
+  #main-container,
+  #footer-container {
+    width: 95%;
+    box-sizing: border-box;
+  }
+
+  #customers-list-header-row,
+  .customers-list-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #home-jobs-pages,
+  .list-pages {
+    gap: 0.10rem;
+  }
+
+  #home-jobs-pages a,
+  .list-pages a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.85rem;
+    padding: 0.2rem 0.35rem;
+    font-size: 1.05rem;
+    border-radius: 4px;
+  }
+
+}
+
 
 
 

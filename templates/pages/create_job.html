@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Create Job | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="create-job-panel">
+      <h1>Create Job</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('jobs') }}">Jobs</a></li>
+          <li aria-current="page">Create Job</li>
+        </ol>
+      </nav>
+
+      <form id="create-job-form" action="#" method="post">
+        <input type="hidden" name="customer_id" value="{{ customerId }}" />
+
+        <h2 class="create-job-form-section-header">Client Details</h2>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="job-customer-name">Customer</label>
+            <input id="job-customer-name" name="customer_name" type="text" value="{{ customer.first_name }} {{ customer.last_name }}" disabled />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="job-customer-phone">Phone</label>
+            <input id="job-customer-phone" name="customer_phone" type="text" value="{{ customer.phone }}" disabled />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="job-address-line-1">* Address Line 1</label>
+            <input id="job-address-line-1" name="job_address_line_1" type="text" value="{{ customer.address_line_1 }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="job-address-line-2">* Address Line 2</label>
+            <input id="job-address-line-2" name="job_address_line_2" type="text" value="{{ customer.address_line_2 }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="job-city">* City</label>
+            <input id="job-city" name="job_city" type="text" value="{{ customer.city }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="job-state">* State</label>
+            <input id="job-state" name="job_state" type="text" value="{{ customer.state }}" />
+          </div>
+        </div>
+
+        <p class="form-field-note">* Change if job address different than customer's</p>
+
+        <h2 class="create-job-form-section-header">Job Details</h2>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="job-name">Job Type</label>
+            <select id="job-name" name="job_name">
+              <option value="">-- Select a job type --</option>
+              <option value="spring_tune_up">Spring Tune-Up</option>
+              <option value="fall_tune_up">Fall Tune-Up</option>
+              <option value="ac_maintenance">AC Maintenance</option>
+              <option value="heat_maintenance">Heat Maintenance</option>
+              <option value="filter_replacement">Filter Replacement</option>
+              <option value="blower_motor_replacement">Blower Motor Replacement</option>
+              <option value="capacitor_replacement">Capacitor Replacement</option>
+              <option value="refrigerant_recharge">Refrigerant Recharge</option>
+              <option value="thermostat_install">Thermostat Installation</option>
+              <option value="new_system_install">New System Installation</option>
+              <option value="duct_inspection">Duct Inspection</option>
+              <option value="emergency_service">Emergency Service Call</option>
+            </select>
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="job-price">Price</label>
+            <input id="job-price" name="job_price" type="text" value="$0.00" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="job-date">Scheduled Date</label>
+            <input id="job-date" name="job_date" type="date" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="job-assigned-employee">Assigned Employee</label>
+            <select id="job-assigned-employee" name="job_assigned_employee">
+              <option value="">-- Select an employee --</option>
+              <option value="scott_knox">Scott Knox</option>
+              <option value="daniel_essary">Daniel Essary</option>
+              <option value="andrew_crowder">Andrew Crowder</option>
+              <option value="james_whitfield">James Whitfield</option>
+              <option value="marcus_bell">Marcus Bell</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="add-customer-form-row add-customer-form-row--single">
+          <div class="add-customer-form-field">
+            <label for="job-notes">Notes</label>
+            <textarea id="job-notes" name="job_notes" rows="4" placeholder="Access notes, parts needed, and special instructions"></textarea>
+          </div>
+        </div>
+
+        <div id="create-job-form-actions">
+          <button type="submit">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

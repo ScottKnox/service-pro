@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Customers | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-customers-header">
+      <h1>Manage Customers</h1>
+
+      <div id="customers-controls-row">
+        <div class="customers-controls-left">
+          <h2>Search Customers:</h2>
+          <form id="customers-search-form" action="#" method="get">
+            <input
+              id="customers-search-input"
+              name="q"
+              type="search"
+              placeholder="Search by customer name"
+              aria-label="Search customers"
+            />
+            <button type="submit">Submit</button>
+          </form>
+        </div>
+
+        <div class="customers-controls-right">
+          <a href="{{ url_for('add_customer') }}">Add Customer</a>
+        </div>
+      </div>
+
+      <div id="all-customers-title-row">
+        <h2>All Customers</h2>
+      </div>
+
+      <div id="customers-list-header-row">
+        <div>First Name</div>
+        <div>Last Name</div>
+        <div>Phone</div>
+        <div>Email</div>
+        <div>City</div>
+        <div>State</div>
+      </div>
+
+      <a class="customers-list-row" href="#">
+        <div>Emma</div>
+        <div>Collins</div>
+        <div>(615) 555-0183</div>
+        <div>emma.collins@email.com</div>
+        <div>Nashville</div>
+        <div>TN</div>
+      </a>
+
+      <a class="customers-list-row" href="{{ url_for('view_customer', customerId=2) }}">
+        <div>Austin</div>
+        <div>Sanders</div>
+        <div>(615) 555-0135</div>
+        <div>austin.sanders@email.com</div>
+        <div>Franklin</div>
+        <div>TN</div>
+      </a>
+
+      <a class="customers-list-row" href="#">
+        <div>Chloe</div>
+        <div>Wooten</div>
+        <div>(615) 555-0122</div>
+        <div>chloe.wooten@email.com</div>
+        <div>Murfreesboro</div>
+        <div>TN</div>
+      </a>
+
+      <a class="customers-list-row" href="#">
+        <div>Jane</div>
+        <div>Doe</div>
+        <div>(931) 555-0198</div>
+        <div>jane.doe@email.com</div>
+        <div>Columbia</div>
+        <div>TN</div>
+      </a>
+
+      <a class="customers-list-row" href="#">
+        <div>Marcus</div>
+        <div>Hill</div>
+        <div>(615) 555-0178</div>
+        <div>marcus.hill@email.com</div>
+        <div>Brentwood</div>
+        <div>TN</div>
+      </a>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Add Customer | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="add-customer-panel">
+      <h1>Add Customer</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('customers') }}">Customers</a></li>
+          <li aria-current="page">Add Customer</li>
+        </ol>
+      </nav>
+
+      <form id="add-customer-form" action="#" method="post">
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-first-name">First Name</label>
+            <input id="customer-first-name" name="first_name" type="text" placeholder="First name" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="customer-last-name">Last Name</label>
+            <input id="customer-last-name" name="last_name" type="text" placeholder="Last name" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-company">Company</label>
+            <input id="customer-company" name="company" type="text" placeholder="Company name" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="customer-phone">Phone</label>
+            <input id="customer-phone" name="phone" type="tel" placeholder="(555) 555-5555" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-email">Email</label>
+            <input id="customer-email" name="email" type="email" placeholder="name@example.com" />
+          </div>
+
+          <div class="add-customer-form-field">
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-address-line-1">Address Line 1</label>
+            <input id="customer-address-line-1" name="address_line_1" type="text" placeholder="123 Main Street" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="customer-address-line-2">Address Line 2</label>
+            <input id="customer-address-line-2" name="address_line_2" type="text" placeholder="Suite, unit, or apartment" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-city">City</label>
+            <input id="customer-city" name="city" type="text" placeholder="City" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="customer-state">State</label>
+            <input id="customer-state" name="state" type="text" placeholder="State" maxlength="2" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-referral-source">Referral Source</label>
+            <input id="customer-referral-source" name="referral_source" type="text" placeholder="Google, referral, yard sign, etc." />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="customer-status">Customer Status</label>
+            <input id="customer-status" name="customer_status" type="text" placeholder="Lead, active, inactive, etc." />
+          </div>
+        </div>
+
+        <div id="add-customer-form-actions">
+          <button type="submit">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
