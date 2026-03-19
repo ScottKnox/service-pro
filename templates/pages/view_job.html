@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}View Job | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="view-job-panel">
+      <h1>{{ job.job_type }}</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('jobs') }}">Jobs</a></li>
+          <li aria-current="page">View Job</li>
+        </ol>
+      </nav>
+
+      <section id="view-job-actions" aria-labelledby="view-job-actions-header">
+        <h2 id="view-job-actions-header">Actions</h2>
+        <div id="view-job-actions-row">
+          <a href="#">Mark Started</a>
+          <form method="POST" action="{{ url_for('complete_job', jobId=jobId) }}">
+            <button type="submit">Mark Completed</button>
+          </form>
+          <a href="#">Update Job</a>
+          <a href="#">Delete Job</a>
+        </div>
+      </section>
+
+      <section id="view-job-details" aria-label="Job details">
+        <h2>Job Details</h2>
+        <div class="view-job-section-row" id="view-job-details-columns">
+          <div class="view-job-section-column view-job-details-column">
+            <h3>Details</h3>
+            <div id="view-job-details-list">
+              <div class="view-job-detail-item">
+                <h4>Status</h4>
+                <p>{{ job.status }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Customer</h4>
+                <p>{{ job.customer_name }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Scheduled Date</h4>
+                <p>{{ job.scheduled_date }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Date Created</h4>
+                <p>{{ job.date_created }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Assigned Employee</h4>
+                <p>{{ job.assigned_employee }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Price</h4>
+                <p>{{ job.price }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="view-job-section-column view-job-details-column">
+            <h3>Location</h3>
+            <div id="view-job-location-list">
+              <div class="view-job-detail-item">
+                <h4>Address Line 1</h4>
+                <p>{{ job.address_line_1 }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Address Line 2</h4>
+                <p>{{ job.address_line_2 }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>City</h4>
+                <p>{{ job.city }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>State</h4>
+                <p>{{ job.state }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="view-job-section-row" id="view-job-notes-row">
+          <div class="view-job-section-column view-job-details-column">
+            <h3>Services</h3>
+            <div id="view-job-services-list">
+              <div class="view-job-detail-item">
+                <h4>Standard Inspection</h4>
+                <p>$150.00</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Maintenance Package</h4>
+                <p>$200.00</p>
+              </div>
+            </div>
+          </div>
+          <div class="view-job-section-column view-job-details-column">
+            <h3>Notes</h3>
+            <div id="view-job-notes-list">
+              <div class="view-job-detail-item">
+                <p>{{ job.notes }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="view-job-section-row" id="view-job-invoices-row">
+          <div class="view-job-section-column view-job-details-column">
+            <h3>Invoices</h3>
+            <div id="view-job-invoices-list">
+              {% if job.invoices %}
+                {% for invoice in job.invoices %}
+                  <a href="{{ invoice.file_path }}" target="_blank" class="view-customer-card-link">
+                    <h4>{{ invoice.invoice_number }}</h4>
+                    <p>Download Invoice</p>
+                  </a>
+                {% endfor %}
+              {% else %}
+                <a href="{{ url_for('download_invoice', filename='invoice_job1_20260319_084346.pdf') }}" target="_blank" class="view-customer-card-link">
+                  <h4>Invoice #1</h4>
+                  <p>Download Invoice</p>
+                </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </section>
+      
+    </div>
+  </div>
+{% endblock %}

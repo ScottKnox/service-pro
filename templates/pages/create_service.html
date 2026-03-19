@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Create Service | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="create-service-panel">
+      <h1>Create Service</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('jobs') }}">Jobs</a></li>
+          <li><a href="{{ url_for('manage_services') }}">Manage Services</a></li>
+          <li aria-current="page">Create Service</li>
+        </ol>
+      </nav>
+
+      <form id="create-service-form" action="{{ url_for('create_service') }}" method="post">
+        <h2 class="create-job-form-section-header">Service Details</h2>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="service-name">Service</label>
+            <input id="service-name" name="job_type" type="text" placeholder="Enter service name" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="service-price">Price</label>
+            <input id="service-price" name="job_price" type="text" placeholder="$0.00" required />
+          </div>
+        </div>
+
+        <div id="create-service-form-actions">
+          <button type="submit">Save Service</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

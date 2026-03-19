@@ -31,59 +31,142 @@
         <h2>All Customers</h2>
       </div>
 
-      <div id="customers-list-header-row">
-        <div>First Name</div>
-        <div>Last Name</div>
-        <div>Phone</div>
-        <div>Email</div>
-        <div>City</div>
-        <div>State</div>
+      <div id="customers-list-grid">
+        <a class="customer-card" href="#">
+          <div class="customer-card-row">
+            <span class="customer-card-label">First Name</span>
+            <span class="customer-card-value">Emma</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Last Name</span>
+            <span class="customer-card-value">Collins</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Phone</span>
+            <span class="customer-card-value">(615) 555-0183</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Email</span>
+            <span class="customer-card-value">emma.collins@email.com</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">City</span>
+            <span class="customer-card-value">Nashville</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">State</span>
+            <span class="customer-card-value">TN</span>
+          </div>
+        </a>
+
+        <a class="customer-card" href="{{ url_for('view_customer', customerId=2) }}">
+          <div class="customer-card-row">
+            <span class="customer-card-label">First Name</span>
+            <span class="customer-card-value">Austin</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Last Name</span>
+            <span class="customer-card-value">Sanders</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Phone</span>
+            <span class="customer-card-value">(615) 555-0135</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Email</span>
+            <span class="customer-card-value">austin.sanders@email.com</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">City</span>
+            <span class="customer-card-value">Franklin</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">State</span>
+            <span class="customer-card-value">TN</span>
+          </div>
+        </a>
+
+        <a class="customer-card" href="#">
+          <div class="customer-card-row">
+            <span class="customer-card-label">First Name</span>
+            <span class="customer-card-value">Chloe</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Last Name</span>
+            <span class="customer-card-value">Wooten</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Phone</span>
+            <span class="customer-card-value">(615) 555-0122</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Email</span>
+            <span class="customer-card-value">chloe.wooten@email.com</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">City</span>
+            <span class="customer-card-value">Murfreesboro</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">State</span>
+            <span class="customer-card-value">TN</span>
+          </div>
+        </a>
+
+        <a class="customer-card" href="#">
+          <div class="customer-card-row">
+            <span class="customer-card-label">First Name</span>
+            <span class="customer-card-value">Jane</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Last Name</span>
+            <span class="customer-card-value">Doe</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Phone</span>
+            <span class="customer-card-value">(931) 555-0198</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Email</span>
+            <span class="customer-card-value">jane.doe@email.com</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">City</span>
+            <span class="customer-card-value">Columbia</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">State</span>
+            <span class="customer-card-value">TN</span>
+          </div>
+        </a>
+
+        <a class="customer-card" href="#">
+          <div class="customer-card-row">
+            <span class="customer-card-label">First Name</span>
+            <span class="customer-card-value">Marcus</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Last Name</span>
+            <span class="customer-card-value">Hill</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Phone</span>
+            <span class="customer-card-value">(615) 555-0178</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">Email</span>
+            <span class="customer-card-value">marcus.hill@email.com</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">City</span>
+            <span class="customer-card-value">Brentwood</span>
+          </div>
+          <div class="customer-card-row">
+            <span class="customer-card-label">State</span>
+            <span class="customer-card-value">TN</span>
+          </div>
+        </a>
       </div>
-
-      <a class="customers-list-row" href="#">
-        <div>Emma</div>
-        <div>Collins</div>
-        <div>(615) 555-0183</div>
-        <div>emma.collins@email.com</div>
-        <div>Nashville</div>
-        <div>TN</div>
-      </a>
-
-      <a class="customers-list-row" href="{{ url_for('view_customer', customerId=2) }}">
-        <div>Austin</div>
-        <div>Sanders</div>
-        <div>(615) 555-0135</div>
-        <div>austin.sanders@email.com</div>
-        <div>Franklin</div>
-        <div>TN</div>
-      </a>
-
-      <a class="customers-list-row" href="#">
-        <div>Chloe</div>
-        <div>Wooten</div>
-        <div>(615) 555-0122</div>
-        <div>chloe.wooten@email.com</div>
-        <div>Murfreesboro</div>
-        <div>TN</div>
-      </a>
-
-      <a class="customers-list-row" href="#">
-        <div>Jane</div>
-        <div>Doe</div>
-        <div>(931) 555-0198</div>
-        <div>jane.doe@email.com</div>
-        <div>Columbia</div>
-        <div>TN</div>
-      </a>
-
-      <a class="customers-list-row" href="#">
-        <div>Marcus</div>
-        <div>Hill</div>
-        <div>(615) 555-0178</div>
-        <div>marcus.hill@email.com</div>
-        <div>Brentwood</div>
-        <div>TN</div>
-      </a>
     </div>
   </div>
 {% endblock %}

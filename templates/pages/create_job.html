@@ -57,33 +57,41 @@
 
         <p class="form-field-note">* Change if job address different than customer's</p>
 
-        <h2 class="create-job-form-section-header">Job Details</h2>
+        <h2 class="create-job-form-section-header">Services Provided</h2>
 
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="job-name">Job Type</label>
-            <select id="job-name" name="job_name">
-              <option value="">-- Select a job type --</option>
-              <option value="spring_tune_up">Spring Tune-Up</option>
-              <option value="fall_tune_up">Fall Tune-Up</option>
-              <option value="ac_maintenance">AC Maintenance</option>
-              <option value="heat_maintenance">Heat Maintenance</option>
-              <option value="filter_replacement">Filter Replacement</option>
-              <option value="blower_motor_replacement">Blower Motor Replacement</option>
-              <option value="capacitor_replacement">Capacitor Replacement</option>
-              <option value="refrigerant_recharge">Refrigerant Recharge</option>
-              <option value="thermostat_install">Thermostat Installation</option>
-              <option value="new_system_install">New System Installation</option>
-              <option value="duct_inspection">Duct Inspection</option>
-              <option value="emergency_service">Emergency Service Call</option>
-            </select>
-          </div>
+        <div id="job-services-list">
+          <div class="add-customer-form-row job-service-row" data-service-index="1">
+            <div class="add-customer-form-field">
+              <label for="service-type-1">Service Type</label>
+              <select id="service-type-1" name="service_type[]">
+                <option value="">-- Select a service --</option>
+                <option value="spring_tune_up">Spring Tune-Up</option>
+                <option value="fall_tune_up">Fall Tune-Up</option>
+                <option value="ac_maintenance">AC Maintenance</option>
+                <option value="heat_maintenance">Heat Maintenance</option>
+                <option value="filter_replacement">Filter Replacement</option>
+                <option value="blower_motor_replacement">Blower Motor Replacement</option>
+                <option value="capacitor_replacement">Capacitor Replacement</option>
+                <option value="refrigerant_recharge">Refrigerant Recharge</option>
+                <option value="thermostat_install">Thermostat Installation</option>
+                <option value="new_system_install">New System Installation</option>
+                <option value="duct_inspection">Duct Inspection</option>
+                <option value="emergency_service">Emergency Service Call</option>
+              </select>
+            </div>
 
-          <div class="add-customer-form-field">
-            <label for="job-price">Price</label>
-            <input id="job-price" name="job_price" type="text" value="$0.00" />
+            <div class="add-customer-form-field">
+              <label for="service-price-1">Price</label>
+              <input id="service-price-1" name="service_price[]" type="text" placeholder="$0.00" />
+            </div>
           </div>
         </div>
+
+        <div id="job-services-actions">
+          <button id="add-job-service-button" type="button">Add Another Service</button>
+        </div>
+
+        <h2 class="create-job-form-section-header">Job Details</h2>
 
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
@@ -117,4 +125,50 @@
       </form>
     </div>
   </div>
+
+  <script>
+    (function () {
+      const addServiceButton = document.getElementById("add-job-service-button");
+      const servicesList = document.getElementById("job-services-list");
+
+      if (!addServiceButton || !servicesList) {
+        return;
+      }
+
+      addServiceButton.addEventListener("click", function () {
+        const serviceRows = servicesList.querySelectorAll(".job-service-row");
+        const nextIndex = serviceRows.length + 1;
+
+        const row = document.createElement("div");
+        row.className = "add-customer-form-row job-service-row";
+        row.dataset.serviceIndex = String(nextIndex);
+
+        row.innerHTML =
+          '<div class="add-customer-form-field">' +
+            '<label for="service-type-' + nextIndex + '">Service Type</label>' +
+            '<select id="service-type-' + nextIndex + '" name="service_type[]">' +
+              '<option value="">-- Select a service --</option>' +
+              '<option value="spring_tune_up">Spring Tune-Up</option>' +
+              '<option value="fall_tune_up">Fall Tune-Up</option>' +
+              '<option value="ac_maintenance">AC Maintenance</option>' +
+              '<option value="heat_maintenance">Heat Maintenance</option>' +
+              '<option value="filter_replacement">Filter Replacement</option>' +
+              '<option value="blower_motor_replacement">Blower Motor Replacement</option>' +
+              '<option value="capacitor_replacement">Capacitor Replacement</option>' +
+              '<option value="refrigerant_recharge">Refrigerant Recharge</option>' +
+              '<option value="thermostat_install">Thermostat Installation</option>' +
+              '<option value="new_system_install">New System Installation</option>' +
+              '<option value="duct_inspection">Duct Inspection</option>' +
+              '<option value="emergency_service">Emergency Service Call</option>' +
+            '</select>' +
+          '</div>' +
+          '<div class="add-customer-form-field">' +
+            '<label for="service-price-' + nextIndex + '">Price</label>' +
+            '<input id="service-price-' + nextIndex + '" name="service_price[]" type="text" placeholder="$0.00" />' +
+          '</div>';
+
+        servicesList.appendChild(row);
+      });
+    })();
+  </script>
 {% endblock %}

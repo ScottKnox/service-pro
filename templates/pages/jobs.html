@@ -6,6 +6,238 @@
   <div id="main-container">
     <div id="manage-jobs-header">
       <h1>Manage Jobs</h1>
+
+      <div id="jobs-controls-row">
+        <div class="jobs-controls-left">
+          <h2>Filter Jobs</h2>
+
+          <div class="jobs-filter-list">
+            <details class="jobs-filter-group">
+              <summary>Assigned Employee</summary>
+              <div class="jobs-filter-content">
+                <label><input type="checkbox" name="filter_employee" value="scott_knox" /> Scott Knox</label>
+                <label><input type="checkbox" name="filter_employee" value="daniel_essary" /> Daniel Essary</label>
+                <label><input type="checkbox" name="filter_employee" value="andrew_crowder" /> Andrew Crowder</label>
+                <label><input type="checkbox" name="filter_employee" value="james_whitfield" /> James Whitfield</label>
+                <label><input type="checkbox" name="filter_employee" value="marcus_bell" /> Marcus Bell</label>
+              </div>
+            </details>
+
+            <details class="jobs-filter-group">
+              <summary>Date Range</summary>
+              <div class="jobs-filter-content jobs-filter-date-range">
+                <label for="jobs-filter-start-date">Start Date</label>
+                <input id="jobs-filter-start-date" name="jobs_filter_start_date" type="date" />
+
+                <label for="jobs-filter-end-date">End Date</label>
+                <input id="jobs-filter-end-date" name="jobs_filter_end_date" type="date" />
+              </div>
+            </details>
+
+            <details class="jobs-filter-group">
+              <summary>City</summary>
+              <div class="jobs-filter-content">
+                <label><input type="checkbox" name="filter_city" value="nashville" /> Nashville</label>
+                <label><input type="checkbox" name="filter_city" value="franklin" /> Franklin</label>
+                <label><input type="checkbox" name="filter_city" value="brentwood" /> Brentwood</label>
+                <label><input type="checkbox" name="filter_city" value="murfreesboro" /> Murfreesboro</label>
+                <label><input type="checkbox" name="filter_city" value="hendersonville" /> Hendersonville</label>
+              </div>
+            </details>
+
+            <details class="jobs-filter-group">
+              <summary>State</summary>
+              <div class="jobs-filter-content">
+                <label><input type="checkbox" name="filter_state" value="tn" /> TN</label>
+                <label><input type="checkbox" name="filter_state" value="ky" /> KY</label>
+                <label><input type="checkbox" name="filter_state" value="al" /> AL</label>
+                <label><input type="checkbox" name="filter_state" value="ga" /> GA</label>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="jobs-controls-right">
+          <div class="jobs-controls-right-top">
+            <h2>All Jobs</h2>
+
+            <div class="jobs-controls-right-actions">
+              <label for="jobs-sort-by">Sort By</label>
+              <select id="jobs-sort-by" name="jobs_sort_by">
+                <option value="scheduled_date_desc">Scheduled Date (Newest)</option>
+                <option value="scheduled_date_asc">Scheduled Date (Oldest)</option>
+                <option value="price_desc">Price (High to Low)</option>
+                <option value="price_asc">Price (Low to High)</option>
+                <option value="status">Status</option>
+                <option value="employee">Assigned Employee</option>
+              </select>
+              <a href="{{ url_for('manage_services') }}">Manage Services</a>
+            </div>
+          </div>
+
+          <div class="jobs-controls-right-bottom">
+          <div id="jobs-list-container">
+            <div id="jobs-list-grid">
+              <a class="jobs-card" href="{{ url_for('view_job', jobId=1) }}">
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Status</span>
+                  <span class="jobs-card-value">Scheduled</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Customer</span>
+                  <span class="jobs-card-value">Emma Collins</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Company</span>
+                  <span class="jobs-card-value">Collins Heating &amp; Cooling</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Service</span>
+                  <span class="jobs-card-value">Spring Tune-Up</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">City</span>
+                  <span class="jobs-card-value">Nashville</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">State</span>
+                  <span class="jobs-card-value">TN</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Assigned To</span>
+                  <span class="jobs-card-value">Scott Knox</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Date Scheduled</span>
+                  <span class="jobs-card-value">03/22/2026</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Price</span>
+                  <span class="jobs-card-value">$199.99</span>
+                </div>
+              </a>
+
+              <a class="jobs-card" href="{{ url_for('view_job', jobId=2) }}">
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Status</span>
+                  <span class="jobs-card-value">In Progress</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Customer</span>
+                  <span class="jobs-card-value">Austin Sanders</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Company</span>
+                  <span class="jobs-card-value">-</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Service</span>
+                  <span class="jobs-card-value">Blower Motor Replacement</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">City</span>
+                  <span class="jobs-card-value">Franklin</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">State</span>
+                  <span class="jobs-card-value">TN</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Assigned To</span>
+                  <span class="jobs-card-value">Daniel Essary</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Date Scheduled</span>
+                  <span class="jobs-card-value">03/25/2026</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Price</span>
+                  <span class="jobs-card-value">$499.99</span>
+                </div>
+              </a>
+
+              <a class="jobs-card" href="{{ url_for('view_job', jobId=3) }}">
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Status</span>
+                  <span class="jobs-card-value">Waiting Parts</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Customer</span>
+                  <span class="jobs-card-value">Chloe Wooten</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Company</span>
+                  <span class="jobs-card-value">Wooten Properties</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Service</span>
+                  <span class="jobs-card-value">Capacitor Replacement</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">City</span>
+                  <span class="jobs-card-value">Murfreesboro</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">State</span>
+                  <span class="jobs-card-value">TN</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Assigned To</span>
+                  <span class="jobs-card-value">Andrew Crowder</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Date Scheduled</span>
+                  <span class="jobs-card-value">03/28/2026</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Price</span>
+                  <span class="jobs-card-value">$129.00</span>
+                </div>
+              </a>
+
+              <a class="jobs-card" href="{{ url_for('view_job', jobId=4) }}">
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Status</span>
+                  <span class="jobs-card-value">Completed</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Customer</span>
+                  <span class="jobs-card-value">Marcus Hill</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Company</span>
+                  <span class="jobs-card-value">Hill Family Clinic</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Service</span>
+                  <span class="jobs-card-value">Filter Replacement</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">City</span>
+                  <span class="jobs-card-value">Brentwood</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">State</span>
+                  <span class="jobs-card-value">TN</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Assigned To</span>
+                  <span class="jobs-card-value">James Whitfield</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Date Scheduled</span>
+                  <span class="jobs-card-value">03/18/2026</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Price</span>
+                  <span class="jobs-card-value">$49.99</span>
+                </div>
+              </a>
+            </div>
+          </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 {% endblock %}

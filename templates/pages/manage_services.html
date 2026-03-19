@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Services | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-jobs-header">
+      <h1>Manage Services</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('jobs') }}">Jobs</a></li>
+          <li aria-current="page">Manage Services</li>
+        </ol>
+      </nav>
+
+      <div class="jobs-controls-right-top">
+        <h2>All Services</h2>
+        <div class="jobs-controls-right-actions">
+          <a href="{{ url_for('create_service') }}">Create Service</a>
+        </div>
+      </div>
+
+      <div id="jobs-list-container">
+        <div id="jobs-list-grid">
+          {% for service in services %}
+            <a class="jobs-card" href="{{ url_for('view_service', serviceId=loop.index0) }}">
+              <div class="jobs-card-row">
+                <span class="jobs-card-label">Service</span>
+                <span class="jobs-card-value">{{ service.service_type }}</span>
+              </div>
+              <div class="jobs-card-row">
+                <span class="jobs-card-label">Price</span>
+                <span class="jobs-card-value">{{ service.service_default_price }}</span>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

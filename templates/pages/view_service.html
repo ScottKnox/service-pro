@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}View Service | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="view-service-panel">
+      <h1>{{ service.service_type }}</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('manage_services') }}">Manage Services</a></li>
+          <li aria-current="page">View Service</li>
+        </ol>
+      </nav>
+
+      <section id="view-service-actions" aria-labelledby="view-service-actions-header">
+        <h2 id="view-service-actions-header">Actions</h2>
+        <div id="view-service-actions-row">
+          <a href="#">Update Service</a>
+          <a href="#">Delete Service</a>
+        </div>
+      </section>
+
+      <section id="view-service-details" aria-label="Service details">
+        <h2>Service Details</h2>
+        <div id="view-service-details-content">
+          <div class="view-service-detail-item">
+            <h4>Service Type</h4>
+            <p>{{ service.service_type }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Default Price</h4>
+            <p>{{ service.service_default_price }}</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}
