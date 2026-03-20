@@ -883,6 +883,33 @@ p {
   border-color: #27364F;
 }
 
+#add-customer-form-actions button:disabled,
+#create-job-form-actions button:disabled,
+#create-service-form-actions button:disabled {
+  background-color: #C5C7CB;
+  border-color: #C5C7CB;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-field-error {
+  display: block;
+  color: #D32F2F;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+#error-services {
+  display: block;
+  color: #D32F2F;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+  margin-top: -0.5rem;
+}
+
 #view-customer-panel {
   width: 100%;
   padding: 0 0.75rem 0.75rem;
@@ -935,7 +962,27 @@ p {
   font-weight: 600;
 }
 
-#view-customer-actions-row a:hover {
+#view-customer-actions-row form {
+  margin: 0;
+  padding: 0;
+  display: inline;
+}
+
+#view-customer-actions-row button {
+  display: inline-block;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid #1B263B;
+  border-radius: 4px;
+  background-color: #1B263B;
+  color: #F8F9FA;
+  font-weight: 600;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+#view-customer-actions-row a:hover,
+#view-customer-actions-row button:hover {
   background-color: #27364F;
   border-color: #27364F;
 }

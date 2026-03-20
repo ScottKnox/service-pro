@@ -1,15 +1,143 @@
-(() => {
-  const pageLinks = document.querySelectorAll("#home-jobs-pages a");
+// Shared filter state for home page
+window.homePageFilter = {
+  filterData: {
+    selectedDate: null,
+    selectedEmployees: new Set(),
+  },
+  currentPage: 1,
+  JOBS_PER_PAGE: 5,
+  
+  filterAndDisplay: function() {
+    const jobElements = document.querySelectorAll(".home-job");
+    const pagesContainer = document.getElementById("home-jobs-pages");
+    const visibleJobs = Array.from(jobElements).filter((job) => {
+      const jobDate = job.dataset.jobDate;
+      const jobEmployee = job.dataset.assignedEmployee;
 
-  pageLinks.forEach((link) => {
-    link.addEventListener("click", (event) => {
-      event.preventDefault();
-      pageLinks.forEach((item) => item.classList.remove("is-active"));
-      link.classList.add("is-active");
+      // Filter by date if a date is selected
+      if (this.filterData.selectedDate && jobDate !== this.filterData.selectedDate) {
+        return false;
+      }
+
+      // Filter by employee if any employees are selected
+      if (this.filterData.selectedEmployees.size > 0 && !this.filterData.selectedEmployees.has(jobEmployee)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // Reset to page 1 and update pagination
+    this.currentPage = 1;
+    this.updatePaginationLinks(visibleJobs.length);
+    this.displayPageContent();
+  },
+
+  updatePaginationLinks: function(visibleJobsCount) {
+    const pagesContainer = document.getElementById("home-jobs-pages");
+    const totalPages = Math.ceil(visibleJobsCount / this.JOBS_PER_PAGE) || 1;
+    const existingLinks = pagesContainer.querySelectorAll("a");
+    
+    // Remove old page links
+    existingLinks.forEach((link) => link.remove());
+
+    // Create new page links
+    for (let i = 1; i <= totalPages; i++) {
+      const link = document.createElement("a");
+      link.href = "#";
+      link.textContent = String(i);
+      if (i === 1) {
+        link.classList.add("is-active");
+      }
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        this.currentPage = i;
+        this.displayPageContent();
+      });
+      pagesContainer.appendChild(link);
+    }
+  },
+
+  displayPageContent: function() {
+    const jobElements = document.querySelectorAll(".home-job");
+    const pagesContainer = document.getElementById("home-jobs-pages");
+    const visibleJobs = Array.from(jobElements).filter((job) => {
+      const jobDate = job.dataset.jobDate;
+      const jobEmployee = job.dataset.assignedEmployee;
+
+      // Filter by date if a date is selected
+      if (this.filterData.selectedDate && jobDate !== this.filterData.selectedDate) {
+        return false;
+      }
+
+      // Filter by employee if any employees are selected
+      if (this.filterData.selectedEmployees.size > 0 && !this.filterData.selectedEmployees.has(jobEmployee)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    const startIndex = (this.currentPage - 1) * this.JOBS_PER_PAGE;
+    const endIndex = startIndex + this.JOBS_PER_PAGE;
+
+    // Show/hide jobs based on current page
+    jobElements.forEach((job) => {
+      job.style.display = "none";
+    });
+
+    visibleJobs.slice(startIndex, endIndex).forEach((job) => {
+      job.style.display = "";
+    });
+
+    // Update active page link
+    const pageLinks = pagesContainer.querySelectorAll("a");
+    pageLinks.forEach((link) => link.classList.remove("is-active"));
+    if (pageLinks[this.currentPage - 1]) {
+      pageLinks[this.currentPage - 1].classList.add("is-active");
+    }
+
+    // Show/hide empty state message
+    const emptyMessage = document.getElementById("home-jobs-empty");
+    if (emptyMessage) {
+      emptyMessage.style.display = visibleJobs.length === 0 ? "block" : "none";
+    }
+  }
+};
+
+// Jobs filter and pagination IIFE
+(() => {
+  function getSelectedEmployees() {
+    const checkboxes = document.querySelectorAll("input[name='home-jobs-assignee']:checked");
+    const selected = new Set();
+    checkboxes.forEach((checkbox) => {
+      selected.add(checkbox.value);
+    });
+    return selected;
+  }
+
+  // Handle employee checkbox changes
+  const employeeCheckboxes = document.querySelectorAll("input[name='home-jobs-assignee']");
+  employeeCheckboxes.forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      // Ensure at least one employee is selected
+      const checkedBoxes = document.querySelectorAll("input[name='home-jobs-assignee']:checked");
+      if (checkedBoxes.length === 0) {
+        // Prevent unchecking - revert the change
+        checkbox.checked = true;
+        return;
+      }
+      window.homePageFilter.filterData.selectedEmployees = getSelectedEmployees();
+      window.homePageFilter.filterAndDisplay();
     });
   });
+
+  // Initialize with checked employees
+  window.homePageFilter.filterData.selectedEmployees = getSelectedEmployees();
+  window.homePageFilter.filterAndDisplay();
 })();
 
+// Calendar IIFE
 (() => {
   const monthLabel = document.getElementById("home-calendar-month-label");
   const daysContainer = document.getElementById("home-calendar-days");
@@ -105,7 +233,9 @@
         if (selectedDays.has(key)) {
           selectedDays.delete(key);
           button.classList.remove("is-selected");
+          window.homePageFilter.filterData.selectedDate = null;
           updateHeadline(null);
+          window.homePageFilter.filterAndDisplay();
         } else {
           selectedDays.clear();
           daysContainer.querySelectorAll(".home-calendar-day.is-selected").forEach((el) => {
@@ -113,7 +243,9 @@
           });
           selectedDays.add(key);
           button.classList.add("is-selected");
+          window.homePageFilter.filterData.selectedDate = key;
           updateHeadline(key);
+          window.homePageFilter.filterAndDisplay();
         }
       });
 
@@ -133,4 +265,7 @@
 
   renderCalendar();
   updateHeadline(todayKey());
+  // Set initial filter to today's date
+  window.homePageFilter.filterData.selectedDate = todayKey();
+  window.homePageFilter.filterAndDisplay();
 })();

@@ -18,8 +18,10 @@
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
           <a href="{{ url_for('create_job', customerId=customerId) }}">Create Job</a>
-          <a href="#">Update Customer</a>
-          <a href="#">Delete Customer</a>
+          <a href="{{ url_for('update_customer', customerId=customerId) }}">Update Customer</a>
+          <form method="POST" action="{{ url_for('delete_customer', customerId=customerId) }}" onsubmit="return confirm('Delete this customer and all related jobs/estimates? This cannot be undone.');">
+            <button type="submit">Delete Customer</button>
+          </form>
         </div>
       </section>
 
@@ -106,18 +108,7 @@
           <div class="view-customer-section-column view-customer-details-column">
             <h3>Estimates</h3>
             <div id="view-customer-estimates-list">
-              <a class="view-customer-estimate-item" href="#">
-                <h4>03/15/2026 - Standard Maintenance Plan</h4>
-                <p>$199.99</p>
-              </a>
-              <a class="view-customer-estimate-item" href="#">
-                <h4>03/15/2026 - Replace Blower Motor</h4>
-                <p>$499.99</p>
-              </a>
-              <a class="view-customer-estimate-item" href="#">
-                <h4>03/15/2026 - Filter Replacement</h4>
-                <p>$49.99</p>
-              </a>
+              <p>No estimates found.</p>
             </div>
             {% set active_page = customer_pages.estimates %}
             {% include "partials/list_pages.html" %}
@@ -125,18 +116,16 @@
           <div class="view-customer-section-column view-customer-details-column">
             <h3>Jobs</h3>
             <div class="view-customer-jobs-list">
-              <a class="view-customer-card-link" href="#">
-                <h4>03/20/2026 - Spring Tune-Up</h4>
-                <p>Assigned to Scott Knox at 9:00 AM</p>
-              </a>
-              <a class="view-customer-card-link" href="#">
-                <h4>03/25/2026 - Blower Motor Replacement</h4>
-                <p>Assigned to Daniel Essary at 1:30 PM</p>
-              </a>
-              <a class="view-customer-card-link" href="#">
-                <h4>04/02/2026 - Filter Replacement</h4>
-                <p>Assigned to Andrew Crowder at 11:00 AM</p>
-              </a>
+              {% if customer_jobs %}
+                {% for job in customer_jobs %}
+                  <a class="view-customer-card-link" href="{{ url_for('view_job', jobId=job._id) }}">
+                    <h4>{{ job.scheduled_date }} - {{ job.job_type }}</h4>
+                    <p>Assigned to {{ job.assigned_employee or 'Unassigned' }}</p>
+                  </a>
+                {% endfor %}
+              {% else %}
+                <p>No jobs found for this customer.</p>
+              {% endif %}
             </div>
             {% set active_page = customer_pages.jobs %}
             {% include "partials/list_pages.html" %}
@@ -147,18 +136,7 @@
           <div class="view-customer-section-column view-customer-details-column">
             <h3>Payments</h3>
             <div class="view-customer-payments-list">
-              <a class="view-customer-card-link" href="#">
-                <h4>03/05/2026 - Invoice #1048</h4>
-                <p>$199.99 paid by card</p>
-              </a>
-              <a class="view-customer-card-link" href="#">
-                <h4>03/18/2026 - Invoice #1056</h4>
-                <p>$499.99 due on 03/25/2026</p>
-              </a>
-              <a class="view-customer-card-link" href="#">
-                <h4>04/01/2026 - Membership Renewal</h4>
-                <p>$29.99 scheduled via autopay</p>
-              </a>
+              <p>No payments found.</p>
             </div>
             {% set active_page = customer_pages.payments %}
             {% include "partials/list_pages.html" %}

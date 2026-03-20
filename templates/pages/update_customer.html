@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Update Customer | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="add-customer-panel">
+      <h1>Update Customer</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li aria-current="page">Update Customer</li>
+        </ol>
+      </nav>
+
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
+      <form id="add-customer-form" action="{{ url_for('update_customer', customerId=customerId) }}" method="post">
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-first-name">First Name</label>
+            <input id="customer-first-name" name="first_name" type="text" placeholder="First name" value="{{ customer.first_name|default('') }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="customer-last-name">Last Name</label>
+            <input id="customer-last-name" name="last_name" type="text" placeholder="Last name" value="{{ customer.last_name|default('') }}" required />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-company">Company</label>
+            <input id="customer-company" name="company" type="text" placeholder="Company name" value="{{ customer.company|default('') }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="customer-phone">Phone</label>
+            <input id="customer-phone" name="phone" type="tel" placeholder="(555) 555-5555" value="{{ customer.phone|default('') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-email">Email</label>
+            <input id="customer-email" name="email" type="email" placeholder="name@example.com" value="{{ customer.email|default('') }}" />
+          </div>
+
+          <div class="add-customer-form-field"></div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-address-line-1">Address Line 1</label>
+            <input id="customer-address-line-1" name="address_line_1" type="text" placeholder="123 Main Street" value="{{ customer.address_line_1|default('') }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="customer-address-line-2">Address Line 2</label>
+            <input id="customer-address-line-2" name="address_line_2" type="text" placeholder="Suite, unit, or apartment" value="{{ customer.address_line_2|default('') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-city">City</label>
+            <input id="customer-city" name="city" type="text" placeholder="City" value="{{ customer.city|default('') }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="customer-state">State</label>
+            <input id="customer-state" name="state" type="text" placeholder="State" maxlength="2" value="{{ customer.state|default('') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-referral-source">Referral Source</label>
+            <input id="customer-referral-source" name="referral_source" type="text" placeholder="Google, referral, yard sign, etc." value="{{ customer.referral_source|default('') }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="customer-status">Customer Status</label>
+            <input id="customer-status" name="customer_status" type="text" placeholder="Lead, active, inactive, etc." value="{{ customer.customer_status|default('active') }}" />
+          </div>
+        </div>
+
+        <div id="add-customer-form-actions">
+          <button type="submit">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Update Job | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="create-job-panel">
+      <h1>Update Job</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('jobs') }}">Jobs</a></li>
+          <li><a href="{{ url_for('view_job', jobId=jobId) }}">View Job</a></li>
+          <li aria-current="page">Update Job</li>
+        </ol>
+      </nav>
+
+      <form id="create-job-form" action="{{ url_for('update_job', jobId=jobId) }}" method="post" data-services-prices="{{ services_prices_json }}">
+        <h2 class="create-job-form-section-header">Client Details</h2>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="job-customer-name">Customer</label>
+            <input id="job-customer-name" name="customer_name" type="text" value="{{ job.customer_name }}" disabled />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="job-customer-phone">Phone</label>
+            <input id="job-customer-phone" name="customer_phone" type="text" value="{{ customer.phone }}" disabled />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="job-address-line-1">* Address Line 1</label>
+            <input id="job-address-line-1" name="job_address_line_1" type="text" value="{{ job.address_line_1 }}" required />
+            <span id="error-address-line-1" class="form-field-error" style="display:none;">Address Line 1 is required</span>
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="job-address-line-2">* Address Line 2</label>
+            <input id="job-address-line-2" name="job_address_line_2" type="text" value="{{ job.address_line_2 }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="job-city">* City</label>
+            <input id="job-city" name="job_city" type="text" value="{{ job.city }}" required />
+            <span id="error-city" class="form-field-error" style="display:none;">City is required</span>
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="job-state">* State</label>
+            <input id="job-state" name="job_state" type="text" value="{{ job.state }}" required />
+            <span id="error-state" class="form-field-error" style="display:none;">State is required</span>
+          </div>
+        </div>
+
+        <p class="form-field-note">* Change if job address different than customer's</p>
+
+        <h2 class="create-job-form-section-header">Services Provided</h2>
+        <span id="error-services" class="form-field-error" style="display:none;">At least one service must be selected</span>
+
+        <div id="job-services-list">
+          {% if job.services %}
+            {% for service in job.services %}
+            {% set service_price = job.price if loop.first else '' %}
+            <div class="add-customer-form-row job-service-row" data-service-index="{{ loop.index }}">
+              <div class="add-customer-form-field">
+                <label for="service-type-{{ loop.index }}">Service Type</label>
+                <select id="service-type-{{ loop.index }}" name="service_type[]">
+                  <option value="">-- Select a service --</option>
+                  {% for available_service in services %}
+                    <option value="{{ available_service.service_type }}" {% if available_service.service_type == service %}selected{% endif %}>{{ available_service.service_type }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="add-customer-form-field">
+                <label for="service-price-{{ loop.index }}">Price</label>
+                <input id="service-price-{{ loop.index }}" name="service_price[]" type="text" placeholder="$0.00" value="{{ service_price }}" />
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="add-customer-form-row job-service-row" data-service-index="1">
+              <div class="add-customer-form-field">
+                <label for="service-type-1">Service Type</label>
+                <select id="service-type-1" name="service_type[]">
+                  <option value="">-- Select a service --</option>
+                  {% for service in services %}
+                    <option value="{{ service.service_type }}">{{ service.service_type }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="add-customer-form-field">
+                <label for="service-price-1">Price</label>
+                <input id="service-price-1" name="service_price[]" type="text" placeholder="$0.00" />
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        <div id="job-services-actions">
+          <button id="add-job-service-button" type="button">Add Another Service</button>
+        </div>
+
+        <template id="service-options-template">
+          {% for service in services %}
+            <option value="{{ service.service_type }}">{{ service.service_type }}</option>
+          {% endfor %}
+        </template>
+
+        <h2 class="create-job-form-section-header">Job Details</h2>
+        <span id="error-job-details" class="form-field-error" style="display:none;"></span>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="job-is-estimate">Is This Job Still Being Quoted or Estimated?</label>
+            <select id="job-is-estimate" name="job_is_estimate">
+              <option value="no" {% if job.status != 'Estimate' %}selected{% endif %}>No</option>
+              <option value="yes" {% if job.status == 'Estimate' %}selected{% endif %}>Yes</option>
+            </select>
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="job-date">Scheduled Date</label>
+            {% set date_parts = job.scheduled_date.split('/') %}
+            {% set job_date_value = date_parts[2] + '-' + date_parts[0] + '-' + date_parts[1] if date_parts|length == 3 else '' %}
+            <input id="job-date" name="job_date" type="date" value="{{ job_date_value }}" required />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="job-assigned-employee">Assigned Employee</label>
+            <select id="job-assigned-employee" name="job_assigned_employee" required>
+              <option value="">-- Select an employee --</option>
+              <option value="scott_knox" {% if job.assigned_employee == 'Scott Knox' %}selected{% endif %}>Scott Knox</option>
+              <option value="daniel_essary" {% if job.assigned_employee == 'Daniel Essary' %}selected{% endif %}>Daniel Essary</option>
+              <option value="andrew_crowder" {% if job.assigned_employee == 'Andrew Crowder' %}selected{% endif %}>Andrew Crowder</option>
+              <option value="james_whitfield" {% if job.assigned_employee == 'James Whitfield' %}selected{% endif %}>James Whitfield</option>
+              <option value="marcus_bell" {% if job.assigned_employee == 'Marcus Bell' %}selected{% endif %}>Marcus Bell</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="add-customer-form-row add-customer-form-row--single">
+          <div class="add-customer-form-field">
+            <label for="job-notes">Notes</label>
+            <textarea id="job-notes" name="job_notes" rows="4" placeholder="Access notes, parts needed, and special instructions">{{ job.notes }}</textarea>
+          </div>
+        </div>
+
+        <div id="create-job-form-actions">
+          <button id="submit-button" type="submit">Update Job</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/update_job.js') }}"></script>
+{% endblock %}
