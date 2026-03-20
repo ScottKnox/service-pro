@@ -2,8 +2,9 @@
   const form = document.getElementById('create-job-form');
   const submitButton = document.getElementById('submit-button');
 
-  // Get service price map from form data attribute
-  const servicesPriceMap = form && form.dataset.servicesPrices ? JSON.parse(form.dataset.servicesPrices) : {};
+  // Get service catalog from form data attribute
+  const servicesCatalog = form && form.dataset.servicesCatalog ? JSON.parse(form.dataset.servicesCatalog) : {};
+  const partsCatalog = form && form.dataset.partsCatalog ? JSON.parse(form.dataset.partsCatalog) : {};
 
   // Track user interaction for specific fields
   let servicesTouched = false;
@@ -87,19 +88,29 @@
     return isValid;
   }
 
-  // Function to update price when service is selected
+  // Function to update price and duration when service is selected
   function attachPriceUpdateListener(selectElement) {
     selectElement.addEventListener('change', function () {
       servicesTouched = true; // Mark services as touched
       const selectedService = this.value;
       const serviceIndex = this.id.split('-')[2]; // Extract index from id like 'service-type-1'
       const priceInput = document.getElementById('service-price-' + serviceIndex);
+      const durationInput = document.getElementById('service-duration-' + serviceIndex);
+      const serviceDetails = selectedService ? servicesCatalog[selectedService] : null;
       
       if (priceInput) {
-        if (selectedService && servicesPriceMap[selectedService]) {
-          priceInput.value = servicesPriceMap[selectedService];
+        if (serviceDetails && serviceDetails.price) {
+          priceInput.value = serviceDetails.price;
         } else if (!selectedService) {
           priceInput.value = '$0.00';
+        }
+      }
+
+      if (durationInput) {
+        if (serviceDetails && serviceDetails.duration) {
+          durationInput.value = serviceDetails.duration;
+        } else if (!selectedService) {
+          durationInput.value = '';
         }
       }
 
@@ -116,6 +127,9 @@
   const addServiceButton = document.getElementById("add-job-service-button");
   const servicesList = document.getElementById("job-services-list");
   const serviceOptionsTemplate = document.getElementById("service-options-template");
+  const addPartButton = document.getElementById("add-job-part-button");
+  const partsList = document.getElementById("job-parts-list");
+  const partOptionsTemplate = document.getElementById("part-options-template");
 
   if (!addServiceButton || !servicesList || !serviceOptionsTemplate) {
     return;
@@ -142,6 +156,10 @@
       '<div class="add-customer-form-field">' +
         '<label for="service-price-' + nextIndex + '">Price</label>' +
         '<input id="service-price-' + nextIndex + '" name="service_price[]" type="text" placeholder="$0.00" />' +
+      '</div>' +
+      '<div class="add-customer-form-field">' +
+        '<label for="service-duration-' + nextIndex + '">Duration</label>' +
+        '<input id="service-duration-' + nextIndex + '" name="service_duration[]" type="text" placeholder="e.g. 2 hours" />' +
       '</div>';
 
     servicesList.appendChild(row);
@@ -154,6 +172,61 @@
 
     validateForm();
   });
+
+  function attachPartPriceUpdateListener(selectElement) {
+    selectElement.addEventListener('change', function () {
+      const selectedPart = this.value;
+      const partIndex = this.id.split('-')[2];
+      const priceInput = document.getElementById('part-price-' + partIndex);
+      const partDetails = selectedPart ? partsCatalog[selectedPart] : null;
+
+      if (priceInput) {
+        if (partDetails && partDetails.price) {
+          priceInput.value = partDetails.price;
+        } else if (!selectedPart) {
+          priceInput.value = '$0.00';
+        }
+      }
+    });
+  }
+
+  const initialPartSelects = document.querySelectorAll('select[id^="part-name-"]');
+  initialPartSelects.forEach(function (select) {
+    attachPartPriceUpdateListener(select);
+  });
+
+  if (addPartButton && partsList && partOptionsTemplate) {
+    addPartButton.addEventListener("click", function () {
+      const partRows = partsList.querySelectorAll(".job-part-row");
+      const nextIndex = partRows.length + 1;
+
+      const row = document.createElement("div");
+      row.className = "add-customer-form-row job-part-row";
+      row.dataset.partIndex = String(nextIndex);
+
+      const optionHtml = partOptionsTemplate.innerHTML;
+
+      row.innerHTML =
+        '<div class="add-customer-form-field">' +
+          '<label for="part-name-' + nextIndex + '">Part</label>' +
+          '<select id="part-name-' + nextIndex + '" name="part_name[]">' +
+            '<option value="">-- Select a part --</option>' +
+            optionHtml +
+          '</select>' +
+        '</div>' +
+        '<div class="add-customer-form-field">' +
+          '<label for="part-price-' + nextIndex + '">Price</label>' +
+          '<input id="part-price-' + nextIndex + '" name="part_price[]" type="text" placeholder="$0.00" />' +
+        '</div>';
+
+      partsList.appendChild(row);
+
+      const newSelect = row.querySelector('select');
+      if (newSelect) {
+        attachPartPriceUpdateListener(newSelect);
+      }
+    });
+  }
 
   // Add event listeners to validate on input change
   const fieldsToValidate = [

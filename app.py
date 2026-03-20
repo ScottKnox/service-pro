@@ -32,6 +32,10 @@ def normalize_currency(value: str) -> str:
         return "$0.00"
 
 
+def normalize_duration(value: str) -> str:
+    return (value or "").strip()
+
+
 def format_date(date_str: str) -> str:
     if not date_str:
         return ""
@@ -39,6 +43,98 @@ def format_date(date_str: str) -> str:
         return datetime.strptime(date_str, "%Y-%m-%d").strftime("%m/%d/%Y")
     except ValueError:
         return date_str
+
+
+def collect_invoice_items(db):
+    invoice_items = []
+    jobs_with_invoices = db.jobs.find(
+        {"invoices.0": {"$exists": True}},
+        {"customer_name": 1, "scheduled_date": 1, "invoices": 1, "total": 1, "job_type": 1},
+    ).sort([("scheduled_date", -1), ("_id", -1)])
+
+    for job in jobs_with_invoices:
+        customer_name = job.get("customer_name", "Unknown Customer")
+        scheduled_date = job.get("scheduled_date", "")
+        total = job.get("total", "$0.00")
+        job_type = job.get("job_type", "Service")
+        job_id = str(job.get("_id", ""))
+
+        for invoice in reversed(job.get("invoices", [])):
+            invoice_items.append(
+                {
+                    "invoice_number": invoice.get("invoice_number", "Invoice"),
+                    "file_path": invoice.get("file_path", "#"),
+                    "customer_name": customer_name,
+                    "scheduled_date": scheduled_date,
+                    "total": total,
+                    "job_type": job_type,
+                    "job_id": job_id,
+                }
+            )
+
+    return invoice_items
+
+
+def build_service_catalog(services):
+    return {
+        service["service_type"]: {
+            "price": service.get("service_default_price", "$0.00"),
+            "duration": service.get("service_duration", ""),
+        }
+        for service in services
+    }
+
+
+def build_part_catalog(parts):
+    return {
+        part["part_name"]: {
+            "price": part.get("part_default_price", "$0.00"),
+        }
+        for part in parts
+    }
+
+
+def build_job_services_from_form(service_types, service_prices, service_durations, service_catalog):
+    services = []
+    total = 0.0
+
+    for index, service_type in enumerate(service_types):
+        catalog_entry = service_catalog.get(service_type, {})
+        price = service_prices[index] if index < len(service_prices) else catalog_entry.get("price", "$0.00")
+        duration = service_durations[index] if index < len(service_durations) else catalog_entry.get("duration", "")
+        normalized_price = normalize_currency(price)
+        normalized_duration = normalize_duration(duration)
+
+        services.append(
+            {
+                "type": service_type,
+                "price": normalized_price,
+                "duration": normalized_duration,
+            }
+        )
+        total += float(normalized_price.replace("$", "").replace(",", ""))
+
+    return services, total
+
+
+def build_job_parts_from_form(part_names, part_prices, part_catalog):
+    parts = []
+    total = 0.0
+
+    for index, part_name in enumerate(part_names):
+        catalog_entry = part_catalog.get(part_name, {})
+        price = part_prices[index] if index < len(part_prices) else catalog_entry.get("price", "$0.00")
+        normalized_price = normalize_currency(price)
+
+        parts.append(
+            {
+                "name": part_name,
+                "price": normalized_price,
+            }
+        )
+        total += float(normalized_price.replace("$", "").replace(",", ""))
+
+    return parts, total
 
 
 @app.route("/")
@@ -56,24 +152,7 @@ def home():
         invoice_page = 1
 
     invoices_per_page = 5
-    invoice_items = []
-    jobs_with_invoices = db.jobs.find(
-        {"invoices.0": {"$exists": True}},
-        {"customer_name": 1, "scheduled_date": 1, "invoices": 1},
-    ).sort([("scheduled_date", -1), ("_id", -1)])
-
-    for job in jobs_with_invoices:
-        customer_name = job.get("customer_name", "Unknown Customer")
-        scheduled_date = job.get("scheduled_date", "")
-        for invoice in reversed(job.get("invoices", [])):
-            invoice_items.append(
-                {
-                    "invoice_number": invoice.get("invoice_number", "Invoice"),
-                    "file_path": invoice.get("file_path", "#"),
-                    "customer_name": customer_name,
-                    "scheduled_date": scheduled_date,
-                }
-            )
+    invoice_items = collect_invoice_items(db)
 
     invoices_total_pages = (len(invoice_items) + invoices_per_page - 1) // invoices_per_page
     if invoices_total_pages == 0:
@@ -238,6 +317,18 @@ def jobs():
     return render_template("pages/jobs.html", jobs=jobs_list)
 
 
+@app.route("/admin")
+def admin():
+    return render_template("pages/admin.html")
+
+
+@app.route("/invoices")
+def invoices():
+    db = ensure_connection_or_500()
+    invoice_items = collect_invoice_items(db)
+    return render_template("pages/invoices.html", invoices=invoice_items)
+
+
 @app.route("/services")
 def manage_services():
     db = ensure_connection_or_500()
@@ -248,18 +339,64 @@ def manage_services():
     )
 
 
+@app.route("/parts")
+def manage_parts():
+    db = ensure_connection_or_500()
+    parts = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+    return render_template(
+        "pages/manage_parts.html",
+        parts=parts,
+    )
+
+
+@app.route("/parts/create", methods=["GET", "POST"])
+def create_part():
+    db = ensure_connection_or_500()
+    if request.method == "POST":
+        part_name = request.form.get("part_name", "").strip()
+        part_default_price = normalize_currency(request.form.get("part_price", ""))
+
+        if part_name:
+            db.parts.insert_one(
+                {
+                    "part_name": part_name,
+                    "part_default_price": part_default_price,
+                }
+            )
+
+        return redirect(url_for("manage_parts"))
+
+    return render_template("pages/create_part.html")
+
+
+@app.route("/parts/<partId>")
+def view_part(partId):
+    db = ensure_connection_or_500()
+    part = db.parts.find_one({"_id": object_id_or_404(partId)})
+    if not part:
+        return redirect(url_for("manage_parts"))
+
+    return render_template(
+        "pages/view_part.html",
+        partId=partId,
+        part=serialize_doc(part),
+    )
+
+
 @app.route("/services/create", methods=["GET", "POST"])
 def create_service():
     db = ensure_connection_or_500()
     if request.method == "POST":
         service_name = request.form.get("job_type", "").strip()
         service_default_price = normalize_currency(request.form.get("job_price", ""))
+        service_duration = normalize_duration(request.form.get("service_duration", ""))
 
         if service_name:
             db.services.insert_one(
                 {
                     "service_type": service_name,
                     "service_default_price": service_default_price,
+                    "service_duration": service_duration,
                 }
             )
 
@@ -280,6 +417,13 @@ def view_service(serviceId):
         serviceId=serviceId,
         service=serialize_doc(service),
     )
+
+
+@app.route("/services/<serviceId>/delete", methods=["POST"])
+def delete_service(serviceId):
+    db = ensure_connection_or_500()
+    db.services.delete_one({"_id": object_id_or_404(serviceId)})
+    return redirect(url_for("manage_services"))
 
 
 @app.route("/customers/<customerId>")
@@ -316,15 +460,31 @@ def create_job(customerId):
         return redirect(url_for("customers"))
 
     if request.method == "POST":
-        selected_services = [s.strip() for s in request.form.getlist("service_type[]") if s.strip()]
-        entered_prices = [normalize_currency(p) for p in request.form.getlist("service_price[]") if p.strip()]
-        primary_service = selected_services[0] if selected_services else "General Service"
+        selected_service_types = [s.strip() for s in request.form.getlist("service_type[]") if s.strip()]
+        entered_service_prices = [normalize_currency(p) for p in request.form.getlist("service_price[]") if p.strip()]
+        entered_service_durations = [normalize_duration(d) for d in request.form.getlist("service_duration[]") if d.strip()]
+        selected_part_names = [p.strip() for p in request.form.getlist("part_name[]") if p.strip()]
+        entered_part_prices = [normalize_currency(p) for p in request.form.getlist("part_price[]") if p.strip()]
+        service_docs = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
+        part_docs = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+        service_catalog = build_service_catalog(service_docs)
+        part_catalog = build_part_catalog(part_docs)
+        services, services_total = build_job_services_from_form(
+            selected_service_types,
+            entered_service_prices,
+            entered_service_durations,
+            service_catalog,
+        )
+        parts, parts_total = build_job_parts_from_form(
+            selected_part_names,
+            entered_part_prices,
+            part_catalog,
+        )
+        total = services_total + parts_total
+        
+        primary_service = selected_service_types[0] if selected_service_types else "General Service"
         is_estimate = request.form.get("job_is_estimate", "no").strip().lower() == "yes"
         job_status = "Estimate" if is_estimate else "Scheduled"
-
-        total = 0.0
-        for price in entered_prices:
-            total += float(price.replace("$", "").replace(",", ""))
 
         assigned_employee = request.form.get("job_assigned_employee", "").replace("_", " ").title()
         new_job = {
@@ -332,7 +492,8 @@ def create_job(customerId):
             "customer_name": f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
             "company": customer.get("company", ""),
             "job_type": primary_service,
-            "services": selected_services,
+            "services": services,
+            "parts": parts,
             "status": job_status,
             "scheduled_date": format_date(request.form.get("job_date", "")),
             "address_line_1": request.form.get("job_address_line_1", "").strip(),
@@ -340,7 +501,7 @@ def create_job(customerId):
             "city": request.form.get("job_city", "").strip(),
             "state": request.form.get("job_state", "").strip().upper(),
             "assigned_employee": assigned_employee,
-            "price": f"${total:.2f}" if total else "$0.00",
+            "total": f"${total:.2f}" if total else "$0.00",
             "notes": request.form.get("job_notes", "").strip(),
             "date_created": datetime.now().strftime("%m/%d/%Y"),
             "invoices": [],
@@ -349,17 +510,18 @@ def create_job(customerId):
         return redirect(url_for("view_job", jobId=str(inserted.inserted_id)))
 
     services = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
-    
-    # Build services price map for JavaScript
-    services_prices = {service['service_type']: service['service_default_price'] for service in services}
-    services_prices_json = json.dumps(services_prices)
+    parts = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+    services_catalog_json = json.dumps(build_service_catalog(services))
+    parts_catalog_json = json.dumps(build_part_catalog(parts))
 
     return render_template(
         "pages/create_job.html",
         customerId=customerId,
         customer=serialize_doc(customer),
         services=services,
-        services_prices_json=services_prices_json,
+        parts=parts,
+        services_catalog_json=services_catalog_json,
+        parts_catalog_json=parts_catalog_json,
     )
 
 
@@ -461,7 +623,7 @@ def create_quote(jobId):
         "job_id": jobId,
         "title": f"Quote for {job.get('job_type', 'Service')}",
         "date": datetime.now().strftime("%m/%d/%Y"),
-        "amount": job.get("price", "$0.00"),
+        "amount": job.get("total", "$0.00"),
         "file_path": url_for("download_invoice", filename=filename),
     })
 
@@ -529,21 +691,38 @@ def update_job(jobId):
         return redirect(url_for("jobs"))
 
     if request.method == "POST":
-        selected_services = [s.strip() for s in request.form.getlist("service_type[]") if s.strip()]
-        entered_prices = [normalize_currency(p) for p in request.form.getlist("service_price[]") if p.strip()]
-        primary_service = selected_services[0] if selected_services else job.get("job_type", "General Service")
+        selected_service_types = [s.strip() for s in request.form.getlist("service_type[]") if s.strip()]
+        entered_service_prices = [normalize_currency(p) for p in request.form.getlist("service_price[]") if p.strip()]
+        entered_service_durations = [normalize_duration(d) for d in request.form.getlist("service_duration[]") if d.strip()]
+        selected_part_names = [p.strip() for p in request.form.getlist("part_name[]") if p.strip()]
+        entered_part_prices = [normalize_currency(p) for p in request.form.getlist("part_price[]") if p.strip()]
+        service_docs = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
+        part_docs = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+        service_catalog = build_service_catalog(service_docs)
+        part_catalog = build_part_catalog(part_docs)
+        services, services_total = build_job_services_from_form(
+            selected_service_types,
+            entered_service_prices,
+            entered_service_durations,
+            service_catalog,
+        )
+        parts, parts_total = build_job_parts_from_form(
+            selected_part_names,
+            entered_part_prices,
+            part_catalog,
+        )
+        total = services_total + parts_total
+        
+        primary_service = selected_service_types[0] if selected_service_types else job.get("job_type", "General Service")
         is_estimate = request.form.get("job_is_estimate", "no").strip().lower() == "yes"
         job_status = "Estimate" if is_estimate else "Scheduled"
-
-        total = 0.0
-        for price in entered_prices:
-            total += float(price.replace("$", "").replace(",", ""))
 
         assigned_employee = request.form.get("job_assigned_employee", "").replace("_", " ").title()
         
         update_data = {
             "job_type": primary_service,
-            "services": selected_services,
+            "services": services,
+            "parts": parts,
             "status": job_status,
             "scheduled_date": format_date(request.form.get("job_date", "")),
             "address_line_1": request.form.get("job_address_line_1", "").strip(),
@@ -551,7 +730,7 @@ def update_job(jobId):
             "city": request.form.get("job_city", "").strip(),
             "state": request.form.get("job_state", "").strip().upper(),
             "assigned_employee": assigned_employee,
-            "price": f"${total:.2f}" if total else "$0.00",
+            "total": f"${total:.2f}" if total else "$0.00",
             "notes": request.form.get("job_notes", "").strip(),
         }
         
@@ -570,10 +749,9 @@ def update_job(jobId):
             customer = serialize_doc(customer_doc)
 
     services = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
-    
-    # Build services price map for JavaScript
-    services_prices = {service['service_type']: service['service_default_price'] for service in services}
-    services_prices_json = json.dumps(services_prices)
+    parts = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+    services_catalog_json = json.dumps(build_service_catalog(services))
+    parts_catalog_json = json.dumps(build_part_catalog(parts))
 
     return render_template(
         "pages/update_job.html",
@@ -581,7 +759,9 @@ def update_job(jobId):
         job=serialize_doc(job),
         customer=customer,
         services=services,
-        services_prices_json=services_prices_json,
+        parts=parts,
+        services_catalog_json=services_catalog_json,
+        parts_catalog_json=parts_catalog_json,
     )
 
 

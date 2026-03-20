@@ -106,7 +106,6 @@ def generate_invoice(job_id, job, customer):
     # Service Details
     story.append(Paragraph("Service Details", heading_style))
     service_info = [
-        ["Service Type:", job.get("job_type", "N/A")],
         ["Location:", f"{job.get('address_line_1', 'N/A')}"],
         ["", f"{job.get('city', 'N/A')}, {job.get('state', 'N/A')}"],
         ["Assigned Employee:", job.get("assigned_employee", "N/A")],
@@ -127,12 +126,64 @@ def generate_invoice(job_id, job, customer):
         )
     )
     story.append(service_table)
+    story.append(Spacer(1, 0.3 * inch))
+
+    # Services Breakdown Table
+    story.append(Paragraph("Services", heading_style))
+    services_data = [["Service", "Price", "Duration"]]
+    if job.get('services'):
+        for service in job.get('services', []):
+            if isinstance(service, dict) and 'type' in service and 'price' in service:
+                services_data.append([service['type'], service['price'], service.get('duration', '')])
+    
+    services_breakdown_table = Table(services_data, colWidths=[2.8 * inch, 1.2 * inch, 1.5 * inch])
+    services_breakdown_table.setStyle(
+        TableStyle(
+            [
+                ("FONT", (0, 0), (-1, -1), "Helvetica", 10),
+                ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 10),
+                ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1B263B")),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                ("ALIGN", (2, 0), (2, -1), "LEFT"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, colors.HexColor("#1B263B")),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E9EEF4")),
+            ]
+        )
+    )
+    story.append(services_breakdown_table)
     story.append(Spacer(1, 0.4 * inch))
 
+    if job.get('parts'):
+        story.append(Paragraph("Parts", heading_style))
+        parts_data = [["Part", "Price"]]
+        for part in job.get('parts', []):
+            if isinstance(part, dict) and 'name' in part and 'price' in part:
+                parts_data.append([part['name'], part['price']])
+
+        parts_breakdown_table = Table(parts_data, colWidths=[3.5 * inch, 1.5 * inch])
+        parts_breakdown_table.setStyle(
+            TableStyle(
+                [
+                    ("FONT", (0, 0), (-1, -1), "Helvetica", 10),
+                    ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 10),
+                    ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1B263B")),
+                    ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                    ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, colors.HexColor("#1B263B")),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E9EEF4")),
+                ]
+            )
+        )
+        story.append(parts_breakdown_table)
+        story.append(Spacer(1, 0.4 * inch))
+
     # Amount Due
-    amount_str = job.get("price", "$0.00").replace("$", "").replace(",", "")
+    amount_str = job.get("total", "$0.00").replace("$", "").replace(",", "")
     total_amount_data = [
-        ["Total Amount Due:", job.get("price", "$0.00")],
+        ["Total Amount Due:", job.get("total", "$0.00")],
     ]
     total_table = Table(total_amount_data, colWidths=[3 * inch, 1 * inch])
     total_table.setStyle(
@@ -143,7 +194,7 @@ def generate_invoice(job_id, job, customer):
                 ("ALIGN", (0, 0), (0, -1), "RIGHT"),
                 ("ALIGN", (1, 0), (1, -1), "RIGHT"),
                 ("LINEABOVE", (0, 0), (-1, -1), 2, colors.HexColor("#1B263B")),
-                ("LINBELOW", (0, 0), (-1, -1), 2, colors.HexColor("#1B263B")),
+                ("LINEBELOW", (0, 0), (-1, -1), 2, colors.HexColor("#1B263B")),
             ]
         )
     )
@@ -272,7 +323,6 @@ def generate_quote(job_id, job, customer):
     # Service Details
     story.append(Paragraph("Service Details", heading_style))
     service_info = [
-        ["Service Type:", job.get("job_type", "N/A")],
         ["Location:", f"{job.get('address_line_1', 'N/A')}"],
         ["", f"{job.get('city', 'N/A')}, {job.get('state', 'N/A')}"],
         ["Assigned Employee:", job.get("assigned_employee", "N/A")],
@@ -292,11 +342,63 @@ def generate_quote(job_id, job, customer):
         )
     )
     story.append(service_table)
+    story.append(Spacer(1, 0.3 * inch))
+
+    # Services Breakdown Table
+    story.append(Paragraph("Services", heading_style))
+    services_data = [["Service", "Price", "Duration"]]
+    if job.get('services'):
+        for service in job.get('services', []):
+            if isinstance(service, dict) and 'type' in service and 'price' in service:
+                services_data.append([service['type'], service['price'], service.get('duration', '')])
+    
+    services_breakdown_table = Table(services_data, colWidths=[2.8 * inch, 1.2 * inch, 1.5 * inch])
+    services_breakdown_table.setStyle(
+        TableStyle(
+            [
+                ("FONT", (0, 0), (-1, -1), "Helvetica", 10),
+                ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 10),
+                ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1B263B")),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                ("ALIGN", (2, 0), (2, -1), "LEFT"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, colors.HexColor("#1B263B")),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E9EEF4")),
+            ]
+        )
+    )
+    story.append(services_breakdown_table)
     story.append(Spacer(1, 0.4 * inch))
+
+    if job.get('parts'):
+        story.append(Paragraph("Parts", heading_style))
+        parts_data = [["Part", "Price"]]
+        for part in job.get('parts', []):
+            if isinstance(part, dict) and 'name' in part and 'price' in part:
+                parts_data.append([part['name'], part['price']])
+
+        parts_breakdown_table = Table(parts_data, colWidths=[3.5 * inch, 1.5 * inch])
+        parts_breakdown_table.setStyle(
+            TableStyle(
+                [
+                    ("FONT", (0, 0), (-1, -1), "Helvetica", 10),
+                    ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 10),
+                    ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1B263B")),
+                    ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                    ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, colors.HexColor("#1B263B")),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E9EEF4")),
+                ]
+            )
+        )
+        story.append(parts_breakdown_table)
+        story.append(Spacer(1, 0.4 * inch))
 
     # Estimated Amount
     total_amount_data = [
-        ["Estimated Total:", job.get("price", "$0.00")],
+        ["Estimated Total:", job.get("total", "$0.00")],
     ]
     total_table = Table(total_amount_data, colWidths=[3 * inch, 1 * inch])
     total_table.setStyle(

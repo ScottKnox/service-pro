@@ -9,7 +9,7 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('jobs') }}">Jobs</a></li>
+          <li><a href="{{ url_for('admin') }}">Admin</a></li>
           <li aria-current="page">Manage Services</li>
         </ol>
       </nav>
@@ -32,6 +32,10 @@
               <div class="jobs-card-row">
                 <span class="jobs-card-label">Price</span>
                 <span class="jobs-card-value">{{ service.service_default_price }}</span>
+              </div>
+              <div class="jobs-card-row">
+                <span class="jobs-card-label">Duration</span>
+                <span class="jobs-card-value">{{ service.service_duration or '-' }}</span>
               </div>
             </a>
           {% endfor %}

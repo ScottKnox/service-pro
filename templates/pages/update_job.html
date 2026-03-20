@@ -15,7 +15,7 @@
         </ol>
       </nav>
 
-      <form id="create-job-form" action="{{ url_for('update_job', jobId=jobId) }}" method="post" data-services-prices="{{ services_prices_json }}">
+      <form id="create-job-form" action="{{ url_for('update_job', jobId=jobId) }}" method="post" data-services-catalog='{{ services_catalog_json|safe }}' data-parts-catalog='{{ parts_catalog_json|safe }}'>
         <h2 class="create-job-form-section-header">Client Details</h2>
 
         <div class="add-customer-form-row">
@@ -65,21 +65,25 @@
         <div id="job-services-list">
           {% if job.services %}
             {% for service in job.services %}
-            {% set service_price = job.price if loop.first else '' %}
             <div class="add-customer-form-row job-service-row" data-service-index="{{ loop.index }}">
               <div class="add-customer-form-field">
                 <label for="service-type-{{ loop.index }}">Service Type</label>
                 <select id="service-type-{{ loop.index }}" name="service_type[]">
                   <option value="">-- Select a service --</option>
                   {% for available_service in services %}
-                    <option value="{{ available_service.service_type }}" {% if available_service.service_type == service %}selected{% endif %}>{{ available_service.service_type }}</option>
+                    <option value="{{ available_service.service_type }}" {% if available_service.service_type == service.type %}selected{% endif %}>{{ available_service.service_type }}</option>
                   {% endfor %}
                 </select>
               </div>
 
               <div class="add-customer-form-field">
                 <label for="service-price-{{ loop.index }}">Price</label>
-                <input id="service-price-{{ loop.index }}" name="service_price[]" type="text" placeholder="$0.00" value="{{ service_price }}" />
+                <input id="service-price-{{ loop.index }}" name="service_price[]" type="text" placeholder="$0.00" value="{{ service.price }}" />
+              </div>
+
+              <div class="add-customer-form-field">
+                <label for="service-duration-{{ loop.index }}">Duration</label>
+                <input id="service-duration-{{ loop.index }}" name="service_duration[]" type="text" placeholder="e.g. 2 hours" value="{{ service.duration }}" />
               </div>
             </div>
             {% endfor %}
@@ -99,6 +103,11 @@
                 <label for="service-price-1">Price</label>
                 <input id="service-price-1" name="service_price[]" type="text" placeholder="$0.00" />
               </div>
+
+              <div class="add-customer-form-field">
+                <label for="service-duration-1">Duration</label>
+                <input id="service-duration-1" name="service_duration[]" type="text" placeholder="e.g. 2 hours" />
+              </div>
             </div>
           {% endif %}
         </div>
@@ -110,6 +119,58 @@
         <template id="service-options-template">
           {% for service in services %}
             <option value="{{ service.service_type }}">{{ service.service_type }}</option>
+          {% endfor %}
+        </template>
+
+        <h2 class="create-job-form-section-header">Parts Used</h2>
+
+        <div id="job-parts-list">
+          {% if job.parts %}
+            {% for part in job.parts %}
+            <div class="add-customer-form-row job-part-row" data-part-index="{{ loop.index }}">
+              <div class="add-customer-form-field">
+                <label for="part-name-{{ loop.index }}">Part</label>
+                <select id="part-name-{{ loop.index }}" name="part_name[]">
+                  <option value="">-- Select a part --</option>
+                  {% for available_part in parts %}
+                    <option value="{{ available_part.part_name }}" {% if available_part.part_name == part.name %}selected{% endif %}>{{ available_part.part_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="add-customer-form-field">
+                <label for="part-price-{{ loop.index }}">Price</label>
+                <input id="part-price-{{ loop.index }}" name="part_price[]" type="text" placeholder="$0.00" value="{{ part.price }}" />
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="add-customer-form-row job-part-row" data-part-index="1">
+              <div class="add-customer-form-field">
+                <label for="part-name-1">Part</label>
+                <select id="part-name-1" name="part_name[]">
+                  <option value="">-- Select a part --</option>
+                  {% for part in parts %}
+                    <option value="{{ part.part_name }}">{{ part.part_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="add-customer-form-field">
+                <label for="part-price-1">Price</label>
+                <input id="part-price-1" name="part_price[]" type="text" placeholder="$0.00" />
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        <div id="job-parts-actions">
+          <button id="add-job-part-button" type="button">Add More Parts</button>
+        </div>
+
+        <template id="part-options-template">
+          {% for part in parts %}
+            <option value="{{ part.part_name }}">{{ part.part_name }}</option>
           {% endfor %}
         </template>
 

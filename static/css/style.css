@@ -706,7 +706,10 @@ p {
 
 #add-customer-panel,
 #create-job-panel,
-#create-service-panel {
+#create-service-panel,
+#create-part-panel,
+#view-part-panel,
+#view-service-panel {
   width: 100%;
   padding: 0 0.75rem 0.75rem;
   box-sizing: border-box;
@@ -714,7 +717,10 @@ p {
 
 #add-customer-panel h1,
 #create-job-panel h1,
-#create-service-panel h1 {
+#create-service-panel h1,
+#create-part-panel h1,
+#view-part-panel h1,
+#view-service-panel h1 {
   margin: 0 -0.75rem 0;
   padding: 0.5rem 0.75rem;
   text-align: center;
@@ -764,12 +770,49 @@ p {
 
 #add-customer-form,
 #create-job-form,
-#create-service-form {
+#create-service-form,
+#create-part-form {
   display: grid;
   gap: 1rem;
   padding: 1rem;
   border: 1px solid #C5C7CB;
   background-color: #FFFFFF;
+}
+
+.admin-links-grid,
+.resource-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.admin-link-card {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid #C5C7CB;
+  border-radius: 6px;
+  background-color: #FFFFFF;
+  color: #1B263B;
+  text-decoration: none;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-link-card:hover {
+  background-color: #F8FAFC;
+  box-shadow: 0 2px 8px rgba(27, 38, 59, 0.1);
+}
+
+.admin-link-card h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.admin-link-card p {
+  margin: 0;
+  color: #4B5563;
+  font-size: 0.95rem;
 }
 
 .create-job-form-section-header {
@@ -834,12 +877,14 @@ p {
   gap: 1rem;
 }
 
-#job-services-actions {
+#job-services-actions,
+#job-parts-actions {
   display: flex;
   justify-content: flex-start;
 }
 
-#add-job-service-button {
+#add-job-service-button,
+#add-job-part-button {
   padding: 0.55rem 0.95rem;
   border: 1px solid #1B263B;
   border-radius: 4px;
@@ -851,7 +896,8 @@ p {
   cursor: pointer;
 }
 
-#add-job-service-button:hover {
+#add-job-service-button:hover,
+#add-job-part-button:hover {
   background-color: #F1F5F9;
 }
 
@@ -1190,6 +1236,8 @@ p {
   display: grid;
   grid-template-columns: 1fr 1fr;
   border-top: 1px solid #808080;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 #view-job-notes-row {
@@ -1198,6 +1246,8 @@ p {
 
 .view-job-section-column {
   padding: 0 0.75rem 0.75rem;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .view-job-section-column:first-child {
@@ -1305,6 +1355,28 @@ p {
   border-color: #27364F;
 }
 
+#view-service-actions-row form {
+  margin: 0;
+}
+
+#view-service-actions-row button {
+  display: inline-block;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid #1B263B;
+  border-radius: 4px;
+  background-color: #1B263B;
+  color: #F8F9FA;
+  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#view-service-actions-row button:hover {
+  background-color: #27364F;
+  border-color: #27364F;
+}
+
 #view-service-details {
   margin-top: 0.5rem;
 }
@@ -1352,27 +1424,35 @@ p {
   .view-customer-section-column:first-child {
     border-right: 0;
     border-bottom: 1px solid #F8F9FA;
-   
-     .view-job-section-row {
-       grid-template-columns: 1fr;
-     }
-   
-     #view-job-details-list {
-       grid-template-columns: 1fr;
-     }
-   
-     #view-job-location-list {
-       grid-template-columns: 1fr;
-     }
-   
-     .view-job-section-column:first-child {
-       border-right: 0;
-       border-bottom: 1px solid #F8F9FA;
-     }
-   
-     #view-service-details-content {
-       grid-template-columns: 1fr;
-     }
+  }
+
+  .view-job-section-row {
+    grid-template-columns: 1fr;
+  }
+
+  #view-job-details-list {
+    grid-template-columns: 1fr;
+  }
+
+  #view-job-location-list {
+    grid-template-columns: 1fr;
+  }
+
+  #view-job-services-list {
+    flex-direction: column;
+  }
+
+  #view-job-notes-list {
+    grid-template-columns: 1fr;
+  }
+
+  .view-job-section-column:first-child {
+    border-right: 0;
+    border-bottom: 1px solid #F8F9FA;
+  }
+
+  #view-service-details-content {
+    grid-template-columns: 1fr;
   }
 }
 

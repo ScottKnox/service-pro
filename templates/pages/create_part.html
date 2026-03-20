@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Create Part | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="create-part-panel">
+      <h1>Create Part</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('manage_parts') }}">Manage Parts</a></li>
+          <li aria-current="page">Create Part</li>
+        </ol>
+      </nav>
+
+      <form id="create-part-form" action="{{ url_for('create_part') }}" method="post">
+        <h2 class="create-job-form-section-header">Part Details</h2>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="part-name">Part</label>
+            <input id="part-name" name="part_name" type="text" placeholder="Enter part name" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="part-price">Price</label>
+            <input id="part-price" name="part_price" type="text" placeholder="$0.00" required />
+          </div>
+        </div>
+
+        <div id="create-service-form-actions">
+          <button type="submit">Save Part</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

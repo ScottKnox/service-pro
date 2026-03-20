@@ -9,6 +9,7 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
+          <li><a href="{{ url_for('admin') }}">Admin</a></li>
           <li><a href="{{ url_for('manage_services') }}">Manage Services</a></li>
           <li aria-current="page">View Service</li>
         </ol>
@@ -18,7 +19,9 @@
         <h2 id="view-service-actions-header">Actions</h2>
         <div id="view-service-actions-row">
           <a href="#">Update Service</a>
-          <a href="#">Delete Service</a>
+          <form method="POST" action="{{ url_for('delete_service', serviceId=serviceId) }}" onsubmit="return confirm('Are you sure you want to delete this service?');">
+            <button type="submit">Delete Service</button>
+          </form>
         </div>
       </section>
 
@@ -32,6 +35,10 @@
           <div class="view-service-detail-item">
             <h4>Default Price</h4>
             <p>{{ service.service_default_price }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Duration</h4>
+            <p>{{ service.service_duration or '-' }}</p>
           </div>
         </div>
       </section>

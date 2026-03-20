@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Parts | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-jobs-header">
+      <h1>Manage Parts</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('admin') }}">Admin</a></li>
+          <li aria-current="page">Manage Parts</li>
+        </ol>
+      </nav>
+
+      <div class="jobs-controls-right-top">
+        <h2>All Parts</h2>
+        <div class="jobs-controls-right-actions">
+          <a href="{{ url_for('create_part') }}">Create Part</a>
+        </div>
+      </div>
+
+      <div class="resource-list-grid">
+        {% if parts %}
+          {% for part in parts %}
+            <a class="jobs-card" href="{{ url_for('view_part', partId=part._id) }}">
+              <div class="jobs-card-row">
+                <span class="jobs-card-label">Part</span>
+                <span class="jobs-card-value">{{ part.part_name }}</span>
+              </div>
+              <div class="jobs-card-row">
+                <span class="jobs-card-label">Default Price</span>
+                <span class="jobs-card-value">{{ part.part_default_price }}</span>
+              </div>
+            </a>
+          {% endfor %}
+        {% else %}
+          <p>No parts have been created yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

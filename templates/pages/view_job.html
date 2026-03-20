@@ -66,8 +66,8 @@
                 <p>{{ job.assigned_employee }}</p>
               </div>
               <div class="view-job-detail-item">
-                <h4>Price</h4>
-                <p>{{ job.price }}</p>
+                <h4>Total</h4>
+                <p>{{ job.total }}</p>
               </div>
             </div>
           </div>
@@ -101,18 +101,38 @@
               {% if job.services %}
                 {% for service in job.services %}
                   <div class="view-job-detail-item">
-                    <h4>{{ service }}</h4>
-                    <p>{{ job.price if loop.first else '' }}</p>
+                    <h4>{{ service.type }}</h4>
+                    <p>{{ service.price }}{% if service.duration %} • {{ service.duration }}{% endif %}</p>
                   </div>
                 {% endfor %}
               {% else %}
                 <div class="view-job-detail-item">
                   <h4>{{ job.job_type }}</h4>
-                  <p>{{ job.price }}</p>
+                  <p>{{ job.total }}</p>
                 </div>
               {% endif %}
             </div>
           </div>
+          <div class="view-job-section-column view-job-details-column">
+            <h3>Parts</h3>
+            <div id="view-job-parts-list">
+              {% if job.parts %}
+                {% for part in job.parts %}
+                  <div class="view-job-detail-item">
+                    <h4>{{ part.name }}</h4>
+                    <p>{{ part.price }}</p>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="view-job-detail-item">
+                  <p>No parts added.</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="view-job-section-row" id="view-job-notes-row-secondary">
           <div class="view-job-section-column view-job-details-column">
             <h3>Notes</h3>
             <div id="view-job-notes-list">
@@ -121,6 +141,7 @@
               </div>
             </div>
           </div>
+          <div class="view-job-section-column view-job-details-column"></div>
         </div>
 
         <div class="view-job-section-row" id="view-job-invoices-estimates-row">

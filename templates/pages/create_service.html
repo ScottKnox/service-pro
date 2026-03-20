@@ -9,7 +9,7 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('jobs') }}">Jobs</a></li>
+          <li><a href="{{ url_for('admin') }}">Admin</a></li>
           <li><a href="{{ url_for('manage_services') }}">Manage Services</a></li>
           <li aria-current="page">Create Service</li>
         </ol>
@@ -27,6 +27,11 @@
           <div class="add-customer-form-field">
             <label for="service-price">Price</label>
             <input id="service-price" name="job_price" type="text" placeholder="$0.00" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="service-duration">Duration</label>
+            <input id="service-duration" name="service_duration" type="text" placeholder="e.g. 2 hours" required />
           </div>
         </div>
 

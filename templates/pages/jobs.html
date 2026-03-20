@@ -71,7 +71,6 @@
                 <option value="status">Status</option>
                 <option value="employee">Assigned Employee</option>
               </select>
-              <a href="{{ url_for('manage_services') }}">Manage Services</a>
             </div>
           </div>
 
@@ -114,8 +113,8 @@
                       <span class="jobs-card-value">{{ job.scheduled_date }}</span>
                     </div>
                     <div class="jobs-card-row">
-                      <span class="jobs-card-label">Price</span>
-                      <span class="jobs-card-value">{{ job.price }}</span>
+                      <span class="jobs-card-label">Total</span>
+                      <span class="jobs-card-value">{{ job.total }}</span>
                     </div>
                   </a>
                 {% endfor %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}View Part | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="view-part-panel">
+      <h1>{{ part.part_name }}</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('manage_parts') }}">Manage Parts</a></li>
+          <li aria-current="page">View Part</li>
+        </ol>
+      </nav>
+
+      <section id="view-service-actions" aria-labelledby="view-service-actions-header">
+        <h2 id="view-service-actions-header">Actions</h2>
+        <div id="view-service-actions-row">
+          <a href="{{ url_for('manage_parts') }}">Back to Parts</a>
+        </div>
+      </section>
+
+      <section id="view-service-details" aria-label="Part details">
+        <h2>Part Details</h2>
+        <div id="view-service-details-content">
+          <div class="view-service-detail-item">
+            <h4>Part Name</h4>
+            <p>{{ part.part_name }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Default Price</h4>
+            <p>{{ part.part_default_price }}</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}
