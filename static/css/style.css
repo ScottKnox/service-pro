@@ -226,6 +226,13 @@ p {
   border-color: #A9B0BA;
 }
 
+#home-jobs-empty {
+  display: none;
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
 .home-jobs-column {
   padding: 0 0.75rem 0.75rem;
 }

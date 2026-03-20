@@ -22,7 +22,9 @@ def generate_invoice(job_id, job, customer):
     # Create filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"invoice_job{job_id}_{timestamp}.pdf"
-    filepath = os.path.join(os.path.dirname(__file__), "invoices", filename)
+    invoices_dir = os.path.join(os.path.dirname(__file__), "invoices")
+    os.makedirs(invoices_dir, exist_ok=True)
+    filepath = os.path.join(invoices_dir, filename)
 
     # Create PDF document
     doc = SimpleDocTemplate(filepath, pagesize=letter, topMargin=0.5 * inch, bottomMargin=0.5 * inch)

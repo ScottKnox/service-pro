@@ -3,6 +3,7 @@
 {% block title %}View Job | Steady Work{% endblock %}
 
 {% block content %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/view_job.css') }}" />
   <div id="main-container">
     <div id="view-job-panel">
       <h1>{{ job.job_type }}</h1>
@@ -201,16 +202,16 @@
   </div>
 
   <!-- Email Estimate Modal -->
-  <div id="email-estimate-modal" class="modal" style="display: none;">
+  <div id="email-estimate-modal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
         <h2>Email Estimate</h2>
         <button class="modal-close-btn" id="modal-close-btn">&times;</button>
       </div>
-      <form id="email-estimate-form" method="POST">
+      <form id="email-estimate-form" method="POST" data-send-url="{{ url_for('send_estimate_email', jobId=jobId) }}">
         <div class="form-group">
           <label for="email-recipient">Recipient Email:</label>
-          <input type="email" id="email-recipient" name="recipient_email" required readonly style="background-color: #f5f5f5;">
+          <input type="email" id="email-recipient" name="recipient_email" required readonly class="email-readonly-input">
         </div>
         <div class="form-group">
           <label for="email-subject">Subject:</label>
@@ -228,242 +229,8 @@
     </div>
   </div>
 
-  <style>
-    .estimate-card-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      justify-content: space-between;
-      padding: 0.5rem 0;
-    }
+{% endblock %}
 
-    .estimate-card-wrapper .view-customer-card-link {
-      flex: 1;
-    }
-
-    .estimate-email-btn {
-      padding: 0.5rem 1rem;
-      background-color: #1B263B;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.875rem;
-      white-space: nowrap;
-      transition: background-color 0.2s;
-    }
-
-    .estimate-email-btn:hover {
-      background-color: #0f1823;
-    }
-
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .modal-content {
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      max-width: 500px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1.5rem;
-      border-bottom: 1px solid #e0e0e0;
-    }
-
-    .modal-header h2 {
-      margin: 0;
-      font-size: 1.5rem;
-    }
-
-    .modal-close-btn {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: #999;
-      padding: 0;
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-close-btn:hover {
-      color: #333;
-    }
-
-    #email-estimate-form {
-      padding: 1.5rem;
-    }
-
-    .form-group {
-      margin-bottom: 1.5rem;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-      color: #333;
-    }
-
-    .form-group input,
-    .form-group textarea {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-family: inherit;
-      font-size: 1rem;
-      box-sizing: border-box;
-    }
-
-    .form-group textarea {
-      resize: vertical;
-    }
-
-    .modal-actions {
-      display: flex;
-      gap: 1rem;
-      justify-content: flex-end;
-      border-top: 1px solid #e0e0e0;
-      padding-top: 1.5rem;
-    }
-
-    .modal-send-btn,
-    .modal-cancel-btn {
-      padding: 0.75rem 1.5rem;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: background-color 0.2s;
-    }
-
-    .modal-send-btn {
-      background-color: #1B263B;
-      color: white;
-    }
-
-    .modal-send-btn:hover {
-      background-color: #0f1823;
-    }
-
-    .modal-cancel-btn {
-      background-color: #f0f0f0;
-      color: #333;
-    }
-
-    .modal-cancel-btn:hover {
-      background-color: #e0e0e0;
-    }
-  </style>
-
-  <script>
-    const modal = document.getElementById('email-estimate-modal');
-    const emailButtons = document.querySelectorAll('.estimate-email-btn');
-    const closeBtn = document.getElementById('modal-close-btn');
-    const cancelBtn = document.getElementById('modal-cancel-btn');
-    const emailForm = document.getElementById('email-estimate-form');
-    const recipientInput = document.getElementById('email-recipient');
-    const subjectInput = document.getElementById('email-subject');
-    const bodyInput = document.getElementById('email-body');
-    
-    let currentEstimateFile = '';
-    let currentEmailType = 'estimate';
-
-    emailButtons.forEach(btn => {
-      btn.addEventListener('click', function(e) {
-        e.preventDefault();
-        const estimateTitle = this.getAttribute('data-estimate-title');
-        const estimateFile = this.getAttribute('data-estimate-file');
-        const customerEmail = this.getAttribute('data-customer-email');
-        const customerName = this.getAttribute('data-customer-name').trim();
-        const emailType = this.getAttribute('data-email-type') || 'estimate';
-        
-        // Pre-fill form fields with appropriate subject based on type
-        recipientInput.value = customerEmail;
-        if (emailType === 'invoice') {
-          subjectInput.value = `Invoice: ${estimateTitle}`;
-          bodyInput.value = `Hi ${customerName},\n\nPlease find attached your invoice.\n\nPlease let us know if you have any questions.\n\nBest regards`;
-        } else {
-          subjectInput.value = `Estimate: ${estimateTitle}`;
-          bodyInput.value = `Hi ${customerName},\n\nPlease find attached your estimate.\n\nPlease let us know if you have any questions.\n\nBest regards`;
-        }
-        
-        currentEstimateFile = estimateFile;
-        currentEmailType = emailType;
-        modal.style.display = 'flex';
-      });
-    });
-
-    closeBtn.addEventListener('click', function() {
-      modal.style.display = 'none';
-    });
-
-    cancelBtn.addEventListener('click', function() {
-      modal.style.display = 'none';
-    });
-
-    modal.addEventListener('click', function(e) {
-      if (e.target === modal) {
-        modal.style.display = 'none';
-      }
-    });
-
-    emailForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      const recipient = recipientInput.value;
-      const subject = subjectInput.value;
-      const body = bodyInput.value;
-      
-      // Send email via AJAX
-      fetch('{{ url_for("send_estimate_email", jobId=jobId) }}', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          recipient_email: recipient,
-          subject: subject,
-          body: body,
-          estimate_file: currentEstimateFile
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          alert('Email sent successfully!');
-          modal.style.display = 'none';
-          emailForm.reset();
-        } else {
-          alert('Error sending email: ' + (data.error || 'Unknown error'));
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('Error sending email: ' + error);
-      });
-    });
-  </script>
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/view_job.js') }}" defer></script>
 {% endblock %}
