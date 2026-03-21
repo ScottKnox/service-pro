@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Error | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="create-job-panel">
+      <h1>Error</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li aria-current="page">Error</li>
+        </ol>
+      </nav>
+
+      <div style="padding: 2rem; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; margin: 2rem 0;">
+        <p style="color: #721c24; font-size: 1.1rem; margin: 0;">{{ error_message }}</p>
+      </div>
+
+      <div style="margin-top: 2rem;">
+        <a href="{{ url_for('home') }}" style="display: inline-block; padding: 0.5rem 1.5rem; background-color: #1B263B; color: white; text-decoration: none; border-radius: 4px;">Return to Home</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}

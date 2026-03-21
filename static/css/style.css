@@ -106,6 +106,20 @@ p {
   border-color: #DDE3EA;
 }
 
+#employee-greeting-link {
+  color: #F8F9FA;
+  text-decoration: none;
+  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+#employee-greeting-link:hover {
+  text-decoration: underline;
+}
+
 #main-container {
   width: 60vw;
   height: auto;
@@ -1055,6 +1069,22 @@ p {
   border-top: 1px solid #808080;
 }
 
+#view-profile-details-columns {
+  grid-template-columns: 1fr;
+}
+
+#view-profile-details-columns .view-customer-section-column:first-child {
+  border-right: 0;
+}
+
+#view-employee-details-columns {
+  grid-template-columns: 1fr;
+}
+
+#view-employee-details-columns .view-customer-section-column:first-child {
+  border-right: 0;
+}
+
 #view-customer-account-columns {
   margin-top: 1rem;
 }
@@ -1525,6 +1555,12 @@ p {
   }
 
   #login-button {
+    grid-area: login;
+    justify-self: end;
+    margin-left: 0.5rem;
+  }
+
+  #employee-greeting-link {
     grid-area: login;
     justify-self: end;
     margin-left: 0.5rem;

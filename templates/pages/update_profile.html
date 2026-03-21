@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Update Profile | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="add-customer-panel">
+      <h1>Update Profile</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li><a href="{{ url_for('view_profile') }}">My Profile</a></li>
+          <li aria-current="page">Update Profile</li>
+        </ol>
+      </nav>
+
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
+      <form id="add-customer-form" action="{{ url_for('update_profile') }}" method="post">
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="profile-first-name">First Name</label>
+            <input id="profile-first-name" name="first_name" type="text" value="{{ employee.first_name|default('') }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="profile-last-name">Last Name</label>
+            <input id="profile-last-name" name="last_name" type="text" value="{{ employee.last_name|default('') }}" required />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="profile-email">Email</label>
+            <input id="profile-email" name="email" type="email" value="{{ employee.email|default('') }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="profile-phone">Phone</label>
+            <input id="profile-phone" name="phone" type="tel" value="{{ employee.phone|default('') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="profile-position">Position</label>
+            <input id="profile-position" name="position" type="text" value="{{ employee.position|default('') }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="profile-username">Username</label>
+            <input id="profile-username" type="text" value="{{ employee.username|default('') }}" disabled />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="profile-bio">Bio</label>
+            <textarea id="profile-bio" name="bio" rows="6" placeholder="Tell customers and coworkers a bit about yourself">{{ employee.bio|default('') }}</textarea>
+          </div>
+
+          <div class="add-customer-form-field"></div>
+        </div>
+
+        <div id="add-customer-form-actions">
+          <button type="submit">Save Profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

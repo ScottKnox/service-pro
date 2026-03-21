@@ -3,13 +3,16 @@ import os
 import json
 
 from bson import ObjectId
-from flask import Flask, abort, redirect, render_template, request, send_file, url_for, jsonify
+from flask import Flask, abort, redirect, render_template, request, send_file, url_for, jsonify, session
 from flask_mail import Mail, Message
 
 from invoice_generator import generate_invoice
 from mongo import ensure_connection_or_500, object_id_or_404, serialize_doc
 
 app = Flask(__name__)
+
+# Session Configuration
+app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # Flask-Mail Configuration
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
@@ -30,6 +33,16 @@ def normalize_currency(value: str) -> str:
         return f"${float(stripped):.2f}"
     except ValueError:
         return "$0.00"
+
+
+def currency_to_float(value: str) -> float:
+    stripped = (value or "").replace("$", "").replace(",", "").strip()
+    if not stripped:
+        return 0.0
+    try:
+        return float(stripped)
+    except ValueError:
+        return 0.0
 
 
 def normalize_duration(value: str) -> str:
@@ -98,10 +111,17 @@ def build_job_services_from_form(service_types, service_prices, service_duration
     services = []
     total = 0.0
 
-    for index, service_type in enumerate(service_types):
+    for index, raw_service_type in enumerate(service_types):
+        service_type = (raw_service_type or "").strip()
+        if not service_type:
+            continue
+
         catalog_entry = service_catalog.get(service_type, {})
-        price = service_prices[index] if index < len(service_prices) else catalog_entry.get("price", "$0.00")
-        duration = service_durations[index] if index < len(service_durations) else catalog_entry.get("duration", "")
+        entered_price = service_prices[index] if index < len(service_prices) else ""
+        entered_duration = service_durations[index] if index < len(service_durations) else ""
+
+        price = entered_price if (entered_price or "").strip() else catalog_entry.get("price", "$0.00")
+        duration = entered_duration if (entered_duration or "").strip() else catalog_entry.get("duration", "")
         normalized_price = normalize_currency(price)
         normalized_duration = normalize_duration(duration)
 
@@ -121,9 +141,14 @@ def build_job_parts_from_form(part_names, part_prices, part_catalog):
     parts = []
     total = 0.0
 
-    for index, part_name in enumerate(part_names):
+    for index, raw_part_name in enumerate(part_names):
+        part_name = (raw_part_name or "").strip()
+        if not part_name:
+            continue
+
         catalog_entry = part_catalog.get(part_name, {})
-        price = part_prices[index] if index < len(part_prices) else catalog_entry.get("price", "$0.00")
+        entered_price = part_prices[index] if index < len(part_prices) else ""
+        price = entered_price if (entered_price or "").strip() else catalog_entry.get("price", "$0.00")
         normalized_price = normalize_currency(price)
 
         parts.append(
@@ -137,13 +162,129 @@ def build_job_parts_from_form(part_names, part_prices, part_catalog):
     return parts, total
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    db = ensure_connection_or_500()
+    error = None
+    
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+        
+        if not username or not password:
+            error = "Username and password are required."
+        else:
+            # Find employee by username
+            employee = db.employees.find_one({"username": username})
+            
+            if not employee:
+                error = "Invalid username or password."
+            elif employee.get("password") != password:
+                error = "Invalid username or password."
+            else:
+                # Login successful - set session
+                session["employee_id"] = str(employee["_id"])
+                session["employee_name"] = f"{employee.get('first_name', '')} {employee.get('last_name', '')}".strip()
+                session["employee_position"] = (employee.get("position") or "").strip()
+                return redirect(url_for("home"))
+    
+    return render_template("pages/login.html", error=error)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
+@app.route("/profile")
+def view_profile():
+    db = ensure_connection_or_500()
+    employee_id = session.get("employee_id")
+
+    if not employee_id or not ObjectId.is_valid(employee_id):
+        session.clear()
+        return redirect(url_for("login"))
+
+    employee = db.employees.find_one({"_id": ObjectId(employee_id)})
+    if not employee:
+        session.clear()
+        return redirect(url_for("login"))
+
+    return render_template("pages/view_profile.html", employee=serialize_doc(employee))
+
+
+@app.route("/profile/update", methods=["GET", "POST"])
+def update_profile():
+    db = ensure_connection_or_500()
+    employee_id = session.get("employee_id")
+
+    if not employee_id or not ObjectId.is_valid(employee_id):
+        session.clear()
+        return redirect(url_for("login"))
+
+    employee = db.employees.find_one({"_id": ObjectId(employee_id)})
+    if not employee:
+        session.clear()
+        return redirect(url_for("login"))
+
+    error = ""
+    if request.method == "POST":
+        first_name = request.form.get("first_name", "").strip()
+        last_name = request.form.get("last_name", "").strip()
+
+        if not first_name or not last_name:
+            error = "First name and last name are required."
+        else:
+            update_data = {
+                "first_name": first_name,
+                "last_name": last_name,
+                "phone": request.form.get("phone", "").strip(),
+                "email": request.form.get("email", "").strip(),
+                "position": request.form.get("position", "").strip(),
+                "bio": request.form.get("bio", "").strip(),
+                "profile_updated_at": datetime.now().strftime("%m/%d/%Y %H:%M:%S"),
+            }
+
+            db.employees.update_one({"_id": ObjectId(employee_id)}, {"$set": update_data})
+            employee = db.employees.find_one({"_id": ObjectId(employee_id)})
+
+            # Keep header/session identity in sync with profile edits.
+            session["employee_name"] = f"{employee.get('first_name', '')} {employee.get('last_name', '')}".strip()
+            session["employee_position"] = (employee.get("position") or "").strip()
+
+            return redirect(url_for("view_profile"))
+
+    return render_template("pages/update_profile.html", employee=serialize_doc(employee), error=error)
+
+
 @app.route("/")
 def home():
     db = ensure_connection_or_500()
+    current_employee_name = (session.get("employee_name") or "").strip()
+    normalized_current_employee_name = " ".join(current_employee_name.lower().split())
+
     jobs_list = [
         serialize_doc(job)
         for job in db.jobs.find().sort([("scheduled_date", 1), ("date_created", -1)])
     ]
+    employees = [
+        serialize_doc(employee)
+        for employee in db.employees.find().sort([("last_name", 1), ("first_name", 1)])
+    ]
+    employee_filters = []
+    for employee in employees:
+        full_name = f"{employee.get('first_name', '').strip()} {employee.get('last_name', '').strip()}".strip()
+        if not full_name:
+            continue
+        normalized_full_name = " ".join(full_name.lower().split())
+        employee_filters.append(
+            {
+                "label": full_name,
+                "value": full_name.lower().replace(" ", "-"),
+                "checked": normalized_full_name == normalized_current_employee_name,
+            }
+        )
 
     invoice_page_raw = request.args.get("invoice_page", "1")
     try:
@@ -190,6 +331,7 @@ def home():
     return render_template(
         "index.html",
         jobs=jobs_list,
+        employee_filters=employee_filters,
         invoices=invoices,
         invoice_page=invoice_page,
         invoices_total_pages=invoices_total_pages,
@@ -307,6 +449,117 @@ def delete_customer(customerId):
     return redirect(url_for("customers"))
 
 
+@app.route("/employees")
+def employees():
+    db = ensure_connection_or_500()
+    employees_list = [
+        serialize_doc(employee)
+        for employee in db.employees.find().sort([("last_name", 1), ("first_name", 1)])
+    ]
+    return render_template("pages/employees.html", employees=employees_list)
+
+
+@app.route("/employees/add", methods=["GET", "POST"])
+def add_employee():
+    db = ensure_connection_or_500()
+    if request.method == "POST":
+        first_name = request.form.get("first_name", "").strip()
+        last_name = request.form.get("last_name", "").strip()
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+
+        if first_name and last_name and username and password:
+            employee_count = db.employees.count_documents({}) + 1
+            employee = {
+                "first_name": first_name,
+                "last_name": last_name,
+                "username": username,
+                "password": password,
+                "phone": request.form.get("phone", "").strip(),
+                "email": request.form.get("email", "").strip(),
+                "position": request.form.get("position", "").strip(),
+                "bio": request.form.get("bio", "").strip(),
+                "status": request.form.get("status", "").strip() or "active",
+                "date_added": datetime.now().strftime("%m/%d/%Y"),
+                "employee_id": f"EMP-{employee_count:05d}",
+            }
+            inserted = db.employees.insert_one(employee)
+            return redirect(url_for("view_employee", employeeId=str(inserted.inserted_id)))
+
+    return render_template("pages/add_employee.html")
+
+
+@app.route("/employees/<employeeId>")
+def view_employee(employeeId):
+    db = ensure_connection_or_500()
+    employee = db.employees.find_one({"_id": object_id_or_404(employeeId)})
+    if not employee:
+        return redirect(url_for("employees"))
+
+    return render_template(
+        "pages/view_employee.html",
+        employeeId=employeeId,
+        employee=serialize_doc(employee),
+    )
+
+
+@app.route("/employees/<employeeId>/update", methods=["GET", "POST"])
+def update_employee(employeeId):
+    db = ensure_connection_or_500()
+    employee = db.employees.find_one({"_id": object_id_or_404(employeeId)})
+    if not employee:
+        return redirect(url_for("employees"))
+
+    if request.method == "POST":
+        first_name = request.form.get("first_name", "").strip()
+        last_name = request.form.get("last_name", "").strip()
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+
+        if not first_name or not last_name or not username or not password:
+            return render_template(
+                "pages/update_employee.html",
+                employeeId=employeeId,
+                employee=serialize_doc(employee),
+                error="First name, last name, username, and password are required.",
+            )
+
+        update_data = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "username": username,
+            "password": password,
+            "phone": request.form.get("phone", "").strip(),
+            "email": request.form.get("email", "").strip(),
+            "position": request.form.get("position", "").strip(),
+            "bio": request.form.get("bio", "").strip(),
+            "status": request.form.get("status", "").strip() or "active",
+        }
+
+        db.employees.update_one({"_id": ObjectId(employeeId)}, {"$set": update_data})
+        return redirect(url_for("view_employee", employeeId=employeeId))
+
+    return render_template(
+        "pages/update_employee.html",
+        employeeId=employeeId,
+        employee=serialize_doc(employee),
+        error="",
+    )
+
+
+@app.route("/employees/<employeeId>/delete", methods=["POST"])
+def delete_employee(employeeId):
+    db = ensure_connection_or_500()
+    employee_oid = object_id_or_404(employeeId)
+    employee = db.employees.find_one({"_id": employee_oid})
+    if not employee:
+        return redirect(url_for("employees"))
+
+    db.employees.delete_one({"_id": employee_oid})
+
+    return redirect(url_for("employees"))
+
+
 @app.route("/jobs")
 def jobs():
     db = ensure_connection_or_500()
@@ -347,6 +600,110 @@ def manage_parts():
         "pages/manage_parts.html",
         parts=parts,
     )
+
+
+@app.route("/business")
+def business_profile():
+    db = ensure_connection_or_500()
+
+    employee_id = session.get("employee_id")
+    if not employee_id or not ObjectId.is_valid(employee_id):
+        session.clear()
+        return redirect(url_for("login"))
+
+    employee = db.employees.find_one({"_id": ObjectId(employee_id)})
+    if not employee:
+        session.clear()
+        return redirect(url_for("login"))
+
+    business_ref = employee.get("business")
+    if not business_ref:
+        return redirect(url_for("error_page", error="no_business"))
+
+    business_oid = None
+    if isinstance(business_ref, ObjectId):
+        business_oid = business_ref
+    elif isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
+        business_oid = ObjectId(business_ref)
+
+    if not business_oid:
+        return redirect(url_for("error_page", error="no_business"))
+
+    # Get the business profile for the logged-in employee's assigned business
+    business = db.businesses.find_one({"_id": business_oid})
+
+    if not business:
+        return redirect(url_for("error_page", error="no_business"))
+
+    business = serialize_doc(business)
+
+    return render_template("pages/business_profile.html", business=business)
+
+
+@app.route("/business/update", methods=["GET", "POST"])
+def update_business():
+    db = ensure_connection_or_500()
+
+    employee_id = session.get("employee_id")
+    if not employee_id or not ObjectId.is_valid(employee_id):
+        session.clear()
+        return redirect(url_for("login"))
+
+    employee = db.employees.find_one({"_id": ObjectId(employee_id)})
+    if not employee:
+        session.clear()
+        return redirect(url_for("login"))
+
+    business_ref = employee.get("business")
+    if not business_ref:
+        return redirect(url_for("error_page", error="no_business"))
+
+    business_oid = None
+    if isinstance(business_ref, ObjectId):
+        business_oid = business_ref
+    elif isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
+        business_oid = ObjectId(business_ref)
+
+    if not business_oid:
+        return redirect(url_for("error_page", error="no_business"))
+
+    if request.method == "POST":
+        company_name = request.form.get("company_name", "").strip()
+        tax_rate = request.form.get("tax_rate", "0").strip()
+        quote_email_template = request.form.get("quote_email_template", "").strip()
+        invoice_email_template = request.form.get("invoice_email_template", "").strip()
+
+        db.businesses.update_one(
+            {"_id": business_oid},
+            {
+                "$set": {
+                    "company_name": company_name,
+                    "tax_rate": tax_rate,
+                    "quote_email_template": quote_email_template,
+                    "invoice_email_template": invoice_email_template,
+                }
+            },
+        )
+
+        return redirect(url_for("business_profile"))
+
+    business = db.businesses.find_one({"_id": business_oid})
+    if not business:
+        return redirect(url_for("error_page", error="no_business"))
+
+    business = serialize_doc(business)
+    return render_template("pages/update_business.html", business=business)
+
+
+@app.route("/error")
+def error_page():
+    error_type = request.args.get("error", "unknown")
+    error_messages = {
+        "no_business": "No business onboarded for logged in employee",
+        "unknown": "An error occurred"
+    }
+    error_message = error_messages.get(error_type, error_messages["unknown"])
+    return render_template("pages/error.html", error_message=error_message)
 
 
 @app.route("/parts/create", methods=["GET", "POST"])
@@ -433,14 +790,51 @@ def view_customer(customerId):
     if not customer:
         return redirect(url_for("customers"))
 
+    jobs_page_raw = request.args.get("jobs_page", "1")
+    payments_page_raw = request.args.get("payments_page", "1")
+
+    try:
+        jobs_page = max(1, int(jobs_page_raw))
+    except ValueError:
+        jobs_page = 1
+
+    try:
+        payments_page = max(1, int(payments_page_raw))
+    except ValueError:
+        payments_page = 1
+
+    jobs_per_page = 5
+    payments_per_page = 5
+
+    customer_jobs_total = db.jobs.count_documents({"customer_id": customerId})
+    customer_jobs_total_pages = (customer_jobs_total + jobs_per_page - 1) // jobs_per_page
+    if customer_jobs_total_pages == 0:
+        jobs_page = 1
+    elif jobs_page > customer_jobs_total_pages:
+        jobs_page = customer_jobs_total_pages
+
+    customer_payments_total = db.payments.count_documents({"customer_id": customerId})
+    customer_payments_total_pages = (customer_payments_total + payments_per_page - 1) // payments_per_page
+    if customer_payments_total_pages == 0:
+        payments_page = 1
+    elif payments_page > customer_payments_total_pages:
+        payments_page = customer_payments_total_pages
+
     customer_pages = {
-        "estimates": 1,
-        "jobs": 1,
-        "payments": 1,
+        "jobs": jobs_page,
+        "payments": payments_page,
     }
+
+    jobs_skip = (jobs_page - 1) * jobs_per_page
     customer_jobs = [
         serialize_doc(job)
-        for job in db.jobs.find({"customer_id": customerId}).sort("scheduled_date", -1).limit(5)
+        for job in db.jobs.find({"customer_id": customerId}).sort("scheduled_date", -1).skip(jobs_skip).limit(jobs_per_page)
+    ]
+
+    payments_skip = (payments_page - 1) * payments_per_page
+    customer_payments = [
+        serialize_doc(payment)
+        for payment in db.payments.find({"customer_id": customerId}).sort([("date", -1), ("_id", -1)]).skip(payments_skip).limit(payments_per_page)
     ]
 
     return render_template(
@@ -449,6 +843,9 @@ def view_customer(customerId):
         customer=serialize_doc(customer),
         customer_pages=customer_pages,
         customer_jobs=customer_jobs,
+        customer_jobs_total_pages=customer_jobs_total_pages,
+        customer_payments=customer_payments,
+        customer_payments_total_pages=customer_payments_total_pages,
     )
 
 
@@ -460,11 +857,11 @@ def create_job(customerId):
         return redirect(url_for("customers"))
 
     if request.method == "POST":
-        selected_service_types = [s.strip() for s in request.form.getlist("service_type[]") if s.strip()]
-        entered_service_prices = [normalize_currency(p) for p in request.form.getlist("service_price[]") if p.strip()]
-        entered_service_durations = [normalize_duration(d) for d in request.form.getlist("service_duration[]") if d.strip()]
-        selected_part_names = [p.strip() for p in request.form.getlist("part_name[]") if p.strip()]
-        entered_part_prices = [normalize_currency(p) for p in request.form.getlist("part_price[]") if p.strip()]
+        selected_service_types = request.form.getlist("service_type[]")
+        entered_service_prices = request.form.getlist("service_price[]")
+        entered_service_durations = request.form.getlist("service_duration[]")
+        selected_part_names = request.form.getlist("part_name[]")
+        entered_part_prices = request.form.getlist("part_price[]")
         service_docs = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
         part_docs = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
         service_catalog = build_service_catalog(service_docs)
@@ -482,7 +879,7 @@ def create_job(customerId):
         )
         total = services_total + parts_total
         
-        primary_service = selected_service_types[0] if selected_service_types else "General Service"
+        primary_service = services[0]["type"] if services else "General Service"
         is_estimate = request.form.get("job_is_estimate", "no").strip().lower() == "yes"
         job_status = "Estimate" if is_estimate else "Scheduled"
 
@@ -532,6 +929,26 @@ def view_job(jobId):
     if not job:
         return redirect(url_for("jobs"))
 
+    quote_email_template = ""
+    invoice_email_template = ""
+
+    employee_id = session.get("employee_id")
+    if employee_id and ObjectId.is_valid(employee_id):
+        employee = db.employees.find_one({"_id": ObjectId(employee_id)})
+        if employee:
+            business_ref = employee.get("business")
+            business_oid = None
+            if isinstance(business_ref, ObjectId):
+                business_oid = business_ref
+            elif isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
+                business_oid = ObjectId(business_ref)
+
+            if business_oid:
+                business = db.businesses.find_one({"_id": business_oid})
+                if business:
+                    quote_email_template = business.get("quote_email_template", "")
+                    invoice_email_template = business.get("invoice_email_template", "")
+
     customer = {}
     customer_id = job.get("customer_id")
     if customer_id and ObjectId.is_valid(customer_id):
@@ -550,6 +967,8 @@ def view_job(jobId):
         job=serialize_doc(job),
         customer=customer,
         estimates=estimates,
+        quote_email_template=quote_email_template,
+        invoice_email_template=invoice_email_template,
     )
 
 
@@ -577,8 +996,11 @@ def complete_job(jobId):
 
     customer = {}
     customer_id = job.get("customer_id")
+    customer_oid = None
+    customer_doc = None
     if customer_id and ObjectId.is_valid(customer_id):
-        customer_doc = db.customers.find_one({"_id": ObjectId(customer_id)})
+        customer_oid = ObjectId(customer_id)
+        customer_doc = db.customers.find_one({"_id": customer_oid})
         if customer_doc:
             customer = serialize_doc(customer_doc)
 
@@ -597,6 +1019,20 @@ def complete_job(jobId):
             },
         },
     )
+
+    if customer_oid and customer_doc:
+        current_balance = currency_to_float(customer_doc.get("balance_due", "$0.00"))
+        invoice_total = currency_to_float(job.get("total", "$0.00"))
+        updated_balance = normalize_currency(str(current_balance + invoice_total))
+
+        db.customers.update_one(
+            {"_id": customer_oid},
+            {
+                "$set": {
+                    "balance_due": updated_balance,
+                }
+            },
+        )
 
     return redirect(url_for("view_job", jobId=jobId))
 
@@ -691,11 +1127,11 @@ def update_job(jobId):
         return redirect(url_for("jobs"))
 
     if request.method == "POST":
-        selected_service_types = [s.strip() for s in request.form.getlist("service_type[]") if s.strip()]
-        entered_service_prices = [normalize_currency(p) for p in request.form.getlist("service_price[]") if p.strip()]
-        entered_service_durations = [normalize_duration(d) for d in request.form.getlist("service_duration[]") if d.strip()]
-        selected_part_names = [p.strip() for p in request.form.getlist("part_name[]") if p.strip()]
-        entered_part_prices = [normalize_currency(p) for p in request.form.getlist("part_price[]") if p.strip()]
+        selected_service_types = request.form.getlist("service_type[]")
+        entered_service_prices = request.form.getlist("service_price[]")
+        entered_service_durations = request.form.getlist("service_duration[]")
+        selected_part_names = request.form.getlist("part_name[]")
+        entered_part_prices = request.form.getlist("part_price[]")
         service_docs = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
         part_docs = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
         service_catalog = build_service_catalog(service_docs)
@@ -713,7 +1149,7 @@ def update_job(jobId):
         )
         total = services_total + parts_total
         
-        primary_service = selected_service_types[0] if selected_service_types else job.get("job_type", "General Service")
+        primary_service = services[0]["type"] if services else job.get("job_type", "General Service")
         is_estimate = request.form.get("job_is_estimate", "no").strip().lower() == "yes"
         job_status = "Estimate" if is_estimate else "Scheduled"
 

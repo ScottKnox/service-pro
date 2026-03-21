@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Employees | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-customers-header">
+      <h1>Manage Employees</h1>
+
+      <div id="customers-controls-row">
+        <div class="customers-controls-left">
+          <h2>Search Employees:</h2>
+          <form id="customers-search-form" action="#" method="get">
+            <input
+              id="customers-search-input"
+              name="q"
+              type="search"
+              placeholder="Search by employee name"
+              aria-label="Search employees"
+            />
+            <button type="submit">Submit</button>
+          </form>
+        </div>
+
+        <div class="customers-controls-right">
+          <a href="{{ url_for('add_employee') }}">Add Employee</a>
+        </div>
+      </div>
+
+      <div id="all-customers-title-row">
+        <h2>All Employees</h2>
+      </div>
+
+      <div id="customers-list-grid">
+        {% if employees %}
+          {% for employee in employees %}
+            <a class="customer-card" href="{{ url_for('view_employee', employeeId=employee._id) }}">
+              <div class="customer-card-row">
+                <span class="customer-card-label">First Name</span>
+                <span class="customer-card-value">{{ employee.first_name }}</span>
+              </div>
+              <div class="customer-card-row">
+                <span class="customer-card-label">Last Name</span>
+                <span class="customer-card-value">{{ employee.last_name }}</span>
+              </div>
+              <div class="customer-card-row">
+                <span class="customer-card-label">Phone</span>
+                <span class="customer-card-value">{{ employee.phone }}</span>
+              </div>
+              <div class="customer-card-row">
+                <span class="customer-card-label">Email</span>
+                <span class="customer-card-value">{{ employee.email }}</span>
+              </div>
+              <div class="customer-card-row">
+                <span class="customer-card-label">Position</span>
+                <span class="customer-card-value">{{ employee.position }}</span>
+              </div>
+              <div class="customer-card-row">
+                <span class="customer-card-label">Status</span>
+                <span class="customer-card-value">{{ employee.status }}</span>
+              </div>
+            </a>
+          {% endfor %}
+        {% else %}
+          <p>No employees found. Add your first employee to get started.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

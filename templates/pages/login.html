@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Login | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="add-customer-panel" style="max-width: 500px; margin: 2rem auto;">
+      <h1>Employee Login</h1>
+
+      {% if error %}
+        <div style="padding: 1rem; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; margin: 1rem 0;">
+          <p style="color: #721c24; margin: 0;">{{ error }}</p>
+        </div>
+      {% endif %}
+
+      <form id="login-form" method="post" action="{{ url_for('login') }}">
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="username">Username</label>
+            <input id="username" name="username" type="text" placeholder="Enter your username" required />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" placeholder="Enter your password" required />
+          </div>
+        </div>
+
+        <div id="add-customer-form-actions">
+          <button type="submit">Login</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

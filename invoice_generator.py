@@ -80,8 +80,8 @@ def generate_invoice(job_id, job, customer):
     story.append(invoice_table)
     story.append(Spacer(1, 0.3 * inch))
 
-    # Customer and Job Details section
-    story.append(Paragraph("Customer Information", heading_style))
+    # Customer Information and Service Details - Two Column Layout
+    # Left column - Customer Information
     customer_info = [
         ["Name:", f"{customer.get('first_name', 'N/A')} {customer.get('last_name', 'N/A')}"],
         ["Company:", customer.get("company", "N/A")],
@@ -90,7 +90,7 @@ def generate_invoice(job_id, job, customer):
         ["Address:", f"{customer.get('address_line_1', 'N/A')}"],
         ["", f"{customer.get('city', 'N/A')}, {customer.get('state', 'N/A')}"],
     ]
-    customer_table = Table(customer_info, colWidths=[1.2 * inch, 3.8 * inch])
+    customer_table = Table(customer_info, colWidths=[0.9 * inch, 2.3 * inch])
     customer_table.setStyle(
         TableStyle(
             [
@@ -102,11 +102,8 @@ def generate_invoice(job_id, job, customer):
             ]
         )
     )
-    story.append(customer_table)
-    story.append(Spacer(1, 0.3 * inch))
 
-    # Service Details
-    story.append(Paragraph("Service Details", heading_style))
+    # Right column - Service Details
     service_info = [
         ["Location:", f"{job.get('address_line_1', 'N/A')}"],
         ["", f"{job.get('city', 'N/A')}, {job.get('state', 'N/A')}"],
@@ -115,7 +112,7 @@ def generate_invoice(job_id, job, customer):
         ["Date Created:", job.get("date_created", "N/A")],
         ["Notes:", job.get("notes", "N/A")],
     ]
-    service_table = Table(service_info, colWidths=[1.2 * inch, 3.8 * inch])
+    service_table = Table(service_info, colWidths=[0.9 * inch, 2.3 * inch])
     service_table.setStyle(
         TableStyle(
             [
@@ -127,7 +124,28 @@ def generate_invoice(job_id, job, customer):
             ]
         )
     )
-    story.append(service_table)
+
+    # Two-column wrapper table
+    two_column_data = [
+        [
+            Paragraph("Customer Information", heading_style),
+            Paragraph("Service Details", heading_style),
+        ],
+        [customer_table, service_table],
+    ]
+    two_column_table = Table(two_column_data, colWidths=[3.3 * inch, 3.3 * inch])
+    two_column_table.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+    story.append(two_column_table)
     story.append(Spacer(1, 0.3 * inch))
 
     # Services Breakdown Table
@@ -164,7 +182,7 @@ def generate_invoice(job_id, job, customer):
             if isinstance(part, dict) and 'name' in part and 'price' in part:
                 parts_data.append([part['name'], part['price']])
 
-        parts_breakdown_table = Table(parts_data, colWidths=[3.5 * inch, 1.5 * inch])
+        parts_breakdown_table = Table(parts_data, colWidths=[4.0 * inch, 1.5 * inch])
         parts_breakdown_table.setStyle(
             TableStyle(
                 [
@@ -297,8 +315,8 @@ def generate_quote(job_id, job, customer):
     story.append(quote_table)
     story.append(Spacer(1, 0.3 * inch))
 
-    # Customer and Job Details section
-    story.append(Paragraph("Customer Information", heading_style))
+    # Customer Information and Service Details - Two Column Layout
+    # Left column - Customer Information
     customer_info = [
         ["Name:", f"{customer.get('first_name', 'N/A')} {customer.get('last_name', 'N/A')}"],
         ["Company:", customer.get("company", "N/A")],
@@ -307,7 +325,7 @@ def generate_quote(job_id, job, customer):
         ["Address:", f"{customer.get('address_line_1', 'N/A')}"],
         ["", f"{customer.get('city', 'N/A')}, {customer.get('state', 'N/A')}"],
     ]
-    customer_table = Table(customer_info, colWidths=[1.2 * inch, 3.8 * inch])
+    customer_table = Table(customer_info, colWidths=[0.9 * inch, 2.3 * inch])
     customer_table.setStyle(
         TableStyle(
             [
@@ -319,19 +337,15 @@ def generate_quote(job_id, job, customer):
             ]
         )
     )
-    story.append(customer_table)
-    story.append(Spacer(1, 0.3 * inch))
 
-    # Service Details
-    story.append(Paragraph("Service Details", heading_style))
+    # Right column - Service Details
     service_info = [
         ["Location:", f"{job.get('address_line_1', 'N/A')}"],
         ["", f"{job.get('city', 'N/A')}, {job.get('state', 'N/A')}"],
         ["Assigned Employee:", job.get("assigned_employee", "N/A")],
         ["Scheduled Date:", job.get("scheduled_date", "N/A")],
-        ["Notes:", job.get("notes", "N/A")],
     ]
-    service_table = Table(service_info, colWidths=[1.2 * inch, 3.8 * inch])
+    service_table = Table(service_info, colWidths=[0.9 * inch, 2.3 * inch])
     service_table.setStyle(
         TableStyle(
             [
@@ -343,7 +357,28 @@ def generate_quote(job_id, job, customer):
             ]
         )
     )
-    story.append(service_table)
+
+    # Two-column wrapper table
+    two_column_data = [
+        [
+            Paragraph("Customer Information", heading_style),
+            Paragraph("Service Details", heading_style),
+        ],
+        [customer_table, service_table],
+    ]
+    two_column_table = Table(two_column_data, colWidths=[3.3 * inch, 3.3 * inch])
+    two_column_table.setStyle(
+        TableStyle(
+            [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]
+        )
+    )
+    story.append(two_column_table)
     story.append(Spacer(1, 0.3 * inch))
 
     # Services Breakdown Table
@@ -380,7 +415,7 @@ def generate_quote(job_id, job, customer):
             if isinstance(part, dict) and 'name' in part and 'price' in part:
                 parts_data.append([part['name'], part['price']])
 
-        parts_breakdown_table = Table(parts_data, colWidths=[3.5 * inch, 1.5 * inch])
+        parts_breakdown_table = Table(parts_data, colWidths=[4.0 * inch, 1.5 * inch])
         parts_breakdown_table.setStyle(
             TableStyle(
                 [

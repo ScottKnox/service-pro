@@ -10,22 +10,12 @@
 				<div id="home-jobs-asignee">
 					<span>Assigned to:</span>
 					<div id="home-jobs-assignee-options">
-						<label>
-							<input type="checkbox" name="home-jobs-assignee" value="scott-knox" checked />
-							Scott Knox
-						</label>
-						<label>
-							<input type="checkbox" name="home-jobs-assignee" value="daniel-essary" />
-							Daniel Essary
-						</label>
-						<label>
-							<input type="checkbox" name="home-jobs-assignee" value="andrew-crowder" />
-							Andrew Crowder
-						</label>
-						<label>
-							<input type="checkbox" name="home-jobs-assignee" value="richard-essary" />
-							Richard Essary
-						</label>
+						{% for employee in employee_filters %}
+							<label>
+								<input type="checkbox" name="home-jobs-assignee" value="{{ employee.value }}" {% if employee.checked %}checked{% endif %} />
+								{{ employee.label }}
+							</label>
+						{% endfor %}
 					</div>
 				</div>
                 

@@ -13,6 +13,8 @@
   }
 
   const sendUrl = emailForm.dataset.sendUrl || '';
+  const quoteTemplate = emailForm.dataset.quoteTemplate || '';
+  const invoiceTemplate = emailForm.dataset.invoiceTemplate || '';
   let currentEstimateFile = '';
 
   function openModal() {
@@ -35,10 +37,10 @@
       recipientInput.value = customerEmail;
       if (emailType === 'invoice') {
         subjectInput.value = `Invoice: ${estimateTitle}`;
-        bodyInput.value = `Hi ${customerName},\n\nPlease find attached your invoice.\n\nPlease let us know if you have any questions.\n\nBest regards`;
+        bodyInput.value = invoiceTemplate || `Hi ${customerName},\n\nPlease find attached your invoice.\n\nPlease let us know if you have any questions.\n\nBest regards`;
       } else {
         subjectInput.value = `Estimate: ${estimateTitle}`;
-        bodyInput.value = `Hi ${customerName},\n\nPlease find attached your estimate.\n\nPlease let us know if you have any questions.\n\nBest regards`;
+        bodyInput.value = quoteTemplate || `Hi ${customerName},\n\nPlease find attached your estimate.\n\nPlease let us know if you have any questions.\n\nBest regards`;
       }
 
       currentEstimateFile = estimateFile;

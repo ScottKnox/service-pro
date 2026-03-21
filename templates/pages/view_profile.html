@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="view-customer-panel">
+      <h1>My Profile</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li aria-current="page">My Profile</li>
+        </ol>
+      </nav>
+
+      <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
+        <h2 id="view-customer-actions-header">Actions</h2>
+        <div id="view-customer-actions-row">
+          <a href="{{ url_for('update_profile') }}">Update Profile</a>
+          <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+      </section>
+
+      <section id="view-customer-details" aria-label="Profile details">
+        <h2>Profile Details</h2>
+        <div class="view-customer-section-row" id="view-profile-details-columns">
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>Details</h3>
+            <div id="view-customer-details-list">
+              <div class="view-customer-detail-item">
+                <h4>First Name</h4>
+                <p>{{ employee.first_name|default('') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Last Name</h4>
+                <p>{{ employee.last_name|default('') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Username</h4>
+                <p>{{ employee.username|default('') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Email</h4>
+                <p>{{ employee.email|default('') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Phone</h4>
+                <p>{{ employee.phone|default('') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Position</h4>
+                <p>{{ employee.position|default('') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Status</h4>
+                <p>{{ employee.status|default('') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Bio</h4>
+                <p>{{ employee.bio|default('') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Profile Updated</h4>
+                <p>{{ employee.profile_updated_at|default('N/A') }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}

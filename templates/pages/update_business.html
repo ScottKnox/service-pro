@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Update Business | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="create-job-panel">
+      <h1>Update Business</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li><a href="{{ url_for('admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('business_profile') }}">Business Profile</a></li>
+          <li aria-current="page">Update Business</li>
+        </ol>
+      </nav>
+
+      <form id="business-profile-form" action="{{ url_for('update_business') }}" method="post">
+        <h2 class="create-job-form-section-header">Business Information</h2>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="company-name">Company Name</label>
+            <input id="company-name" name="company_name" type="text" value="{{ business.get('company_name', '') }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="tax-rate">Tax Rate (%)</label>
+            <input id="tax-rate" name="tax_rate" type="number" step="0.01" value="{{ business.get('tax_rate', '0') }}" />
+          </div>
+        </div>
+
+        <h2 class="create-job-form-section-header">Email Templates</h2>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="quote-email-template">Quote Email Template</label>
+            <textarea id="quote-email-template" name="quote_email_template" rows="8" placeholder="Enter the email template text for quotes...">{{ business.get('quote_email_template', '') }}</textarea>
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="invoice-email-template">Invoice Email Template</label>
+            <textarea id="invoice-email-template" name="invoice_email_template" rows="8" placeholder="Enter the email template text for invoices...">{{ business.get('invoice_email_template', '') }}</textarea>
+          </div>
+        </div>
+
+        <div id="add-customer-form-actions">
+          <button type="submit">Save Business Profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

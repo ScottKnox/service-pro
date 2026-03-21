@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Business Profile | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="view-customer-panel">
+      <h1>Business Profile</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li><a href="{{ url_for('admin') }}">Admin</a></li>
+          <li aria-current="page">Business Profile</li>
+        </ol>
+      </nav>
+
+      <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
+        <h2 id="view-customer-actions-header">Actions</h2>
+        <div id="view-customer-actions-row">
+          <a href="{{ url_for('update_business') }}">Update Business</a>
+        </div>
+      </section>
+
+      <section id="view-customer-details" aria-label="Business details">
+        <h2>Business Details</h2>
+        <div class="view-customer-section-row" id="view-profile-details-columns">
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>Details</h3>
+            <div id="view-customer-details-list">
+              <div class="view-customer-detail-item">
+                <h4>Company Name</h4>
+                <p>{{ business.get('business_name', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Tax Rate (%)</h4>
+                <p>{{ business.get('tax_rate', '0') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Quote Email Template</h4>
+                <p>{{ business.get('quote_email_template', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Invoice Email Template</h4>
+                <p>{{ business.get('invoice_email_template', '') }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}

@@ -208,7 +208,13 @@
         <h2>Email Estimate</h2>
         <button class="modal-close-btn" id="modal-close-btn">&times;</button>
       </div>
-      <form id="email-estimate-form" method="POST" data-send-url="{{ url_for('send_estimate_email', jobId=jobId) }}">
+      <form
+        id="email-estimate-form"
+        method="POST"
+        data-send-url="{{ url_for('send_estimate_email', jobId=jobId) }}"
+        data-quote-template="{{ quote_email_template|default('', true)|e }}"
+        data-invoice-template="{{ invoice_email_template|default('', true)|e }}"
+      >
         <div class="form-group">
           <label for="email-recipient">Recipient Email:</label>
           <input type="email" id="email-recipient" name="recipient_email" required readonly class="email-readonly-input">

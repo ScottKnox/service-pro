@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}View Employee | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="view-customer-panel">
+      <h1>{{ employee.first_name }} {{ employee.last_name }}</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('employees') }}">Employees</a></li>
+          <li aria-current="page">View Employee</li>
+        </ol>
+      </nav>
+
+      <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
+        <h2 id="view-customer-actions-header">Actions</h2>
+        <div id="view-customer-actions-row">
+          <a href="{{ url_for('update_employee', employeeId=employeeId) }}">Update Employee</a>
+          <form method="POST" action="{{ url_for('delete_employee', employeeId=employeeId) }}" onsubmit="return confirm('Delete this employee? This cannot be undone.');">
+            <button type="submit">Delete Employee</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="view-customer-details" aria-label="Employee details">
+        <h2>Employee Details</h2>
+        <div class="view-customer-section-row" id="view-employee-details-columns">
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>Details</h3>
+            <div id="view-customer-details-list">
+              <div class="view-customer-detail-item">
+                <h4>First Name</h4>
+                <p>{{ employee.first_name }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Last Name</h4>
+                <p>{{ employee.last_name }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Phone</h4>
+                <p>{{ employee.phone }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Email</h4>
+                <p>{{ employee.email }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Position</h4>
+                <p>{{ employee.position }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Status</h4>
+                <p>{{ employee.status }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Employee ID</h4>
+                <p>{{ employee.employee_id }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Date Added</h4>
+                <p>{{ employee.date_added }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}

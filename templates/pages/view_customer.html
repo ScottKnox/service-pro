@@ -106,14 +106,6 @@
 
         <div class="view-customer-section-row" id="view-customer-estimates-columns">
           <div class="view-customer-section-column view-customer-details-column">
-            <h3>Estimates</h3>
-            <div id="view-customer-estimates-list">
-              <p>No estimates found.</p>
-            </div>
-            {% set active_page = customer_pages.estimates %}
-            {% include "partials/list_pages.html" %}
-          </div>
-          <div class="view-customer-section-column view-customer-details-column">
             <h3>Jobs</h3>
             <div class="view-customer-jobs-list">
               {% if customer_jobs %}
@@ -127,21 +119,37 @@
                 <p>No jobs found for this customer.</p>
               {% endif %}
             </div>
-            {% set active_page = customer_pages.jobs %}
-            {% include "partials/list_pages.html" %}
+            {% if customer_jobs_total_pages|default(0, true) > 0 %}
+              <div class="list-pages">
+                <span>Page:</span>
+                {% for page_num in range(1, customer_jobs_total_pages + 1) %}
+                  <a class="{% if page_num == customer_pages.jobs %}is-active{% endif %}" href="{{ url_for('view_customer', customerId=customerId, jobs_page=page_num, payments_page=customer_pages.payments) }}">{{ page_num }}</a>
+                {% endfor %}
+              </div>
+            {% endif %}
           </div>
-        </div>
-
-        <div class="view-customer-section-row" id="view-customer-account-columns">
           <div class="view-customer-section-column view-customer-details-column">
             <h3>Payments</h3>
             <div class="view-customer-payments-list">
-              <p>No payments found.</p>
+              {% if customer_payments %}
+                {% for payment in customer_payments %}
+                  <a class="view-customer-card-link" href="#">
+                    <h4>{{ payment.date or payment.payment_date or payment.created_at or '' }}</h4>
+                    <p>{{ payment.amount or payment.total or '$0.00' }}</p>
+                  </a>
+                {% endfor %}
+              {% else %}
+                <p>No payments found.</p>
+              {% endif %}
             </div>
-            {% set active_page = customer_pages.payments %}
-            {% include "partials/list_pages.html" %}
-          </div>
-          <div class="view-customer-section-column view-customer-details-column">
+            {% if customer_payments_total_pages|default(0, true) > 0 %}
+              <div class="list-pages">
+                <span>Page:</span>
+                {% for page_num in range(1, customer_payments_total_pages + 1) %}
+                  <a class="{% if page_num == customer_pages.payments %}is-active{% endif %}" href="{{ url_for('view_customer', customerId=customerId, jobs_page=customer_pages.jobs, payments_page=page_num) }}">{{ page_num }}</a>
+                {% endfor %}
+              </div>
+            {% endif %}
           </div>
         </div>
       </section>

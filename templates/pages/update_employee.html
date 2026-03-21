@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Update Employee | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="add-customer-panel">
+      <h1>Update Employee</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('employees') }}">Employees</a></li>
+          <li><a href="{{ url_for('view_employee', employeeId=employeeId) }}">View Employee</a></li>
+          <li aria-current="page">Update Employee</li>
+        </ol>
+      </nav>
+
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
+      <form id="add-customer-form" action="{{ url_for('update_employee', employeeId=employeeId) }}" method="post">
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="employee-first-name">First Name</label>
+            <input id="employee-first-name" name="first_name" type="text" placeholder="First name" value="{{ employee.first_name|default('') }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="employee-last-name">Last Name</label>
+            <input id="employee-last-name" name="last_name" type="text" placeholder="Last name" value="{{ employee.last_name|default('') }}" required />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="employee-username">Username</label>
+            <input id="employee-username" name="username" type="text" placeholder="Username for login" value="{{ employee.username|default('') }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="employee-password">Password</label>
+            <input id="employee-password" name="password" type="password" placeholder="Password for login" value="{{ employee.password|default('') }}" required />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="employee-phone">Phone</label>
+            <input id="employee-phone" name="phone" type="tel" placeholder="(555) 555-5555" value="{{ employee.phone|default('') }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="employee-email">Email</label>
+            <input id="employee-email" name="email" type="email" placeholder="name@example.com" value="{{ employee.email|default('') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="employee-position">Position</label>
+            <input id="employee-position" name="position" type="text" placeholder="Job title or position" value="{{ employee.position|default('') }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="employee-status">Status</label>
+            <input id="employee-status" name="status" type="text" placeholder="Active, inactive, etc." value="{{ employee.status|default('active') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="employee-bio">Bio</label>
+            <textarea id="employee-bio" name="bio" rows="4" placeholder="Short employee profile bio">{{ employee.bio|default('') }}</textarea>
+          </div>
+
+          <div class="add-customer-form-field"></div>
+        </div>
+
+        <div id="add-customer-form-actions">
+          <button type="submit">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

@@ -53,7 +53,59 @@
 
           <div class="add-customer-form-field">
             <label for="job-state">* State</label>
-            <input id="job-state" name="job_state" type="text" value="{{ customer.state }}" required />
+            <select id="job-state" name="job_state" required>
+              <option value="">-- Select a state --</option>
+              <option value="AL" {% if customer.state == 'AL' %}selected{% endif %}>AL</option>
+              <option value="AK" {% if customer.state == 'AK' %}selected{% endif %}>AK</option>
+              <option value="AZ" {% if customer.state == 'AZ' %}selected{% endif %}>AZ</option>
+              <option value="AR" {% if customer.state == 'AR' %}selected{% endif %}>AR</option>
+              <option value="CA" {% if customer.state == 'CA' %}selected{% endif %}>CA</option>
+              <option value="CO" {% if customer.state == 'CO' %}selected{% endif %}>CO</option>
+              <option value="CT" {% if customer.state == 'CT' %}selected{% endif %}>CT</option>
+              <option value="DE" {% if customer.state == 'DE' %}selected{% endif %}>DE</option>
+              <option value="FL" {% if customer.state == 'FL' %}selected{% endif %}>FL</option>
+              <option value="GA" {% if customer.state == 'GA' %}selected{% endif %}>GA</option>
+              <option value="HI" {% if customer.state == 'HI' %}selected{% endif %}>HI</option>
+              <option value="ID" {% if customer.state == 'ID' %}selected{% endif %}>ID</option>
+              <option value="IL" {% if customer.state == 'IL' %}selected{% endif %}>IL</option>
+              <option value="IN" {% if customer.state == 'IN' %}selected{% endif %}>IN</option>
+              <option value="IA" {% if customer.state == 'IA' %}selected{% endif %}>IA</option>
+              <option value="KS" {% if customer.state == 'KS' %}selected{% endif %}>KS</option>
+              <option value="KY" {% if customer.state == 'KY' %}selected{% endif %}>KY</option>
+              <option value="LA" {% if customer.state == 'LA' %}selected{% endif %}>LA</option>
+              <option value="ME" {% if customer.state == 'ME' %}selected{% endif %}>ME</option>
+              <option value="MD" {% if customer.state == 'MD' %}selected{% endif %}>MD</option>
+              <option value="MA" {% if customer.state == 'MA' %}selected{% endif %}>MA</option>
+              <option value="MI" {% if customer.state == 'MI' %}selected{% endif %}>MI</option>
+              <option value="MN" {% if customer.state == 'MN' %}selected{% endif %}>MN</option>
+              <option value="MS" {% if customer.state == 'MS' %}selected{% endif %}>MS</option>
+              <option value="MO" {% if customer.state == 'MO' %}selected{% endif %}>MO</option>
+              <option value="MT" {% if customer.state == 'MT' %}selected{% endif %}>MT</option>
+              <option value="NE" {% if customer.state == 'NE' %}selected{% endif %}>NE</option>
+              <option value="NV" {% if customer.state == 'NV' %}selected{% endif %}>NV</option>
+              <option value="NH" {% if customer.state == 'NH' %}selected{% endif %}>NH</option>
+              <option value="NJ" {% if customer.state == 'NJ' %}selected{% endif %}>NJ</option>
+              <option value="NM" {% if customer.state == 'NM' %}selected{% endif %}>NM</option>
+              <option value="NY" {% if customer.state == 'NY' %}selected{% endif %}>NY</option>
+              <option value="NC" {% if customer.state == 'NC' %}selected{% endif %}>NC</option>
+              <option value="ND" {% if customer.state == 'ND' %}selected{% endif %}>ND</option>
+              <option value="OH" {% if customer.state == 'OH' %}selected{% endif %}>OH</option>
+              <option value="OK" {% if customer.state == 'OK' %}selected{% endif %}>OK</option>
+              <option value="OR" {% if customer.state == 'OR' %}selected{% endif %}>OR</option>
+              <option value="PA" {% if customer.state == 'PA' %}selected{% endif %}>PA</option>
+              <option value="RI" {% if customer.state == 'RI' %}selected{% endif %}>RI</option>
+              <option value="SC" {% if customer.state == 'SC' %}selected{% endif %}>SC</option>
+              <option value="SD" {% if customer.state == 'SD' %}selected{% endif %}>SD</option>
+              <option value="TN" {% if customer.state == 'TN' %}selected{% endif %}>TN</option>
+              <option value="TX" {% if customer.state == 'TX' %}selected{% endif %}>TX</option>
+              <option value="UT" {% if customer.state == 'UT' %}selected{% endif %}>UT</option>
+              <option value="VT" {% if customer.state == 'VT' %}selected{% endif %}>VT</option>
+              <option value="VA" {% if customer.state == 'VA' %}selected{% endif %}>VA</option>
+              <option value="WA" {% if customer.state == 'WA' %}selected{% endif %}>WA</option>
+              <option value="WV" {% if customer.state == 'WV' %}selected{% endif %}>WV</option>
+              <option value="WI" {% if customer.state == 'WI' %}selected{% endif %}>WI</option>
+              <option value="WY" {% if customer.state == 'WY' %}selected{% endif %}>WY</option>
+            </select>
             <span id="error-state" class="form-field-error" style="display:none;">State is required</span>
           </div>
         </div>

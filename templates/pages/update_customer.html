@@ -73,7 +73,59 @@
 
           <div class="add-customer-form-field">
             <label for="customer-state">State</label>
-            <input id="customer-state" name="state" type="text" placeholder="State" maxlength="2" value="{{ customer.state|default('') }}" />
+            <select id="customer-state" name="state">
+              <option value="">-- Select a state --</option>
+              <option value="AL" {% if customer.state|default('') == 'AL' %}selected{% endif %}>AL</option>
+              <option value="AK" {% if customer.state|default('') == 'AK' %}selected{% endif %}>AK</option>
+              <option value="AZ" {% if customer.state|default('') == 'AZ' %}selected{% endif %}>AZ</option>
+              <option value="AR" {% if customer.state|default('') == 'AR' %}selected{% endif %}>AR</option>
+              <option value="CA" {% if customer.state|default('') == 'CA' %}selected{% endif %}>CA</option>
+              <option value="CO" {% if customer.state|default('') == 'CO' %}selected{% endif %}>CO</option>
+              <option value="CT" {% if customer.state|default('') == 'CT' %}selected{% endif %}>CT</option>
+              <option value="DE" {% if customer.state|default('') == 'DE' %}selected{% endif %}>DE</option>
+              <option value="FL" {% if customer.state|default('') == 'FL' %}selected{% endif %}>FL</option>
+              <option value="GA" {% if customer.state|default('') == 'GA' %}selected{% endif %}>GA</option>
+              <option value="HI" {% if customer.state|default('') == 'HI' %}selected{% endif %}>HI</option>
+              <option value="ID" {% if customer.state|default('') == 'ID' %}selected{% endif %}>ID</option>
+              <option value="IL" {% if customer.state|default('') == 'IL' %}selected{% endif %}>IL</option>
+              <option value="IN" {% if customer.state|default('') == 'IN' %}selected{% endif %}>IN</option>
+              <option value="IA" {% if customer.state|default('') == 'IA' %}selected{% endif %}>IA</option>
+              <option value="KS" {% if customer.state|default('') == 'KS' %}selected{% endif %}>KS</option>
+              <option value="KY" {% if customer.state|default('') == 'KY' %}selected{% endif %}>KY</option>
+              <option value="LA" {% if customer.state|default('') == 'LA' %}selected{% endif %}>LA</option>
+              <option value="ME" {% if customer.state|default('') == 'ME' %}selected{% endif %}>ME</option>
+              <option value="MD" {% if customer.state|default('') == 'MD' %}selected{% endif %}>MD</option>
+              <option value="MA" {% if customer.state|default('') == 'MA' %}selected{% endif %}>MA</option>
+              <option value="MI" {% if customer.state|default('') == 'MI' %}selected{% endif %}>MI</option>
+              <option value="MN" {% if customer.state|default('') == 'MN' %}selected{% endif %}>MN</option>
+              <option value="MS" {% if customer.state|default('') == 'MS' %}selected{% endif %}>MS</option>
+              <option value="MO" {% if customer.state|default('') == 'MO' %}selected{% endif %}>MO</option>
+              <option value="MT" {% if customer.state|default('') == 'MT' %}selected{% endif %}>MT</option>
+              <option value="NE" {% if customer.state|default('') == 'NE' %}selected{% endif %}>NE</option>
+              <option value="NV" {% if customer.state|default('') == 'NV' %}selected{% endif %}>NV</option>
+              <option value="NH" {% if customer.state|default('') == 'NH' %}selected{% endif %}>NH</option>
+              <option value="NJ" {% if customer.state|default('') == 'NJ' %}selected{% endif %}>NJ</option>
+              <option value="NM" {% if customer.state|default('') == 'NM' %}selected{% endif %}>NM</option>
+              <option value="NY" {% if customer.state|default('') == 'NY' %}selected{% endif %}>NY</option>
+              <option value="NC" {% if customer.state|default('') == 'NC' %}selected{% endif %}>NC</option>
+              <option value="ND" {% if customer.state|default('') == 'ND' %}selected{% endif %}>ND</option>
+              <option value="OH" {% if customer.state|default('') == 'OH' %}selected{% endif %}>OH</option>
+              <option value="OK" {% if customer.state|default('') == 'OK' %}selected{% endif %}>OK</option>
+              <option value="OR" {% if customer.state|default('') == 'OR' %}selected{% endif %}>OR</option>
+              <option value="PA" {% if customer.state|default('') == 'PA' %}selected{% endif %}>PA</option>
+              <option value="RI" {% if customer.state|default('') == 'RI' %}selected{% endif %}>RI</option>
+              <option value="SC" {% if customer.state|default('') == 'SC' %}selected{% endif %}>SC</option>
+              <option value="SD" {% if customer.state|default('') == 'SD' %}selected{% endif %}>SD</option>
+              <option value="TN" {% if customer.state|default('') == 'TN' %}selected{% endif %}>TN</option>
+              <option value="TX" {% if customer.state|default('') == 'TX' %}selected{% endif %}>TX</option>
+              <option value="UT" {% if customer.state|default('') == 'UT' %}selected{% endif %}>UT</option>
+              <option value="VT" {% if customer.state|default('') == 'VT' %}selected{% endif %}>VT</option>
+              <option value="VA" {% if customer.state|default('') == 'VA' %}selected{% endif %}>VA</option>
+              <option value="WA" {% if customer.state|default('') == 'WA' %}selected{% endif %}>WA</option>
+              <option value="WV" {% if customer.state|default('') == 'WV' %}selected{% endif %}>WV</option>
+              <option value="WI" {% if customer.state|default('') == 'WI' %}selected{% endif %}>WI</option>
+              <option value="WY" {% if customer.state|default('') == 'WY' %}selected{% endif %}>WY</option>
+            </select>
           </div>
         </div>
 
@@ -85,7 +137,10 @@
 
           <div class="add-customer-form-field">
             <label for="customer-status">Customer Status</label>
-            <input id="customer-status" name="customer_status" type="text" placeholder="Lead, active, inactive, etc." value="{{ customer.customer_status|default('active') }}" />
+            <select id="customer-status" name="customer_status">
+              <option value="Lead" {% if customer.customer_status|default('active') == 'Lead' %}selected{% endif %}>Lead</option>
+              <option value="active" {% if customer.customer_status|default('active') == 'active' %}selected{% endif %}>Active</option>
+            </select>
           </div>
         </div>
 
