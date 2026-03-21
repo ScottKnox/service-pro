@@ -261,6 +261,11 @@ def update_profile():
 @app.route("/")
 def home():
     db = ensure_connection_or_500()
+    is_logged_in = bool(session.get("employee_id"))
+
+    if not is_logged_in:
+        return render_template("index.html", is_logged_in=False)
+
     current_employee_name = (session.get("employee_name") or "").strip()
     normalized_current_employee_name = " ".join(current_employee_name.lower().split())
 
@@ -330,6 +335,7 @@ def home():
 
     return render_template(
         "index.html",
+        is_logged_in=True,
         jobs=jobs_list,
         employee_filters=employee_filters,
         invoices=invoices,

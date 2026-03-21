@@ -1,6 +1,7 @@
 <header id="header">
   <div id="header-container">
     <h1>Steady Work</h1>
+    {% if session.get('employee_id') %}
     <button
       id="mobile-nav-toggle"
       type="button"
@@ -23,6 +24,7 @@
         {% endif %}
       </ul>
     </nav>
+    {% endif %}
     {% if session.get('employee_id') and session.get('employee_name') %}
       <a href="{{ url_for('view_profile') }}" id="employee-greeting-link">Hello, {{ session.get('employee_name') }}</a>
     {% else %}

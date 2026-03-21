@@ -3,6 +3,17 @@
 {% block title %}Home | Steady Work{% endblock %}
 
 {% block content %}
+	{% if not is_logged_in %}
+	<div id="main-container">
+		<div class="view-customer-detail-container" style="max-width: 720px; margin: 2rem auto; text-align: center;">
+			<h1>Welcome to Steady Work</h1>
+			<p>Log in to access your jobs, customers, schedules, and invoices.</p>
+			<div id="view-customer-actions-row" style="justify-content: center; margin-top: 1rem;">
+				<a href="{{ url_for('login') }}">Login</a>
+			</div>
+		</div>
+	</div>
+	{% else %}
 	<div id="main-container">
 		<div class="home-scheduling-row">
 			<div class="home-jobs-column">
@@ -143,8 +154,11 @@
 			</div>
 		</div>
 	</div>
+	{% endif %}
 {% endblock %}
 
 {% block scripts %}
+	{% if is_logged_in %}
 	<script src="{{ url_for('static', filename='js/home.js') }}" defer></script>
+	{% endif %}
 {% endblock %}
