@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Add Equipment | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="add-customer-panel">
+      <h1>Add Equipment</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li aria-current="page">Add Equipment</li>
+        </ol>
+      </nav>
+
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
+      <form id="add-customer-form" action="{{ url_for('add_equipment', customerId=customerId) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="equipment-name">Equipment Name</label>
+            <input id="equipment-name" name="equipment_name" type="text" placeholder="Equipment name" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="equipment-serial-number">Serial Number</label>
+            <input id="equipment-serial-number" name="serial_number" type="text" placeholder="Serial number" required />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="equipment-brand">Brand</label>
+            <select id="equipment-brand" name="brand" required>
+              <option value="Goodman" selected>Goodman</option>
+            </select>
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="equipment-location">Equipment Location</label>
+            <select id="equipment-location" name="equipment_location">
+              <option value="">-- Select a location --</option>
+              <option value="Attic">Attic</option>
+              <option value="Basement">Basement</option>
+              <option value="Closet">Closet</option>
+              <option value="Garage">Garage</option>
+              <option value="Hallway">Hallway</option>
+              <option value="Outdoor Unit">Outdoor Unit</option>
+              <option value="Roof">Roof</option>
+              <option value="Utility Room">Utility Room</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="add-customer-form-actions">
+          <button type="submit">Save Equipment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

@@ -16,6 +16,7 @@
       </nav>
 
       <form id="create-job-form" action="{{ url_for('update_job', jobId=jobId) }}" method="post" data-services-catalog='{{ services_catalog_json|safe }}' data-parts-catalog='{{ parts_catalog_json|safe }}'>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Client Details</h2>
 
         <div class="add-customer-form-row">

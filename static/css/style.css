@@ -1085,6 +1085,14 @@ p {
   border-right: 0;
 }
 
+#view-equipment-details-columns {
+  grid-template-columns: 1fr;
+}
+
+#view-equipment-details-columns .view-customer-section-column:first-child {
+  border-right: 0;
+}
+
 #view-customer-account-columns {
   margin-top: 1rem;
 }

@@ -17,6 +17,7 @@
       </nav>
 
       <form id="business-profile-form" action="{{ url_for('update_business') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Business Information</h2>
 
         <div class="add-customer-form-row">

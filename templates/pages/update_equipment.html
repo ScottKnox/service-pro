@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Update Equipment | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="add-customer-panel">
+      <h1>Update Equipment</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li><a href="{{ url_for('view_equipment', customerId=customerId, equipmentId=equipmentId) }}">View Equipment</a></li>
+          <li aria-current="page">Update Equipment</li>
+        </ol>
+      </nav>
+
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
+      <form id="add-customer-form" action="{{ url_for('update_equipment', customerId=customerId, equipmentId=equipmentId) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="equipment-name">Equipment Name</label>
+            <input id="equipment-name" name="equipment_name" type="text" value="{{ equipment.equipment_name|default('') }}" placeholder="Equipment name" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="equipment-serial-number">Serial Number</label>
+            <input id="equipment-serial-number" name="serial_number" type="text" value="{{ equipment.serial_number|default('') }}" placeholder="Serial number" required />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="equipment-brand">Brand</label>
+            <select id="equipment-brand" name="brand" required>
+              <option value="Goodman" {% if equipment.brand|default('') == 'Goodman' %}selected{% endif %}>Goodman</option>
+            </select>
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="equipment-location">Equipment Location</label>
+            <select id="equipment-location" name="equipment_location">
+              <option value="" {% if equipment.equipment_location|default('') == '' %}selected{% endif %}>-- Select a location --</option>
+              <option value="Attic" {% if equipment.equipment_location|default('') == 'Attic' %}selected{% endif %}>Attic</option>
+              <option value="Basement" {% if equipment.equipment_location|default('') == 'Basement' %}selected{% endif %}>Basement</option>
+              <option value="Closet" {% if equipment.equipment_location|default('') == 'Closet' %}selected{% endif %}>Closet</option>
+              <option value="Garage" {% if equipment.equipment_location|default('') == 'Garage' %}selected{% endif %}>Garage</option>
+              <option value="Hallway" {% if equipment.equipment_location|default('') == 'Hallway' %}selected{% endif %}>Hallway</option>
+              <option value="Outdoor Unit" {% if equipment.equipment_location|default('') == 'Outdoor Unit' %}selected{% endif %}>Outdoor Unit</option>
+              <option value="Roof" {% if equipment.equipment_location|default('') == 'Roof' %}selected{% endif %}>Roof</option>
+              <option value="Utility Room" {% if equipment.equipment_location|default('') == 'Utility Room' %}selected{% endif %}>Utility Room</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="add-customer-form-actions">
+          <button type="submit">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

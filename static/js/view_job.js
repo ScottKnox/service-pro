@@ -68,11 +68,13 @@
     const recipient = recipientInput.value;
     const subject = subjectInput.value;
     const body = bodyInput.value;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
     fetch(sendUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken,
       },
       body: JSON.stringify({
         recipient_email: recipient,

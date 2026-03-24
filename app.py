@@ -5,6 +5,8 @@ import json
 from bson import ObjectId
 from flask import Flask, abort, redirect, render_template, request, send_file, url_for, jsonify, session
 from flask_mail import Mail, Message
+from flask_wtf.csrf import CSRFProtect
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from invoice_generator import generate_invoice
 from mongo import ensure_connection_or_500, object_id_or_404, serialize_doc
@@ -12,7 +14,10 @@ from mongo import ensure_connection_or_500, object_id_or_404, serialize_doc
 app = Flask(__name__)
 
 # Session Configuration
-app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+_secret_key = os.getenv('SECRET_KEY')
+if not _secret_key:
+    raise RuntimeError("SECRET_KEY environment variable is not set")
+app.secret_key = _secret_key
 
 # Flask-Mail Configuration
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
@@ -23,6 +28,18 @@ app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 
 mail = Mail(app)
+csrf = CSRFProtect(app)
+
+
+@app.before_request
+def require_login():
+    """Redirect unauthenticated users to login for all protected endpoints."""
+    open_endpoints = {'login', 'logout', 'static', 'home', 'error_page'}
+    if request.endpoint not in open_endpoints:
+        employee_id = session.get("employee_id")
+        if not employee_id or not ObjectId.is_valid(employee_id):
+            session.clear()
+            return redirect(url_for("login"))
 
 
 def normalize_currency(value: str) -> str:
@@ -177,9 +194,7 @@ def login():
             # Find employee by username
             employee = db.employees.find_one({"username": username})
             
-            if not employee:
-                error = "Invalid username or password."
-            elif employee.get("password") != password:
+            if not employee or not check_password_hash(employee.get("password", ""), password):
                 error = "Invalid username or password."
             else:
                 # Login successful - set session
@@ -201,11 +216,6 @@ def logout():
 def view_profile():
     db = ensure_connection_or_500()
     employee_id = session.get("employee_id")
-
-    if not employee_id or not ObjectId.is_valid(employee_id):
-        session.clear()
-        return redirect(url_for("login"))
-
     employee = db.employees.find_one({"_id": ObjectId(employee_id)})
     if not employee:
         session.clear()
@@ -218,11 +228,6 @@ def view_profile():
 def update_profile():
     db = ensure_connection_or_500()
     employee_id = session.get("employee_id")
-
-    if not employee_id or not ObjectId.is_valid(employee_id):
-        session.clear()
-        return redirect(url_for("login"))
-
     employee = db.employees.find_one({"_id": ObjectId(employee_id)})
     if not employee:
         session.clear()
@@ -449,6 +454,7 @@ def delete_customer(customerId):
 
     db.customers.delete_one({"_id": customer_oid})
     db.jobs.delete_many({"customer_id": customerId})
+    db.equipment.delete_many({"customer_id": customerId})
     if related_job_ids:
         db.estimates.delete_many({"job_id": {"$in": related_job_ids}})
 
@@ -480,7 +486,7 @@ def add_employee():
                 "first_name": first_name,
                 "last_name": last_name,
                 "username": username,
-                "password": password,
+                "password": generate_password_hash(password, method="scrypt"),
                 "phone": request.form.get("phone", "").strip(),
                 "email": request.form.get("email", "").strip(),
                 "position": request.form.get("position", "").strip(),
@@ -522,25 +528,26 @@ def update_employee(employeeId):
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
 
-        if not first_name or not last_name or not username or not password:
+        if not first_name or not last_name or not username:
             return render_template(
                 "pages/update_employee.html",
                 employeeId=employeeId,
                 employee=serialize_doc(employee),
-                error="First name, last name, username, and password are required.",
+                error="First name, last name, and username are required.",
             )
 
         update_data = {
             "first_name": first_name,
             "last_name": last_name,
             "username": username,
-            "password": password,
             "phone": request.form.get("phone", "").strip(),
             "email": request.form.get("email", "").strip(),
             "position": request.form.get("position", "").strip(),
             "bio": request.form.get("bio", "").strip(),
             "status": request.form.get("status", "").strip() or "active",
         }
+        if password:
+            update_data["password"] = generate_password_hash(password, method="scrypt")
 
         db.employees.update_one({"_id": ObjectId(employeeId)}, {"$set": update_data})
         return redirect(url_for("view_employee", employeeId=employeeId))
@@ -613,10 +620,6 @@ def business_profile():
     db = ensure_connection_or_500()
 
     employee_id = session.get("employee_id")
-    if not employee_id or not ObjectId.is_valid(employee_id):
-        session.clear()
-        return redirect(url_for("login"))
-
     employee = db.employees.find_one({"_id": ObjectId(employee_id)})
     if not employee:
         session.clear()
@@ -651,10 +654,6 @@ def update_business():
     db = ensure_connection_or_500()
 
     employee_id = session.get("employee_id")
-    if not employee_id or not ObjectId.is_valid(employee_id):
-        session.clear()
-        return redirect(url_for("login"))
-
     employee = db.employees.find_one({"_id": ObjectId(employee_id)})
     if not employee:
         session.clear()
@@ -798,6 +797,7 @@ def view_customer(customerId):
 
     jobs_page_raw = request.args.get("jobs_page", "1")
     payments_page_raw = request.args.get("payments_page", "1")
+    equipment_page_raw = request.args.get("equipment_page", "1")
 
     try:
         jobs_page = max(1, int(jobs_page_raw))
@@ -809,8 +809,14 @@ def view_customer(customerId):
     except ValueError:
         payments_page = 1
 
+    try:
+        equipment_page = max(1, int(equipment_page_raw))
+    except ValueError:
+        equipment_page = 1
+
     jobs_per_page = 5
     payments_per_page = 5
+    equipment_per_page = 5
 
     customer_jobs_total = db.jobs.count_documents({"customer_id": customerId})
     customer_jobs_total_pages = (customer_jobs_total + jobs_per_page - 1) // jobs_per_page
@@ -826,9 +832,17 @@ def view_customer(customerId):
     elif payments_page > customer_payments_total_pages:
         payments_page = customer_payments_total_pages
 
+    customer_equipment_total = db.equipment.count_documents({"customer_id": customerId})
+    customer_equipment_total_pages = (customer_equipment_total + equipment_per_page - 1) // equipment_per_page
+    if customer_equipment_total_pages == 0:
+        equipment_page = 1
+    elif equipment_page > customer_equipment_total_pages:
+        equipment_page = customer_equipment_total_pages
+
     customer_pages = {
         "jobs": jobs_page,
         "payments": payments_page,
+        "equipment": equipment_page,
     }
 
     jobs_skip = (jobs_page - 1) * jobs_per_page
@@ -842,6 +856,11 @@ def view_customer(customerId):
         serialize_doc(payment)
         for payment in db.payments.find({"customer_id": customerId}).sort([("date", -1), ("_id", -1)]).skip(payments_skip).limit(payments_per_page)
     ]
+    equipment_skip = (equipment_page - 1) * equipment_per_page
+    customer_equipment = [
+        serialize_doc(equipment)
+        for equipment in db.equipment.find({"customer_id": customerId}).sort([("equipment_name", 1), ("_id", -1)]).skip(equipment_skip).limit(equipment_per_page)
+    ]
 
     return render_template(
         "pages/view_customer.html",
@@ -852,7 +871,124 @@ def view_customer(customerId):
         customer_jobs_total_pages=customer_jobs_total_pages,
         customer_payments=customer_payments,
         customer_payments_total_pages=customer_payments_total_pages,
+        customer_equipment=customer_equipment,
+        customer_equipment_total_pages=customer_equipment_total_pages,
     )
+
+
+@app.route("/customers/<customerId>/equipment/add", methods=["GET", "POST"])
+def add_equipment(customerId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers"))
+
+    error = ""
+    if request.method == "POST":
+        equipment_name = request.form.get("equipment_name", "").strip()
+        serial_number = request.form.get("serial_number", "").strip()
+        brand = request.form.get("brand", "").strip()
+        equipment_location = request.form.get("equipment_location", "").strip()
+
+        if not equipment_name:
+            error = "Equipment name is required."
+        elif not serial_number:
+            error = "Serial number is required."
+        elif not brand:
+            error = "Brand is required."
+        else:
+            equipment = {
+                "customer_id": customerId,
+                "equipment_name": equipment_name,
+                "serial_number": serial_number,
+                "brand": brand,
+                "equipment_location": equipment_location,
+            }
+            inserted = db.equipment.insert_one(equipment)
+            return redirect(url_for("view_equipment", customerId=customerId, equipmentId=str(inserted.inserted_id)))
+
+    return render_template(
+        "pages/add_equipment.html",
+        customerId=customerId,
+        customer=serialize_doc(customer),
+        error=error,
+    )
+
+
+@app.route("/customers/<customerId>/equipment/<equipmentId>")
+def view_equipment(customerId, equipmentId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers"))
+
+    equipment = db.equipment.find_one({"_id": object_id_or_404(equipmentId), "customer_id": customerId})
+    if not equipment:
+        return redirect(url_for("view_customer", customerId=customerId))
+
+    return render_template(
+        "pages/view_equipment.html",
+        customerId=customerId,
+        equipmentId=equipmentId,
+        customer=serialize_doc(customer),
+        equipment=serialize_doc(equipment),
+    )
+
+
+@app.route("/customers/<customerId>/equipment/<equipmentId>/update", methods=["GET", "POST"])
+def update_equipment(customerId, equipmentId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers"))
+
+    equipment = db.equipment.find_one({"_id": object_id_or_404(equipmentId), "customer_id": customerId})
+    if not equipment:
+        return redirect(url_for("view_customer", customerId=customerId))
+
+    error = ""
+    if request.method == "POST":
+        equipment_name = request.form.get("equipment_name", "").strip()
+        serial_number = request.form.get("serial_number", "").strip()
+        brand = request.form.get("brand", "").strip()
+        equipment_location = request.form.get("equipment_location", "").strip()
+
+        if not equipment_name:
+            error = "Equipment name is required."
+        elif not serial_number:
+            error = "Serial number is required."
+        elif not brand:
+            error = "Brand is required."
+        else:
+            update_data = {
+                "equipment_name": equipment_name,
+                "serial_number": serial_number,
+                "brand": brand,
+                "equipment_location": equipment_location,
+            }
+
+            db.equipment.update_one({"_id": ObjectId(equipmentId), "customer_id": customerId}, {"$set": update_data})
+            return redirect(url_for("view_equipment", customerId=customerId, equipmentId=equipmentId))
+
+    return render_template(
+        "pages/update_equipment.html",
+        customerId=customerId,
+        equipmentId=equipmentId,
+        customer=serialize_doc(customer),
+        equipment=serialize_doc(equipment),
+        error=error,
+    )
+
+
+@app.route("/customers/<customerId>/equipment/<equipmentId>/delete", methods=["POST"])
+def delete_equipment(customerId, equipmentId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers"))
+
+    db.equipment.delete_one({"_id": object_id_or_404(equipmentId), "customer_id": customerId})
+    return redirect(url_for("view_customer", customerId=customerId))
 
 
 @app.route("/customers/<customerId>/jobs/create", methods=["GET", "POST"])

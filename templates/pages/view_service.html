@@ -20,6 +20,7 @@
         <div id="view-service-actions-row">
           <a href="#">Update Service</a>
           <form method="POST" action="{{ url_for('delete_service', serviceId=serviceId) }}" onsubmit="return confirm('Are you sure you want to delete this service?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Delete Service</button>
           </form>
         </div>

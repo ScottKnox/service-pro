@@ -16,6 +16,7 @@
       </nav>
 
       <form id="create-part-form" action="{{ url_for('create_part') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Part Details</h2>
 
         <div class="add-customer-form-row">

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}View Equipment | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="view-customer-panel">
+      <h1>{{ equipment.equipment_name }}</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li aria-current="page">View Equipment</li>
+        </ol>
+      </nav>
+
+      <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
+        <h2 id="view-customer-actions-header">Actions</h2>
+        <div id="view-customer-actions-row">
+          <a href="{{ url_for('update_equipment', customerId=customerId, equipmentId=equipmentId) }}">Update Equipment</a>
+          <form method="POST" action="{{ url_for('delete_equipment', customerId=customerId, equipmentId=equipmentId) }}" onsubmit="return confirm('Delete this equipment? This cannot be undone.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit">Delete Equipment</button>
+          </form>
+          <a href="{{ url_for('view_customer', customerId=customerId) }}">Back to Customer</a>
+        </div>
+      </section>
+
+      <section id="view-customer-details" aria-label="Equipment details">
+        <h2>Equipment Details</h2>
+        <div class="view-customer-section-row" id="view-equipment-details-columns">
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>Details</h3>
+            <div id="view-customer-details-list">
+              <div class="view-customer-detail-item">
+                <h4>Equipment Name</h4>
+                <p>{{ equipment.equipment_name }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Serial Number</h4>
+                <p>{{ equipment.serial_number or '-' }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Brand</h4>
+                <p>{{ equipment.brand or '-' }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Equipment Location</h4>
+                <p>{{ equipment.equipment_location or '-' }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}

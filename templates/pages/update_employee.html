@@ -20,6 +20,7 @@
       {% endif %}
 
       <form id="add-customer-form" action="{{ url_for('update_employee', employeeId=employeeId) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="employee-first-name">First Name</label>
@@ -39,8 +40,8 @@
           </div>
 
           <div class="add-customer-form-field">
-            <label for="employee-password">Password</label>
-            <input id="employee-password" name="password" type="password" placeholder="Password for login" value="{{ employee.password|default('') }}" required />
+            <label for="employee-password">New Password</label>
+            <input id="employee-password" name="password" type="password" placeholder="Leave blank to keep current password" />
           </div>
         </div>
 
