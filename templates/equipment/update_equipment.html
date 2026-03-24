@@ -9,9 +9,9 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('customers') }}">Customers</a></li>
-          <li><a href="{{ url_for('view_customer', customerId=customerId) }}">View Customer</a></li>
-          <li><a href="{{ url_for('view_equipment', customerId=customerId, equipmentId=equipmentId) }}">View Equipment</a></li>
+          <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li><a href="{{ url_for('customers.view_equipment', customerId=customerId, equipmentId=equipmentId) }}">View Equipment</a></li>
           <li aria-current="page">Update Equipment</li>
         </ol>
       </nav>
@@ -20,7 +20,7 @@
         <p class="form-field-error">{{ error }}</p>
       {% endif %}
 
-      <form id="add-customer-form" action="{{ url_for('update_equipment', customerId=customerId, equipmentId=equipmentId) }}" method="post">
+      <form id="add-customer-form" action="{{ url_for('customers.update_equipment', customerId=customerId, equipmentId=equipmentId) }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">

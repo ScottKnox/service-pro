@@ -10,7 +10,7 @@
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><a href="{{ url_for('home') }}">Home</a></li>
-          <li><a href="{{ url_for('admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
           <li aria-current="page">Business Profile</li>
         </ol>
       </nav>
@@ -18,7 +18,7 @@
       <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
-          <a href="{{ url_for('update_business') }}">Update Business</a>
+          <a href="{{ url_for('business.update_business') }}">Update Business</a>
         </div>
       </section>
 

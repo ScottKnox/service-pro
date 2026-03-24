@@ -9,12 +9,12 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('employees') }}">Employees</a></li>
+          <li><a href="{{ url_for('employees.employees') }}">Employees</a></li>
           <li aria-current="page">Add Employee</li>
         </ol>
       </nav>
 
-      <form id="add-customer-form" action="{{ url_for('add_employee') }}" method="post">
+      <form id="add-customer-form" action="{{ url_for('employees.add_employee') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
@@ -55,12 +55,20 @@
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="employee-position">Position</label>
-            <input id="employee-position" name="position" type="text" placeholder="Job title or position" />
+            <select id="employee-position" name="position">
+              <option value="">-- Select a position --</option>
+              <option value="Technician">Technician</option>
+              <option value="Clerk">Clerk</option>
+              <option value="Other">Other</option>
+            </select>
           </div>
 
           <div class="add-customer-form-field">
             <label for="employee-status">Status</label>
-            <input id="employee-status" name="status" type="text" placeholder="Active, inactive, etc." />
+            <select id="employee-status" name="status">
+              <option value="Active" selected>Active</option>
+              <option value="Onboarding">Onboarding</option>
+            </select>
           </div>
         </div>
 

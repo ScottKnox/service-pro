@@ -19,22 +19,22 @@
       </div>
 
       <div class="admin-links-grid">
-        <a class="admin-link-card" href="{{ url_for('invoices') }}">
+        <a class="admin-link-card" href="{{ url_for('admin_bp.invoices') }}">
           <h3>Invoices</h3>
           <p>Browse every generated invoice and open the PDF for any completed job.</p>
         </a>
 
-        <a class="admin-link-card" href="{{ url_for('manage_services') }}">
+        <a class="admin-link-card" href="{{ url_for('catalog.manage_services') }}">
           <h3>Manage Services</h3>
           <p>Review service offerings and maintain default service pricing.</p>
         </a>
 
-        <a class="admin-link-card" href="{{ url_for('manage_parts') }}">
+        <a class="admin-link-card" href="{{ url_for('catalog.manage_parts') }}">
           <h3>Manage Parts</h3>
           <p>Maintain the parts catalog and default pricing for offered parts.</p>
         </a>
 
-        <a class="admin-link-card" href="{{ url_for('business_profile') }}">
+        <a class="admin-link-card" href="{{ url_for('business.business_profile') }}">
           <h3>Business</h3>
           <p>Manage business details like tax info, company emails, and more</p>
         </a>

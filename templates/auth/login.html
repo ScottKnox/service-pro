@@ -13,7 +13,7 @@
         </div>
       {% endif %}
 
-      <form id="login-form" method="post" action="{{ url_for('login') }}">
+      <form id="login-form" method="post" action="{{ url_for('auth.login') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">

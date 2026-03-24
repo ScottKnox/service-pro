@@ -9,8 +9,8 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('employees') }}">Employees</a></li>
-          <li><a href="{{ url_for('view_employee', employeeId=employeeId) }}">View Employee</a></li>
+          <li><a href="{{ url_for('employees.employees') }}">Employees</a></li>
+          <li><a href="{{ url_for('employees.view_employee', employeeId=employeeId) }}">View Employee</a></li>
           <li aria-current="page">Update Employee</li>
         </ol>
       </nav>
@@ -19,7 +19,7 @@
         <p class="form-field-error">{{ error }}</p>
       {% endif %}
 
-      <form id="add-customer-form" action="{{ url_for('update_employee', employeeId=employeeId) }}" method="post">
+      <form id="add-customer-form" action="{{ url_for('employees.update_employee', employeeId=employeeId) }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
@@ -60,12 +60,20 @@
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="employee-position">Position</label>
-            <input id="employee-position" name="position" type="text" placeholder="Job title or position" value="{{ employee.position|default('') }}" />
+            <select id="employee-position" name="position">
+              <option value="">-- Select a position --</option>
+              <option value="Technician" {% if employee.position|default('') == 'Technician' %}selected{% endif %}>Technician</option>
+              <option value="Clerk" {% if employee.position|default('') == 'Clerk' %}selected{% endif %}>Clerk</option>
+              <option value="Other" {% if employee.position|default('') == 'Other' %}selected{% endif %}>Other</option>
+            </select>
           </div>
 
           <div class="add-customer-form-field">
             <label for="employee-status">Status</label>
-            <input id="employee-status" name="status" type="text" placeholder="Active, inactive, etc." value="{{ employee.status|default('active') }}" />
+            <select id="employee-status" name="status">
+              <option value="Active" {% if employee.status|default('Active')|lower == 'active' %}selected{% endif %}>Active</option>
+              <option value="Onboarding" {% if employee.status|default('')|lower == 'onboarding' %}selected{% endif %}>Onboarding</option>
+            </select>
           </div>
         </div>
 

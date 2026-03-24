@@ -9,12 +9,12 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
           <li aria-current="page">Add Customer</li>
         </ol>
       </nav>
 
-      <form id="add-customer-form" action="{{ url_for('add_customer') }}" method="post">
+      <form id="add-customer-form" action="{{ url_for('customers.add_customer') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">

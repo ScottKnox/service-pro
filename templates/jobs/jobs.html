@@ -79,7 +79,7 @@
             <div id="jobs-list-grid">
               {% if jobs %}
                 {% for job in jobs %}
-                  <a class="jobs-card" href="{{ url_for('view_job', jobId=job._id) }}">
+                  <a class="jobs-card" href="{{ url_for('jobs.view_job', jobId=job._id) }}">
                     <div class="jobs-card-row">
                       <span class="jobs-card-label">Status</span>
                       <span class="jobs-card-value">{{ job.status }}</span>

@@ -65,6 +65,13 @@
   emailForm.addEventListener('submit', function (e) {
     e.preventDefault();
 
+    const sendBtn = emailForm.querySelector('.modal-send-btn');
+    const originalBtnText = sendBtn ? sendBtn.textContent : '';
+    if (sendBtn) {
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending...';
+    }
+
     const recipient = recipientInput.value;
     const subject = subjectInput.value;
     const body = bodyInput.value;
@@ -87,6 +94,10 @@
         return response.json();
       })
       .then(function (data) {
+        if (sendBtn) {
+          sendBtn.disabled = false;
+          sendBtn.textContent = originalBtnText;
+        }
         if (data.success) {
           alert('Email sent successfully!');
           closeModal();
@@ -96,6 +107,10 @@
         }
       })
       .catch(function (error) {
+        if (sendBtn) {
+          sendBtn.disabled = false;
+          sendBtn.textContent = originalBtnText;
+        }
         console.error('Error:', error);
         alert('Error sending email: ' + error);
       });

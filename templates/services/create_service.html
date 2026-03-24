@@ -9,13 +9,13 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('admin') }}">Admin</a></li>
-          <li><a href="{{ url_for('manage_services') }}">Manage Services</a></li>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('catalog.manage_services') }}">Manage Services</a></li>
           <li aria-current="page">Create Service</li>
         </ol>
       </nav>
 
-      <form id="create-service-form" action="{{ url_for('create_service') }}" method="post">
+      <form id="create-service-form" action="{{ url_for('catalog.create_service') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Service Details</h2>
 

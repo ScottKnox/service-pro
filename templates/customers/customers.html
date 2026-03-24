@@ -23,7 +23,7 @@
         </div>
 
         <div class="customers-controls-right">
-          <a href="{{ url_for('add_customer') }}">Add Customer</a>
+          <a href="{{ url_for('customers.add_customer') }}">Add Customer</a>
         </div>
       </div>
 
@@ -34,7 +34,7 @@
       <div id="customers-list-grid">
         {% if customers %}
           {% for customer in customers %}
-            <a class="customer-card" href="{{ url_for('view_customer', customerId=customer._id) }}">
+            <a class="customer-card" href="{{ url_for('customers.view_customer', customerId=customer._id) }}">
               <div class="customer-card-row">
                 <span class="customer-card-label">First Name</span>
                 <span class="customer-card-value">{{ customer.first_name }}</span>

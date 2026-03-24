@@ -9,12 +9,12 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('jobs') }}">Jobs</a></li>
+          <li><a href="{{ url_for('jobs.jobs') }}">Jobs</a></li>
           <li aria-current="page">Create Job</li>
         </ol>
       </nav>
 
-      <form id="create-job-form" action="{{ url_for('create_job', customerId=customerId) }}" method="post" data-services-catalog='{{ services_catalog_json|safe }}' data-parts-catalog='{{ parts_catalog_json|safe }}'>
+      <form id="create-job-form" action="{{ url_for('jobs.create_job', customerId=customerId) }}" method="post" data-services-catalog='{{ services_catalog_json|safe }}' data-parts-catalog='{{ parts_catalog_json|safe }}'>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="customer_id" value="{{ customerId }}" />
 
@@ -227,5 +227,5 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='js/create_job.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/job_form.js') }}"></script>
 {% endblock %}

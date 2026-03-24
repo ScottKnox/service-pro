@@ -9,8 +9,8 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('admin') }}">Admin</a></li>
-          <li><a href="{{ url_for('manage_parts') }}">Manage Parts</a></li>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('catalog.manage_parts') }}">Manage Parts</a></li>
           <li aria-current="page">View Part</li>
         </ol>
       </nav>
@@ -18,7 +18,7 @@
       <section id="view-service-actions" aria-labelledby="view-service-actions-header">
         <h2 id="view-service-actions-header">Actions</h2>
         <div id="view-service-actions-row">
-          <a href="{{ url_for('manage_parts') }}">Back to Parts</a>
+          <a href="{{ url_for('catalog.manage_parts') }}">Back to Parts</a>
         </div>
       </section>
 

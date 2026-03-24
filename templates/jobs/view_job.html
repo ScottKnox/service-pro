@@ -10,7 +10,7 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('jobs') }}">Jobs</a></li>
+          <li><a href="{{ url_for('jobs.jobs') }}">Jobs</a></li>
           <li aria-current="page">View Job</li>
         </ol>
       </nav>
@@ -19,25 +19,25 @@
         <h2 id="view-job-actions-header">Actions</h2>
         <div id="view-job-actions-row">
           {% if job.status != "Started" and job.status != "Completed" %}
-          <form method="POST" action="{{ url_for('start_job', jobId=jobId) }}">
+          <form method="POST" action="{{ url_for('jobs.start_job', jobId=jobId) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Mark Started</button>
           </form>
           {% endif %}
           {% if job.status != "Completed" and job.status != "Estimate" %}
-          <form method="POST" action="{{ url_for('complete_job', jobId=jobId) }}">
+          <form method="POST" action="{{ url_for('jobs.complete_job', jobId=jobId) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Mark Completed</button>
           </form>
           {% endif %}
           {% if job.status == "Estimate" and not estimates %}
-          <form method="POST" action="{{ url_for('create_quote', jobId=jobId) }}">
+          <form method="POST" action="{{ url_for('jobs.create_quote', jobId=jobId) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Create Quote</button>
           </form>
           {% endif %}
-          <a href="{{ url_for('update_job', jobId=jobId) }}">Update Job</a>
-          <form method="POST" action="{{ url_for('delete_job', jobId=jobId) }}" onsubmit="return confirm('Are you sure you want to delete this job?');">
+          <a href="{{ url_for('jobs.update_job', jobId=jobId) }}">Update Job</a>
+          <form method="POST" action="{{ url_for('jobs.delete_job', jobId=jobId) }}" onsubmit="return confirm('Are you sure you want to delete this job?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Delete Job</button>
           </form>
@@ -215,7 +215,7 @@
       <form
         id="email-estimate-form"
         method="POST"
-        data-send-url="{{ url_for('send_estimate_email', jobId=jobId) }}"
+        data-send-url="{{ url_for('jobs.send_estimate_email', jobId=jobId) }}"
         data-quote-template="{{ quote_email_template|default('', true)|e }}"
         data-invoice-template="{{ invoice_email_template|default('', true)|e }}"
       >

@@ -9,13 +9,13 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('jobs') }}">Jobs</a></li>
-          <li><a href="{{ url_for('view_job', jobId=jobId) }}">View Job</a></li>
+          <li><a href="{{ url_for('jobs.jobs') }}">Jobs</a></li>
+          <li><a href="{{ url_for('jobs.view_job', jobId=jobId) }}">View Job</a></li>
           <li aria-current="page">Update Job</li>
         </ol>
       </nav>
 
-      <form id="create-job-form" action="{{ url_for('update_job', jobId=jobId) }}" method="post" data-services-catalog='{{ services_catalog_json|safe }}' data-parts-catalog='{{ parts_catalog_json|safe }}'>
+      <form id="create-job-form" action="{{ url_for('jobs.update_job', jobId=jobId) }}" method="post" data-services-catalog='{{ services_catalog_json|safe }}' data-parts-catalog='{{ parts_catalog_json|safe }}'>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Client Details</h2>
 
@@ -275,5 +275,5 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='js/update_job.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/job_form.js') }}"></script>
 {% endblock %}

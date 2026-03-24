@@ -9,13 +9,13 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('admin') }}">Admin</a></li>
-          <li><a href="{{ url_for('manage_parts') }}">Manage Parts</a></li>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('catalog.manage_parts') }}">Manage Parts</a></li>
           <li aria-current="page">Create Part</li>
         </ol>
       </nav>
 
-      <form id="create-part-form" action="{{ url_for('create_part') }}" method="post">
+      <form id="create-part-form" action="{{ url_for('catalog.create_part') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Part Details</h2>
 

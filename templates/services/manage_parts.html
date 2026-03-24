@@ -9,7 +9,7 @@
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
           <li aria-current="page">Manage Parts</li>
         </ol>
       </nav>
@@ -17,7 +17,7 @@
       <div class="jobs-controls-right-top">
         <h2>All Parts</h2>
         <div class="jobs-controls-right-actions">
-          <a href="{{ url_for('create_part') }}">Create Part</a>
+          <a href="{{ url_for('catalog.create_part') }}">Create Part</a>
         </div>
       </div>
 

@@ -10,13 +10,13 @@
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><a href="{{ url_for('home') }}">Home</a></li>
-          <li><a href="{{ url_for('admin') }}">Admin</a></li>
-          <li><a href="{{ url_for('business_profile') }}">Business Profile</a></li>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('business.business_profile') }}">Business Profile</a></li>
           <li aria-current="page">Update Business</li>
         </ol>
       </nav>
 
-      <form id="business-profile-form" action="{{ url_for('update_business') }}" method="post">
+      <form id="business-profile-form" action="{{ url_for('business.update_business') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Business Information</h2>
 

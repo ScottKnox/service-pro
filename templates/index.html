@@ -9,7 +9,7 @@
 			<h1>Welcome to Steady Work</h1>
 			<p>Log in to access your jobs, customers, schedules, and invoices.</p>
 			<div id="view-customer-actions-row" style="justify-content: center; margin-top: 1rem;">
-				<a href="{{ url_for('login') }}">Login</a>
+				<a href="{{ url_for('auth.login') }}">Login</a>
 			</div>
 		</div>
 	</div>
@@ -34,7 +34,7 @@
 					{% for job in jobs %}
 					{% set date_parts = job.scheduled_date.split('/') %}
 					{% set job_iso_date = date_parts[2] + '-' + date_parts[0] + '-' + date_parts[1] if date_parts|length == 3 else '' %}
-					<a class="home-job" href="{{ url_for('view_job', jobId=job._id) }}" data-job-date="{{ job_iso_date }}" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
+					<a class="home-job" href="{{ url_for('jobs.view_job', jobId=job._id) }}" data-job-date="{{ job_iso_date }}" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
 						<div class="home-job-top-row">
 							<div class="home-job-cell">{{ job.scheduled_date }} - {{ job.assigned_employee }} Assigned</div>
 						</div>
@@ -102,7 +102,7 @@
 				</div>
 				{% endif %}
 				<div class="home-latest-action">
-					<a class="home-latest-action-link" href="{{ url_for('invoices') }}">Manage Invoices</a>
+					<a class="home-latest-action-link" href="{{ url_for('admin_bp.invoices') }}">Manage Invoices</a>
 				</div>
 				
 			</div>
