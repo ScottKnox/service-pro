@@ -789,6 +789,46 @@ p {
   color: #808080;
 }
 
+#login-form {
+  display: grid;
+  gap: 1.75rem;
+  padding: 2rem;
+  border: 1px solid #C5C7CB;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+}
+
+#login-form .add-customer-form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#login-form .add-customer-form-field {
+  gap: 0.6rem;
+}
+
+#login-form .add-customer-form-field label {
+  font-size: 1.1rem;
+}
+
+#login-form .add-customer-form-field input {
+  padding: 0.85rem 1rem;
+  font-size: 1.05rem;
+  border-radius: 6px;
+}
+
+#login-form #add-customer-form-actions {
+  justify-content: stretch;
+  margin-top: 0;
+}
+
+#login-form #add-customer-form-actions button {
+  width: 100%;
+  padding: 0.85rem 1.1rem;
+  font-size: 1.05rem;
+  border-radius: 6px;
+}
+
 #add-customer-form,
 #create-job-form,
 #create-service-form,
@@ -927,6 +967,7 @@ p {
 #create-service-form-actions {
   display: flex;
   justify-content: flex-end;
+  margin-top: 1.5rem;
 }
 
 #add-customer-form-actions button,

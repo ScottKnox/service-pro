@@ -1,6 +1,6 @@
 <header id="header">
   <div id="header-container">
-    <h1>Steady Work</h1>
+    <h1><a href="{{ url_for('home') }}" class="header-home-link">Steady Work</a></h1>
     {% if session.get('employee_id') %}
     <button
       id="mobile-nav-toggle"
@@ -32,3 +32,13 @@
     {% endif %}
   </div>
 </header>
+
+<style>
+  .header-home-link {
+    text-decoration: none;
+    color: inherit;
+  }
+  .header-home-link:hover {
+    cursor: pointer;
+  }
+</style>

@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 import os
 import json
 
@@ -10,6 +11,10 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from invoice_generator import generate_invoice
 from mongo import ensure_connection_or_500, object_id_or_404, serialize_doc
+from utils.currency import normalize_currency, currency_to_float
+from utils.formatters import format_date, normalize_duration
+from utils.catalog import build_service_catalog, build_part_catalog, build_job_services_from_form, build_job_parts_from_form
+from utils.invoices import collect_invoice_items
 
 app = Flask(__name__)
 
@@ -30,6 +35,25 @@ app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 mail = Mail(app)
 csrf = CSRFProtect(app)
 
+# Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return render_template("error.html", error_message="The page you requested could not be found."), 404
+
+
+@app.errorhandler(500)
+def internal_error(e):
+    logger.error("Internal server error: %s", e)
+    return render_template("error.html", error_message="An internal server error occurred. Please try again later."), 500
+
 
 @app.before_request
 def require_login():
@@ -40,143 +64,6 @@ def require_login():
         if not employee_id or not ObjectId.is_valid(employee_id):
             session.clear()
             return redirect(url_for("login"))
-
-
-def normalize_currency(value: str) -> str:
-    stripped = (value or "").replace("$", "").replace(",", "").strip()
-    if not stripped:
-        return "$0.00"
-    try:
-        return f"${float(stripped):.2f}"
-    except ValueError:
-        return "$0.00"
-
-
-def currency_to_float(value: str) -> float:
-    stripped = (value or "").replace("$", "").replace(",", "").strip()
-    if not stripped:
-        return 0.0
-    try:
-        return float(stripped)
-    except ValueError:
-        return 0.0
-
-
-def normalize_duration(value: str) -> str:
-    return (value or "").strip()
-
-
-def format_date(date_str: str) -> str:
-    if not date_str:
-        return ""
-    try:
-        return datetime.strptime(date_str, "%Y-%m-%d").strftime("%m/%d/%Y")
-    except ValueError:
-        return date_str
-
-
-def collect_invoice_items(db):
-    invoice_items = []
-    jobs_with_invoices = db.jobs.find(
-        {"invoices.0": {"$exists": True}},
-        {"customer_name": 1, "scheduled_date": 1, "invoices": 1, "total": 1, "job_type": 1},
-    ).sort([("scheduled_date", -1), ("_id", -1)])
-
-    for job in jobs_with_invoices:
-        customer_name = job.get("customer_name", "Unknown Customer")
-        scheduled_date = job.get("scheduled_date", "")
-        total = job.get("total", "$0.00")
-        job_type = job.get("job_type", "Service")
-        job_id = str(job.get("_id", ""))
-
-        for invoice in reversed(job.get("invoices", [])):
-            invoice_items.append(
-                {
-                    "invoice_number": invoice.get("invoice_number", "Invoice"),
-                    "file_path": invoice.get("file_path", "#"),
-                    "customer_name": customer_name,
-                    "scheduled_date": scheduled_date,
-                    "total": total,
-                    "job_type": job_type,
-                    "job_id": job_id,
-                }
-            )
-
-    return invoice_items
-
-
-def build_service_catalog(services):
-    return {
-        service["service_type"]: {
-            "price": service.get("service_default_price", "$0.00"),
-            "duration": service.get("service_duration", ""),
-        }
-        for service in services
-    }
-
-
-def build_part_catalog(parts):
-    return {
-        part["part_name"]: {
-            "price": part.get("part_default_price", "$0.00"),
-        }
-        for part in parts
-    }
-
-
-def build_job_services_from_form(service_types, service_prices, service_durations, service_catalog):
-    services = []
-    total = 0.0
-
-    for index, raw_service_type in enumerate(service_types):
-        service_type = (raw_service_type or "").strip()
-        if not service_type:
-            continue
-
-        catalog_entry = service_catalog.get(service_type, {})
-        entered_price = service_prices[index] if index < len(service_prices) else ""
-        entered_duration = service_durations[index] if index < len(service_durations) else ""
-
-        price = entered_price if (entered_price or "").strip() else catalog_entry.get("price", "$0.00")
-        duration = entered_duration if (entered_duration or "").strip() else catalog_entry.get("duration", "")
-        normalized_price = normalize_currency(price)
-        normalized_duration = normalize_duration(duration)
-
-        services.append(
-            {
-                "type": service_type,
-                "price": normalized_price,
-                "duration": normalized_duration,
-            }
-        )
-        total += float(normalized_price.replace("$", "").replace(",", ""))
-
-    return services, total
-
-
-def build_job_parts_from_form(part_names, part_prices, part_catalog):
-    parts = []
-    total = 0.0
-
-    for index, raw_part_name in enumerate(part_names):
-        part_name = (raw_part_name or "").strip()
-        if not part_name:
-            continue
-
-        catalog_entry = part_catalog.get(part_name, {})
-        entered_price = part_prices[index] if index < len(part_prices) else ""
-        price = entered_price if (entered_price or "").strip() else catalog_entry.get("price", "$0.00")
-        normalized_price = normalize_currency(price)
-
-        parts.append(
-            {
-                "name": part_name,
-                "price": normalized_price,
-            }
-        )
-        total += float(normalized_price.replace("$", "").replace(",", ""))
-
-    return parts, total
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -195,19 +82,22 @@ def login():
             employee = db.employees.find_one({"username": username})
             
             if not employee or not check_password_hash(employee.get("password", ""), password):
+                logger.warning("Failed login attempt for username=%r from %s", username, request.remote_addr)
                 error = "Invalid username or password."
             else:
                 # Login successful - set session
                 session["employee_id"] = str(employee["_id"])
                 session["employee_name"] = f"{employee.get('first_name', '')} {employee.get('last_name', '')}".strip()
                 session["employee_position"] = (employee.get("position") or "").strip()
+                logger.info("Login: employee_id=%s username=%r from %s", session["employee_id"], username, request.remote_addr)
                 return redirect(url_for("home"))
     
-    return render_template("pages/login.html", error=error)
+    return render_template("auth/login.html", error=error)
 
 
 @app.route("/logout")
 def logout():
+    logger.info("Logout: employee_id=%s", session.get("employee_id"))
     session.clear()
     return redirect(url_for("login"))
 
@@ -221,7 +111,7 @@ def view_profile():
         session.clear()
         return redirect(url_for("login"))
 
-    return render_template("pages/view_profile.html", employee=serialize_doc(employee))
+    return render_template("profile/view_profile.html", employee=serialize_doc(employee))
 
 
 @app.route("/profile/update", methods=["GET", "POST"])
@@ -260,7 +150,7 @@ def update_profile():
 
             return redirect(url_for("view_profile"))
 
-    return render_template("pages/update_profile.html", employee=serialize_doc(employee), error=error)
+    return render_template("profile/update_profile.html", employee=serialize_doc(employee), error=error)
 
 
 @app.route("/")
@@ -361,7 +251,7 @@ def customers():
         serialize_doc(customer)
         for customer in db.customers.find().sort([("last_name", 1), ("first_name", 1)])
     ]
-    return render_template("pages/customers.html", customers=customers_list)
+    return render_template("customers/customers.html", customers=customers_list)
 
 
 @app.route("/customers/add", methods=["GET", "POST"])
@@ -392,9 +282,10 @@ def add_customer():
                 "account_status": "Current",
             }
             inserted = db.customers.insert_one(customer)
+            logger.info("Customer created: id=%s by employee_id=%s", str(inserted.inserted_id), session.get("employee_id"))
             return redirect(url_for("view_customer", customerId=str(inserted.inserted_id)))
 
-    return render_template("pages/add_customer.html")
+    return render_template("customers/add_customer.html")
 
 
 @app.route("/customers/<customerId>/update", methods=["GET", "POST"])
@@ -410,7 +301,7 @@ def update_customer(customerId):
 
         if not first_name or not last_name:
             return render_template(
-                "pages/update_customer.html",
+                "customers/update_customer.html",
                 customerId=customerId,
                 customer=serialize_doc(customer),
                 error="First name and last name are required.",
@@ -434,7 +325,7 @@ def update_customer(customerId):
         return redirect(url_for("view_customer", customerId=customerId))
 
     return render_template(
-        "pages/update_customer.html",
+        "customers/update_customer.html",
         customerId=customerId,
         customer=serialize_doc(customer),
         error="",
@@ -457,7 +348,7 @@ def delete_customer(customerId):
     db.equipment.delete_many({"customer_id": customerId})
     if related_job_ids:
         db.estimates.delete_many({"job_id": {"$in": related_job_ids}})
-
+    logger.info("Customer deleted: id=%s by employee_id=%s", customerId, session.get("employee_id"))
     return redirect(url_for("customers"))
 
 
@@ -468,7 +359,7 @@ def employees():
         serialize_doc(employee)
         for employee in db.employees.find().sort([("last_name", 1), ("first_name", 1)])
     ]
-    return render_template("pages/employees.html", employees=employees_list)
+    return render_template("employees/employees.html", employees=employees_list)
 
 
 @app.route("/employees/add", methods=["GET", "POST"])
@@ -496,9 +387,10 @@ def add_employee():
                 "employee_id": f"EMP-{employee_count:05d}",
             }
             inserted = db.employees.insert_one(employee)
+            logger.info("Employee created: id=%s username=%r by employee_id=%s", str(inserted.inserted_id), username, session.get("employee_id"))
             return redirect(url_for("view_employee", employeeId=str(inserted.inserted_id)))
 
-    return render_template("pages/add_employee.html")
+    return render_template("employees/add_employee.html")
 
 
 @app.route("/employees/<employeeId>")
@@ -509,7 +401,7 @@ def view_employee(employeeId):
         return redirect(url_for("employees"))
 
     return render_template(
-        "pages/view_employee.html",
+        "employees/view_employee.html",
         employeeId=employeeId,
         employee=serialize_doc(employee),
     )
@@ -530,7 +422,7 @@ def update_employee(employeeId):
 
         if not first_name or not last_name or not username:
             return render_template(
-                "pages/update_employee.html",
+                "employees/update_employee.html",
                 employeeId=employeeId,
                 employee=serialize_doc(employee),
                 error="First name, last name, and username are required.",
@@ -553,7 +445,7 @@ def update_employee(employeeId):
         return redirect(url_for("view_employee", employeeId=employeeId))
 
     return render_template(
-        "pages/update_employee.html",
+        "employees/update_employee.html",
         employeeId=employeeId,
         employee=serialize_doc(employee),
         error="",
@@ -569,7 +461,7 @@ def delete_employee(employeeId):
         return redirect(url_for("employees"))
 
     db.employees.delete_one({"_id": employee_oid})
-
+    logger.info("Employee deleted: id=%s by employee_id=%s", employeeId, session.get("employee_id"))
     return redirect(url_for("employees"))
 
 
@@ -580,19 +472,19 @@ def jobs():
         serialize_doc(job)
         for job in db.jobs.find().sort([("scheduled_date", 1), ("date_created", -1)])
     ]
-    return render_template("pages/jobs.html", jobs=jobs_list)
+    return render_template("jobs/jobs.html", jobs=jobs_list)
 
 
 @app.route("/admin")
 def admin():
-    return render_template("pages/admin.html")
+    return render_template("admin/admin.html")
 
 
 @app.route("/invoices")
 def invoices():
     db = ensure_connection_or_500()
     invoice_items = collect_invoice_items(db)
-    return render_template("pages/invoices.html", invoices=invoice_items)
+    return render_template("invoices/invoices.html", invoices=invoice_items)
 
 
 @app.route("/services")
@@ -600,7 +492,7 @@ def manage_services():
     db = ensure_connection_or_500()
     services = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
     return render_template(
-        "pages/manage_services.html",
+        "services/manage_services.html",
         services=services,
     )
 
@@ -610,7 +502,7 @@ def manage_parts():
     db = ensure_connection_or_500()
     parts = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
     return render_template(
-        "pages/manage_parts.html",
+        "services/manage_parts.html",
         parts=parts,
     )
 
@@ -646,7 +538,7 @@ def business_profile():
 
     business = serialize_doc(business)
 
-    return render_template("pages/business_profile.html", business=business)
+    return render_template("business/business_profile.html", business=business)
 
 
 @app.route("/business/update", methods=["GET", "POST"])
@@ -697,7 +589,7 @@ def update_business():
         return redirect(url_for("error_page", error="no_business"))
 
     business = serialize_doc(business)
-    return render_template("pages/update_business.html", business=business)
+    return render_template("business/update_business.html", business=business)
 
 
 @app.route("/error")
@@ -708,7 +600,7 @@ def error_page():
         "unknown": "An error occurred"
     }
     error_message = error_messages.get(error_type, error_messages["unknown"])
-    return render_template("pages/error.html", error_message=error_message)
+    return render_template("error.html", error_message=error_message)
 
 
 @app.route("/parts/create", methods=["GET", "POST"])
@@ -728,7 +620,7 @@ def create_part():
 
         return redirect(url_for("manage_parts"))
 
-    return render_template("pages/create_part.html")
+    return render_template("services/create_part.html")
 
 
 @app.route("/parts/<partId>")
@@ -739,7 +631,7 @@ def view_part(partId):
         return redirect(url_for("manage_parts"))
 
     return render_template(
-        "pages/view_part.html",
+        "services/view_part.html",
         partId=partId,
         part=serialize_doc(part),
     )
@@ -764,7 +656,7 @@ def create_service():
 
         return redirect(url_for("manage_services"))
 
-    return render_template("pages/create_service.html")
+    return render_template("services/create_service.html")
 
 
 @app.route("/services/<serviceId>")
@@ -775,7 +667,7 @@ def view_service(serviceId):
         return redirect(url_for("manage_services"))
 
     return render_template(
-        "pages/view_service.html",
+        "services/view_service.html",
         serviceId=serviceId,
         service=serialize_doc(service),
     )
@@ -863,7 +755,7 @@ def view_customer(customerId):
     ]
 
     return render_template(
-        "pages/view_customer.html",
+        "customers/view_customer.html",
         customerId=customerId,
         customer=serialize_doc(customer),
         customer_pages=customer_pages,
@@ -908,7 +800,7 @@ def add_equipment(customerId):
             return redirect(url_for("view_equipment", customerId=customerId, equipmentId=str(inserted.inserted_id)))
 
     return render_template(
-        "pages/add_equipment.html",
+        "equipment/add_equipment.html",
         customerId=customerId,
         customer=serialize_doc(customer),
         error=error,
@@ -927,7 +819,7 @@ def view_equipment(customerId, equipmentId):
         return redirect(url_for("view_customer", customerId=customerId))
 
     return render_template(
-        "pages/view_equipment.html",
+        "equipment/view_equipment.html",
         customerId=customerId,
         equipmentId=equipmentId,
         customer=serialize_doc(customer),
@@ -971,7 +863,7 @@ def update_equipment(customerId, equipmentId):
             return redirect(url_for("view_equipment", customerId=customerId, equipmentId=equipmentId))
 
     return render_template(
-        "pages/update_equipment.html",
+        "equipment/update_equipment.html",
         customerId=customerId,
         equipmentId=equipmentId,
         customer=serialize_doc(customer),
@@ -1046,6 +938,7 @@ def create_job(customerId):
             "invoices": [],
         }
         inserted = db.jobs.insert_one(new_job)
+        logger.info("Job created: id=%s customer_id=%s by employee_id=%s", str(inserted.inserted_id), customerId, session.get("employee_id"))
         return redirect(url_for("view_job", jobId=str(inserted.inserted_id)))
 
     services = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
@@ -1054,7 +947,7 @@ def create_job(customerId):
     parts_catalog_json = json.dumps(build_part_catalog(parts))
 
     return render_template(
-        "pages/create_job.html",
+        "jobs/create_job.html",
         customerId=customerId,
         customer=serialize_doc(customer),
         services=services,
@@ -1104,7 +997,7 @@ def view_job(jobId):
     estimates = [serialize_doc(estimate) for estimate in estimates_list]
 
     return render_template(
-        "pages/view_job.html",
+        "jobs/view_job.html",
         jobId=jobId,
         job=serialize_doc(job),
         customer=customer,
@@ -1161,6 +1054,7 @@ def complete_job(jobId):
             },
         },
     )
+    logger.info("Job completed: id=%s invoice=%s by employee_id=%s", jobId, filename, session.get("employee_id"))
 
     if customer_oid and customer_doc:
         current_balance = currency_to_float(customer_doc.get("balance_due", "$0.00"))
@@ -1254,10 +1148,11 @@ def send_estimate_email(jobId):
 
         # Send email
         mail.send(msg)
-
+        logger.info("Estimate email sent: job_id=%s to=%r by employee_id=%s", jobId, recipient_email, session.get("employee_id"))
         return jsonify({"success": True}), 200
 
     except Exception as e:
+        logger.error("Email send failed: job_id=%s error=%s", jobId, e)
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -1332,7 +1227,7 @@ def update_job(jobId):
     parts_catalog_json = json.dumps(build_part_catalog(parts))
 
     return render_template(
-        "pages/update_job.html",
+        "jobs/update_job.html",
         jobId=jobId,
         job=serialize_doc(job),
         customer=customer,
@@ -1347,6 +1242,7 @@ def update_job(jobId):
 def delete_job(jobId):
     db = ensure_connection_or_500()
     db.jobs.delete_one({"_id": object_id_or_404(jobId)})
+    logger.info("Job deleted: id=%s by employee_id=%s", jobId, session.get("employee_id"))
     return redirect(url_for("jobs"))
 
 @app.route("/invoices/<filename>")

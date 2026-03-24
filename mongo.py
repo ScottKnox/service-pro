@@ -1,4 +1,5 @@
 import os
+import logging
 from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
 
 from bson import ObjectId
@@ -8,6 +9,8 @@ from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 MONGODB_HOST = os.getenv("MONGODB_HOST", "localhost")
 MONGODB_PORT = os.getenv("MONGODB_PORT", "27017")
@@ -86,4 +89,5 @@ def ensure_connection_or_500():
         db.command("ping")
         return db
     except PyMongoError as exc:
+        logger.error("MongoDB connection failed: %s", exc)
         abort(500, description=f"MongoDB connection failed: {exc}")
