@@ -136,11 +136,9 @@
               <label for="job-assigned-employee">Assigned Employee</label>
               <select id="job-assigned-employee" name="job_assigned_employee" required>
                 <option value="">-- Select an employee --</option>
-                <option value="scott_knox">Scott Knox</option>
-                <option value="daniel_essary">Daniel Essary</option>
-                <option value="andrew_crowder">Andrew Crowder</option>
-                <option value="james_whitfield">James Whitfield</option>
-                <option value="marcus_bell">Marcus Bell</option>
+                {% for employee in employee_options %}
+                  <option value="{{ employee.name }}">{{ employee.name }}</option>
+                {% endfor %}
               </select>
             </div>
 

@@ -24,7 +24,7 @@
       <div id="jobs-list-container">
         <div id="jobs-list-grid">
           {% for service in services %}
-            <a class="jobs-card" href="{{ url_for('view_service', serviceId=service._id) }}">
+            <a class="jobs-card" href="{{ url_for('catalog.view_service', serviceId=service._id) }}">
               <div class="jobs-card-row">
                 <span class="jobs-card-label">Service</span>
                 <span class="jobs-card-value">{{ service.service_type }}</span>

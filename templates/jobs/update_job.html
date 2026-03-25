@@ -137,11 +137,9 @@
               <label for="job-assigned-employee">Assigned Employee</label>
               <select id="job-assigned-employee" name="job_assigned_employee" required>
                 <option value="">-- Select an employee --</option>
-                <option value="scott_knox" {% if job.assigned_employee == 'Scott Knox' %}selected{% endif %}>Scott Knox</option>
-                <option value="daniel_essary" {% if job.assigned_employee == 'Daniel Essary' %}selected{% endif %}>Daniel Essary</option>
-                <option value="andrew_crowder" {% if job.assigned_employee == 'Andrew Crowder' %}selected{% endif %}>Andrew Crowder</option>
-                <option value="james_whitfield" {% if job.assigned_employee == 'James Whitfield' %}selected{% endif %}>James Whitfield</option>
-                <option value="marcus_bell" {% if job.assigned_employee == 'Marcus Bell' %}selected{% endif %}>Marcus Bell</option>
+                {% for employee in employee_options %}
+                  <option value="{{ employee.name }}" {% if job.assigned_employee == employee.name %}selected{% endif %}>{{ employee.name }}</option>
+                {% endfor %}
               </select>
             </div>
 

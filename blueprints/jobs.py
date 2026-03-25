@@ -15,6 +15,26 @@ from utils.formatters import format_date
 bp = Blueprint("jobs", __name__)
 
 
+def build_employee_options(db):
+    employee_docs = [
+        serialize_doc(employee)
+        for employee in db.employees.find().sort([("last_name", 1), ("first_name", 1)])
+    ]
+
+    employee_options = []
+    for employee in employee_docs:
+        first_name = str(employee.get("first_name", "")).strip()
+        last_name = str(employee.get("last_name", "")).strip()
+        full_name = f"{first_name} {last_name}".strip()
+        if full_name:
+            employee_options.append({
+                "id": employee.get("_id", ""),
+                "name": full_name,
+            })
+
+    return employee_options
+
+
 @bp.route("/jobs")
 def jobs():
     db = ensure_connection_or_500()
@@ -60,7 +80,7 @@ def create_job(customerId):
         scheduled_time = request.form.get("job_time", "").strip()
         job_status = "Scheduled" if scheduled_date and scheduled_time else "Pending"
 
-        assigned_employee = request.form.get("job_assigned_employee", "").replace("_", " ").title()
+        assigned_employee = request.form.get("job_assigned_employee", "").strip()
         
         # Initialize notes collection with the first note if provided
         notes_collection = []
@@ -97,6 +117,7 @@ def create_job(customerId):
 
     services = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
     parts = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+    employee_options = build_employee_options(db)
     services_catalog_json = json.dumps(build_service_catalog(services))
     parts_catalog_json = json.dumps(build_part_catalog(parts))
 
@@ -106,6 +127,7 @@ def create_job(customerId):
         customer=serialize_doc(customer),
         services=services,
         parts=parts,
+        employee_options=employee_options,
         services_catalog_json=services_catalog_json,
         parts_catalog_json=parts_catalog_json,
     )
@@ -340,7 +362,7 @@ def update_job(jobId):
         if added_services or added_parts:
             job_status = "Estimating"
 
-        assigned_employee = request.form.get("job_assigned_employee", "").replace("_", " ").title()
+        assigned_employee = request.form.get("job_assigned_employee", "").strip()
 
         # Prepare notes update - add new note to collection if provided
         update_data = {
@@ -388,6 +410,7 @@ def update_job(jobId):
 
     services = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
     parts = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+    employee_options = build_employee_options(db)
     services_catalog_json = json.dumps(build_service_catalog(services))
     parts_catalog_json = json.dumps(build_part_catalog(parts))
 
@@ -398,6 +421,7 @@ def update_job(jobId):
         customer=customer,
         services=services,
         parts=parts,
+        employee_options=employee_options,
         services_catalog_json=services_catalog_json,
         parts_catalog_json=parts_catalog_json,
     )

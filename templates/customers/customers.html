@@ -3,22 +3,22 @@
 {% block title %}Customers | Steady Work{% endblock %}
 
 {% block content %}
-  <div id="main-container">
+  <div id="main-container" data-live-card-filter-root>
     <div id="manage-customers-header">
       <h1>Manage Customers</h1>
 
       <div id="customers-controls-row">
         <div class="customers-controls-left">
           <h2>Search Customers:</h2>
-          <form id="customers-search-form" action="#" method="get">
+          <form id="customers-search-form" action="#" method="get" data-live-card-filter-form>
             <input
               id="customers-search-input"
               name="q"
               type="search"
               placeholder="Search by customer name"
               aria-label="Search customers"
+              data-live-card-filter-input
             />
-            <button type="submit">Submit</button>
           </form>
         </div>
 
@@ -31,17 +31,25 @@
         <h2>All Customers</h2>
       </div>
 
-      <div id="customers-list-grid">
+      <div id="customers-list-grid" data-live-card-filter-grid>
         {% if customers %}
           {% for customer in customers %}
-            <a class="customer-card" href="{{ url_for('customers.view_customer', customerId=customer._id) }}">
+            {% set customer_status = customer.customer_status|default('N/A', true) %}
+            {% set customer_status_normalized = customer_status|lower %}
+            <a class="customer-card" href="{{ url_for('customers.view_customer', customerId=customer._id) }}" data-live-card-filter-item>
+              <div class="customer-card-row">
+                <span class="customer-card-label">Status</span>
+                <span class="customer-card-value">
+                  <span class="customer-status-chip{% if customer_status_normalized == 'lead' %} is-lead{% elif customer_status_normalized == 'active' %} is-active{% endif %}">{{ customer_status }}</span>
+                </span>
+              </div>
               <div class="customer-card-row">
                 <span class="customer-card-label">First Name</span>
-                <span class="customer-card-value">{{ customer.first_name }}</span>
+                <span class="customer-card-value" data-live-card-first-name>{{ customer.first_name }}</span>
               </div>
               <div class="customer-card-row">
                 <span class="customer-card-label">Last Name</span>
-                <span class="customer-card-value">{{ customer.last_name }}</span>
+                <span class="customer-card-value" data-live-card-last-name>{{ customer.last_name }}</span>
               </div>
               <div class="customer-card-row">
                 <span class="customer-card-label">Phone</span>
@@ -65,6 +73,13 @@
           <p>No customers found. Add your first customer to get started.</p>
         {% endif %}
       </div>
+      {% if customers %}
+        <p data-live-card-filter-empty hidden>No matching customers found.</p>
+      {% endif %}
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/live_card_filter.js') }}" defer></script>
 {% endblock %}

@@ -3,22 +3,22 @@
 {% block title %}Employees | Steady Work{% endblock %}
 
 {% block content %}
-  <div id="main-container">
+  <div id="main-container" data-live-card-filter-root>
     <div id="manage-customers-header">
       <h1>Manage Employees</h1>
 
       <div id="customers-controls-row">
         <div class="customers-controls-left">
           <h2>Search Employees:</h2>
-          <form id="customers-search-form" action="#" method="get">
+          <form id="customers-search-form" action="#" method="get" data-live-card-filter-form>
             <input
               id="customers-search-input"
               name="q"
               type="search"
               placeholder="Search by employee name"
               aria-label="Search employees"
+              data-live-card-filter-input
             />
-            <button type="submit">Submit</button>
           </form>
         </div>
 
@@ -31,17 +31,17 @@
         <h2>All Employees</h2>
       </div>
 
-      <div id="customers-list-grid">
+      <div id="customers-list-grid" data-live-card-filter-grid>
         {% if employees %}
           {% for employee in employees %}
-            <a class="customer-card" href="{{ url_for('employees.view_employee', employeeId=employee._id) }}">
+            <a class="customer-card" href="{{ url_for('employees.view_employee', employeeId=employee._id) }}" data-live-card-filter-item>
               <div class="customer-card-row">
                 <span class="customer-card-label">First Name</span>
-                <span class="customer-card-value">{{ employee.first_name }}</span>
+                <span class="customer-card-value" data-live-card-first-name>{{ employee.first_name }}</span>
               </div>
               <div class="customer-card-row">
                 <span class="customer-card-label">Last Name</span>
-                <span class="customer-card-value">{{ employee.last_name }}</span>
+                <span class="customer-card-value" data-live-card-last-name>{{ employee.last_name }}</span>
               </div>
               <div class="customer-card-row">
                 <span class="customer-card-label">Phone</span>
@@ -65,6 +65,13 @@
           <p>No employees found. Add your first employee to get started.</p>
         {% endif %}
       </div>
+      {% if employees %}
+        <p data-live-card-filter-empty hidden>No matching employees found.</p>
+      {% endif %}
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/live_card_filter.js') }}" defer></script>
 {% endblock %}
