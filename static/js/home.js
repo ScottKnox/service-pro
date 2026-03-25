@@ -6,10 +6,31 @@ window.homePageFilter = {
   },
   currentPage: 1,
   JOBS_PER_PAGE: 5,
+
+  getHighlightedJobDates: function() {
+    const jobElements = document.querySelectorAll(".home-job");
+    const highlightedDates = new Set();
+
+    jobElements.forEach((job) => {
+      const jobDate = job.dataset.jobDate;
+      const jobEmployee = job.dataset.assignedEmployee;
+
+      if (!jobDate) {
+        return;
+      }
+
+      if (this.filterData.selectedEmployees.size > 0 && !this.filterData.selectedEmployees.has(jobEmployee)) {
+        return;
+      }
+
+      highlightedDates.add(jobDate);
+    });
+
+    return highlightedDates;
+  },
   
   filterAndDisplay: function() {
     const jobElements = document.querySelectorAll(".home-job");
-    const pagesContainer = document.getElementById("home-jobs-pages");
     const visibleJobs = Array.from(jobElements).filter((job) => {
       const jobDate = job.dataset.jobDate;
       const jobEmployee = job.dataset.assignedEmployee;
@@ -31,6 +52,37 @@ window.homePageFilter = {
     this.currentPage = 1;
     this.updatePaginationLinks(visibleJobs.length);
     this.displayPageContent();
+    this.filterCallsNeeded();
+
+    if (typeof this.refreshCalendarHighlights === "function") {
+      this.refreshCalendarHighlights();
+    }
+  },
+
+  filterCallsNeeded: function() {
+    const callRows = document.querySelectorAll(".home-call-row");
+    const emptyMessage = document.getElementById("home-calls-needed-empty");
+    const serverEmptyMessage = document.getElementById("home-calls-needed-empty-server");
+    let visibleCount = 0;
+
+    callRows.forEach((row) => {
+      const assignedEmployee = row.dataset.assignedEmployee;
+      const shouldShow = this.filterData.selectedEmployees.size === 0
+        || this.filterData.selectedEmployees.has(assignedEmployee);
+
+      row.style.display = shouldShow ? "" : "none";
+      if (shouldShow) {
+        visibleCount += 1;
+      }
+    });
+
+    if (serverEmptyMessage) {
+      serverEmptyMessage.style.display = callRows.length === 0 ? "block" : "none";
+    }
+
+    if (emptyMessage) {
+      emptyMessage.style.display = callRows.length > 0 && visibleCount === 0 ? "block" : "none";
+    }
   },
 
   updatePaginationLinks: function(visibleJobsCount) {
@@ -76,6 +128,16 @@ window.homePageFilter = {
       }
 
       return true;
+    }).sort((a, b) => {
+      const dateA = a.dataset.jobDate || "9999-12-31";
+      const dateB = b.dataset.jobDate || "9999-12-31";
+      if (dateA !== dateB) {
+        return dateA.localeCompare(dateB);
+      }
+
+      const timeA = a.dataset.jobTime || "99:99";
+      const timeB = b.dataset.jobTime || "99:99";
+      return timeA.localeCompare(timeB);
     });
 
     const startIndex = (this.currentPage - 1) * this.JOBS_PER_PAGE;
@@ -198,6 +260,7 @@ window.homePageFilter = {
   function renderCalendar() {
     const year = visibleMonth.getFullYear();
     const month = visibleMonth.getMonth();
+    const highlightedJobDates = window.homePageFilter.getHighlightedJobDates();
 
     monthLabel.textContent = visibleMonth.toLocaleDateString("en-US", {
       month: "long",
@@ -224,6 +287,10 @@ window.homePageFilter = {
       button.type = "button";
       button.className = "home-calendar-day";
       button.textContent = String(day);
+
+      if (highlightedJobDates.has(key)) {
+        button.classList.add("has-jobs");
+      }
 
       if (selectedDays.has(key)) {
         button.classList.add("is-selected");
@@ -262,6 +329,8 @@ window.homePageFilter = {
     visibleMonth.setMonth(visibleMonth.getMonth() + 1);
     renderCalendar();
   });
+
+  window.homePageFilter.refreshCalendarHighlights = renderCalendar;
 
   renderCalendar();
   updateHeadline(todayKey());

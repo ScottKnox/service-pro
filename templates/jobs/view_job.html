@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/view_job.css') }}" />
   <div id="main-container">
     <div id="view-job-panel">
-      <h1>{{ job.job_type }}</h1>
+      <h1>{% if job.services %}{{ job.job_type }}{% else %}No services added.{% endif %}</h1>
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
@@ -18,22 +18,23 @@
       <section id="view-job-actions" aria-labelledby="view-job-actions-header">
         <h2 id="view-job-actions-header">Actions</h2>
         <div id="view-job-actions-row">
-          {% if job.status != "Started" and job.status != "Completed" %}
-          <form method="POST" action="{{ url_for('jobs.start_job', jobId=jobId) }}">
+          {% set job_status_normalized = job.status|default('', true)|lower %}
+          {% if job_status_normalized == "estimate" or job_status_normalized == "estimating" or job_status_normalized == "pending" %}
+          <form method="POST" action="{{ url_for('jobs.create_quote', jobId=jobId) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit">Mark Started</button>
+            <button type="submit"{% if job_status_normalized == "pending" or (not job.services and not job.parts) %} disabled{% endif %}>Create Quote</button>
           </form>
           {% endif %}
-          {% if job.status != "Completed" and job.status != "Estimate" %}
+          {% if job_status_normalized != "started" and job_status_normalized != "completed" %}
+          <form method="POST" action="{{ url_for('jobs.start_job', jobId=jobId) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit"{% if job_status_normalized == "pending" %} disabled{% endif %}>Mark Started</button>
+          </form>
+          {% endif %}
+          {% if job_status_normalized != "completed" and job_status_normalized != "estimate" and job_status_normalized != "estimating" and job_status_normalized != "pending" %}
           <form method="POST" action="{{ url_for('jobs.complete_job', jobId=jobId) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Mark Completed</button>
-          </form>
-          {% endif %}
-          {% if job.status == "Estimate" and not estimates %}
-          <form method="POST" action="{{ url_for('jobs.create_quote', jobId=jobId) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit">Create Quote</button>
           </form>
           {% endif %}
           <a href="{{ url_for('jobs.update_job', jobId=jobId) }}">Update Job</a>
@@ -52,7 +53,11 @@
             <div id="view-job-details-list">
               <div class="view-job-detail-item">
                 <h4>Status</h4>
-                <p>{{ job.status }}</p>
+                <p>
+                  {% set job_status = job.status|default('N/A', true) %}
+                  {% set detail_job_status_normalized = job_status|lower %}
+                  <span class="job-status-chip{% if detail_job_status_normalized == 'pending' %} is-pending{% elif detail_job_status_normalized == 'scheduled' %} is-scheduled{% elif detail_job_status_normalized == 'estimating' %} is-estimating{% elif detail_job_status_normalized == 'started' %} is-started{% endif %}">{{ job_status }}</span>
+                </p>
               </div>
               <div class="view-job-detail-item">
                 <h4>Customer</h4>
@@ -60,7 +65,11 @@
               </div>
               <div class="view-job-detail-item">
                 <h4>Scheduled Date</h4>
-                <p>{{ job.scheduled_date }}</p>
+                <p>{{ job.scheduled_date|default('N/A', true) }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Scheduled Time</h4>
+                <p>{{ job.scheduled_time|default('N/A', true) }}</p>
               </div>
               <div class="view-job-detail-item">
                 <h4>Date Created</h4>
@@ -112,8 +121,7 @@
                 {% endfor %}
               {% else %}
                 <div class="view-job-detail-item">
-                  <h4>{{ job.job_type }}</h4>
-                  <p>{{ job.total }}</p>
+                  <p>No services added.</p>
                 </div>
               {% endif %}
             </div>
@@ -135,18 +143,6 @@
               {% endif %}
             </div>
           </div>
-        </div>
-
-        <div class="view-job-section-row" id="view-job-notes-row-secondary">
-          <div class="view-job-section-column view-job-details-column">
-            <h3>Notes</h3>
-            <div id="view-job-notes-list">
-              <div class="view-job-detail-item">
-                <p>{{ job.notes }}</p>
-              </div>
-            </div>
-          </div>
-          <div class="view-job-section-column view-job-details-column"></div>
         </div>
 
         <div class="view-job-section-row" id="view-job-invoices-estimates-row">
@@ -199,6 +195,27 @@
               {% endif %}
             </div>
           </div>
+        </div>
+
+        <div class="view-job-section-row" id="view-job-notes-row-secondary">
+          <div class="view-job-section-column view-job-details-column">
+            <h3>Notes</h3>
+            <div id="view-job-notes-list">
+              {% if job.notes %}
+                {% for note in job.notes|reverse %}
+                  <div class="note-card">
+                    <div class="note-card-date">{{ note.date }}</div>
+                    <div class="note-card-text">{{ note.text }}</div>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="view-job-detail-item">
+                  <p>No notes added.</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="view-job-section-column view-job-details-column"></div>
         </div>
       </section>
       

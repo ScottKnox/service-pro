@@ -65,10 +65,24 @@
   background-color: #E6EBF2;
 }
 
+.home-calendar-day.has-jobs {
+  border-color: #1F6B35;
+  background-color: #EAF6EE;
+  color: #1F6B35;
+  font-weight: 700;
+}
+
 .home-calendar-day.is-selected {
   background-color: #000000;
   color: #F8F9FA;
   border-color: #000000;
+}
+
+.home-calendar-day.has-jobs.is-selected {
+  background-color: #000000;
+  color: #F8F9FA;
+  border-color: #000000;
+  box-shadow: inset 0 0 0 2px #1F6B35;
 }
 
 .home-calendar-day.is-empty {

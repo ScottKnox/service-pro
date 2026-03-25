@@ -14,7 +14,7 @@
         </ol>
       </nav>
 
-      <form id="create-job-form" action="{{ url_for('jobs.create_job', customerId=customerId) }}" method="post" data-services-catalog='{{ services_catalog_json|safe }}' data-parts-catalog='{{ parts_catalog_json|safe }}'>
+      <form id="create-job-form" action="{{ url_for('jobs.create_job', customerId=customerId) }}" method="post" data-services-catalog='{{ services_catalog_json|safe }}' data-parts-catalog='{{ parts_catalog_json|safe }}' data-schedule-required="false">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="customer_id" value="{{ customerId }}" />
 
@@ -113,6 +113,44 @@
 
         <p class="form-field-note">* Change if job address different than customer's</p>
 
+        <h2 class="create-job-form-section-header">Job Details</h2>
+        <p class="form-field-note form-field-note--compact">* Leave Scheduled Date / Time blank if still estimating / quoting job.</p>
+        <span id="error-job-details" class="form-field-error" style="display:none;"></span>
+
+        <div class="add-customer-form-row job-details-layout">
+          <div class="job-details-stack">
+            <div class="add-customer-form-field">
+              <label for="job-date">Scheduled Date</label>
+              <input id="job-date" name="job_date" type="date" />
+            </div>
+
+            <div class="add-customer-form-field">
+              <label for="job-time">Scheduled Time</label>
+              <input id="job-time" name="job_time" type="time" />
+              <button id="clear-date-time" type="button">Clear Date and Time</button>
+            </div>
+          </div>
+
+          <div class="job-details-stack">
+            <div class="add-customer-form-field">
+              <label for="job-assigned-employee">Assigned Employee</label>
+              <select id="job-assigned-employee" name="job_assigned_employee" required>
+                <option value="">-- Select an employee --</option>
+                <option value="scott_knox">Scott Knox</option>
+                <option value="daniel_essary">Daniel Essary</option>
+                <option value="andrew_crowder">Andrew Crowder</option>
+                <option value="james_whitfield">James Whitfield</option>
+                <option value="marcus_bell">Marcus Bell</option>
+              </select>
+            </div>
+
+            <div class="add-customer-form-field">
+              <label for="job-notes">Add Note</label>
+              <textarea id="job-notes" name="job_notes" rows="4" placeholder="Access notes, parts needed, and special instructions"></textarea>
+            </div>
+          </div>
+        </div>
+
         <h2 class="create-job-form-section-header">Services Provided</h2>
         <span id="error-services" class="form-field-error" style="display:none;">At least one service must be selected</span>
 
@@ -141,7 +179,7 @@
         </div>
 
         <div id="job-services-actions">
-          <button id="add-job-service-button" type="button">Add Another Service</button>
+          <button id="add-job-service-button" type="button">Add Service</button>
         </div>
 
         <template id="service-options-template">
@@ -172,7 +210,7 @@
         </div>
 
         <div id="job-parts-actions">
-          <button id="add-job-part-button" type="button">Add More Parts</button>
+          <button id="add-job-part-button" type="button">Add Part</button>
         </div>
 
         <template id="part-options-template">
@@ -180,45 +218,6 @@
             <option value="{{ part.part_name }}">{{ part.part_name }}</option>
           {% endfor %}
         </template>
-
-        <h2 class="create-job-form-section-header">Job Details</h2>
-        <span id="error-job-details" class="form-field-error" style="display:none;"></span>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="job-is-estimate">Is This Job Still Being Quoted or Estimated?</label>
-            <select id="job-is-estimate" name="job_is_estimate">
-              <option value="no">No</option>
-              <option value="yes" selected>Yes</option>
-            </select>
-          </div>
-
-          <div class="add-customer-form-field">
-            <label for="job-date">Scheduled Date</label>
-            <input id="job-date" name="job_date" type="date" required />
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="job-assigned-employee">Assigned Employee</label>
-            <select id="job-assigned-employee" name="job_assigned_employee" required>
-              <option value="">-- Select an employee --</option>
-              <option value="scott_knox">Scott Knox</option>
-              <option value="daniel_essary">Daniel Essary</option>
-              <option value="andrew_crowder">Andrew Crowder</option>
-              <option value="james_whitfield">James Whitfield</option>
-              <option value="marcus_bell">Marcus Bell</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="add-customer-form-row add-customer-form-row--single">
-          <div class="add-customer-form-field">
-            <label for="job-notes">Notes</label>
-            <textarea id="job-notes" name="job_notes" rows="4" placeholder="Access notes, parts needed, and special instructions"></textarea>
-          </div>
-        </div>
 
         <div id="create-job-form-actions">
           <button id="submit-button" type="submit">Submit</button>

@@ -14,6 +14,10 @@
         </ol>
       </nav>
 
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
       <form id="add-customer-form" action="{{ url_for('customers.add_customer') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="add-customer-form-row">
@@ -132,13 +136,7 @@
             <input id="customer-referral-source" name="referral_source" type="text" placeholder="Google, referral, yard sign, etc." />
           </div>
 
-          <div class="add-customer-form-field">
-            <label for="customer-status">Customer Status</label>
-            <select id="customer-status" name="customer_status">
-              <option value="Lead">Lead</option>
-              <option value="active" selected>Active</option>
-            </select>
-          </div>
+          <div class="add-customer-form-field"></div>
         </div>
 
         <div id="add-customer-form-actions">
@@ -147,4 +145,8 @@
       </form>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/create_customer.js') }}" defer></script>
 {% endblock %}

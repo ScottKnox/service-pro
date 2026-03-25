@@ -1,9 +1,41 @@
 .estimate-card-wrapper {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 0.5rem;
   justify-content: space-between;
   padding: 0.5rem 0;
+}
+
+.job-status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.24rem 0.8rem;
+  border-radius: 999px;
+  background-color: #E5E7EB;
+  color: #1F2937;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.job-status-chip.is-pending {
+  background-color: #FDE6C8;
+  color: #9A4D00;
+}
+
+.job-status-chip.is-scheduled {
+  background-color: #DDF5E3;
+  color: #1F6B35;
+}
+
+.job-status-chip.is-estimating {
+  background-color: #DDF5E3;
+  color: #1F6B35;
+}
+
+.job-status-chip.is-started {
+  background-color: #DDF5E3;
+  color: #1F6B35;
 }
 
 .estimate-card-wrapper .view-customer-card-link {
@@ -11,19 +43,66 @@
 }
 
 .estimate-email-btn {
-  padding: 0.5rem 1rem;
-  background-color: #1B263B;
-  color: #fff;
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  gap: 0.35rem;
+  min-width: 44px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #1F6B35;
   border-radius: 4px;
+  background-color: #EAF6EE;
+  color: #1F6B35;
   cursor: pointer;
   font-size: 0.875rem;
+  font-weight: 600;
   white-space: nowrap;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .estimate-email-btn:hover {
-  background-color: #0f1823;
+  background-color: #DDF5E3;
+}
+
+.estimate-email-btn::before {
+  content: "\2709";
+  line-height: 1;
+  font-size: 0.95rem;
+}
+
+.estimate-email-btn:focus {
+  outline: 2px solid #5FA3D3;
+  outline-offset: 1px;
+}
+
+button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.note-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  background-color: #f9fafb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.note-card-date {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.note-card-text {
+  color: #1f2937;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  word-wrap: break-word;
 }
 
 .modal {

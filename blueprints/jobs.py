@@ -20,7 +20,7 @@ def jobs():
     db = ensure_connection_or_500()
     jobs_list = [
         serialize_doc(job)
-        for job in db.jobs.find().sort([("scheduled_date", 1), ("date_created", -1)])
+        for job in db.jobs.find().sort([("scheduled_date", 1), ("scheduled_time", 1), ("date_created", -1)])
     ]
     return render_template("jobs/jobs.html", jobs=jobs_list)
 
@@ -55,11 +55,22 @@ def create_job(customerId):
         )
         total = services_total + parts_total
 
-        primary_service = services[0]["type"] if services else "General Service"
-        is_estimate = request.form.get("job_is_estimate", "no").strip().lower() == "yes"
-        job_status = "Estimate" if is_estimate else "Scheduled"
+        primary_service = services[0]["type"] if services else "No services added."
+        scheduled_date = format_date(request.form.get("job_date", ""))
+        scheduled_time = request.form.get("job_time", "").strip()
+        job_status = "Scheduled" if scheduled_date and scheduled_time else "Pending"
 
         assigned_employee = request.form.get("job_assigned_employee", "").replace("_", " ").title()
+        
+        # Initialize notes collection with the first note if provided
+        notes_collection = []
+        initial_note = request.form.get("job_notes", "").strip()
+        if initial_note:
+            notes_collection.append({
+                "text": initial_note,
+                "date": datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+            })
+        
         new_job = {
             "customer_id": customerId,
             "customer_name": f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
@@ -68,14 +79,15 @@ def create_job(customerId):
             "services": services,
             "parts": parts,
             "status": job_status,
-            "scheduled_date": format_date(request.form.get("job_date", "")),
+            "scheduled_date": scheduled_date,
+            "scheduled_time": scheduled_time,
             "address_line_1": request.form.get("job_address_line_1", "").strip(),
             "address_line_2": request.form.get("job_address_line_2", "").strip(),
             "city": request.form.get("job_city", "").strip(),
             "state": request.form.get("job_state", "").strip().upper(),
             "assigned_employee": assigned_employee,
             "total": f"${total:.2f}" if total else "$0.00",
-            "notes": request.form.get("job_notes", "").strip(),
+            "notes": notes_collection,
             "date_created": datetime.now().strftime("%m/%d/%Y"),
             "invoices": [],
         }
@@ -217,7 +229,8 @@ def complete_job(jobId):
 def create_quote(jobId):
     db = ensure_connection_or_500()
     job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
-    if not job or job.get("status") != "Estimate":
+    job_status = str(job.get("status", "")).strip().lower() if job else ""
+    if not job or job_status not in {"estimate", "estimating", "pending"}:
         return redirect(url_for("jobs.jobs"))
 
     customer = {}
@@ -229,6 +242,8 @@ def create_quote(jobId):
 
     quote_path = generate_quote(jobId, job, customer)
     filename = os.path.basename(quote_path)
+
+    db.estimates.delete_many({"job_id": jobId})
 
     db.estimates.insert_one(
         {
@@ -316,31 +331,51 @@ def update_job(jobId):
         )
         total = services_total + parts_total
 
-        primary_service = services[0]["type"] if services else job.get("job_type", "General Service")
-        is_estimate = request.form.get("job_is_estimate", "no").strip().lower() == "yes"
-        job_status = "Estimate" if is_estimate else "Scheduled"
+        primary_service = services[0]["type"] if services else "No services added."
+        existing_services = job.get("services", [])
+        existing_parts = job.get("parts", [])
+        added_services = len(services) > len(existing_services)
+        added_parts = len(parts) > len(existing_parts)
+        job_status = job.get("status", "Scheduled")
+        if added_services or added_parts:
+            job_status = "Estimating"
 
         assigned_employee = request.form.get("job_assigned_employee", "").replace("_", " ").title()
 
+        # Prepare notes update - add new note to collection if provided
         update_data = {
             "job_type": primary_service,
             "services": services,
             "parts": parts,
             "status": job_status,
             "scheduled_date": format_date(request.form.get("job_date", "")),
+            "scheduled_time": request.form.get("job_time", "").strip(),
             "address_line_1": request.form.get("job_address_line_1", "").strip(),
             "address_line_2": request.form.get("job_address_line_2", "").strip(),
             "city": request.form.get("job_city", "").strip(),
             "state": request.form.get("job_state", "").strip().upper(),
             "assigned_employee": assigned_employee,
             "total": f"${total:.2f}" if total else "$0.00",
-            "notes": request.form.get("job_notes", "").strip(),
         }
 
-        db.jobs.update_one(
-            {"_id": ObjectId(jobId)},
-            {"$set": update_data},
-        )
+        new_note_text = request.form.get("job_notes", "").strip()
+        if new_note_text:
+            new_note = {
+                "text": new_note_text,
+                "date": datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+            }
+            db.jobs.update_one(
+                {"_id": ObjectId(jobId)},
+                {
+                    "$set": update_data,
+                    "$push": {"notes": new_note}
+                },
+            )
+        else:
+            db.jobs.update_one(
+                {"_id": ObjectId(jobId)},
+                {"$set": update_data},
+            )
 
         return redirect(url_for("jobs.view_job", jobId=jobId))
 

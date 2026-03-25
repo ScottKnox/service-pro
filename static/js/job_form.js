@@ -9,7 +9,54 @@
   // Track user interaction for specific fields
   let servicesTouched = false;
   let dateTouched = false;
+  let timeTouched = false;
   let employeeTouched = false;
+
+  const estimateField = document.getElementById('job-is-estimate');
+  const dateField = document.getElementById('job-date');
+  const timeField = document.getElementById('job-time');
+  const clearDateTimeButton = document.getElementById('clear-date-time');
+  const dateFieldContainer = dateField ? dateField.closest('.add-customer-form-field') : null;
+  const timeFieldContainer = timeField ? timeField.closest('.add-customer-form-field') : null;
+  const scheduleRequiredByForm = !(form && form.dataset.scheduleRequired === 'false');
+
+  function isScheduledDateRequired() {
+    if (!scheduleRequiredByForm) {
+      return false;
+    }
+    return !estimateField || estimateField.value === 'no';
+  }
+
+  function syncScheduledDateVisibility() {
+    if (!dateField || !dateFieldContainer || !timeField || !timeFieldContainer) {
+      return;
+    }
+
+    if (!scheduleRequiredByForm) {
+      dateFieldContainer.style.display = '';
+      dateField.required = false;
+      timeFieldContainer.style.display = '';
+      timeField.required = false;
+      return;
+    }
+
+    if (isScheduledDateRequired()) {
+      dateFieldContainer.style.display = '';
+      dateField.required = true;
+      timeFieldContainer.style.display = '';
+      timeField.required = true;
+      return;
+    }
+
+    dateFieldContainer.style.display = 'none';
+    dateField.required = false;
+    dateField.value = '';
+    dateTouched = false;
+    timeFieldContainer.style.display = 'none';
+    timeField.required = false;
+    timeField.value = '';
+    timeTouched = false;
+  }
 
   // Validation function
   function validateForm() {
@@ -21,6 +68,7 @@
       'job-city',
       'job-state',
       'job-date',
+      'job-time',
       'job-assigned-employee'
     ];
 
@@ -29,6 +77,10 @@
       const errorElement = document.getElementById('error-' + fieldId.replace('job-', ''));
 
       if (!field) return;
+      if ((fieldId === 'job-date' || fieldId === 'job-time') && !isScheduledDateRequired()) {
+        if (errorElement) errorElement.style.display = 'none';
+        return;
+      }
 
       const isFieldValid = field.value.trim() !== '';
       if (!isFieldValid) {
@@ -49,7 +101,8 @@
     });
 
     const servicesError = document.getElementById('error-services');
-    if (!hasSelectedService) {
+    const servicesRequired = isScheduledDateRequired();
+    if (servicesRequired && !hasSelectedService) {
       isValid = false;
       if (servicesError) servicesError.style.display = servicesTouched ? 'block' : 'none';
     } else {
@@ -57,15 +110,19 @@
     }
 
     // Handle date field error visibility based on touch status
-    const dateField = document.getElementById('job-date');
     const employeeField = document.getElementById('job-assigned-employee');
     const jobDetailsError = document.getElementById('error-job-details');
     
     let jobDetailsErrors = [];
     
-    if (dateField && dateField.value.trim() === '' && dateTouched) {
+    if (dateField && isScheduledDateRequired() && dateField.value.trim() === '' && dateTouched) {
       isValid = false;
       jobDetailsErrors.push('Scheduled Date is required');
+    }
+
+    if (timeField && isScheduledDateRequired() && timeField.value.trim() === '' && timeTouched) {
+      isValid = false;
+      jobDetailsErrors.push('Scheduled Time is required');
     }
     
     if (employeeField && employeeField.value.trim() === '' && employeeTouched) {
@@ -114,6 +171,13 @@
         }
       }
 
+      const serviceRow = this.closest('.job-service-row');
+      if (serviceRow) {
+        updateRemoveButtonVisibility(serviceRow, 'service');
+      }
+
+      refreshRemoveButtons('service');
+
       validateForm();
     });
   }
@@ -131,14 +195,72 @@
   const partsList = document.getElementById("job-parts-list");
   const partOptionsTemplate = document.getElementById("part-options-template");
 
-  if (!addServiceButton || !servicesList || !serviceOptionsTemplate) {
-    return;
+  function getNextRowIndex(listElement, rowSelector, datasetKey) {
+    const rows = listElement ? listElement.querySelectorAll(rowSelector) : [];
+    let maxIndex = 0;
+
+    rows.forEach(function (row) {
+      const parsed = Number.parseInt(row.dataset[datasetKey], 10);
+      if (!Number.isNaN(parsed) && parsed > maxIndex) {
+        maxIndex = parsed;
+      }
+    });
+
+    return maxIndex + 1;
   }
 
-  addServiceButton.addEventListener("click", function () {
-    const serviceRows = servicesList.querySelectorAll(".job-service-row");
-    const nextIndex = serviceRows.length + 1;
+  function getServiceSelect(rowElement) {
+    return rowElement ? rowElement.querySelector('select[name="service_type[]"]') : null;
+  }
 
+  function getPartSelect(rowElement) {
+    return rowElement ? rowElement.querySelector('select[name="part_name[]"]') : null;
+  }
+
+  function isServiceRowPopulated(rowElement) {
+    const select = getServiceSelect(rowElement);
+    return !!(select && select.value.trim() !== '');
+  }
+
+  function isPartRowPopulated(rowElement) {
+    const select = getPartSelect(rowElement);
+    return !!(select && select.value.trim() !== '');
+  }
+
+  function updateRemoveButtonVisibility(rowElement, rowType) {
+    const removeWrap = rowElement ? rowElement.querySelector('.job-row-remove-wrap') : null;
+    if (!removeWrap) {
+      return;
+    }
+
+    const rowCollection = rowType === 'service'
+      ? (servicesList ? servicesList.querySelectorAll('.job-service-row') : [])
+      : (partsList ? partsList.querySelectorAll('.job-part-row') : []);
+    const hasMultipleRows = rowCollection.length > 1;
+
+    const isPopulated = rowType === 'service'
+      ? isServiceRowPopulated(rowElement)
+      : isPartRowPopulated(rowElement);
+
+    removeWrap.style.display = (isPopulated || hasMultipleRows) ? '' : 'none';
+  }
+
+  function refreshRemoveButtons(rowType) {
+    const listElement = rowType === 'service' ? servicesList : partsList;
+    const selector = rowType === 'service' ? '.job-service-row' : '.job-part-row';
+
+    if (!listElement) {
+      return;
+    }
+
+    const rows = listElement.querySelectorAll(selector);
+    rows.forEach(function (row) {
+      updateRemoveButtonVisibility(row, rowType);
+    });
+  }
+
+  function createServiceRow() {
+    const nextIndex = getNextRowIndex(servicesList, '.job-service-row', 'serviceIndex');
     const row = document.createElement("div");
     row.className = "add-customer-form-row job-service-row";
     row.dataset.serviceIndex = String(nextIndex);
@@ -162,16 +284,120 @@
         '<input id="service-duration-' + nextIndex + '" name="service_duration[]" type="text" placeholder="e.g. 2 hours" />' +
       '</div>';
 
-    servicesList.appendChild(row);
-
-    // Attach listener to the newly created select
     const newSelect = row.querySelector('select');
     if (newSelect) {
       attachPriceUpdateListener(newSelect);
     }
 
-    validateForm();
+    attachRowRemoveButton(row, 'service');
+    updateRemoveButtonVisibility(row, 'service');
+    return row;
+  }
+
+  function createPartRow() {
+    const nextIndex = getNextRowIndex(partsList, '.job-part-row', 'partIndex');
+    const row = document.createElement("div");
+    row.className = "add-customer-form-row job-part-row";
+    row.dataset.partIndex = String(nextIndex);
+
+    const optionHtml = partOptionsTemplate.innerHTML;
+
+    row.innerHTML =
+      '<div class="add-customer-form-field">' +
+        '<label for="part-name-' + nextIndex + '">Part</label>' +
+        '<select id="part-name-' + nextIndex + '" name="part_name[]">' +
+          '<option value="">-- Select a part --</option>' +
+          optionHtml +
+        '</select>' +
+      '</div>' +
+      '<div class="add-customer-form-field">' +
+        '<label for="part-price-' + nextIndex + '">Price</label>' +
+        '<input id="part-price-' + nextIndex + '" name="part_price[]" type="text" placeholder="$0.00" />' +
+      '</div>';
+
+    const newSelect = row.querySelector('select');
+    if (newSelect) {
+      attachPartPriceUpdateListener(newSelect);
+    }
+
+    attachRowRemoveButton(row, 'part');
+    updateRemoveButtonVisibility(row, 'part');
+    return row;
+  }
+
+  function ensureAtLeastOneServiceRow() {
+    if (!servicesList || !serviceOptionsTemplate) {
+      return;
+    }
+
+    const rows = servicesList.querySelectorAll('.job-service-row');
+    if (rows.length === 0) {
+      servicesList.appendChild(createServiceRow());
+    }
+  }
+
+  function ensureAtLeastOnePartRow() {
+    if (!partsList || !partOptionsTemplate) {
+      return;
+    }
+
+    const rows = partsList.querySelectorAll('.job-part-row');
+    if (rows.length === 0) {
+      partsList.appendChild(createPartRow());
+    }
+  }
+
+  function attachRowRemoveButton(rowElement, rowType) {
+    if (!rowElement || rowElement.querySelector('.job-row-remove-button')) {
+      return;
+    }
+
+    const removeWrap = document.createElement('div');
+    removeWrap.className = 'job-row-remove-wrap';
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'job-row-remove-button';
+    removeButton.textContent = rowType === 'service' ? 'Remove Service' : 'Remove Part';
+
+    removeButton.addEventListener('click', function () {
+      rowElement.remove();
+      if (rowType === 'service') {
+        servicesTouched = true;
+        ensureAtLeastOneServiceRow();
+        refreshRemoveButtons('service');
+      } else {
+        ensureAtLeastOnePartRow();
+        refreshRemoveButtons('part');
+      }
+      validateForm();
+    });
+
+    removeWrap.appendChild(removeButton);
+    rowElement.appendChild(removeWrap);
+    updateRemoveButtonVisibility(rowElement, rowType);
+  }
+
+  if (!servicesList || !serviceOptionsTemplate) {
+    return;
+  }
+
+  const initialServiceRows = servicesList.querySelectorAll('.job-service-row');
+  initialServiceRows.forEach(function (row) {
+    attachRowRemoveButton(row, 'service');
   });
+
+  ensureAtLeastOneServiceRow();
+  refreshRemoveButtons('service');
+
+  if (addServiceButton) {
+    addServiceButton.addEventListener("click", function () {
+      servicesList.appendChild(createServiceRow());
+      refreshRemoveButtons('service');
+
+      validateForm();
+    });
+  }
 
   function attachPartPriceUpdateListener(selectElement) {
     selectElement.addEventListener('change', function () {
@@ -187,6 +413,14 @@
           priceInput.value = '$0.00';
         }
       }
+
+      const partRow = this.closest('.job-part-row');
+      if (partRow) {
+        updateRemoveButtonVisibility(partRow, 'part');
+      }
+
+      refreshRemoveButtons('part');
+
     });
   }
 
@@ -195,36 +429,20 @@
     attachPartPriceUpdateListener(select);
   });
 
+  const initialPartRows = partsList ? partsList.querySelectorAll('.job-part-row') : [];
+  initialPartRows.forEach(function (row) {
+    attachRowRemoveButton(row, 'part');
+  });
+
+  ensureAtLeastOnePartRow();
+  refreshRemoveButtons('part');
+
   if (addPartButton && partsList && partOptionsTemplate) {
     addPartButton.addEventListener("click", function () {
-      const partRows = partsList.querySelectorAll(".job-part-row");
-      const nextIndex = partRows.length + 1;
+      partsList.appendChild(createPartRow());
+      refreshRemoveButtons('part');
 
-      const row = document.createElement("div");
-      row.className = "add-customer-form-row job-part-row";
-      row.dataset.partIndex = String(nextIndex);
-
-      const optionHtml = partOptionsTemplate.innerHTML;
-
-      row.innerHTML =
-        '<div class="add-customer-form-field">' +
-          '<label for="part-name-' + nextIndex + '">Part</label>' +
-          '<select id="part-name-' + nextIndex + '" name="part_name[]">' +
-            '<option value="">-- Select a part --</option>' +
-            optionHtml +
-          '</select>' +
-        '</div>' +
-        '<div class="add-customer-form-field">' +
-          '<label for="part-price-' + nextIndex + '">Price</label>' +
-          '<input id="part-price-' + nextIndex + '" name="part_price[]" type="text" placeholder="$0.00" />' +
-        '</div>';
-
-      partsList.appendChild(row);
-
-      const newSelect = row.querySelector('select');
-      if (newSelect) {
-        attachPartPriceUpdateListener(newSelect);
-      }
+      validateForm();
     });
   }
 
@@ -234,6 +452,7 @@
     'job-city',
     'job-state',
     'job-date',
+    'job-time',
     'job-assigned-employee'
   ];
 
@@ -243,6 +462,8 @@
       field.addEventListener('change', function () {
         if (fieldId === 'job-date') {
           dateTouched = true;
+        } else if (fieldId === 'job-time') {
+          timeTouched = true;
         } else if (fieldId === 'job-assigned-employee') {
           employeeTouched = true;
         }
@@ -251,6 +472,8 @@
       field.addEventListener('input', function () {
         if (fieldId === 'job-date') {
           dateTouched = true;
+        } else if (fieldId === 'job-time') {
+          timeTouched = true;
         } else if (fieldId === 'job-assigned-employee') {
           employeeTouched = true;
         }
@@ -258,6 +481,20 @@
       });
     }
   });
+
+  if (clearDateTimeButton) {
+    clearDateTimeButton.addEventListener('click', function () {
+      if (dateField) {
+        dateField.value = '';
+      }
+      if (timeField) {
+        timeField.value = '';
+      }
+      dateTouched = false;
+      timeTouched = false;
+      validateForm();
+    });
+  }
 
   // Validate on form submission
   form.addEventListener('submit', function (event) {
@@ -267,5 +504,14 @@
   });
 
   // Initial validation
-  validateForm();
+   if (estimateField) {
+     estimateField.addEventListener('change', function () {
+       syncScheduledDateVisibility();
+       validateForm();
+     });
+   }
+   
+   // Initial validation
+   syncScheduledDateVisibility();
+   validateForm();
 })();

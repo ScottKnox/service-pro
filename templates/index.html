@@ -34,9 +34,9 @@
 					{% for job in jobs %}
 					{% set date_parts = job.scheduled_date.split('/') %}
 					{% set job_iso_date = date_parts[2] + '-' + date_parts[0] + '-' + date_parts[1] if date_parts|length == 3 else '' %}
-					<a class="home-job" href="{{ url_for('jobs.view_job', jobId=job._id) }}" data-job-date="{{ job_iso_date }}" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
+					<a class="home-job" href="{{ url_for('jobs.view_job', jobId=job._id) }}" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
 						<div class="home-job-top-row">
-							<div class="home-job-cell">{{ job.scheduled_date }} - {{ job.assigned_employee }} Assigned</div>
+							<div class="home-job-cell">{{ job.scheduled_date }} {{ job.scheduled_time|default('', true) }} - {{ job.assigned_employee }} Assigned</div>
 						</div>
 						<div class="home-job-bottom-row">
 							<div class="home-job-cell">{{ job.job_type }} - {{ job.customer_name }}</div>
@@ -79,32 +79,60 @@
 
 		<div id="home-latest-row">
 			<div class="home-latest-column">
-				<h2>Invoices Ready</h2>
-				<div id="home-invoices-list">
-					{% if invoices %}
-						{% for invoice in invoices %}
-							<a class="home-invoice-cell" href="{{ invoice.file_path }}" target="_blank">
-								{{ invoice.invoice_number }} - {{ invoice.customer_name }}
+				<h2>Calls Needed</h2>
+				<div id="home-calls-needed-list">
+					{% if pending_jobs %}
+						{% for job in pending_jobs %}
+							<div class="home-call-row" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
+								<a class="home-call-cell" href="{{ url_for('jobs.view_job', jobId=job._id) }}">
+									<strong>Date Created:</strong> {{ job.date_created|default('N/A', true) }}
+									<br/><strong>Customer:</strong> {{ job.customer_name|default('Unknown Customer', true) }}
+									<br/><strong>Phone:</strong> {{ job.customer_phone|default('N/A', true) }}
+								</a>
+								{% if job.customer_phone and job.customer_phone != 'N/A' %}
+									<a class="home-call-mobile-button" href="tel:{{ job.customer_phone|replace(' ', '') }}" aria-label="Call {{ job.customer_name|default('customer', true) }}">
+										<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+											<path d="M6.6 10.8a15.7 15.7 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.2c1 .3 2 .4 3 .4a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 5a1 1 0 0 1 1-1h3.6a1 1 0 0 1 1 1c0 1 .1 2 .4 3a1 1 0 0 1-.2 1z" fill="currentColor"/>
+										</svg>
+									</a>
+								{% endif %}
+							</div>
+						{% endfor %}
+					{% else %}
+						<p id="home-calls-needed-empty-server">No pending jobs for the selected employee(s).</p>
+					{% endif %}
+					<p id="home-calls-needed-empty">No pending jobs for the selected employee(s).</p>
+				</div>
+				
+			</div>
+			<div class="home-latest-column">
+				<h2>Estimates</h2>
+				<div id="home-outstanding-estimates-list">
+					{% if estimates %}
+						{% for estimate in estimates %}
+							<a class="home-estimate-cell" href="#">
+								{{ estimate.date|default('') }} - {{ estimate.customer_name|default('Unknown Customer') }}
+								<br/>{{ estimate.title|default('Estimate') }} - {{ estimate.amount|default('$0.00') }}
 							</a>
 						{% endfor %}
 					{% else %}
-						<p>No invoices available.</p>
+						<p id="home-estimates-empty-server">No jobs being estimated for the selected employee(s).</p>
 					{% endif %}
+					<p id="home-estimates-empty">No jobs being estimated for the selected employee(s).</p>
 				</div>
-				{% if invoices_total_pages|default(0, true) > 0 %}
-				<div id="home-invoices-pages">
+				{% if estimates_total_pages|default(0, true) > 0 %}
+				<div id="home-estimates-pages">
 					<span>Page:</span>
-					{% set invoice_pages = invoices_total_pages %}
-					{% set active_invoice_page = invoice_page|default(1, true) %}
-					{% for page_num in range(1, invoice_pages + 1) %}
-						<a class="{% if page_num == active_invoice_page %}is-active{% endif %}" href="{{ url_for('home', invoice_page=page_num) }}" data-page="{{ page_num }}">{{ page_num }}</a>
+					{% set estimate_pages = estimates_total_pages %}
+					{% set active_estimate_page = estimate_page|default(1, true) %}
+					{% for page_num in range(1, estimate_pages + 1) %}
+						<a class="{% if page_num == active_estimate_page %}is-active{% endif %}" href="{{ url_for('home', estimate_page=page_num) }}" data-page="{{ page_num }}">{{ page_num }}</a>
 					{% endfor %}
 				</div>
 				{% endif %}
 				<div class="home-latest-action">
-					<a class="home-latest-action-link" href="{{ url_for('admin_bp.invoices') }}">Manage Invoices</a>
+					<a class="home-latest-action-link" href="#">Manage Jobs</a>
 				</div>
-				
 			</div>
 			<div class="home-latest-column">
 				<h2>Payments Due</h2>
@@ -122,34 +150,6 @@
 				{% endif %}
 				<div class="home-latest-action">
 					<a class="home-latest-action-link" href="#">Manage Payments</a>
-				</div>
-			</div>
-			<div class="home-latest-column">
-				<h2>Estimates</h2>
-				<div id="home-outstanding-estimates-list">
-					{% if estimates %}
-						{% for estimate in estimates %}
-							<a class="home-estimate-cell" href="#">
-								{{ estimate.date|default('') }} - {{ estimate.customer_name|default('Unknown Customer') }}
-								<br/>{{ estimate.title|default('Estimate') }} - {{ estimate.amount|default('$0.00') }}
-							</a>
-						{% endfor %}
-					{% else %}
-						<p>No estimates available.</p>
-					{% endif %}
-				</div>
-				{% if estimates_total_pages|default(0, true) > 0 %}
-				<div id="home-estimates-pages">
-					<span>Page:</span>
-					{% set estimate_pages = estimates_total_pages %}
-					{% set active_estimate_page = estimate_page|default(1, true) %}
-					{% for page_num in range(1, estimate_pages + 1) %}
-						<a class="{% if page_num == active_estimate_page %}is-active{% endif %}" href="{{ url_for('home', invoice_page=invoice_page, estimate_page=page_num) }}" data-page="{{ page_num }}">{{ page_num }}</a>
-					{% endfor %}
-				</div>
-				{% endif %}
-				<div class="home-latest-action">
-					<a class="home-latest-action-link" href="#">Manage Estimates</a>
 				</div>
 			</div>
 		</div>

@@ -79,10 +79,11 @@
             <div id="jobs-list-grid">
               {% if jobs %}
                 {% for job in jobs %}
+                  {% set job_status_normalized = (job.status|default('', true))|lower %}
                   <a class="jobs-card" href="{{ url_for('jobs.view_job', jobId=job._id) }}">
                     <div class="jobs-card-row">
                       <span class="jobs-card-label">Status</span>
-                      <span class="jobs-card-value">{{ job.status }}</span>
+                      <span class="jobs-card-value jobs-status-chip{% if job_status_normalized == 'pending' %} is-pending{% elif job_status_normalized == 'scheduled' %} is-scheduled{% elif job_status_normalized == 'estimating' or job_status_normalized == 'estimate' %} is-estimating{% elif job_status_normalized == 'started' %} is-started{% endif %}">{{ job.status }}</span>
                     </div>
                     <div class="jobs-card-row">
                       <span class="jobs-card-label">Customer</span>
@@ -94,7 +95,7 @@
                     </div>
                     <div class="jobs-card-row">
                       <span class="jobs-card-label">Service</span>
-                      <span class="jobs-card-value">{{ job.job_type }}</span>
+                      <span class="jobs-card-value">{% if job.services %}{{ job.job_type }}{% else %}No services added.{% endif %}</span>
                     </div>
                     <div class="jobs-card-row">
                       <span class="jobs-card-label">City</span>
@@ -110,7 +111,7 @@
                     </div>
                     <div class="jobs-card-row">
                       <span class="jobs-card-label">Date Scheduled</span>
-                      <span class="jobs-card-value">{{ job.scheduled_date }}</span>
+                      <span class="jobs-card-value">{{ job.scheduled_date }} {{ job.scheduled_time|default('', true) }}</span>
                     </div>
                     <div class="jobs-card-row">
                       <span class="jobs-card-label">Total</span>

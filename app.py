@@ -9,8 +9,6 @@ from flask_wtf.csrf import CSRFProtect
 
 from blueprints import register_blueprints
 from mongo import ensure_connection_or_500, serialize_doc
-from utils.invoices import collect_invoice_items
-
 app = Flask(__name__)
 
 # Session Configuration
@@ -69,11 +67,12 @@ def home():
         return render_template("index.html", is_logged_in=False)
 
     current_employee_name = (session.get("employee_name") or "").strip()
+    current_employee_position = (session.get("employee_position") or "").strip().lower()
     normalized_current_employee_name = " ".join(current_employee_name.lower().split())
 
     jobs_list = [
         serialize_doc(job)
-        for job in db.jobs.find().sort([("scheduled_date", 1), ("date_created", -1)])
+        for job in db.jobs.find().sort([("scheduled_date", 1), ("scheduled_time", 1), ("date_created", -1)])
     ]
     employees = [
         serialize_doc(employee)
@@ -89,29 +88,22 @@ def home():
             {
                 "label": full_name,
                 "value": full_name.lower().replace(" ", "-"),
-                "checked": normalized_full_name == normalized_current_employee_name,
+                "checked": current_employee_position == "clerk" or normalized_full_name == normalized_current_employee_name,
             }
         )
 
-    invoice_page_raw = request.args.get("invoice_page", "1")
-    try:
-        invoice_page = max(1, int(invoice_page_raw))
-    except ValueError:
-        invoice_page = 1
+    pending_jobs = []
+    for job in db.jobs.find({"status": {"$regex": "^Pending$", "$options": "i"}}).sort([("date_created", -1), ("_id", -1)]):
+        serialized_job = serialize_doc(job)
+        customer_phone = "N/A"
+        customer_id = serialized_job.get("customer_id")
+        if customer_id and ObjectId.is_valid(customer_id):
+            customer_doc = db.customers.find_one({"_id": ObjectId(customer_id)}, {"phone": 1})
+            if customer_doc:
+                customer_phone = (customer_doc.get("phone") or "").strip() or "N/A"
 
-    invoices_per_page = 5
-    invoice_items = collect_invoice_items(db)
-
-    invoices_total_pages = (len(invoice_items) + invoices_per_page - 1) // invoices_per_page
-    if invoices_total_pages == 0:
-        invoice_page = 1
-        invoices = []
-    else:
-        if invoice_page > invoices_total_pages:
-            invoice_page = invoices_total_pages
-        invoice_start = (invoice_page - 1) * invoices_per_page
-        invoice_end = invoice_start + invoices_per_page
-        invoices = invoice_items[invoice_start:invoice_end]
+        serialized_job["customer_phone"] = customer_phone
+        pending_jobs.append(serialized_job)
 
     estimate_page_raw = request.args.get("estimate_page", "1")
     try:
@@ -122,7 +114,7 @@ def home():
     estimates_per_page = 5
     estimate_items = [
         serialize_doc(job)
-        for job in db.jobs.find({"status": "Estimate"}).sort([("scheduled_date", -1), ("_id", -1)])
+        for job in db.jobs.find({"status": {"$regex": "^Estimating$", "$options": "i"}}).sort([("scheduled_date", -1), ("scheduled_time", -1), ("_id", -1)])
     ]
     estimates_total_pages = (len(estimate_items) + estimates_per_page - 1) // estimates_per_page
     if estimates_total_pages == 0:
@@ -140,9 +132,7 @@ def home():
         is_logged_in=True,
         jobs=jobs_list,
         employee_filters=employee_filters,
-        invoices=invoices,
-        invoice_page=invoice_page,
-        invoices_total_pages=invoices_total_pages,
+        pending_jobs=pending_jobs,
         payments=[],
         payments_total_pages=0,
         estimates=estimates,

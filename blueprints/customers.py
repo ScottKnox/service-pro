@@ -24,32 +24,48 @@ def add_customer():
     if request.method == "POST":
         first_name = request.form.get("first_name", "").strip()
         last_name = request.form.get("last_name", "").strip()
+        company = request.form.get("company", "").strip()
+        phone = request.form.get("phone", "").strip()
+        email = request.form.get("email", "").strip()
+        address_line_1 = request.form.get("address_line_1", "").strip()
+        address_line_2 = request.form.get("address_line_2", "").strip()
+        city = request.form.get("city", "").strip()
+        state = request.form.get("state", "").strip().upper()
+        referral_source = request.form.get("referral_source", "").strip()
 
-        if first_name and last_name:
-            customer_count = db.customers.count_documents({}) + 1
-            customer = {
-                "first_name": first_name,
-                "last_name": last_name,
-                "company": request.form.get("company", "").strip(),
-                "phone": request.form.get("phone", "").strip(),
-                "email": request.form.get("email", "").strip(),
-                "address_line_1": request.form.get("address_line_1", "").strip(),
-                "address_line_2": request.form.get("address_line_2", "").strip(),
-                "city": request.form.get("city", "").strip(),
-                "state": request.form.get("state", "").strip().upper(),
-                "referral_source": request.form.get("referral_source", "").strip(),
-                "customer_status": request.form.get("customer_status", "").strip() or "active",
-                "date_added": datetime.now().strftime("%m/%d/%Y"),
-                "account_number": f"ACC-{customer_count:05d}",
-                "account_type": "Residential",
-                "balance_due": "$0.00",
-                "account_status": "Current",
-            }
-            inserted = db.customers.insert_one(customer)
-            current_app.logger.info("Customer created: id=%s by employee_id=%s", str(inserted.inserted_id), session.get("employee_id"))
-            return redirect(url_for("customers.view_customer", customerId=str(inserted.inserted_id)))
+        if not first_name or not last_name:
+            return render_template(
+                "customers/add_customer.html",
+                error="First name and last name are required.",
+                form_data=request.form,
+            )
 
-    return render_template("customers/add_customer.html")
+        customer_status = "Active" if all((phone, email, address_line_1, city, state)) else "Lead"
+
+        customer_count = db.customers.count_documents({}) + 1
+        customer = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "company": company,
+            "phone": phone,
+            "email": email,
+            "address_line_1": address_line_1,
+            "address_line_2": address_line_2,
+            "city": city,
+            "state": state,
+            "referral_source": referral_source,
+            "customer_status": customer_status,
+            "date_added": datetime.now().strftime("%m/%d/%Y"),
+            "account_number": f"ACC-{customer_count:05d}",
+            "account_type": "Residential",
+            "balance_due": "$0.00",
+            "account_status": "Current",
+        }
+        inserted = db.customers.insert_one(customer)
+        current_app.logger.info("Customer created: id=%s by employee_id=%s", str(inserted.inserted_id), session.get("employee_id"))
+        return redirect(url_for("customers.view_customer", customerId=str(inserted.inserted_id)))
+
+    return render_template("customers/add_customer.html", error="", form_data={})
 
 
 @bp.route("/customers/<customerId>/update", methods=["GET", "POST"])
@@ -62,6 +78,11 @@ def update_customer(customerId):
     if request.method == "POST":
         first_name = request.form.get("first_name", "").strip()
         last_name = request.form.get("last_name", "").strip()
+        phone = request.form.get("phone", "").strip()
+        email = request.form.get("email", "").strip()
+        address_line_1 = request.form.get("address_line_1", "").strip()
+        city = request.form.get("city", "").strip()
+        state = request.form.get("state", "").strip().upper()
 
         if not first_name or not last_name:
             return render_template(
@@ -71,18 +92,23 @@ def update_customer(customerId):
                 error="First name and last name are required.",
             )
 
+        current_status = str(customer.get("customer_status", "")).strip()
+        next_status = current_status
+        if current_status.lower() == "lead" and all((phone, email, address_line_1, city, state)):
+            next_status = "Active"
+
         update_data = {
             "first_name": first_name,
             "last_name": last_name,
             "company": request.form.get("company", "").strip(),
-            "phone": request.form.get("phone", "").strip(),
-            "email": request.form.get("email", "").strip(),
-            "address_line_1": request.form.get("address_line_1", "").strip(),
+            "phone": phone,
+            "email": email,
+            "address_line_1": address_line_1,
             "address_line_2": request.form.get("address_line_2", "").strip(),
-            "city": request.form.get("city", "").strip(),
-            "state": request.form.get("state", "").strip().upper(),
+            "city": city,
+            "state": state,
             "referral_source": request.form.get("referral_source", "").strip(),
-            "customer_status": request.form.get("customer_status", "").strip() or "active",
+            "customer_status": next_status,
         }
 
         db.customers.update_one({"_id": ObjectId(customerId)}, {"$set": update_data})
@@ -176,7 +202,7 @@ def view_customer(customerId):
     jobs_skip = (jobs_page - 1) * jobs_per_page
     customer_jobs = [
         serialize_doc(job)
-        for job in db.jobs.find({"customer_id": customerId}).sort("scheduled_date", -1).skip(jobs_skip).limit(jobs_per_page)
+        for job in db.jobs.find({"customer_id": customerId}).sort([("scheduled_date", -1), ("scheduled_time", -1)]).skip(jobs_skip).limit(jobs_per_page)
     ]
 
     payments_skip = (payments_page - 1) * payments_per_page

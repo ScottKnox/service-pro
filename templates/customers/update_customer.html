@@ -24,31 +24,31 @@
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="customer-first-name">First Name</label>
-            <input id="customer-first-name" name="first_name" type="text" placeholder="First name" value="{{ customer.first_name|default('') }}" required />
+            <input id="customer-first-name" name="first_name" type="text" placeholder="First name" value="{{ customer.first_name|default('', true) }}" required />
           </div>
 
           <div class="add-customer-form-field">
             <label for="customer-last-name">Last Name</label>
-            <input id="customer-last-name" name="last_name" type="text" placeholder="Last name" value="{{ customer.last_name|default('') }}" required />
+            <input id="customer-last-name" name="last_name" type="text" placeholder="Last name" value="{{ customer.last_name|default('', true) }}" required />
           </div>
         </div>
 
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="customer-company">Company</label>
-            <input id="customer-company" name="company" type="text" placeholder="Company name" value="{{ customer.company|default('') }}" />
+            <input id="customer-company" name="company" type="text" placeholder="Company name" value="{{ customer.company|default('', true) }}" />
           </div>
 
           <div class="add-customer-form-field">
             <label for="customer-phone">Phone</label>
-            <input id="customer-phone" name="phone" type="tel" placeholder="(555) 555-5555" value="{{ customer.phone|default('') }}" />
+            <input id="customer-phone" name="phone" type="tel" placeholder="(555) 555-5555" value="{{ customer.phone|default('', true) }}" />
           </div>
         </div>
 
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="customer-email">Email</label>
-            <input id="customer-email" name="email" type="email" placeholder="name@example.com" value="{{ customer.email|default('') }}" />
+            <input id="customer-email" name="email" type="email" placeholder="name@example.com" value="{{ customer.email|default('', true) }}" />
           </div>
 
           <div class="add-customer-form-field"></div>
@@ -57,75 +57,75 @@
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="customer-address-line-1">Address Line 1</label>
-            <input id="customer-address-line-1" name="address_line_1" type="text" placeholder="123 Main Street" value="{{ customer.address_line_1|default('') }}" />
+            <input id="customer-address-line-1" name="address_line_1" type="text" placeholder="123 Main Street" value="{{ customer.address_line_1|default('', true) }}" />
           </div>
 
           <div class="add-customer-form-field">
             <label for="customer-address-line-2">Address Line 2</label>
-            <input id="customer-address-line-2" name="address_line_2" type="text" placeholder="Suite, unit, or apartment" value="{{ customer.address_line_2|default('') }}" />
+            <input id="customer-address-line-2" name="address_line_2" type="text" placeholder="Suite, unit, or apartment" value="{{ customer.address_line_2|default('', true) }}" />
           </div>
         </div>
 
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="customer-city">City</label>
-            <input id="customer-city" name="city" type="text" placeholder="City" value="{{ customer.city|default('') }}" />
+            <input id="customer-city" name="city" type="text" placeholder="City" value="{{ customer.city|default('', true) }}" />
           </div>
 
           <div class="add-customer-form-field">
             <label for="customer-state">State</label>
             <select id="customer-state" name="state">
               <option value="">-- Select a state --</option>
-              <option value="AL" {% if customer.state|default('') == 'AL' %}selected{% endif %}>AL</option>
-              <option value="AK" {% if customer.state|default('') == 'AK' %}selected{% endif %}>AK</option>
-              <option value="AZ" {% if customer.state|default('') == 'AZ' %}selected{% endif %}>AZ</option>
-              <option value="AR" {% if customer.state|default('') == 'AR' %}selected{% endif %}>AR</option>
-              <option value="CA" {% if customer.state|default('') == 'CA' %}selected{% endif %}>CA</option>
-              <option value="CO" {% if customer.state|default('') == 'CO' %}selected{% endif %}>CO</option>
-              <option value="CT" {% if customer.state|default('') == 'CT' %}selected{% endif %}>CT</option>
-              <option value="DE" {% if customer.state|default('') == 'DE' %}selected{% endif %}>DE</option>
-              <option value="FL" {% if customer.state|default('') == 'FL' %}selected{% endif %}>FL</option>
-              <option value="GA" {% if customer.state|default('') == 'GA' %}selected{% endif %}>GA</option>
-              <option value="HI" {% if customer.state|default('') == 'HI' %}selected{% endif %}>HI</option>
-              <option value="ID" {% if customer.state|default('') == 'ID' %}selected{% endif %}>ID</option>
-              <option value="IL" {% if customer.state|default('') == 'IL' %}selected{% endif %}>IL</option>
-              <option value="IN" {% if customer.state|default('') == 'IN' %}selected{% endif %}>IN</option>
-              <option value="IA" {% if customer.state|default('') == 'IA' %}selected{% endif %}>IA</option>
-              <option value="KS" {% if customer.state|default('') == 'KS' %}selected{% endif %}>KS</option>
-              <option value="KY" {% if customer.state|default('') == 'KY' %}selected{% endif %}>KY</option>
-              <option value="LA" {% if customer.state|default('') == 'LA' %}selected{% endif %}>LA</option>
-              <option value="ME" {% if customer.state|default('') == 'ME' %}selected{% endif %}>ME</option>
-              <option value="MD" {% if customer.state|default('') == 'MD' %}selected{% endif %}>MD</option>
-              <option value="MA" {% if customer.state|default('') == 'MA' %}selected{% endif %}>MA</option>
-              <option value="MI" {% if customer.state|default('') == 'MI' %}selected{% endif %}>MI</option>
-              <option value="MN" {% if customer.state|default('') == 'MN' %}selected{% endif %}>MN</option>
-              <option value="MS" {% if customer.state|default('') == 'MS' %}selected{% endif %}>MS</option>
-              <option value="MO" {% if customer.state|default('') == 'MO' %}selected{% endif %}>MO</option>
-              <option value="MT" {% if customer.state|default('') == 'MT' %}selected{% endif %}>MT</option>
-              <option value="NE" {% if customer.state|default('') == 'NE' %}selected{% endif %}>NE</option>
-              <option value="NV" {% if customer.state|default('') == 'NV' %}selected{% endif %}>NV</option>
-              <option value="NH" {% if customer.state|default('') == 'NH' %}selected{% endif %}>NH</option>
-              <option value="NJ" {% if customer.state|default('') == 'NJ' %}selected{% endif %}>NJ</option>
-              <option value="NM" {% if customer.state|default('') == 'NM' %}selected{% endif %}>NM</option>
-              <option value="NY" {% if customer.state|default('') == 'NY' %}selected{% endif %}>NY</option>
-              <option value="NC" {% if customer.state|default('') == 'NC' %}selected{% endif %}>NC</option>
-              <option value="ND" {% if customer.state|default('') == 'ND' %}selected{% endif %}>ND</option>
-              <option value="OH" {% if customer.state|default('') == 'OH' %}selected{% endif %}>OH</option>
-              <option value="OK" {% if customer.state|default('') == 'OK' %}selected{% endif %}>OK</option>
-              <option value="OR" {% if customer.state|default('') == 'OR' %}selected{% endif %}>OR</option>
-              <option value="PA" {% if customer.state|default('') == 'PA' %}selected{% endif %}>PA</option>
-              <option value="RI" {% if customer.state|default('') == 'RI' %}selected{% endif %}>RI</option>
-              <option value="SC" {% if customer.state|default('') == 'SC' %}selected{% endif %}>SC</option>
-              <option value="SD" {% if customer.state|default('') == 'SD' %}selected{% endif %}>SD</option>
-              <option value="TN" {% if customer.state|default('') == 'TN' %}selected{% endif %}>TN</option>
-              <option value="TX" {% if customer.state|default('') == 'TX' %}selected{% endif %}>TX</option>
-              <option value="UT" {% if customer.state|default('') == 'UT' %}selected{% endif %}>UT</option>
-              <option value="VT" {% if customer.state|default('') == 'VT' %}selected{% endif %}>VT</option>
-              <option value="VA" {% if customer.state|default('') == 'VA' %}selected{% endif %}>VA</option>
-              <option value="WA" {% if customer.state|default('') == 'WA' %}selected{% endif %}>WA</option>
-              <option value="WV" {% if customer.state|default('') == 'WV' %}selected{% endif %}>WV</option>
-              <option value="WI" {% if customer.state|default('') == 'WI' %}selected{% endif %}>WI</option>
-              <option value="WY" {% if customer.state|default('') == 'WY' %}selected{% endif %}>WY</option>
+              <option value="AL" {% if customer.state|default('', true) == 'AL' %}selected{% endif %}>AL</option>
+              <option value="AK" {% if customer.state|default('', true) == 'AK' %}selected{% endif %}>AK</option>
+              <option value="AZ" {% if customer.state|default('', true) == 'AZ' %}selected{% endif %}>AZ</option>
+              <option value="AR" {% if customer.state|default('', true) == 'AR' %}selected{% endif %}>AR</option>
+              <option value="CA" {% if customer.state|default('', true) == 'CA' %}selected{% endif %}>CA</option>
+              <option value="CO" {% if customer.state|default('', true) == 'CO' %}selected{% endif %}>CO</option>
+              <option value="CT" {% if customer.state|default('', true) == 'CT' %}selected{% endif %}>CT</option>
+              <option value="DE" {% if customer.state|default('', true) == 'DE' %}selected{% endif %}>DE</option>
+              <option value="FL" {% if customer.state|default('', true) == 'FL' %}selected{% endif %}>FL</option>
+              <option value="GA" {% if customer.state|default('', true) == 'GA' %}selected{% endif %}>GA</option>
+              <option value="HI" {% if customer.state|default('', true) == 'HI' %}selected{% endif %}>HI</option>
+              <option value="ID" {% if customer.state|default('', true) == 'ID' %}selected{% endif %}>ID</option>
+              <option value="IL" {% if customer.state|default('', true) == 'IL' %}selected{% endif %}>IL</option>
+              <option value="IN" {% if customer.state|default('', true) == 'IN' %}selected{% endif %}>IN</option>
+              <option value="IA" {% if customer.state|default('', true) == 'IA' %}selected{% endif %}>IA</option>
+              <option value="KS" {% if customer.state|default('', true) == 'KS' %}selected{% endif %}>KS</option>
+              <option value="KY" {% if customer.state|default('', true) == 'KY' %}selected{% endif %}>KY</option>
+              <option value="LA" {% if customer.state|default('', true) == 'LA' %}selected{% endif %}>LA</option>
+              <option value="ME" {% if customer.state|default('', true) == 'ME' %}selected{% endif %}>ME</option>
+              <option value="MD" {% if customer.state|default('', true) == 'MD' %}selected{% endif %}>MD</option>
+              <option value="MA" {% if customer.state|default('', true) == 'MA' %}selected{% endif %}>MA</option>
+              <option value="MI" {% if customer.state|default('', true) == 'MI' %}selected{% endif %}>MI</option>
+              <option value="MN" {% if customer.state|default('', true) == 'MN' %}selected{% endif %}>MN</option>
+              <option value="MS" {% if customer.state|default('', true) == 'MS' %}selected{% endif %}>MS</option>
+              <option value="MO" {% if customer.state|default('', true) == 'MO' %}selected{% endif %}>MO</option>
+              <option value="MT" {% if customer.state|default('', true) == 'MT' %}selected{% endif %}>MT</option>
+              <option value="NE" {% if customer.state|default('', true) == 'NE' %}selected{% endif %}>NE</option>
+              <option value="NV" {% if customer.state|default('', true) == 'NV' %}selected{% endif %}>NV</option>
+              <option value="NH" {% if customer.state|default('', true) == 'NH' %}selected{% endif %}>NH</option>
+              <option value="NJ" {% if customer.state|default('', true) == 'NJ' %}selected{% endif %}>NJ</option>
+              <option value="NM" {% if customer.state|default('', true) == 'NM' %}selected{% endif %}>NM</option>
+              <option value="NY" {% if customer.state|default('', true) == 'NY' %}selected{% endif %}>NY</option>
+              <option value="NC" {% if customer.state|default('', true) == 'NC' %}selected{% endif %}>NC</option>
+              <option value="ND" {% if customer.state|default('', true) == 'ND' %}selected{% endif %}>ND</option>
+              <option value="OH" {% if customer.state|default('', true) == 'OH' %}selected{% endif %}>OH</option>
+              <option value="OK" {% if customer.state|default('', true) == 'OK' %}selected{% endif %}>OK</option>
+              <option value="OR" {% if customer.state|default('', true) == 'OR' %}selected{% endif %}>OR</option>
+              <option value="PA" {% if customer.state|default('', true) == 'PA' %}selected{% endif %}>PA</option>
+              <option value="RI" {% if customer.state|default('', true) == 'RI' %}selected{% endif %}>RI</option>
+              <option value="SC" {% if customer.state|default('', true) == 'SC' %}selected{% endif %}>SC</option>
+              <option value="SD" {% if customer.state|default('', true) == 'SD' %}selected{% endif %}>SD</option>
+              <option value="TN" {% if customer.state|default('', true) == 'TN' %}selected{% endif %}>TN</option>
+              <option value="TX" {% if customer.state|default('', true) == 'TX' %}selected{% endif %}>TX</option>
+              <option value="UT" {% if customer.state|default('', true) == 'UT' %}selected{% endif %}>UT</option>
+              <option value="VT" {% if customer.state|default('', true) == 'VT' %}selected{% endif %}>VT</option>
+              <option value="VA" {% if customer.state|default('', true) == 'VA' %}selected{% endif %}>VA</option>
+              <option value="WA" {% if customer.state|default('', true) == 'WA' %}selected{% endif %}>WA</option>
+              <option value="WV" {% if customer.state|default('', true) == 'WV' %}selected{% endif %}>WV</option>
+              <option value="WI" {% if customer.state|default('', true) == 'WI' %}selected{% endif %}>WI</option>
+              <option value="WY" {% if customer.state|default('', true) == 'WY' %}selected{% endif %}>WY</option>
             </select>
           </div>
         </div>
@@ -133,16 +133,10 @@
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="customer-referral-source">Referral Source</label>
-            <input id="customer-referral-source" name="referral_source" type="text" placeholder="Google, referral, yard sign, etc." value="{{ customer.referral_source|default('') }}" />
+            <input id="customer-referral-source" name="referral_source" type="text" placeholder="Google, referral, yard sign, etc." value="{{ customer.referral_source|default('', true) }}" />
           </div>
 
-          <div class="add-customer-form-field">
-            <label for="customer-status">Customer Status</label>
-            <select id="customer-status" name="customer_status">
-              <option value="Lead" {% if customer.customer_status|default('active') == 'Lead' %}selected{% endif %}>Lead</option>
-              <option value="active" {% if customer.customer_status|default('active') == 'active' %}selected{% endif %}>Active</option>
-            </select>
-          </div>
+          <div class="add-customer-form-field"></div>
         </div>
 
         <div id="add-customer-form-actions">
@@ -151,4 +145,8 @@
       </form>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/create_customer.js') }}" defer></script>
 {% endblock %}
