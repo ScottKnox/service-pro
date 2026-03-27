@@ -14,70 +14,60 @@
         </ol>
       </nav>
 
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
       <form id="add-customer-form" action="{{ url_for('employees.add_employee') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="employee-first-name">First Name</label>
-            <input id="employee-first-name" name="first_name" type="text" placeholder="First name" required />
+            <input id="employee-first-name" name="first_name" type="text" placeholder="First name" value="{{ form_data.get('first_name', '') }}" required />
           </div>
 
           <div class="add-customer-form-field">
             <label for="employee-last-name">Last Name</label>
-            <input id="employee-last-name" name="last_name" type="text" placeholder="Last name" required />
+            <input id="employee-last-name" name="last_name" type="text" placeholder="Last name" value="{{ form_data.get('last_name', '') }}" required />
           </div>
         </div>
 
-        <div class="add-customer-form-row">
+        <div class="add-customer-form-row add-customer-form-row--top-aligned">
           <div class="add-customer-form-field">
             <label for="employee-username">Username</label>
-            <input id="employee-username" name="username" type="text" placeholder="Username for login" required />
+            <input id="employee-username" name="username" type="text" placeholder="Username for login" value="{{ form_data.get('username', '') }}" required />
           </div>
 
           <div class="add-customer-form-field">
             <label for="employee-password">Password</label>
             <input id="employee-password" name="password" type="password" placeholder="Password for login" required />
+            <p class="form-field-note form-field-note--compact">Use at least 8 characters with 1 uppercase letter, 1 number, and 1 special character from !@#$%^&amp;*.</p>
+            <p id="employee-password-error" class="field-validation-error" aria-live="polite"></p>
           </div>
         </div>
 
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="employee-phone">Phone</label>
-            <input id="employee-phone" name="phone" type="tel" placeholder="(555) 555-5555" />
+            <input id="employee-phone" name="phone" type="tel" placeholder="(555) 555-5555" value="{{ form_data.get('phone', '') }}" required />
           </div>
 
           <div class="add-customer-form-field">
             <label for="employee-email">Email</label>
-            <input id="employee-email" name="email" type="email" placeholder="name@example.com" />
+            <input id="employee-email" name="email" type="email" placeholder="name@example.com" value="{{ form_data.get('email', '') }}" required />
           </div>
         </div>
 
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="employee-position">Position</label>
-            <select id="employee-position" name="position">
+            <select id="employee-position" name="position" required>
               <option value="">-- Select a position --</option>
-              <option value="Technician">Technician</option>
-              <option value="Clerk">Clerk</option>
-              <option value="Other">Other</option>
+              <option value="Technician" {% if form_data.get('position', '') == 'Technician' %}selected{% endif %}>Technician</option>
+              <option value="Clerk" {% if form_data.get('position', '') == 'Clerk' %}selected{% endif %}>Clerk</option>
+              <option value="Other" {% if form_data.get('position', '') == 'Other' %}selected{% endif %}>Other</option>
             </select>
           </div>
-
-          <div class="add-customer-form-field">
-            <label for="employee-status">Status</label>
-            <select id="employee-status" name="status">
-              <option value="Active" selected>Active</option>
-              <option value="Onboarding">Onboarding</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="employee-bio">Bio</label>
-            <textarea id="employee-bio" name="bio" rows="4" placeholder="Short employee profile bio"></textarea>
-          </div>
-
           <div class="add-customer-form-field"></div>
         </div>
 
@@ -87,4 +77,8 @@
       </form>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/add_employee.js') }}" defer></script>
 {% endblock %}

@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 
 from bson import ObjectId
 from flask import Blueprint, current_app, redirect, render_template, request, session, url_for
@@ -6,6 +7,13 @@ from flask import Blueprint, current_app, redirect, render_template, request, se
 from mongo import ensure_connection_or_500, object_id_or_404, serialize_doc
 
 bp = Blueprint("customers", __name__)
+
+EMAIL_VALIDATION_MESSAGE = "Enter a valid email address."
+EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
+def _email_is_valid(email):
+    return bool(EMAIL_PATTERN.match(email))
 
 
 @bp.route("/customers")
@@ -22,6 +30,7 @@ def customers():
 def add_customer():
     db = ensure_connection_or_500()
     if request.method == "POST":
+        form_data = request.form.to_dict()
         first_name = request.form.get("first_name", "").strip()
         last_name = request.form.get("last_name", "").strip()
         company = request.form.get("company", "").strip()
@@ -37,7 +46,14 @@ def add_customer():
             return render_template(
                 "customers/add_customer.html",
                 error="First name and last name are required.",
-                form_data=request.form,
+                form_data=form_data,
+            )
+
+        if email and not _email_is_valid(email):
+            return render_template(
+                "customers/add_customer.html",
+                error=EMAIL_VALIDATION_MESSAGE,
+                form_data=form_data,
             )
 
         customer_status = "Active" if all((phone, email, address_line_1, city, state)) else "Lead"

@@ -34,7 +34,15 @@
       <div id="customers-list-grid" data-live-card-filter-grid>
         {% if employees %}
           {% for employee in employees %}
+            {% set employee_status = employee.status|default('N/A', true) %}
+            {% set employee_status_normalized = employee_status|lower %}
             <a class="customer-card" href="{{ url_for('employees.view_employee', employeeId=employee._id) }}" data-live-card-filter-item>
+              <div class="customer-card-row">
+                <span class="customer-card-label">Status</span>
+                <span class="customer-card-value">
+                  <span class="customer-status-chip{% if employee_status_normalized == 'onboarding' %} is-lead{% elif employee_status_normalized == 'active' %} is-active{% endif %}">{{ employee_status }}</span>
+                </span>
+              </div>
               <div class="customer-card-row">
                 <span class="customer-card-label">First Name</span>
                 <span class="customer-card-value" data-live-card-first-name>{{ employee.first_name }}</span>
@@ -54,10 +62,6 @@
               <div class="customer-card-row">
                 <span class="customer-card-label">Position</span>
                 <span class="customer-card-value">{{ employee.position }}</span>
-              </div>
-              <div class="customer-card-row">
-                <span class="customer-card-label">Status</span>
-                <span class="customer-card-value">{{ employee.status }}</span>
               </div>
             </a>
           {% endfor %}

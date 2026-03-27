@@ -998,6 +998,10 @@ p {
   gap: 1rem;
 }
 
+.add-customer-form-row--top-aligned {
+  align-items: start;
+}
+
 .add-customer-form-row--single {
   grid-template-columns: minmax(0, 1fr);
   max-width: calc(50% - 0.5rem);
@@ -1254,6 +1258,11 @@ p {
 .customer-status-chip.is-active {
   background-color: #DDF5E3;
   color: #1F6B35;
+}
+
+.employee-status-chip {
+  padding: 0.24rem 0.8rem;
+  font-size: 1.15rem;
 }
 
 #error-services {

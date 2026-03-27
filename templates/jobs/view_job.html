@@ -25,10 +25,10 @@
             <button type="submit"{% if job_status_normalized == "pending" or (not job.services and not job.parts) %} disabled{% endif %}>Create Quote</button>
           </form>
           {% endif %}
-          {% if job_status_normalized != "started" and job_status_normalized != "completed" %}
+          {% if job_status_normalized != "started" and job_status_normalized != "completed" and job.scheduled_date and job.scheduled_time %}
           <form method="POST" action="{{ url_for('jobs.start_job', jobId=jobId) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit"{% if job_status_normalized == "pending" %} disabled{% endif %}>Mark Started</button>
+            <button type="submit">Mark Started</button>
           </form>
           {% endif %}
           {% if job_status_normalized != "completed" and job_status_normalized != "estimate" and job_status_normalized != "estimating" and job_status_normalized != "pending" %}
@@ -44,6 +44,18 @@
           </form>
         </div>
       </section>
+
+      {% if job_status_normalized == "pending" %}
+      <div id="view-job-pending-note" style="border: 1px solid #FFA500; background-color: #FFF8DC; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
+        <p style="color: #B8860B; font-weight: 600; margin: 0;">You must add services or parts to a job before creating a Quote.</p>
+      </div>
+      {% endif %}
+
+      {% if job_status_normalized == "estimating" and (not job.scheduled_date or not job.scheduled_time) %}
+      <div id="view-job-missing-scheduling-note" style="border: 1px solid #FFA500; background-color: #FFF8DC; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
+        <p style="color: #B8860B; font-weight: 600; margin: 0;">You must add a scheduled date and time for a job before marking it started.</p>
+      </div>
+      {% endif %}
 
       <section id="view-job-details" aria-label="Job details">
         <h2>Job Details</h2>
@@ -69,7 +81,7 @@
               </div>
               <div class="view-job-detail-item">
                 <h4>Scheduled Time</h4>
-                <p>{{ job.scheduled_time|default('N/A', true) }}</p>
+                <p id="scheduled-time-display">{{ job.scheduled_time|default('N/A', true) }}</p>
               </div>
               <div class="view-job-detail-item">
                 <h4>Date Created</h4>
@@ -83,6 +95,22 @@
                 <h4>Total</h4>
                 <p>{{ job.total }}</p>
               </div>
+              {% if detail_job_status_normalized == 'started' or detail_job_status_normalized == 'completed' %}
+              <div class="view-job-detail-item">
+                <h4>Date Started</h4>
+                <p id="date-started-display">{{ job.dateStarted|default('N/A', true) }}</p>
+              </div>
+              {% endif %}
+              {% if detail_job_status_normalized == 'completed' %}
+              <div class="view-job-detail-item">
+                <h4>Date Completed</h4>
+                <p id="date-completed-display">{{ job.dateCompleted|default('N/A', true) }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Time Spent</h4>
+                <p>{{ job.timeSpent|default('N/A', true) }}</p>
+              </div>
+              {% endif %}
             </div>
           </div>
           <div class="view-job-section-column view-job-details-column">

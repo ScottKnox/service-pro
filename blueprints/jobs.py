@@ -188,9 +188,11 @@ def start_job(jobId):
     if not job:
         return redirect(url_for("jobs.jobs"))
 
+    current_timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+
     db.jobs.update_one(
         {"_id": ObjectId(jobId)},
-        {"$set": {"status": "Started"}},
+        {"$set": {"status": "Started", "dateStarted": current_timestamp}},
     )
 
     return redirect(url_for("jobs.view_job", jobId=jobId))
@@ -216,10 +218,33 @@ def complete_job(jobId):
     invoice_path = generate_invoice(jobId, job, customer)
     filename = os.path.basename(invoice_path)
 
+    current_timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+    time_spent_str = ""
+
+    date_started = job.get("dateStarted")
+    if date_started:
+        try:
+            started_dt = datetime.strptime(date_started, "%m/%d/%Y %H:%M:%S")
+            completed_dt = datetime.strptime(current_timestamp, "%m/%d/%Y %H:%M:%S")
+            time_diff = completed_dt - started_dt
+            total_seconds = int(time_diff.total_seconds())
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            if hours > 0 and minutes > 0:
+                time_spent_str = f"{hours} hour{'s' if hours != 1 else ''} {minutes} minute{'s' if minutes != 1 else ''}"
+            elif hours > 0:
+                time_spent_str = f"{hours} hour{'s' if hours != 1 else ''}"
+            elif minutes > 0:
+                time_spent_str = f"{minutes} minute{'s' if minutes != 1 else ''}"
+            else:
+                time_spent_str = "Less than 1 minute"
+        except ValueError:
+            time_spent_str = ""
+
     db.jobs.update_one(
         {"_id": ObjectId(jobId)},
         {
-            "$set": {"status": "Completed"},
+            "$set": {"status": "Completed", "dateCompleted": current_timestamp, "timeSpent": time_spent_str},
             "$push": {
                 "invoices": {
                     "invoice_number": f"INV-{jobId[:8].upper()}",

@@ -1,4 +1,58 @@
 (function () {
+  // Convert UTC times to local timezone
+  const convertTimeStringsToLocal = () => {
+    const timeFieldIds = [
+      'scheduled-time-display',
+      'date-started-display',
+      'date-completed-display',
+    ];
+
+    timeFieldIds.forEach((fieldId) => {
+      const element = document.getElementById(fieldId);
+      if (!element) return;
+
+      const timeString = element.textContent.trim();
+      if (!timeString || timeString === 'N/A') return;
+
+      const localTime = convertUTCToLocal(timeString);
+      if (localTime) {
+        element.textContent = localTime;
+      }
+    });
+  };
+
+  const convertUTCToLocal = (timeString) => {
+    try {
+      const parts = timeString.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})/);
+      if (!parts) return null;
+
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const year = parseInt(parts[3], 10);
+      const hours = parseInt(parts[4], 10);
+      const minutes = parseInt(parts[5], 10);
+      const seconds = parseInt(parts[6], 10);
+
+      const utcDate = new Date(Date.UTC(year, month, day, hours, minutes, seconds));
+      const localDate = new Date(utcDate.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+
+      const localMonth = String(localDate.getMonth() + 1).padStart(2, '0');
+      const localDay = String(localDate.getDate()).padStart(2, '0');
+      const localYear = localDate.getFullYear();
+      const localHours = String(localDate.getHours()).padStart(2, '0');
+      const localMinutes = String(localDate.getMinutes()).padStart(2, '0');
+      const localSeconds = String(localDate.getSeconds()).padStart(2, '0');
+
+      return `${localMonth}/${localDay}/${localYear} ${localHours}:${localMinutes}:${localSeconds}`;
+    } catch (error) {
+      console.error('Error converting time:', error);
+      return null;
+    }
+  };
+
+  // Convert times on page load
+  convertTimeStringsToLocal();
+
   const modal = document.getElementById('email-estimate-modal');
   const emailButtons = document.querySelectorAll('.estimate-email-btn');
   const closeBtn = document.getElementById('modal-close-btn');

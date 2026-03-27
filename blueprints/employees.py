@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 
 from bson import ObjectId
 from flask import Blueprint, current_app, redirect, render_template, request, session, url_for
@@ -7,6 +8,22 @@ from werkzeug.security import generate_password_hash
 from mongo import ensure_connection_or_500, object_id_or_404, serialize_doc
 
 bp = Blueprint("employees", __name__)
+
+PASSWORD_REQUIREMENTS_MESSAGE = (
+    "Password must be at least 8 characters and include at least one uppercase letter, "
+    "one number, and one special character from !@#$%^&*."
+)
+PASSWORD_REQUIREMENTS_PATTERN = re.compile(r"^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$")
+EMAIL_VALIDATION_MESSAGE = "Enter a valid email address."
+EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
+def _password_meets_requirements(password):
+    return bool(PASSWORD_REQUIREMENTS_PATTERN.match(password))
+
+
+def _email_is_valid(email):
+    return bool(EMAIL_PATTERN.match(email))
 
 
 @bp.route("/employees")
@@ -27,32 +44,56 @@ def add_employee():
         last_name = request.form.get("last_name", "").strip()
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
+        phone = request.form.get("phone", "").strip()
+        email = request.form.get("email", "").strip()
+        position = request.form.get("position", "").strip()
+        form_data = request.form.to_dict()
 
-        if first_name and last_name and username and password:
-            employee_count = db.employees.count_documents({}) + 1
-            employee = {
-                "first_name": first_name,
-                "last_name": last_name,
-                "username": username,
-                "password": generate_password_hash(password, method="scrypt"),
-                "phone": request.form.get("phone", "").strip(),
-                "email": request.form.get("email", "").strip(),
-                "position": request.form.get("position", "").strip(),
-                "bio": request.form.get("bio", "").strip(),
-                "status": request.form.get("status", "").strip() or "active",
-                "date_added": datetime.now().strftime("%m/%d/%Y"),
-                "employee_id": f"EMP-{employee_count:05d}",
-            }
-            inserted = db.employees.insert_one(employee)
-            current_app.logger.info(
-                "Employee created: id=%s username=%r by employee_id=%s",
-                str(inserted.inserted_id),
-                username,
-                session.get("employee_id"),
+        if not (first_name and last_name and username and password and phone and email and position):
+            return render_template(
+                "employees/add_employee.html",
+                error="First name, last name, username, password, phone, email, and position are required.",
+                form_data=form_data,
             )
-            return redirect(url_for("employees.view_employee", employeeId=str(inserted.inserted_id)))
 
-    return render_template("employees/add_employee.html")
+        if not _password_meets_requirements(password):
+            return render_template(
+                "employees/add_employee.html",
+                error=PASSWORD_REQUIREMENTS_MESSAGE,
+                form_data=form_data,
+            )
+
+        if not _email_is_valid(email):
+            return render_template(
+                "employees/add_employee.html",
+                error=EMAIL_VALIDATION_MESSAGE,
+                form_data=form_data,
+            )
+
+        employee_count = db.employees.count_documents({}) + 1
+        employee = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "username": username,
+            "password": generate_password_hash(password, method="scrypt"),
+            "phone": phone,
+            "email": email,
+            "position": position,
+            "bio": "",
+            "status": "active",
+            "date_added": datetime.now().strftime("%m/%d/%Y"),
+            "employee_id": f"EMP-{employee_count:05d}",
+        }
+        inserted = db.employees.insert_one(employee)
+        current_app.logger.info(
+            "Employee created: id=%s username=%r by employee_id=%s",
+            str(inserted.inserted_id),
+            username,
+            session.get("employee_id"),
+        )
+        return redirect(url_for("employees.view_employee", employeeId=str(inserted.inserted_id)))
+
+    return render_template("employees/add_employee.html", error="", form_data={})
 
 
 @bp.route("/employees/<employeeId>")

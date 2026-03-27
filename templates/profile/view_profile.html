@@ -27,7 +27,13 @@
         <div class="view-customer-section-row" id="view-profile-details-columns">
           <div class="view-customer-section-column view-customer-details-column">
             <h3>Details</h3>
+            {% set employee_status = employee.status|default('N/A', true) %}
+            {% set employee_status_normalized = employee_status|lower %}
             <div id="view-customer-details-list">
+              <div class="view-customer-detail-item">
+                <h4>Status</h4>
+                <p><span class="customer-status-chip employee-status-chip{% if employee_status_normalized == 'onboarding' %} is-lead{% elif employee_status_normalized == 'active' %} is-active{% endif %}">{{ employee_status }}</span></p>
+              </div>
               <div class="view-customer-detail-item">
                 <h4>First Name</h4>
                 <p>{{ employee.first_name|default('') }}</p>
@@ -56,11 +62,6 @@
               <div class="view-customer-detail-item">
                 <h4>Position</h4>
                 <p>{{ employee.position|default('') }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Status</h4>
-                <p>{{ employee.status|default('') }}</p>
               </div>
 
               <div class="view-customer-detail-item">
