@@ -18,7 +18,7 @@
       <section id="view-service-actions" aria-labelledby="view-service-actions-header">
         <h2 id="view-service-actions-header">Actions</h2>
         <div id="view-service-actions-row">
-          <a href="{{ url_for('catalog.manage_parts') }}">Back to Parts</a>
+          <a href="{{ url_for('catalog.update_part', partId=partId) }}">Update Part</a>
         </div>
       </section>
 
@@ -32,6 +32,14 @@
           <div class="view-service-detail-item">
             <h4>Default Price</h4>
             <p>{{ part.part_default_price }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Product Link</h4>
+            {% if part.product_link %}
+              <p><a href="{{ part.product_link }}" target="_blank" rel="noopener noreferrer">{{ part.product_link }}</a></p>
+            {% else %}
+              <p>-</p>
+            {% endif %}
           </div>
         </div>
       </section>

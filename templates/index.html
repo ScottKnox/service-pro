@@ -35,11 +35,18 @@
 					{% set date_parts = job.scheduled_date.split('/') %}
 					{% set job_iso_date = date_parts[2] + '-' + date_parts[0] + '-' + date_parts[1] if date_parts|length == 3 else '' %}
 					<a class="home-job" href="{{ url_for('jobs.view_job', jobId=job._id) }}" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
-						<div class="home-job-top-row">
-							<div class="home-job-cell">{{ job.scheduled_date }} {{ job.scheduled_time|default('', true) }} - {{ job.assigned_employee }} Assigned</div>
-						</div>
-						<div class="home-job-bottom-row">
-							<div class="home-job-cell">{{ job.job_type }} - {{ job.customer_name }}</div>
+						<div class="home-job-card-content">
+							<div class="home-job-card-column home-job-card-column--left">
+								<strong>Customer:</strong> {{ job.customer_name|default('Unknown Customer', true) }}
+								<br/><strong>Time:</strong>
+								<span class="home-job-time-display" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}">
+									{{ job.scheduled_time|default('N/A', true) }}
+								</span>
+							</div>
+							<div class="home-job-card-column home-job-card-column--right">
+								<strong>Job:</strong> {{ job.job_type|default('No services added.', true) }}
+								<br/><strong>Assigned:</strong> {{ job.assigned_employee|default('Unassigned', true) }}
+							</div>
 						</div>
 					</a>
 					{% endfor %}
@@ -110,7 +117,7 @@
 				<div id="home-outstanding-estimates-list">
 					{% if estimates %}
 						{% for estimate in estimates %}
-							<a class="home-estimate-cell" href="#">
+							<a class="home-estimate-cell" href="{{ estimate.href }}" data-assigned-employee="{{ estimate.assigned_employee_key|default('', true) }}" {% if estimate.open_in_new_tab %}target="_blank" rel="noopener noreferrer"{% endif %}>
 								{{ estimate.date|default('') }} - {{ estimate.customer_name|default('Unknown Customer') }}
 								<br/>{{ estimate.title|default('Estimate') }} - {{ estimate.amount|default('$0.00') }}
 							</a>

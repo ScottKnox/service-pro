@@ -1,57 +1,82 @@
 (function () {
-  // Convert UTC times to local timezone
-  const convertTimeStringsToLocal = () => {
-    const timeFieldIds = [
-      'scheduled-time-display',
-      'date-started-display',
-      'date-completed-display',
-    ];
+  const formatTimeToAmPm = (timeString) => {
+    const match = timeString.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (!match) {
+      return null;
+    }
 
-    timeFieldIds.forEach((fieldId) => {
+    const hours24 = parseInt(match[1], 10);
+    const minutes = match[2];
+    if (Number.isNaN(hours24) || hours24 < 0 || hours24 > 23) {
+      return null;
+    }
+
+    const period = hours24 >= 12 ? 'PM' : 'AM';
+    const hours12 = hours24 % 12 || 12;
+    return `${hours12}:${minutes} ${period}`;
+  };
+
+  const formatUtcDateTimeToLocalAmPm = (value) => {
+    const match = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})$/);
+    if (!match) {
+      return null;
+    }
+
+    const month = parseInt(match[1], 10) - 1;
+    const day = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+    const hours = parseInt(match[4], 10);
+    const minutes = parseInt(match[5], 10);
+    const seconds = parseInt(match[6], 10);
+
+    const utcDate = new Date(Date.UTC(year, month, day, hours, minutes, seconds));
+    if (Number.isNaN(utcDate.getTime())) {
+      return null;
+    }
+
+    const localMonth = String(utcDate.getMonth() + 1).padStart(2, '0');
+    const localDay = String(utcDate.getDate()).padStart(2, '0');
+    const localYear = utcDate.getFullYear();
+    const localHours24 = utcDate.getHours();
+    const localMinutes = String(utcDate.getMinutes()).padStart(2, '0');
+    const period = localHours24 >= 12 ? 'PM' : 'AM';
+    const localHours12 = localHours24 % 12 || 12;
+
+    return `${localMonth}/${localDay}/${localYear} ${localHours12}:${localMinutes} ${period}`;
+  };
+
+  const formatJobTimeDisplays = () => {
+    const scheduledTimeElement = document.getElementById('scheduled-time-display');
+    if (scheduledTimeElement) {
+      const rawScheduledTime = scheduledTimeElement.textContent.trim();
+      if (rawScheduledTime && rawScheduledTime !== 'N/A') {
+        const formattedScheduledTime = formatTimeToAmPm(rawScheduledTime);
+        if (formattedScheduledTime) {
+          scheduledTimeElement.textContent = formattedScheduledTime;
+        }
+      }
+    }
+
+    ['date-started-display', 'date-completed-display'].forEach((fieldId) => {
       const element = document.getElementById(fieldId);
-      if (!element) return;
+      if (!element) {
+        return;
+      }
 
-      const timeString = element.textContent.trim();
-      if (!timeString || timeString === 'N/A') return;
+      const rawValue = element.textContent.trim();
+      if (!rawValue || rawValue === 'N/A') {
+        return;
+      }
 
-      const localTime = convertUTCToLocal(timeString);
-      if (localTime) {
-        element.textContent = localTime;
+      const formattedValue = formatUtcDateTimeToLocalAmPm(rawValue);
+      if (formattedValue) {
+        element.textContent = formattedValue;
       }
     });
   };
 
-  const convertUTCToLocal = (timeString) => {
-    try {
-      const parts = timeString.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})/);
-      if (!parts) return null;
-
-      const month = parseInt(parts[1], 10) - 1;
-      const day = parseInt(parts[2], 10);
-      const year = parseInt(parts[3], 10);
-      const hours = parseInt(parts[4], 10);
-      const minutes = parseInt(parts[5], 10);
-      const seconds = parseInt(parts[6], 10);
-
-      const utcDate = new Date(Date.UTC(year, month, day, hours, minutes, seconds));
-      const localDate = new Date(utcDate.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
-
-      const localMonth = String(localDate.getMonth() + 1).padStart(2, '0');
-      const localDay = String(localDate.getDate()).padStart(2, '0');
-      const localYear = localDate.getFullYear();
-      const localHours = String(localDate.getHours()).padStart(2, '0');
-      const localMinutes = String(localDate.getMinutes()).padStart(2, '0');
-      const localSeconds = String(localDate.getSeconds()).padStart(2, '0');
-
-      return `${localMonth}/${localDay}/${localYear} ${localHours}:${localMinutes}:${localSeconds}`;
-    } catch (error) {
-      console.error('Error converting time:', error);
-      return null;
-    }
-  };
-
-  // Convert times on page load
-  convertTimeStringsToLocal();
+  // Format time fields on page load.
+  formatJobTimeDisplays();
 
   const modal = document.getElementById('email-estimate-modal');
   const emailButtons = document.querySelectorAll('.estimate-email-btn');

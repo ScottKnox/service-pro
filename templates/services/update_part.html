@@ -1,17 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Create Part | Steady Work{% endblock %}
+{% block title %}Update Part | Steady Work{% endblock %}
 
 {% block content %}
   <div id="main-container">
-    <div id="create-part-panel">
-      <h1>Create Part</h1>
+    <div id="update-part-panel">
+      <h1>Update Part</h1>
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
           <li><a href="{{ url_for('catalog.manage_parts') }}">Manage Parts</a></li>
-          <li aria-current="page">Create Part</li>
+          <li><a href="{{ url_for('catalog.view_part', partId=partId) }}">View Part</a></li>
+          <li aria-current="page">Update Part</li>
         </ol>
       </nav>
 
@@ -19,7 +20,7 @@
         <p class="form-field-error">{{ error }}</p>
       {% endif %}
 
-      <form id="create-part-form" action="{{ url_for('catalog.create_part') }}" method="post">
+      <form id="create-part-form" action="{{ url_for('catalog.update_part', partId=partId) }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Part Details</h2>
 
@@ -43,7 +44,7 @@
         </div>
 
         <div id="create-service-form-actions">
-          <button type="submit">Save Part</button>
+          <button type="submit">Save Changes</button>
         </div>
       </form>
     </div>

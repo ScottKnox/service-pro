@@ -15,6 +15,24 @@ from utils.formatters import format_date
 bp = Blueprint("jobs", __name__)
 
 
+def resolve_job_status(scheduled_date, scheduled_time, services, parts, existing_status=""):
+    """Derive job status from scheduling and line items while preserving terminal states."""
+    normalized_existing = str(existing_status or "").strip().lower()
+    if normalized_existing in {"started", "completed"}:
+        return str(existing_status)
+
+    has_schedule = bool(str(scheduled_date).strip()) and bool(str(scheduled_time).strip())
+    has_line_items = bool(services or parts)
+
+    if has_schedule and has_line_items:
+        return "Ready"
+    if has_schedule:
+        return "Scheduled"
+    if has_line_items:
+        return "Estimating"
+    return "Pending"
+
+
 def build_employee_options(db):
     employee_docs = [
         serialize_doc(employee)
@@ -78,7 +96,7 @@ def create_job(customerId):
         primary_service = services[0]["type"] if services else "No services added."
         scheduled_date = format_date(request.form.get("job_date", ""))
         scheduled_time = request.form.get("job_time", "").strip()
-        job_status = "Scheduled" if scheduled_date and scheduled_time else "Pending"
+        job_status = resolve_job_status(scheduled_date, scheduled_time, services, parts)
 
         assigned_employee = request.form.get("job_assigned_employee", "").strip()
         
@@ -379,13 +397,15 @@ def update_job(jobId):
         total = services_total + parts_total
 
         primary_service = services[0]["type"] if services else "No services added."
-        existing_services = job.get("services", [])
-        existing_parts = job.get("parts", [])
-        added_services = len(services) > len(existing_services)
-        added_parts = len(parts) > len(existing_parts)
-        job_status = job.get("status", "Scheduled")
-        if added_services or added_parts:
-            job_status = "Estimating"
+        scheduled_date = format_date(request.form.get("job_date", ""))
+        scheduled_time = request.form.get("job_time", "").strip()
+        job_status = resolve_job_status(
+            scheduled_date,
+            scheduled_time,
+            services,
+            parts,
+            existing_status=job.get("status", ""),
+        )
 
         assigned_employee = request.form.get("job_assigned_employee", "").strip()
 
@@ -395,8 +415,8 @@ def update_job(jobId):
             "services": services,
             "parts": parts,
             "status": job_status,
-            "scheduled_date": format_date(request.form.get("job_date", "")),
-            "scheduled_time": request.form.get("job_time", "").strip(),
+            "scheduled_date": scheduled_date,
+            "scheduled_time": scheduled_time,
             "address_line_1": request.form.get("job_address_line_1", "").strip(),
             "address_line_2": request.form.get("job_address_line_2", "").strip(),
             "city": request.form.get("job_city", "").strip(),

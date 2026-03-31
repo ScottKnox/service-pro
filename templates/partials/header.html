@@ -26,7 +26,7 @@
     </nav>
     {% endif %}
     {% if session.get('employee_id') and session.get('employee_name') %}
-      <a href="{{ url_for('auth.view_profile') }}" id="employee-greeting-link">Hello, {{ session.get('employee_name') }}</a>
+      <a href="{{ url_for('employees.view_employee', employeeId=session.get('employee_id')) }}" id="employee-greeting-link">Hello, {{ session.get('employee_name') }}</a>
     {% elif request.endpoint not in ['home', 'auth.login'] %}
       <a href="{{ url_for('auth.login') }}" id="login-button">Login</a>
     {% endif %}

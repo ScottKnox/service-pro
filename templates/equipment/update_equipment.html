@@ -20,17 +20,32 @@
         <p class="form-field-error">{{ error }}</p>
       {% endif %}
 
-      <form id="add-customer-form" action="{{ url_for('customers.update_equipment', customerId=customerId, equipmentId=equipmentId) }}" method="post">
+      <form id="add-customer-form" action="{{ url_for('customers.update_equipment', customerId=customerId, equipmentId=equipmentId) }}" method="post" data-parts-catalog='{{ parts_catalog_json|safe }}'>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
-            <label for="equipment-name">Equipment Name</label>
-            <input id="equipment-name" name="equipment_name" type="text" value="{{ equipment.equipment_name|default('') }}" placeholder="Equipment name" required />
+            <label for="equipment-name">Equipment Type</label>
+            <select id="equipment-name" name="equipment_name" required>
+              <option value="">-- Select an equipment type --</option>
+              <option value="Air Handler" {% if equipment.equipment_name|default('') == 'Air Handler' %}selected{% endif %}>Air Handler</option>
+              <option value="Condenser Unit" {% if equipment.equipment_name|default('') == 'Condenser Unit' %}selected{% endif %}>Condenser Unit</option>
+              <option value="Furnace" {% if equipment.equipment_name|default('') == 'Furnace' %}selected{% endif %}>Furnace</option>
+              <option value="Mini Split" {% if equipment.equipment_name|default('') == 'Mini Split' %}selected{% endif %}>Mini Split</option>
+              <option value="Packaged Unit" {% if equipment.equipment_name|default('') == 'Packaged Unit' %}selected{% endif %}>Packaged Unit</option>
+              <option value="Supply Ducts" {% if equipment.equipment_name|default('') == 'Supply Ducts' %}selected{% endif %}>Supply Ducts</option>
+              <option value="Return Ducts" {% if equipment.equipment_name|default('') == 'Return Ducts' %}selected{% endif %}>Return Ducts</option>
+              <option value="Exhaust Ducts" {% if equipment.equipment_name|default('') == 'Exhaust Ducts' %}selected{% endif %}>Exhaust Ducts</option>
+              <option value="Thermostat" {% if equipment.equipment_name|default('') == 'Thermostat' %}selected{% endif %}>Thermostat</option>
+              <option value="Filters" {% if equipment.equipment_name|default('') == 'Filters' %}selected{% endif %}>Filters</option>
+              <option value="Drain Lines" {% if equipment.equipment_name|default('') == 'Drain Lines' %}selected{% endif %}>Drain Lines</option>
+            </select>
+            <span id="error-equipment-type" class="field-validation-error">Equipment Type is required</span>
           </div>
 
           <div class="add-customer-form-field">
             <label for="equipment-serial-number">Serial Number</label>
-            <input id="equipment-serial-number" name="serial_number" type="text" value="{{ equipment.serial_number|default('') }}" placeholder="Serial number" required />
+            <input id="equipment-serial-number" name="serial_number" type="text" value="{{ equipment.serial_number|default('') }}" placeholder="Serial number" />
+            <span id="error-serial-number" class="field-validation-error">Serial Number is required</span>
           </div>
         </div>
 
@@ -38,13 +53,15 @@
           <div class="add-customer-form-field">
             <label for="equipment-brand">Brand</label>
             <select id="equipment-brand" name="brand" required>
+              <option value="" {% if equipment.brand|default('') == '' %}selected{% endif %}>-- Select a brand --</option>
               <option value="Goodman" {% if equipment.brand|default('') == 'Goodman' %}selected{% endif %}>Goodman</option>
             </select>
+            <span id="error-brand" class="field-validation-error">Brand is required</span>
           </div>
 
           <div class="add-customer-form-field">
             <label for="equipment-location">Equipment Location</label>
-            <select id="equipment-location" name="equipment_location">
+            <select id="equipment-location" name="equipment_location" required>
               <option value="" {% if equipment.equipment_location|default('') == '' %}selected{% endif %}>-- Select a location --</option>
               <option value="Attic" {% if equipment.equipment_location|default('') == 'Attic' %}selected{% endif %}>Attic</option>
               <option value="Basement" {% if equipment.equipment_location|default('') == 'Basement' %}selected{% endif %}>Basement</option>
@@ -55,8 +72,69 @@
               <option value="Roof" {% if equipment.equipment_location|default('') == 'Roof' %}selected{% endif %}>Roof</option>
               <option value="Utility Room" {% if equipment.equipment_location|default('') == 'Utility Room' %}selected{% endif %}>Utility Room</option>
             </select>
+            <span id="error-location" class="field-validation-error">Equipment Location is required</span>
           </div>
         </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="equipment-notes">Notes</label>
+            <textarea id="equipment-notes" name="equipment_notes" rows="4" placeholder="Helpful details for other employees">{{ equipment.notes|default('') }}</textarea>
+          </div>
+        </div>
+
+        <h2 class="create-job-form-section-header">Parts</h2>
+
+        {% set equipment_parts = equipment.parts|default([], true) %}
+        <div id="job-parts-list">
+          {% if equipment_parts %}
+            {% for part in equipment_parts %}
+            <div class="add-customer-form-row job-part-row" data-part-index="{{ loop.index }}">
+              <div class="add-customer-form-field">
+                <label for="part-name-{{ loop.index }}">Part</label>
+                <select id="part-name-{{ loop.index }}" name="part_name[]">
+                  <option value="">-- Select a part --</option>
+                  {% for catalog_part in parts %}
+                    <option value="{{ catalog_part.part_name }}" {% if part.name|default('') == catalog_part.part_name %}selected{% endif %}>{{ catalog_part.part_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="add-customer-form-field">
+                <label for="part-price-{{ loop.index }}">Price</label>
+                <input id="part-price-{{ loop.index }}" name="part_price[]" type="text" value="{{ part.price|default('') }}" placeholder="$0.00" />
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="add-customer-form-row job-part-row" data-part-index="1">
+              <div class="add-customer-form-field">
+                <label for="part-name-1">Part</label>
+                <select id="part-name-1" name="part_name[]">
+                  <option value="">-- Select a part --</option>
+                  {% for part in parts %}
+                    <option value="{{ part.part_name }}">{{ part.part_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="add-customer-form-field">
+                <label for="part-price-1">Price</label>
+                <input id="part-price-1" name="part_price[]" type="text" placeholder="$0.00" />
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        <div id="job-parts-actions">
+          <button id="add-job-part-button" type="button">Add Part</button>
+        </div>
+
+        <template id="part-options-template">
+          {% for part in parts %}
+            <option value="{{ part.part_name }}">{{ part.part_name }}</option>
+          {% endfor %}
+        </template>
 
         <div id="add-customer-form-actions">
           <button type="submit">Save Changes</button>
@@ -64,4 +142,8 @@
       </form>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/add_equipment.js') }}" defer></script>
 {% endblock %}

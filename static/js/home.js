@@ -53,6 +53,7 @@ window.homePageFilter = {
     this.updatePaginationLinks(visibleJobs.length);
     this.displayPageContent();
     this.filterCallsNeeded();
+    this.filterEstimatesNeeded();
 
     if (typeof this.refreshCalendarHighlights === "function") {
       this.refreshCalendarHighlights();
@@ -82,6 +83,32 @@ window.homePageFilter = {
 
     if (emptyMessage) {
       emptyMessage.style.display = callRows.length > 0 && visibleCount === 0 ? "block" : "none";
+    }
+  },
+
+  filterEstimatesNeeded: function() {
+    const estimateRows = document.querySelectorAll(".home-estimate-cell");
+    const emptyMessage = document.getElementById("home-estimates-empty");
+    const serverEmptyMessage = document.getElementById("home-estimates-empty-server");
+    let visibleCount = 0;
+
+    estimateRows.forEach((row) => {
+      const assignedEmployee = row.dataset.assignedEmployee;
+      const shouldShow = this.filterData.selectedEmployees.size === 0
+        || this.filterData.selectedEmployees.has(assignedEmployee);
+
+      row.style.display = shouldShow ? "" : "none";
+      if (shouldShow) {
+        visibleCount += 1;
+      }
+    });
+
+    if (serverEmptyMessage) {
+      serverEmptyMessage.style.display = estimateRows.length === 0 ? "block" : "none";
+    }
+
+    if (emptyMessage) {
+      emptyMessage.style.display = estimateRows.length > 0 && visibleCount === 0 ? "block" : "none";
     }
   },
 
@@ -167,6 +194,51 @@ window.homePageFilter = {
   }
 };
 
+function formatHomeJobTimes() {
+  const timeElements = document.querySelectorAll('.home-job-time-display');
+
+  timeElements.forEach((element) => {
+    const rawTime = (element.dataset.jobTime || '').trim();
+    const rawDate = (element.dataset.jobDate || '').trim();
+
+    if (!rawTime) {
+      element.textContent = 'N/A';
+      return;
+    }
+
+    const normalizedTime = /:\d{2}:\d{2}$/.test(rawTime) ? rawTime : `${rawTime}:00`;
+
+    if (rawDate) {
+      const utcDate = new Date(`${rawDate}T${normalizedTime}Z`);
+      if (!Number.isNaN(utcDate.getTime())) {
+        element.textContent = utcDate.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        });
+        return;
+      }
+    }
+
+    const timeMatch = rawTime.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!timeMatch) {
+      element.textContent = rawTime;
+      return;
+    }
+
+    const hours24 = parseInt(timeMatch[1], 10);
+    const minutes = timeMatch[2];
+    if (Number.isNaN(hours24) || hours24 < 0 || hours24 > 23) {
+      element.textContent = rawTime;
+      return;
+    }
+
+    const period = hours24 >= 12 ? 'PM' : 'AM';
+    const hours12 = hours24 % 12 || 12;
+    element.textContent = `${hours12}:${minutes} ${period}`;
+  });
+}
+
 // Jobs filter and pagination IIFE
 (() => {
   function getSelectedEmployees() {
@@ -197,6 +269,7 @@ window.homePageFilter = {
   // Initialize with checked employees
   window.homePageFilter.filterData.selectedEmployees = getSelectedEmployees();
   window.homePageFilter.filterAndDisplay();
+  formatHomeJobTimes();
 })();
 
 // Calendar IIFE

@@ -25,7 +25,12 @@
             <button type="submit"{% if job_status_normalized == "pending" or (not job.services and not job.parts) %} disabled{% endif %}>Create Quote</button>
           </form>
           {% endif %}
-          {% if job_status_normalized != "started" and job_status_normalized != "completed" and job.scheduled_date and job.scheduled_time %}
+          {% if job_status_normalized == "pending" or job_status_normalized == "estimating" %}
+          <form method="POST" action="{{ url_for('jobs.start_job', jobId=jobId) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" disabled>Mark Started</button>
+          </form>
+          {% elif job_status_normalized != "started" and job_status_normalized != "completed" and job.scheduled_date and job.scheduled_time %}
           <form method="POST" action="{{ url_for('jobs.start_job', jobId=jobId) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Mark Started</button>
@@ -37,7 +42,9 @@
             <button type="submit">Mark Completed</button>
           </form>
           {% endif %}
+          {% if job_status_normalized != "completed" %}
           <a href="{{ url_for('jobs.update_job', jobId=jobId) }}">Update Job</a>
+          {% endif %}
           <form method="POST" action="{{ url_for('jobs.delete_job', jobId=jobId) }}" onsubmit="return confirm('Are you sure you want to delete this job?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Delete Job</button>
@@ -51,7 +58,7 @@
       </div>
       {% endif %}
 
-      {% if job_status_normalized == "estimating" and (not job.scheduled_date or not job.scheduled_time) %}
+      {% if (job_status_normalized == "estimating" or job_status_normalized == "pending") and (not job.scheduled_date or not job.scheduled_time) %}
       <div id="view-job-missing-scheduling-note" style="border: 1px solid #FFA500; background-color: #FFF8DC; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
         <p style="color: #B8860B; font-weight: 600; margin: 0;">You must add a scheduled date and time for a job before marking it started.</p>
       </div>
@@ -73,7 +80,16 @@
               </div>
               <div class="view-job-detail-item">
                 <h4>Customer</h4>
-                <p>{{ job.customer_name }}</p>
+                <div class="view-job-customer-row">
+                  <p>{{ job.customer_name }}</p>
+                  {% if customer.phone %}
+                  <a class="home-call-mobile-button view-job-customer-call-button" href="tel:{{ customer.phone|replace(' ', '') }}" aria-label="Call {{ job.customer_name|default('customer', true) }}">
+                    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+                      <path d="M6.6 10.8a15.7 15.7 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.2c1 .3 2 .4 3 .4a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 5a1 1 0 0 1 1-1h3.6a1 1 0 0 1 1 1c0 1 .1 2 .4 3a1 1 0 0 1-.2 1z" fill="currentColor"/>
+                    </svg>
+                  </a>
+                  {% endif %}
+                </div>
               </div>
               <div class="view-job-detail-item">
                 <h4>Scheduled Date</h4>

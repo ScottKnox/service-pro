@@ -177,6 +177,7 @@
                   <a class="view-customer-card-link" href="{{ url_for('customers.view_equipment', customerId=customerId, equipmentId=equipment._id) }}">
                     <h4>{{ equipment.equipment_name }}</h4>
                     <p>{{ equipment.brand or 'Unknown Brand' }}{% if equipment.serial_number %} • {{ equipment.serial_number }}{% endif %}</p>
+                    <p>{{ equipment.equipment_location or 'Unknown Location' }}</p>
                   </a>
                 {% endfor %}
               {% else %}

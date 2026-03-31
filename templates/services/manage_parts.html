@@ -26,7 +26,7 @@
           {% for part in parts %}
             <a class="jobs-card" href="{{ url_for('catalog.view_part', partId=part._id) }}">
               <div class="jobs-card-row">
-                <span class="jobs-card-label">Part</span>
+                <span class="jobs-card-label">Part Name</span>
                 <span class="jobs-card-value">{{ part.part_name }}</span>
               </div>
               <div class="jobs-card-row">

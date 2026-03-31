@@ -111,7 +111,6 @@ def generate_invoice(job_id, job, customer):
         ["Scheduled Date:", job.get("scheduled_date", "N/A")],
         ["Scheduled Time:", job.get("scheduled_time", "N/A")],
         ["Date Created:", job.get("date_created", "N/A")],
-        ["Notes:", job.get("notes", "N/A")],
     ]
     service_table = Table(service_info, colWidths=[0.9 * inch, 2.3 * inch])
     service_table.setStyle(

@@ -1,10 +1,12 @@
 from datetime import datetime
+import json
 import re
 
 from bson import ObjectId
 from flask import Blueprint, current_app, redirect, render_template, request, session, url_for
 
 from mongo import ensure_connection_or_500, object_id_or_404, serialize_doc
+from utils.catalog import build_job_parts_from_form, build_part_catalog
 
 bp = Blueprint("customers", __name__)
 
@@ -254,18 +256,24 @@ def add_equipment(customerId):
         return redirect(url_for("customers.customers"))
 
     error = ""
+    part_docs = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+    part_catalog = build_part_catalog(part_docs)
     if request.method == "POST":
         equipment_name = request.form.get("equipment_name", "").strip()
         serial_number = request.form.get("serial_number", "").strip()
         brand = request.form.get("brand", "").strip()
         equipment_location = request.form.get("equipment_location", "").strip()
+        equipment_notes = request.form.get("equipment_notes", "").strip()
+        selected_part_names = request.form.getlist("part_name[]")
+        entered_part_prices = request.form.getlist("part_price[]")
+        equipment_parts, _ = build_job_parts_from_form(selected_part_names, entered_part_prices, part_catalog)
 
         if not equipment_name:
-            error = "Equipment name is required."
-        elif not serial_number:
-            error = "Serial number is required."
+            error = "Equipment type is required."
         elif not brand:
             error = "Brand is required."
+        elif not equipment_location:
+            error = "Equipment location is required."
         else:
             equipment = {
                 "customer_id": customerId,
@@ -273,6 +281,8 @@ def add_equipment(customerId):
                 "serial_number": serial_number,
                 "brand": brand,
                 "equipment_location": equipment_location,
+                "notes": equipment_notes,
+                "parts": equipment_parts,
             }
             inserted = db.equipment.insert_one(equipment)
             return redirect(url_for("customers.view_equipment", customerId=customerId, equipmentId=str(inserted.inserted_id)))
@@ -281,6 +291,8 @@ def add_equipment(customerId):
         "equipment/add_equipment.html",
         customerId=customerId,
         customer=serialize_doc(customer),
+        parts=part_docs,
+        parts_catalog_json=json.dumps(part_catalog),
         error=error,
     )
 
@@ -296,12 +308,41 @@ def view_equipment(customerId, equipmentId):
     if not equipment:
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
+    serialized_equipment = serialize_doc(equipment)
+    equipment_part_names = [
+        (part.get("name") or "").strip()
+        for part in serialized_equipment.get("parts", [])
+        if (part.get("name") or "").strip()
+    ]
+    part_lookup = {}
+
+    if equipment_part_names:
+        matching_parts = [
+            serialize_doc(part)
+            for part in db.parts.find({"part_name": {"$in": equipment_part_names}})
+        ]
+        part_lookup = {part.get("part_name"): part for part in matching_parts}
+
+    equipment_parts = []
+    for part in serialized_equipment.get("parts", []):
+        part_name = (part.get("name") or "").strip()
+        matched_part = part_lookup.get(part_name)
+        equipment_parts.append(
+            {
+                "name": part_name or "-",
+                "price": part.get("price", ""),
+                "part_id": matched_part.get("_id") if matched_part else None,
+                "product_link": matched_part.get("product_link", "") if matched_part else "",
+            }
+        )
+
     return render_template(
         "equipment/view_equipment.html",
         customerId=customerId,
         equipmentId=equipmentId,
         customer=serialize_doc(customer),
-        equipment=serialize_doc(equipment),
+        equipment=serialized_equipment,
+        equipment_parts=equipment_parts,
     )
 
 
@@ -317,24 +358,32 @@ def update_equipment(customerId, equipmentId):
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
     error = ""
+    part_docs = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+    part_catalog = build_part_catalog(part_docs)
     if request.method == "POST":
         equipment_name = request.form.get("equipment_name", "").strip()
         serial_number = request.form.get("serial_number", "").strip()
         brand = request.form.get("brand", "").strip()
         equipment_location = request.form.get("equipment_location", "").strip()
+        equipment_notes = request.form.get("equipment_notes", "").strip()
+        selected_part_names = request.form.getlist("part_name[]")
+        entered_part_prices = request.form.getlist("part_price[]")
+        equipment_parts, _ = build_job_parts_from_form(selected_part_names, entered_part_prices, part_catalog)
 
         if not equipment_name:
-            error = "Equipment name is required."
-        elif not serial_number:
-            error = "Serial number is required."
+            error = "Equipment type is required."
         elif not brand:
             error = "Brand is required."
+        elif not equipment_location:
+            error = "Equipment location is required."
         else:
             update_data = {
                 "equipment_name": equipment_name,
                 "serial_number": serial_number,
                 "brand": brand,
                 "equipment_location": equipment_location,
+                "notes": equipment_notes,
+                "parts": equipment_parts,
             }
 
             db.equipment.update_one({"_id": ObjectId(equipmentId), "customer_id": customerId}, {"$set": update_data})
@@ -346,6 +395,8 @@ def update_equipment(customerId, equipmentId):
         equipmentId=equipmentId,
         customer=serialize_doc(customer),
         equipment=serialize_doc(equipment),
+        parts=part_docs,
+        parts_catalog_json=json.dumps(part_catalog),
         error=error,
     )
 

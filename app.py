@@ -112,10 +112,43 @@ def home():
         estimate_page = 1
 
     estimates_per_page = 5
-    estimate_items = [
+    estimating_jobs = [
         serialize_doc(job)
         for job in db.jobs.find({"status": {"$regex": "^Estimating$", "$options": "i"}}).sort([("scheduled_date", -1), ("scheduled_time", -1), ("_id", -1)])
     ]
+
+    job_ids = [job.get("_id") for job in estimating_jobs if job.get("_id")]
+    estimate_docs = [
+        serialize_doc(estimate)
+        for estimate in db.estimates.find({"job_id": {"$in": job_ids}}).sort([("date", -1), ("_id", -1)])
+    ] if job_ids else []
+
+    latest_estimate_by_job = {}
+    for estimate_doc in estimate_docs:
+        estimate_job_id = estimate_doc.get("job_id")
+        if estimate_job_id and estimate_job_id not in latest_estimate_by_job:
+            latest_estimate_by_job[estimate_job_id] = estimate_doc
+
+    estimate_items = []
+    for job in estimating_jobs:
+        job_id = job.get("_id", "")
+        estimate_doc = latest_estimate_by_job.get(job_id)
+        has_quote_file = bool(estimate_doc and estimate_doc.get("file_path"))
+        assigned_employee = (job.get("assigned_employee") or "").strip()
+
+        estimate_items.append(
+            {
+                "date": (estimate_doc or {}).get("date") or job.get("date_created") or "",
+                "customer_name": job.get("customer_name") or "Unknown Customer",
+                "title": (estimate_doc or {}).get("title") or job.get("job_type") or "Estimate",
+                "amount": (estimate_doc or {}).get("amount") or job.get("total") or "$0.00",
+                "href": (estimate_doc or {}).get("file_path") if has_quote_file else url_for("jobs.view_job", jobId=job_id),
+                "open_in_new_tab": has_quote_file,
+                "assigned_employee": assigned_employee,
+                "assigned_employee_key": assigned_employee.lower().replace(" ", "-"),
+            }
+        )
+
     estimates_total_pages = (len(estimate_items) + estimates_per_page - 1) // estimates_per_page
     if estimates_total_pages == 0:
         estimate_page = 1

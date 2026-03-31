@@ -381,6 +381,30 @@ p {
   border-color: #A9B0BA;
 }
 
+.home-job-card-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  padding: 0.5rem 0.75rem;
+  line-height: 1.45;
+}
+
+.home-job-card-content strong {
+  color: #1B263B;
+}
+
+.home-job-card-column {
+  padding: 0 0.4rem;
+}
+
+.home-job-card-column--left {
+  border-right: 1px solid #D1D5DB;
+}
+
+.home-job-card-column--right {
+  padding-left: 0.75rem;
+}
+
 .home-job-top-row {
   display: grid;
   grid-template-columns: 1fr;
@@ -836,6 +860,7 @@ p {
 #create-job-panel,
 #create-service-panel,
 #create-part-panel,
+#update-part-panel,
 #view-part-panel,
 #view-service-panel {
   width: 100%;
@@ -847,6 +872,7 @@ p {
 #create-job-panel h1,
 #create-service-panel h1,
 #create-part-panel h1,
+#update-part-panel h1,
 #view-part-panel h1,
 #view-service-panel h1 {
   margin: 0 -0.75rem 0;
@@ -1498,6 +1524,24 @@ p {
   padding: 0.25rem 0;
 }
 
+#view-equipment-parts-list {
+  margin-top: 0.25rem;
+}
+
+.equipment-part-card-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.equipment-part-card-link {
+  flex: 1;
+}
+
+.equipment-part-buy-button {
+  flex-shrink: 0;
+}
+
 .view-customer-card-link:hover,
 .view-customer-estimate-item:hover {
   background-color: #F1F5F9;
@@ -1750,7 +1794,7 @@ p {
 
 #view-service-details-content {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
   padding: 1rem;
   border: 1px solid #C5C7CB;
@@ -1759,6 +1803,7 @@ p {
 
 .view-service-detail-item {
   padding: 0;
+  min-width: 0;
 }
 
 .view-service-detail-item h4 {
@@ -1772,6 +1817,13 @@ p {
   margin: 0;
   color: #1B263B;
   font-size: 1.25rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.view-service-detail-item a {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 @media (max-width: 768px) {

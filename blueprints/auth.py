@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from bson import ObjectId
 from flask import Blueprint, current_app, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
@@ -54,40 +52,3 @@ def view_profile():
 
     return render_template("profile/view_profile.html", employee=serialize_doc(employee))
 
-
-@bp.route("/profile/update", methods=["GET", "POST"])
-def update_profile():
-    db = ensure_connection_or_500()
-    employee_id = session.get("employee_id")
-    employee = db.employees.find_one({"_id": ObjectId(employee_id)})
-    if not employee:
-        session.clear()
-        return redirect(url_for("auth.login"))
-
-    error = ""
-    if request.method == "POST":
-        first_name = request.form.get("first_name", "").strip()
-        last_name = request.form.get("last_name", "").strip()
-
-        if not first_name or not last_name:
-            error = "First name and last name are required."
-        else:
-            update_data = {
-                "first_name": first_name,
-                "last_name": last_name,
-                "phone": request.form.get("phone", "").strip(),
-                "email": request.form.get("email", "").strip(),
-                "position": request.form.get("position", "").strip(),
-                "bio": request.form.get("bio", "").strip(),
-                "profile_updated_at": datetime.now().strftime("%m/%d/%Y %H:%M:%S"),
-            }
-
-            db.employees.update_one({"_id": ObjectId(employee_id)}, {"$set": update_data})
-            employee = db.employees.find_one({"_id": ObjectId(employee_id)})
-
-            session["employee_name"] = f"{employee.get('first_name', '')} {employee.get('last_name', '')}".strip()
-            session["employee_position"] = (employee.get("position") or "").strip()
-
-            return redirect(url_for("auth.view_profile"))
-
-    return render_template("profile/update_profile.html", employee=serialize_doc(employee), error=error)
