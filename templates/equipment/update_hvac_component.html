@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Update {{ component_label }} | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="add-customer-panel">
+      <h1>Update {{ component_label }}</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li>
+            <a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=reference_type, reference_id=reference_id) }}">View HVAC System</a>
+          </li>
+          <li aria-current="page">Update {{ component_label }}</li>
+        </ol>
+      </nav>
+
+      <form id="add-customer-form" action="{{ url_for('customers.update_hvac_component', customerId=customerId, reference_type=reference_type, reference_id=reference_id, component_key=component_key) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {% if is_ductwork %}
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="ductwork-type">Type</label>
+              <input id="ductwork-type" name="type" type="text" autocomplete="off" value="{{ form_data.type|default('') }}">
+            </div>
+            <div class="add-customer-form-field">
+              <label for="ductwork-size">Size</label>
+              <input id="ductwork-size" name="size" type="text" autocomplete="off" value="{{ form_data.size|default('') }}">
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="ductwork-install-year">Install Year</label>
+              <input id="ductwork-install-year" name="install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.install_year|default('') }}">
+            </div>
+          </div>
+        {% else %}
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="model-name">Model Name</label>
+              <input id="model-name" name="model_name" type="text" autocomplete="off" value="{{ form_data.model_name|default('') }}">
+            </div>
+            <div class="add-customer-form-field">
+              <label for="model-number">Model Number</label>
+              <input id="model-number" name="model_number" type="text" autocomplete="off" value="{{ form_data.model_number|default('') }}">
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="serial-number">Serial Number</label>
+              <input id="serial-number" name="serial_number" type="text" autocomplete="off" value="{{ form_data.serial_number|default('') }}">
+            </div>
+            <div class="add-customer-form-field">
+              <label for="brand">Brand</label>
+              <input id="brand" name="brand" type="text" autocomplete="organization" value="{{ form_data.brand|default('') }}">
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="install-year">Install Year</label>
+              <input id="install-year" name="install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.install_year|default('') }}">
+            </div>
+          </div>
+        {% endif %}
+
+        <div id="add-customer-form-actions">
+          <button type="submit">Update {{ component_label }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

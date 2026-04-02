@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}View {{ component.component_label }} | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="view-customer-panel">
+      <h1>{{ component.component_label }}</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li>
+            <a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=component.reference_type, reference_id=component.reference_id) }}">View HVAC System</a>
+          </li>
+          <li aria-current="page">View {{ component.component_label }}</li>
+        </ol>
+      </nav>
+
+      <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
+        <h2 id="view-customer-actions-header">Actions</h2>
+        <div id="view-customer-actions-row">
+          <a href="{{ url_for('customers.update_hvac_component', customerId=customerId, reference_type=component.reference_type, reference_id=component.reference_id, component_key=component.component_key) }}">Update {{ component.component_label }}</a>
+        </div>
+      </section>
+
+      <section id="view-customer-details" aria-label="HVAC component details">
+        <h2>Component Details</h2>
+        <div class="view-customer-section-row" id="view-equipment-details-columns">
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>{{ component.component_label }}</h3>
+            <div id="view-customer-details-list">
+              {% if component.component_key == 'ductwork' %}
+                <div class="view-customer-detail-item">
+                  <h4>Type</h4>
+                  <p>{{ component.details.type }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Size</h4>
+                  <p>{{ component.details.size }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Install Year</h4>
+                  <p>{{ component.details.install_year }}</p>
+                </div>
+              {% else %}
+                <div class="view-customer-detail-item">
+                  <h4>Brand</h4>
+                  <p>{{ component.details.brand }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Model Name</h4>
+                  <p>{{ component.details.model_name }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Model Number</h4>
+                  <p>{{ component.details.model_number }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Serial Number</h4>
+                  <p>{{ component.details.serial_number }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Install Year</h4>
+                  <p>{{ component.details.install_year }}</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>System Diagnostics</h3>
+            <div id="view-customer-details-list">
+              {% if component.diagnostics %}
+                <div class="view-customer-detail-item">
+                  <h4>Date Performed</h4>
+                  <p>{{ component.diagnostics.date_performed }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Results</h4>
+                  {% if component.diagnostics.results %}
+                    {% for diagnostic in component.diagnostics.results %}
+                      <p>{{ diagnostic.label }}: {{ diagnostic.value }}</p>
+                    {% endfor %}
+                  {% else %}
+                    <p>No diagnostic results saved yet.</p>
+                  {% endif %}
+                </div>
+              {% else %}
+                <div class="view-customer-detail-item">
+                  <h4>Status</h4>
+                  <p>No system diagnostics saved yet.</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}

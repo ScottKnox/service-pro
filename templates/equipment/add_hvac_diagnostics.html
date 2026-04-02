@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Add Diagnostics | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="add-customer-panel">
+      <h1>Add Diagnostics</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li><a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=reference_type, reference_id=reference_id) }}">View HVAC System</a></li>
+          <li aria-current="page">Add Diagnostics</li>
+        </ol>
+      </nav>
+
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
+      <form id="add-customer-form" action="{{ url_for('customers.add_hvac_diagnostics', customerId=customerId, reference_type=reference_type, reference_id=reference_id) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        {% for section_label, fields in diagnostics_sections %}
+          <details class="hvac-diagnostics-section">
+            <summary>{{ section_label }}</summary>
+            <div class="hvac-diagnostics-section-content">
+              {% for field in fields %}
+                <div class="add-customer-form-row">
+                  <div class="add-customer-form-field">
+                    <label for="{{ field.name }}">{{ field.label }}</label>
+
+                    {% if field.type == 'textarea' %}
+                      <textarea
+                        id="{{ field.name }}"
+                        name="{{ field.name }}"
+                        rows="4"
+                        {% if field.required %}required{% endif %}
+                        {% if field.readonly %}readonly{% endif %}
+                      >{{ form_data[field.name]|default('') }}</textarea>
+                    {% elif field.type == 'select' %}
+                      <select
+                        id="{{ field.name }}"
+                        name="{{ field.name }}"
+                        {% if field.required %}required{% endif %}
+                        {% if field.readonly %}disabled{% endif %}
+                      >
+                        <option value="">Select {{ field.label }}</option>
+                        {% for option in field.options %}
+                          <option value="{{ option }}" {% if form_data[field.name]|default('') == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                      </select>
+                    {% else %}
+                      <input
+                        id="{{ field.name }}"
+                        name="{{ field.name }}"
+                        type="text"
+                        autocomplete="off"
+                        value="{{ form_data[field.name]|default('') }}"
+                        {% if field.required %}required{% endif %}
+                        {% if field.readonly %}readonly{% endif %}
+                      >
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </details>
+        {% endfor %}
+
+        <div id="add-customer-form-actions">
+          <button type="submit">Save Diagnostics</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    (function () {
+      const supplyField = document.getElementById('supplySideStaticPressure');
+      const returnField = document.getElementById('returnSideStaticPressure');
+      const totalField = document.getElementById('totalExternalStaticPressure');
+
+      if (!supplyField || !returnField || !totalField) {
+        return;
+      }
+
+      const parsePressure = (value) => {
+        const parsedValue = Number.parseFloat(value);
+        return Number.isFinite(parsedValue) ? parsedValue : null;
+      };
+
+      const updateTotalPressure = () => {
+        const supplyPressure = parsePressure(supplyField.value);
+        const returnPressure = parsePressure(returnField.value);
+
+        if (supplyPressure === null || returnPressure === null) {
+          totalField.value = '';
+          return;
+        }
+
+        const totalPressure = supplyPressure + returnPressure;
+        totalField.value = Number.parseFloat(totalPressure.toFixed(2)).toString();
+      };
+
+      supplyField.addEventListener('input', updateTotalPressure);
+      returnField.addEventListener('input', updateTotalPressure);
+      updateTotalPressure();
+    })();
+  </script>
+{% endblock %}

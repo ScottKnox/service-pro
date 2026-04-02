@@ -23,7 +23,10 @@
         </div>
 
         <div class="customers-controls-right">
-          <a href="{{ url_for('employees.add_employee') }}">Add Employee</a>
+          {% set current_position = (session.get('employee_position', '')|lower) %}
+          {% if current_position in ['owner', 'co-owner', 'manager'] %}
+            <a href="{{ url_for('employees.add_employee') }}">Add Employee</a>
+          {% endif %}
         </div>
       </div>
 

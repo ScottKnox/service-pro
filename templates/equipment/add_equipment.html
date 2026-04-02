@@ -1,17 +1,27 @@
 {% extends "base.html" %}
 
-{% block title %}Add Equipment | Steady Work{% endblock %}
+{% block title %}{{ page_title|default('Add HVAC System') }} | Steady Work{% endblock %}
 
 {% block content %}
   <div id="main-container">
     <div id="add-customer-panel">
-      <h1>Add Equipment</h1>
+      <h1>{{ page_title|default('Add HVAC System') }}</h1>
+
+      <style>
+        #add-customer-form .add-customer-form-field {
+          gap: 0.6rem;
+        }
+
+        #add-customer-form section .add-customer-form-row + .add-customer-form-row {
+          margin-top: 0.45rem;
+        }
+      </style>
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
           <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
-          <li aria-current="page">Add Equipment</li>
+          <li aria-current="page">{{ breadcrumb_current|default('Add HVAC System') }}</li>
         </ol>
       </nav>
 
@@ -19,48 +29,232 @@
         <p class="form-field-error">{{ error }}</p>
       {% endif %}
 
-      <form id="add-customer-form" action="{{ url_for('customers.add_equipment', customerId=customerId) }}" method="post">
+      <form id="add-customer-form" action="{{ form_action|default(url_for('customers.add_equipment', customerId=customerId)) }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
-            <label for="equipment-name">Equipment Name</label>
-            <input id="equipment-name" name="equipment_name" type="text" placeholder="Equipment name" required />
-          </div>
-
-          <div class="add-customer-form-field">
-            <label for="equipment-serial-number">Serial Number</label>
-            <input id="equipment-serial-number" name="serial_number" type="text" placeholder="Serial number" required />
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="equipment-brand">Brand</label>
-            <select id="equipment-brand" name="brand" required>
-              <option value="Goodman" selected>Goodman</option>
+            <label for="system-type">System Type</label>
+            <select id="system-type" name="system_type" required>
+              <option value="">-- Select a system type --</option>
+              {% for option in system_type_options|default(['Heat Pump', 'Split', 'Package', 'Mini Split']) %}
+                <option value="{{ option }}" {% if form_data.system_type|default('') == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
             </select>
           </div>
-
           <div class="add-customer-form-field">
-            <label for="equipment-location">Equipment Location</label>
-            <select id="equipment-location" name="equipment_location">
-              <option value="">-- Select a location --</option>
-              <option value="Attic">Attic</option>
-              <option value="Basement">Basement</option>
-              <option value="Closet">Closet</option>
-              <option value="Garage">Garage</option>
-              <option value="Hallway">Hallway</option>
-              <option value="Outdoor Unit">Outdoor Unit</option>
-              <option value="Roof">Roof</option>
-              <option value="Utility Room">Utility Room</option>
+            <label for="location-type">Location Type</label>
+            <select id="location-type" name="location_type" required>
+              <option value="">-- Select a location type --</option>
+              {% for option in location_type_options|default(['Primary Residence', 'Shop Building', 'Secondary Home', 'External Building', 'Apartment', 'Townhouse']) %}
+                <option value="{{ option }}" {% if form_data.location_type|default('') == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
             </select>
           </div>
         </div>
+
+        <section id="air-handler-section" class="add-customer-panel" hidden>
+          <h2>Air Handler</h2>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="air-handler-model-name">Model Name</label>
+              <input id="air-handler-model-name" name="air_handler_model_name" type="text" autocomplete="off" value="{{ form_data.air_handler_model_name|default('') }}">
+            </div>
+            <div class="add-customer-form-field">
+              <label for="air-handler-model-number">Model Number</label>
+              <input id="air-handler-model-number" name="air_handler_model_number" type="text" autocomplete="off" value="{{ form_data.air_handler_model_number|default('') }}">
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="air-handler-serial-number">Serial Number</label>
+              <input id="air-handler-serial-number" name="air_handler_serial_number" type="text" autocomplete="off" value="{{ form_data.air_handler_serial_number|default('') }}">
+            </div>
+            <div class="add-customer-form-field">
+              <label for="air-handler-brand">Brand</label>
+              <input id="air-handler-brand" name="air_handler_brand" type="text" autocomplete="organization" value="{{ form_data.air_handler_brand|default('') }}">
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="air-handler-install-year">Install Year</label>
+              <input id="air-handler-install-year" name="air_handler_install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.air_handler_install_year|default('') }}">
+            </div>
+          </div>
+        </section>
+
+        <section id="condenser-section" class="add-customer-panel" hidden>
+          <h2>Condenser</h2>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="condenser-model-name">Model Name</label>
+              <input id="condenser-model-name" name="condenser_model_name" type="text" autocomplete="off" value="{{ form_data.condenser_model_name|default('') }}">
+            </div>
+            <div class="add-customer-form-field">
+              <label for="condenser-model-number">Model Number</label>
+              <input id="condenser-model-number" name="condenser_model_number" type="text" autocomplete="off" value="{{ form_data.condenser_model_number|default('') }}">
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="condenser-serial-number">Serial Number</label>
+              <input id="condenser-serial-number" name="condenser_serial_number" type="text" autocomplete="off" value="{{ form_data.condenser_serial_number|default('') }}">
+            </div>
+            <div class="add-customer-form-field">
+              <label for="condenser-brand">Brand</label>
+              <input id="condenser-brand" name="condenser_brand" type="text" autocomplete="organization" value="{{ form_data.condenser_brand|default('') }}">
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="condenser-install-year">Install Year</label>
+              <input id="condenser-install-year" name="condenser_install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.condenser_install_year|default('') }}">
+            </div>
+          </div>
+        </section>
+
+        <section id="furnace-section" class="add-customer-panel" hidden>
+          <h2>Furnace</h2>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="furnace-model-name">Model Name</label>
+              <input id="furnace-model-name" name="furnace_model_name" type="text" autocomplete="off" value="{{ form_data.furnace_model_name|default('') }}">
+            </div>
+            <div class="add-customer-form-field">
+              <label for="furnace-model-number">Model Number</label>
+              <input id="furnace-model-number" name="furnace_model_number" type="text" autocomplete="off" value="{{ form_data.furnace_model_number|default('') }}">
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="furnace-serial-number">Serial Number</label>
+              <input id="furnace-serial-number" name="furnace_serial_number" type="text" autocomplete="off" value="{{ form_data.furnace_serial_number|default('') }}">
+            </div>
+            <div class="add-customer-form-field">
+              <label for="furnace-brand">Brand</label>
+              <input id="furnace-brand" name="furnace_brand" type="text" autocomplete="organization" value="{{ form_data.furnace_brand|default('') }}">
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="furnace-install-year">Install Year</label>
+              <input id="furnace-install-year" name="furnace_install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.furnace_install_year|default('') }}">
+            </div>
+          </div>
+        </section>
+
+        <section id="unit-section" class="add-customer-panel" hidden>
+          <h2>Unit</h2>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="unit-model-name">Model Name</label>
+              <input id="unit-model-name" name="unit_model_name" type="text" autocomplete="off" value="{{ form_data.unit_model_name|default('') }}">
+            </div>
+            <div class="add-customer-form-field">
+              <label for="unit-model-number">Model Number</label>
+              <input id="unit-model-number" name="unit_model_number" type="text" autocomplete="off" value="{{ form_data.unit_model_number|default('') }}">
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="unit-serial-number">Serial Number</label>
+              <input id="unit-serial-number" name="unit_serial_number" type="text" autocomplete="off" value="{{ form_data.unit_serial_number|default('') }}">
+            </div>
+            <div class="add-customer-form-field">
+              <label for="unit-brand">Brand</label>
+              <input id="unit-brand" name="unit_brand" type="text" autocomplete="organization" value="{{ form_data.unit_brand|default('') }}">
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="unit-install-year">Install Year</label>
+              <input id="unit-install-year" name="unit_install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.unit_install_year|default('') }}">
+            </div>
+          </div>
+        </section>
+
+        <section id="ductwork-section" class="add-customer-panel" hidden>
+          <h2>Ductwork</h2>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="ductwork-type">Type</label>
+              <input id="ductwork-type" name="ductwork_type" type="text" autocomplete="off" value="{{ form_data.ductwork_type|default('') }}">
+            </div>
+            <div class="add-customer-form-field">
+              <label for="ductwork-size">Size</label>
+              <input id="ductwork-size" name="ductwork_size" type="text" autocomplete="off" value="{{ form_data.ductwork_size|default('') }}">
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="ductwork-install-year">Install Year</label>
+              <input id="ductwork-install-year" name="ductwork_install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.ductwork_install_year|default('') }}">
+            </div>
+          </div>
+        </section>
 
         <div id="add-customer-form-actions">
-          <button type="submit">Save Equipment</button>
+          <button type="submit">{{ submit_label|default('Save HVAC System') }}</button>
         </div>
       </form>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script defer>
+    (function () {
+      const systemTypeSelect = document.getElementById('system-type');
+      const sections = {
+        airHandler: document.getElementById('air-handler-section'),
+        condenser: document.getElementById('condenser-section'),
+        furnace: document.getElementById('furnace-section'),
+        unit: document.getElementById('unit-section'),
+        ductwork: document.getElementById('ductwork-section'),
+      };
+
+      if (!systemTypeSelect || !sections.airHandler || !sections.condenser || !sections.furnace || !sections.unit || !sections.ductwork) {
+        return;
+      }
+
+      function hideAllSections() {
+        Object.values(sections).forEach(function (section) {
+          section.hidden = true;
+        });
+      }
+
+      function syncSections() {
+        hideAllSections();
+
+        const selectedType = systemTypeSelect.value;
+        if (selectedType === 'Split') {
+          sections.airHandler.hidden = false;
+          sections.condenser.hidden = false;
+          sections.furnace.hidden = false;
+          sections.ductwork.hidden = false;
+          return;
+        }
+
+        if (selectedType === 'Heat Pump') {
+          sections.airHandler.hidden = false;
+          sections.condenser.hidden = false;
+          sections.ductwork.hidden = false;
+          return;
+        }
+
+        if (selectedType === 'Package') {
+          sections.unit.hidden = false;
+          sections.ductwork.hidden = false;
+          return;
+        }
+
+        if (selectedType === 'Mini Split') {
+          sections.unit.hidden = false;
+        }
+      }
+
+      systemTypeSelect.addEventListener('change', syncSections);
+      syncSections();
+    })();
+  </script>
 {% endblock %}

@@ -36,8 +36,17 @@ def employees():
     return render_template("employees/employees.html", employees=employees_list)
 
 
+def _is_authorized():
+    """Check if current user has permission to manage employees."""
+    position = (session.get("employee_position") or "").strip().lower()
+    return position in ["owner", "co-owner", "manager"]
+
+
 @bp.route("/employees/add", methods=["GET", "POST"])
 def add_employee():
+    if not _is_authorized():
+        return redirect(url_for("employees.employees"))
+    
     db = ensure_connection_or_500()
     if request.method == "POST":
         first_name = request.form.get("first_name", "").strip()
@@ -112,6 +121,9 @@ def view_employee(employeeId):
 
 @bp.route("/employees/<employeeId>/update", methods=["GET", "POST"])
 def update_employee(employeeId):
+    if not _is_authorized():
+        return redirect(url_for("employees.employees"))
+    
     db = ensure_connection_or_500()
     employee = db.employees.find_one({"_id": object_id_or_404(employeeId)})
     if not employee:
@@ -157,6 +169,8 @@ def update_employee(employeeId):
 
 @bp.route("/employees/<employeeId>/delete", methods=["POST"])
 def delete_employee(employeeId):
+    if not _is_authorized():
+        return redirect(url_for("employees.employees"))
     db = ensure_connection_or_500()
     employee_oid = object_id_or_404(employeeId)
     employee = db.employees.find_one({"_id": employee_oid})

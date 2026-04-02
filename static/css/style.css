@@ -784,6 +784,7 @@ p {
   align-items: end;
 }
 
+.customers-add-button,
 .customers-controls-right a {
   display: inline-block;
   padding: 0.55rem 0.95rem;
@@ -795,6 +796,7 @@ p {
   font-weight: 600;
 }
 
+.customers-add-button:hover,
 .customers-controls-right a:hover {
   background-color: #F1F5F9;
   border-color: #A9B0BA;
@@ -1436,6 +1438,14 @@ p {
   border-right: 0;
 }
 
+#view-hvac-reports-columns {
+  grid-template-columns: 1fr;
+}
+
+#view-hvac-reports-columns .view-customer-section-column:first-child {
+  border-right: 0;
+}
+
 #view-customer-account-columns {
   margin-top: 1rem;
 }
@@ -1522,6 +1532,111 @@ p {
   flex-direction: column;
   gap: 0.75rem;
   padding: 0.25rem 0;
+}
+
+.hvac-diagnostics-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.hvac-diagnostics-section {
+  border: 1px solid #C5C7CB;
+  border-radius: 6px;
+  background-color: #FFFFFF;
+  margin-bottom: 0.9rem;
+  overflow: hidden;
+}
+
+.hvac-diagnostics-section summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 48px;
+  padding: 0.75rem 0.9rem;
+  background: linear-gradient(90deg, #1B263B 0%, #2A3A54 100%);
+  color: #F8F9FA;
+  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.hvac-diagnostics-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.hvac-diagnostics-section summary::after {
+  content: "+";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 999px;
+  background-color: rgba(248, 249, 250, 0.2);
+  color: #F8F9FA;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hvac-diagnostics-section[open] summary::after {
+  content: "-";
+}
+
+.hvac-diagnostics-section-content {
+  padding: 0.9rem 0.9rem 0.4rem;
+  background-color: #F9FBFD;
+}
+
+.hvac-diagnostics-section-content .add-customer-form-row {
+  margin-bottom: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .hvac-diagnostics-section {
+    margin-bottom: 0.75rem;
+  }
+
+  .hvac-diagnostics-section summary {
+    min-height: 52px;
+    padding: 0.8rem 0.8rem;
+    font-size: 1.02rem;
+  }
+
+  .hvac-diagnostics-section-content {
+    padding: 0.75rem 0.75rem 0.35rem;
+  }
+}
+
+.hvac-diagnostics-row .view-customer-card-link {
+  flex: 1;
+}
+
+.hvac-generate-report-form {
+  margin: 0;
+  display: inline-flex;
+}
+
+.hvac-generate-report-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  padding: 0.5rem;
+  border: 1px solid #1F6B35;
+  border-radius: 4px;
+  background-color: #EAF6EE;
+  color: #1F6B35;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.hvac-generate-report-button:hover {
+  background-color: #DDF5E3;
 }
 
 #view-equipment-parts-list {

@@ -34,10 +34,12 @@
           <p>Maintain the parts catalog and default pricing for offered parts.</p>
         </a>
 
+        {% if session.get('employee_position', '').lower() in ['owner', 'co-owner', 'manager'] %}
         <a class="admin-link-card" href="{{ url_for('business.business_profile') }}">
           <h3>Business</h3>
           <p>Manage business details like tax info, company emails, and more</p>
         </a>
+        {% endif %}
       </div>
     </div>
   </div>

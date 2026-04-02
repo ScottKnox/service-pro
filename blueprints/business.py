@@ -6,8 +6,16 @@ from mongo import ensure_connection_or_500, serialize_doc
 bp = Blueprint("business", __name__)
 
 
+def _is_authorized():
+    position = (session.get("employee_position") or "").strip().lower()
+    return position in ["owner", "co-owner", "manager"]
+
+
 @bp.route("/business")
 def business_profile():
+    if not _is_authorized():
+        return redirect(url_for("admin_bp.admin"))
+
     db = ensure_connection_or_500()
 
     employee_id = session.get("employee_id")
@@ -41,6 +49,9 @@ def business_profile():
 
 @bp.route("/business/update", methods=["GET", "POST"])
 def update_business():
+    if not _is_authorized():
+        return redirect(url_for("admin_bp.admin"))
+
     db = ensure_connection_or_500()
 
     employee_id = session.get("employee_id")

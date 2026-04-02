@@ -17,11 +17,14 @@
       <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
-          <a href="{{ url_for('employees.update_employee', employeeId=employeeId) }}">Update Employee</a>
-          <form method="POST" action="{{ url_for('employees.delete_employee', employeeId=employeeId) }}" onsubmit="return confirm('Delete this employee? This cannot be undone.');">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit">Delete Employee</button>
-          </form>
+          {% set current_position = (session.get('employee_position', '')|lower) %}
+          {% if current_position in ['owner', 'co-owner', 'manager'] %}
+            <a href="{{ url_for('employees.update_employee', employeeId=employeeId) }}">Update Employee</a>
+            <form method="POST" action="{{ url_for('employees.delete_employee', employeeId=employeeId) }}" onsubmit="return confirm('Delete this employee? This cannot be undone.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit">Delete Employee</button>
+            </form>
+          {% endif %}
         </div>
       </section>
 
