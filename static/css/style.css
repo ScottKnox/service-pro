@@ -3226,6 +3226,35 @@ p {
 }
 
 @media (max-width: 540px) {
+  #breadcrumb {
+    font-size: 0.84rem;
+    line-height: 1.25;
+  }
+
+  #breadcrumb ol {
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 0.3rem;
+  }
+
+  #breadcrumb li {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  #breadcrumb li + li::before {
+    margin: 0 0.35rem;
+    line-height: 1;
+  }
+
+  #breadcrumb a,
+  #breadcrumb li[aria-current="page"] {
+    display: inline-block;
+    line-height: 1.2;
+  }
+
   #view-customer-actions-row form,
   #view-job-actions-row form,
   #view-service-actions-row form {
