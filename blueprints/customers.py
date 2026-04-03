@@ -408,20 +408,44 @@ def _build_hvac_diagnostics_entry(form_data):
     return entry
 
 
-def _build_latest_diagnostics_card(diagnostics):
-    latest_diagnostics = None
+def _parse_date_performed(value):
+    date_text = str(value or "").strip()
+    if not date_text:
+        return None
+
+    for date_format in ("%m/%d/%Y", "%Y-%m-%d", "%m-%d-%Y"):
+        try:
+            return datetime.strptime(date_text, date_format)
+        except ValueError:
+            continue
+
+    return None
+
+
+def _sort_diagnostics_by_date_desc(diagnostics):
     if isinstance(diagnostics, dict):
-        latest_diagnostics = diagnostics
+        diagnostics_entries = [diagnostics]
     elif isinstance(diagnostics, list):
-        for diagnostics_entry in diagnostics:
-            if isinstance(diagnostics_entry, dict):
-                latest_diagnostics = diagnostics_entry
-                break
+        diagnostics_entries = [entry for entry in diagnostics if isinstance(entry, dict)]
+    else:
+        diagnostics_entries = []
+
+    return sorted(
+        diagnostics_entries,
+        key=lambda entry: (_parse_date_performed(entry.get("date_performed")) is not None, _parse_date_performed(entry.get("date_performed")) or datetime.min),
+        reverse=True,
+    )
+
+
+def _build_latest_diagnostics_card(diagnostics):
+    sorted_diagnostics = _sort_diagnostics_by_date_desc(diagnostics)
+    latest_diagnostics = sorted_diagnostics[0] if sorted_diagnostics else None
 
     if not latest_diagnostics:
         return None
 
     date_performed = str(latest_diagnostics.get("date_performed", "")).strip()
+    values = {}
     results = []
     for field_name, field_label in HVAC_DIAGNOSTIC_FIELDS:
         raw_value = latest_diagnostics.get(field_name, "")
@@ -429,16 +453,61 @@ def _build_latest_diagnostics_card(diagnostics):
             value = json.dumps(raw_value)
         else:
             value = str(raw_value).strip()
+        values[field_name] = value
         if not value:
             continue
         results.append({"label": field_label, "value": value})
+
+    # Include additional diagnostics keys that may exist in Mongo but are not
+    # part of the currently modeled section fields.
+    for field_name, raw_value in latest_diagnostics.items():
+        if field_name in values or field_name == "date_performed":
+            continue
+        if isinstance(raw_value, (dict, list)):
+            value = json.dumps(raw_value)
+        else:
+            value = str(raw_value).strip()
+        values[field_name] = value
 
     if not date_performed and not results:
         return None
 
     return {
+        "diagnostic_index": 0,
         "date_performed": date_performed or "-",
+        "values": values,
         "results": results,
+    }
+
+
+def _build_hvac_diagnostic_detail(hvac_system, diagnostic_index):
+    sorted_diagnostics = _sort_diagnostics_by_date_desc(hvac_system.get("diagnostics", []))
+    if diagnostic_index < 0 or diagnostic_index >= len(sorted_diagnostics):
+        return None
+
+    selected_diagnostic = sorted_diagnostics[diagnostic_index]
+    date_performed = str(selected_diagnostic.get("date_performed", "")).strip() or "-"
+    section_details = []
+
+    for section_label, fields in HVAC_DIAGNOSTIC_SECTIONS:
+        rows = []
+        for field in fields:
+            field_name = field["name"]
+            raw_value = selected_diagnostic.get(field_name, "")
+            value = str(raw_value).strip() if raw_value is not None else ""
+            rows.append({
+                "label": field["label"],
+                "value": value or "-",
+            })
+        section_details.append({
+            "label": section_label,
+            "rows": rows,
+        })
+
+    return {
+        "diagnostic_index": diagnostic_index,
+        "date_performed": date_performed,
+        "sections": section_details,
     }
 
 
@@ -854,6 +923,42 @@ def view_hvac_system(customerId, reference_type, reference_id):
     )
 
 
+@bp.route("/customers/<customerId>/hvac/<reference_type>/<reference_id>/diagnostics/<int:diagnostic_index>")
+def view_hvac_diagnostic(customerId, reference_type, reference_id, diagnostic_index):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers.customers"))
+    if reference_type != "system":
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    hvac_system = db.hvacSystems.find_one({"_id": object_id_or_404(reference_id), "customer_id": customerId})
+    if not hvac_system:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    serialized_system = serialize_doc(hvac_system)
+    diagnostic_detail = _build_hvac_diagnostic_detail(serialized_system, diagnostic_index)
+    if not diagnostic_detail:
+        return redirect(
+            url_for(
+                "customers.view_hvac_system",
+                customerId=customerId,
+                reference_type=reference_type,
+                reference_id=reference_id,
+            )
+        )
+
+    return render_template(
+        "equipment/view_hvac_diagnostic.html",
+        customerId=customerId,
+        customer=serialize_doc(customer),
+        reference_type=reference_type,
+        reference_id=reference_id,
+        hvac_system=serialized_system,
+        diagnostic=diagnostic_detail,
+    )
+
+
 @bp.route("/customers/<customerId>/hvac/<reference_type>/<reference_id>/diagnostics/add", methods=["GET", "POST"])
 def add_hvac_diagnostics(customerId, reference_type, reference_id):
     db = ensure_connection_or_500()
@@ -877,12 +982,12 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
         }
 
         diagnostics_entry = _build_hvac_diagnostics_entry(form_data)
-        existing_diagnostics = hvac_system.get("diagnostics", [])
-        diagnostics_history = existing_diagnostics if isinstance(existing_diagnostics, list) else []
+        existing_diagnostics = _sort_diagnostics_by_date_desc(hvac_system.get("diagnostics", []))
+        diagnostics_history = _sort_diagnostics_by_date_desc([diagnostics_entry, *existing_diagnostics])
 
         db.hvacSystems.update_one(
             {"_id": hvac_system["_id"]},
-            {"$push": {"diagnostics": {"$each": [diagnostics_entry], "$position": 0}}},
+            {"$set": {"diagnostics": diagnostics_history}},
         )
 
         return redirect(
@@ -922,8 +1027,9 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
 
     serialized_system = serialize_doc(hvac_system)
     diagnostics_list = serialized_system.get("diagnostics", [])
-    raw_diagnostics = next((d for d in diagnostics_list if isinstance(d, dict)), None) if isinstance(diagnostics_list, list) else (diagnostics_list if isinstance(diagnostics_list, dict) else None)
-    diagnostics_card = _build_latest_diagnostics_card(diagnostics_list)
+    sorted_diagnostics = _sort_diagnostics_by_date_desc(diagnostics_list)
+    raw_diagnostics = sorted_diagnostics[0] if sorted_diagnostics else None
+    diagnostics_card = _build_latest_diagnostics_card(sorted_diagnostics)
     if not diagnostics_card:
         return redirect(
             url_for(

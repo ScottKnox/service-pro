@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}View Diagnostic | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="view-customer-panel">
+      <h1>System Diagnostic</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li>
+            <a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=reference_type, reference_id=reference_id) }}">View HVAC System</a>
+          </li>
+          <li aria-current="page">View Diagnostic</li>
+        </ol>
+      </nav>
+
+      <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
+        <h2 id="view-customer-actions-header">Actions</h2>
+        <div id="view-customer-actions-row">
+          <form method="POST" action="{{ url_for('customers.generate_hvac_system_report', customerId=customerId, reference_type=reference_type, reference_id=reference_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="hvac-generate-report-button">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+                <path d="M6 2h8l4 4v16H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                <path d="M14 2v4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                <path d="M9 12h6M9 16h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              Generate Report
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <section id="view-customer-details" aria-label="HVAC diagnostic details">
+        <h2>Diagnostic Details</h2>
+        <div class="view-customer-section-row" id="view-hvac-diagnostic-columns">
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>System</h3>
+            <div id="view-customer-details-list">
+              <div class="view-customer-detail-item">
+                <h4>System Type</h4>
+                <p>{{ hvac_system.system_type or '-' }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Location Type</h4>
+                <p>{{ hvac_system.location_type or '-' }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Date Performed</h4>
+                <p>{{ diagnostic.date_performed }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="view-customer-section-row" id="view-hvac-diagnostic-sections-columns">
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>Full Results</h3>
+            <div class="hvac-diagnostic-sections-grid">
+              {% for section in diagnostic.sections %}
+                <article class="hvac-component-card hvac-component-card--diagnostics hvac-diagnostic-section-card">
+                  <div class="hvac-component-card-header">
+                    <div class="hvac-component-card-icon hvac-component-card-icon--diagnostics" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="20" height="20" focusable="false"><path d="M4 6h16v12H4z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h10M7 14h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                    </div>
+                    <div class="hvac-component-card-heading-text">
+                      <p class="hvac-component-card-system-type">Section</p>
+                      <h4>{{ section.label }}</h4>
+                    </div>
+                  </div>
+                  <div class="hvac-component-card-body">
+                    {% for row in section.rows %}
+                      <div class="hvac-component-row">
+                        <span>{{ row.label }}</span>
+                        <strong>{{ row.value }}</strong>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </article>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}

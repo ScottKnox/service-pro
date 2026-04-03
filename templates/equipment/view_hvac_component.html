@@ -28,72 +28,129 @@
       <section id="view-customer-details" aria-label="HVAC component details">
         <h2>Component Details</h2>
         <div class="view-customer-section-row" id="view-equipment-details-columns">
+          {% set component_theme_class = 'hvac-component-card--air-handler' %}
+          {% set component_icon_class = 'hvac-component-card-icon--air-handler' %}
+          {% set component_icon = '🌀' %}
+          {% if component.component_key == 'condensers' %}
+            {% set component_theme_class = 'hvac-component-card--condenser' %}
+            {% set component_icon_class = 'hvac-component-card-icon--condenser' %}
+            {% set component_icon = '❄️' %}
+          {% elif component.component_key == 'packageUnits' %}
+            {% set component_theme_class = 'hvac-component-card--unit-package' %}
+            {% set component_icon_class = 'hvac-component-card-icon--unit-package' %}
+            {% set component_icon = '📦' %}
+          {% elif component.component_key == 'miniSplits' %}
+            {% set component_theme_class = 'hvac-component-card--unit-mini' %}
+            {% set component_icon_class = 'hvac-component-card-icon--unit-mini' %}
+            {% set component_icon = '🧊' %}
+          {% elif component.component_key == 'ductwork' %}
+            {% set component_theme_class = 'hvac-component-card--ductwork' %}
+            {% set component_icon_class = 'hvac-component-card-icon--ductwork' %}
+            {% set component_icon = '🧱' %}
+          {% endif %}
+
           <div class="view-customer-section-column view-customer-details-column">
-            <h3>{{ component.component_label }}</h3>
-            <div id="view-customer-details-list">
-              {% if component.component_key == 'ductwork' %}
-                <div class="view-customer-detail-item">
-                  <h4>Type</h4>
-                  <p>{{ component.details.type }}</p>
+            <h3>Component</h3>
+            <div class="hvac-component-card {{ component_theme_class }} hvac-component-card--detail-page" role="article" aria-label="{{ component.component_label }} details">
+              <div class="hvac-component-card-header">
+                <span class="hvac-component-card-icon {{ component_icon_class }}" aria-hidden="true">{{ component_icon }}</span>
+                <div class="hvac-component-card-heading-text">
+                  <p class="hvac-component-card-system-type">{{ component.system_type }}</p>
+                  <h4>{{ component.details.model_name if component.component_key != 'ductwork' else component.component_label }}</h4>
                 </div>
-                <div class="view-customer-detail-item">
-                  <h4>Size</h4>
-                  <p>{{ component.details.size }}</p>
-                </div>
-                <div class="view-customer-detail-item">
-                  <h4>Install Year</h4>
-                  <p>{{ component.details.install_year }}</p>
-                </div>
-              {% else %}
-                <div class="view-customer-detail-item">
-                  <h4>Brand</h4>
-                  <p>{{ component.details.brand }}</p>
-                </div>
-                <div class="view-customer-detail-item">
-                  <h4>Model Name</h4>
-                  <p>{{ component.details.model_name }}</p>
-                </div>
-                <div class="view-customer-detail-item">
-                  <h4>Model Number</h4>
-                  <p>{{ component.details.model_number }}</p>
-                </div>
-                <div class="view-customer-detail-item">
-                  <h4>Serial Number</h4>
-                  <p>{{ component.details.serial_number }}</p>
-                </div>
-                <div class="view-customer-detail-item">
-                  <h4>Install Year</h4>
-                  <p>{{ component.details.install_year }}</p>
-                </div>
-              {% endif %}
+              </div>
+              <div class="hvac-component-card-body">
+                {% if component.component_key == 'ductwork' %}
+                  <div class="hvac-component-row">
+                    <span>Type</span>
+                    <strong>{{ component.details.type }}</strong>
+                  </div>
+                  <div class="hvac-component-row">
+                    <span>Size</span>
+                    <strong>{{ component.details.size }}</strong>
+                  </div>
+                  <div class="hvac-component-row">
+                    <span>Install Year</span>
+                    <strong>{{ component.details.install_year }}</strong>
+                  </div>
+                {% else %}
+                  <div class="hvac-component-row">
+                    <span>Brand</span>
+                    <strong>{{ component.details.brand }}</strong>
+                  </div>
+                  <div class="hvac-component-row">
+                    <span>Model Name</span>
+                    <strong>{{ component.details.model_name }}</strong>
+                  </div>
+                  <div class="hvac-component-row">
+                    <span>Model Number</span>
+                    <strong>{{ component.details.model_number }}</strong>
+                  </div>
+                  <div class="hvac-component-row">
+                    <span>Serial Number</span>
+                    <strong>{{ component.details.serial_number }}</strong>
+                  </div>
+                  <div class="hvac-component-row">
+                    <span>Install Year</span>
+                    <strong>{{ component.details.install_year }}</strong>
+                  </div>
+                {% endif %}
+              </div>
             </div>
           </div>
 
           <div class="view-customer-section-column view-customer-details-column">
             <h3>System Diagnostics</h3>
-            <div id="view-customer-details-list">
-              {% if component.diagnostics %}
-                <div class="view-customer-detail-item">
-                  <h4>Date Performed</h4>
-                  <p>{{ component.diagnostics.date_performed }}</p>
+            {% if component.diagnostics %}
+              <div class="hvac-component-card hvac-component-card--diagnostics" role="article" aria-label="System diagnostics details">
+                <div class="hvac-component-card-header">
+                  <span class="hvac-component-card-icon hvac-component-card-icon--diagnostics" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="20" height="20" focusable="false">
+                      <path d="M4 13h4l2-4 3 8 2-4h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <div class="hvac-component-card-heading-text">
+                    <p class="hvac-component-card-system-type">System Diagnostics</p>
+                    <h4>{{ component.diagnostics.date_performed }}</h4>
+                  </div>
                 </div>
-                <div class="view-customer-detail-item">
-                  <h4>Results</h4>
+                <div class="hvac-component-card-body">
                   {% if component.diagnostics.results %}
                     {% for diagnostic in component.diagnostics.results %}
-                      <p>{{ diagnostic.label }}: {{ diagnostic.value }}</p>
+                      <div class="hvac-component-row">
+                        <span>{{ diagnostic.label }}</span>
+                        <strong>{{ diagnostic.value }}</strong>
+                      </div>
                     {% endfor %}
                   {% else %}
-                    <p>No diagnostic results saved yet.</p>
+                    <div class="hvac-component-row">
+                      <span>Status</span>
+                      <strong>No diagnostic results saved yet.</strong>
+                    </div>
                   {% endif %}
                 </div>
-              {% else %}
-                <div class="view-customer-detail-item">
-                  <h4>Status</h4>
-                  <p>No system diagnostics saved yet.</p>
+              </div>
+            {% else %}
+              <div class="hvac-component-card hvac-component-card--diagnostics" role="article" aria-label="System diagnostics details">
+                <div class="hvac-component-card-header">
+                  <span class="hvac-component-card-icon hvac-component-card-icon--diagnostics" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" width="20" height="20" focusable="false">
+                      <path d="M4 13h4l2-4 3 8 2-4h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <div class="hvac-component-card-heading-text">
+                    <p class="hvac-component-card-system-type">System Diagnostics</p>
+                    <h4>No Data</h4>
+                  </div>
                 </div>
-              {% endif %}
-            </div>
+                <div class="hvac-component-card-body">
+                  <div class="hvac-component-row">
+                    <span>Status</span>
+                    <strong>No system diagnostics saved yet.</strong>
+                  </div>
+                </div>
+              </div>
+            {% endif %}
           </div>
         </div>
       </section>

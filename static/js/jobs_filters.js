@@ -10,6 +10,7 @@
   }
 
   const employeeOptions = document.getElementById('jobs-filter-employee-options');
+  const statusOptions = document.getElementById('jobs-filter-status-options');
   const cityOptions = document.getElementById('jobs-filter-city-options');
   const stateOptions = document.getElementById('jobs-filter-state-options');
   const startDateInput = document.getElementById('jobs-filter-start-date');
@@ -104,8 +105,44 @@
     );
   }
 
+  function parseQueryValues(paramNames) {
+    const searchParams = new URLSearchParams(window.location.search);
+    const values = new Set();
+
+    paramNames.forEach(function (paramName) {
+      const raw = searchParams.get(paramName);
+      if (!raw) {
+        return;
+      }
+
+      raw
+        .split(',')
+        .map(function (value) {
+          return normalizeValue(value);
+        })
+        .filter(Boolean)
+        .forEach(function (value) {
+          values.add(value);
+        });
+    });
+
+    return values;
+  }
+
+  function applyCheckedValues(filterName, values) {
+    if (!values || values.size === 0) {
+      return;
+    }
+
+    const inputs = document.querySelectorAll('input[name="' + filterName + '"]');
+    inputs.forEach(function (input) {
+      input.checked = values.has(normalizeValue(input.value));
+    });
+  }
+
   function applyFilters() {
     const selectedEmployees = getCheckedValues('filter_employee');
+    const selectedStatuses = getCheckedValues('filter_status');
     const selectedCities = getCheckedValues('filter_city');
     const selectedStates = getCheckedValues('filter_state');
     const startDate = startDateInput ? parseIsoDate(startDateInput.value) : null;
@@ -115,11 +152,13 @@
 
     jobCards.forEach(function (card) {
       const employee = normalizeValue(card.dataset.filterEmployee);
+      const status = normalizeValue(card.dataset.filterStatus);
       const city = normalizeValue(card.dataset.filterCity);
       const state = normalizeValue(card.dataset.filterState);
       const scheduledDate = parseUsDate(card.dataset.filterDate);
 
       const matchesEmployee = selectedEmployees.size === 0 || selectedEmployees.has(employee);
+      const matchesStatus = selectedStatuses.size === 0 || selectedStatuses.has(status);
       const matchesCity = selectedCities.size === 0 || selectedCities.has(city);
       const matchesState = selectedStates.size === 0 || selectedStates.has(state);
 
@@ -131,7 +170,7 @@
         matchesDate = false;
       }
 
-      const shouldShow = matchesEmployee && matchesCity && matchesState && matchesDate;
+      const shouldShow = matchesEmployee && matchesStatus && matchesCity && matchesState && matchesDate;
       card.style.display = shouldShow ? '' : 'none';
       if (shouldShow) {
         visibleCount += 1;
@@ -144,10 +183,13 @@
   }
 
   renderCheckboxOptions(employeeOptions, 'filter_employee', getUniqueOptions('filterEmployee'), 'No employees available.');
+  renderCheckboxOptions(statusOptions, 'filter_status', getUniqueOptions('filterStatus'), 'No statuses available.');
   renderCheckboxOptions(cityOptions, 'filter_city', getUniqueOptions('filterCity'), 'No cities available.');
   renderCheckboxOptions(stateOptions, 'filter_state', getUniqueOptions('filterState'), 'No states available.');
 
-  [employeeOptions, cityOptions, stateOptions].forEach(function (container) {
+  applyCheckedValues('filter_status', parseQueryValues(['status', 'filter_status']));
+
+  [employeeOptions, statusOptions, cityOptions, stateOptions].forEach(function (container) {
     if (!container) {
       return;
     }

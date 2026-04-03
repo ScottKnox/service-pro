@@ -41,28 +41,166 @@
                 <p>{{ hvac_system.location_type }}</p>
               </div>
             </div>
+            <div class="hvac-system-kpi-grid" aria-label="System performance summary">
+              {% set diagnostics_values = hvac_system.diagnostics.get('values', {}) if hvac_system.diagnostics else {} %}
+              <article class="hvac-system-kpi-card">
+                <h4>ΔT - Supply / Return</h4>
+                {% set delta_t_status = diagnostics_values.get('temperatureDeltaStatus') or diagnostics_values.get('deltaTStatus') or diagnostics_values.get('temperatureDeltaRange') %}
+                {% set delta_t_status_class = 'is-no-data' %}
+                {% if delta_t_status %}
+                  {% set delta_t_status_class = 'is-normal' %}
+                  {% if 'high' in delta_t_status|lower %}
+                    {% set delta_t_status_class = 'is-high' %}
+                  {% elif 'alert' in delta_t_status|lower or 'critical' in delta_t_status|lower or 'fault' in delta_t_status|lower %}
+                    {% set delta_t_status_class = 'is-alert' %}
+                  {% elif 'info' in delta_t_status|lower or 'check' in delta_t_status|lower %}
+                    {% set delta_t_status_class = 'is-info' %}
+                  {% endif %}
+                {% endif %}
+                <p class="hvac-system-kpi-value">
+                  {{ diagnostics_values.get('temperatureDelta') or diagnostics_values.get('tempDelta') or '-' }}
+                  <span>°F</span>
+                </p>
+                <p class="hvac-system-kpi-meta">
+                  Supply {{ diagnostics_values.get('supplyTemperature') or '-' }} &bull;
+                  Return {{ diagnostics_values.get('returnTemperature') or '-' }}
+                </p>
+                <p><span class="hvac-system-kpi-chip {{ delta_t_status_class }}">{{ delta_t_status or 'No Data' }}</span></p>
+              </article>
+
+              <article class="hvac-system-kpi-card">
+                <h4>Compressor Amperage</h4>
+                {% set compressor_load = diagnostics_values.get('compressorLoadPercent') or diagnostics_values.get('loadPercent') or '-' %}
+                {% set compressor_status = diagnostics_values.get('compressorStatus') or diagnostics_values.get('compressorRange') or diagnostics_values.get('compressorLoadStatus') %}
+                {% set compressor_status_class = 'is-no-data' %}
+                {% if compressor_status %}
+                  {% set compressor_status_class = 'is-normal' %}
+                  {% if 'high' in compressor_status|lower %}
+                    {% set compressor_status_class = 'is-high' %}
+                  {% elif 'alert' in compressor_status|lower or 'critical' in compressor_status|lower or 'fault' in compressor_status|lower %}
+                    {% set compressor_status_class = 'is-alert' %}
+                  {% elif 'info' in compressor_status|lower or 'check' in compressor_status|lower %}
+                    {% set compressor_status_class = 'is-info' %}
+                  {% endif %}
+                {% endif %}
+                <p class="hvac-system-kpi-value">
+                  {{ diagnostics_values.get('compressorVoltage') or diagnostics_values.get('compressorAmperage') or diagnostics_values.get('compressorAmps') or '-' }}
+                  <span>A</span>
+                </p>
+                <p class="hvac-system-kpi-meta">
+                  RLA {{ diagnostics_values.get('compressorRla') or diagnostics_values.get('rla') or '-' }} &bull;
+                  {{ compressor_load }}{% if compressor_load != '-' %}%{% endif %} load
+                </p>
+                <p><span class="hvac-system-kpi-chip {{ compressor_status_class }}">{{ compressor_status or 'No Data' }}</span></p>
+              </article>
+
+              <article class="hvac-system-kpi-card">
+                <h4>Static Pressure</h4>
+                {% set static_variance = diagnostics_values.get('staticPressureVariancePercent') or diagnostics_values.get('staticPressureVariance') or '-' %}
+                {% set static_pressure_status = diagnostics_values.get('staticPressureStatus') or diagnostics_values.get('staticPressureRange') %}
+                {% set static_pressure_status_class = 'is-no-data' %}
+                {% if static_pressure_status %}
+                  {% set static_pressure_status_class = 'is-normal' %}
+                  {% if 'high' in static_pressure_status|lower %}
+                    {% set static_pressure_status_class = 'is-high' %}
+                  {% elif 'alert' in static_pressure_status|lower or 'critical' in static_pressure_status|lower or 'fault' in static_pressure_status|lower %}
+                    {% set static_pressure_status_class = 'is-alert' %}
+                  {% elif 'info' in static_pressure_status|lower or 'check' in static_pressure_status|lower %}
+                    {% set static_pressure_status_class = 'is-info' %}
+                  {% endif %}
+                {% endif %}
+                <p class="hvac-system-kpi-value">
+                  {{ diagnostics_values.get('totalExternalStaticPressure') or '-' }}
+                  <span>WC</span>
+                </p>
+                <p class="hvac-system-kpi-meta">
+                  Design {{ diagnostics_values.get('staticPressureDesign') or '-' }} wc &bull;
+                  {% if static_variance != '-' %}+{% endif %}{{ static_variance }}{% if static_variance != '-' %}%{% endif %}
+                </p>
+                <p><span class="hvac-system-kpi-chip {{ static_pressure_status_class }}">{{ static_pressure_status or 'No Data' }}</span></p>
+              </article>
+            </div>
           </div>
         </div>
 
-        <div class="view-customer-section-row" id="view-customer-equipment-columns">
+        <div class="view-customer-section-row" id="view-hvac-components-columns">
           <div class="view-customer-section-column view-customer-details-column">
             <h3>Components</h3>
-            <div class="view-customer-jobs-list">
+            <div class="hvac-components-grid">
               {% if hvac_system.components %}
                 {% for component in hvac_system.components %}
-                  <a class="view-customer-card-link" href="{{ url_for('customers.view_hvac_component', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, component_key=component.component_key) }}">
-                    <h4>{{ component.label }}</h4>
-                    {% if component.component_key == 'ductwork' %}
-                      <p><strong>Type:</strong> {{ component.details.type }}</p>
-                      <p><strong>Size:</strong> {{ component.details.size }}</p>
-                      <p><strong>Install Year:</strong> {{ component.details.install_year }}</p>
-                    {% else %}
-                      <p><strong>Brand:</strong> {{ component.details.brand }}</p>
-                      <p><strong>Model Name:</strong> {{ component.details.model_name }}</p>
-                      <p><strong>Model Number:</strong> {{ component.details.model_number }}</p>
-                      <p><strong>Serial Number:</strong> {{ component.details.serial_number }}</p>
-                      <p><strong>Install Year:</strong> {{ component.details.install_year }}</p>
-                    {% endif %}
+                  {% set component_theme = 'generic' %}
+                  {% if component.component_key == 'airHandlers' %}
+                    {% set component_theme = 'air-handler' %}
+                  {% elif component.component_key == 'condensers' %}
+                    {% set component_theme = 'condenser' %}
+                  {% elif component.component_key == 'packageUnits' %}
+                    {% set component_theme = 'unit-package' %}
+                  {% elif component.component_key == 'miniSplits' %}
+                    {% set component_theme = 'unit-mini' %}
+                  {% elif component.component_key == 'ductwork' %}
+                    {% set component_theme = 'ductwork' %}
+                  {% endif %}
+                  <a class="hvac-component-card hvac-component-card--{{ component_theme }}" href="{{ url_for('customers.view_hvac_component', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, component_key=component.component_key) }}">
+                    <div class="hvac-component-card-header">
+                      <div class="hvac-component-card-icon hvac-component-card-icon--{{ component_theme }}" aria-hidden="true">
+                        {% if component.component_key == 'airHandlers' %}
+                          <svg viewBox="0 0 24 24" width="20" height="20" focusable="false"><path d="M3 7h18v10H3z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h10M7 14h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                        {% elif component.component_key == 'condensers' %}
+                          <svg viewBox="0 0 24 24" width="20" height="20" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v10M7 12h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                        {% elif component.component_key == 'ductwork' %}
+                          <svg viewBox="0 0 24 24" width="20" height="20" focusable="false"><path d="M3 12h6l2-3h10v6H11l-2-3H3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                        {% else %}
+                          <svg viewBox="0 0 24 24" width="20" height="20" focusable="false"><rect x="4" y="5" width="16" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 9h8M8 13h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                        {% endif %}
+                      </div>
+                      <div class="hvac-component-card-heading-text">
+                        <p class="hvac-component-card-system-type">{{ hvac_system.system_type }}</p>
+                        {% if component.component_key == 'ductwork' %}
+                          <h4>Ductwork</h4>
+                        {% else %}
+                          <h4>{{ component.details.model_name if component.details.model_name and component.details.model_name != '-' else component.label }}</h4>
+                        {% endif %}
+                      </div>
+                    </div>
+
+                    <div class="hvac-component-card-body">
+                      {% if component.component_key == 'ductwork' %}
+                        <div class="hvac-component-row">
+                          <span>Type</span>
+                          <strong>{{ component.details.type }}</strong>
+                        </div>
+                        <div class="hvac-component-row">
+                          <span>Size</span>
+                          <strong>{{ component.details.size }}</strong>
+                        </div>
+                        <div class="hvac-component-row">
+                          <span>Install Year</span>
+                          <strong>{{ component.details.install_year }}</strong>
+                        </div>
+                      {% else %}
+                        <div class="hvac-component-row">
+                          <span>Component</span>
+                          <strong>{{ component.label }}</strong>
+                        </div>
+                        <div class="hvac-component-row">
+                          <span>Brand</span>
+                          <strong>{{ component.details.brand }}</strong>
+                        </div>
+                        <div class="hvac-component-row">
+                          <span>Model Number</span>
+                          <strong>{{ component.details.model_number }}</strong>
+                        </div>
+                        <div class="hvac-component-row">
+                          <span>Serial Number</span>
+                          <strong>{{ component.details.serial_number }}</strong>
+                        </div>
+                        <div class="hvac-component-row">
+                          <span>Install Year</span>
+                          <strong>{{ component.details.install_year }}</strong>
+                        </div>
+                      {% endif %}
+                    </div>
                   </a>
                 {% endfor %}
               {% else %}
@@ -70,55 +208,108 @@
               {% endif %}
             </div>
           </div>
+        </div>
 
+        <div class="view-customer-section-row" id="view-hvac-diagnostics-reports-columns">
           <div class="view-customer-section-column view-customer-details-column">
             <h3>System Diagnostics</h3>
             <div class="view-customer-jobs-list">
               {% if hvac_system.diagnostics %}
-                <div class="hvac-diagnostics-row">
-                  <div class="view-customer-card-link">
-                    <p><strong>Date Performed:</strong> {{ hvac_system.diagnostics.date_performed }}</p>
-                    {% if hvac_system.diagnostics.results %}
-                      {% for diagnostic in hvac_system.diagnostics.results %}
-                        <p>{{ diagnostic.label }}: {{ diagnostic.value }}</p>
-                      {% endfor %}
-                    {% else %}
-                      <p>No diagnostic results saved yet.</p>
-                    {% endif %}
+                {% set diagnostics_values = hvac_system.diagnostics.get('values', {}) %}
+                <a
+                  class="hvac-diagnostics-row hvac-system-diagnostics-link"
+                  href="{{ url_for('customers.view_hvac_diagnostic', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, diagnostic_index=hvac_system.diagnostics.get('diagnostic_index', 0)) }}"
+                >
+                  <div class="hvac-component-card hvac-component-card--diagnostics hvac-system-diagnostics-card">
+                    <div class="hvac-component-card-header">
+                      <div class="hvac-component-card-icon hvac-component-card-icon--diagnostics" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="20" height="20" focusable="false"><path d="M4 6h16v12H4z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h10M7 14h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                      </div>
+                      <div class="hvac-component-card-heading-text">
+                        <p class="hvac-component-card-system-type">Latest Snapshot</p>
+                        <h4>System Diagnostics</h4>
+                      </div>
+                    </div>
+                    <div class="hvac-component-card-body">
+                      <div class="hvac-component-row">
+                        <span>Date Performed</span>
+                        <strong>{{ hvac_system.diagnostics.date_performed or '-' }}</strong>
+                      </div>
+                      <div class="hvac-component-row">
+                        <span>Total External Static Pressure</span>
+                        <strong>{{ diagnostics_values.get('totalExternalStaticPressure') or '-' }}</strong>
+                      </div>
+                      <div class="hvac-component-row">
+                        <span>CFM</span>
+                        <strong>{{ diagnostics_values.get('cfm') or '-' }}</strong>
+                      </div>
+                      <div class="hvac-component-row">
+                        <span>Refrigerant Type</span>
+                        <strong>{{ diagnostics_values.get('refrigerantType') or '-' }}</strong>
+                      </div>
+                      <div class="hvac-component-row">
+                        <span>Temperature Delta</span>
+                        <strong>{{ diagnostics_values.get('temperatureDelta') or '-' }}</strong>
+                      </div>
+                      <div class="hvac-component-row">
+                        <span>Low Side Pressure</span>
+                        <strong>{{ diagnostics_values.get('lowSidePressure') or '-' }}</strong>
+                      </div>
+                      <div class="hvac-component-row">
+                        <span>High Side Pressure</span>
+                        <strong>{{ diagnostics_values.get('highSidePressure') or '-' }}</strong>
+                      </div>
+                      <div class="hvac-component-row">
+                        <span>Compressor Voltage</span>
+                        <strong>{{ diagnostics_values.get('compressorVoltage') or '-' }}</strong>
+                      </div>
+                    </div>
                   </div>
-                  <form
-                    class="hvac-generate-report-form"
-                    method="POST"
-                    action="{{ url_for('customers.generate_hvac_system_report', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id) }}"
-                  >
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button class="hvac-generate-report-button" type="submit" aria-label="Generate system health report">
-                      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-                        <path d="M6 2h8l4 4v16H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                        <path d="M14 2v4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                        <path d="M9 12h6M9 16h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                      </svg>
-                    </button>
-                  </form>
-                </div>
+                </a>
               {% else %}
                 <p>No diagnostics have been saved yet.</p>
               {% endif %}
             </div>
           </div>
-        </div>
-
-        <div class="view-customer-section-row" id="view-hvac-reports-columns">
           <div class="view-customer-section-column view-customer-details-column">
             <h3>Reports</h3>
             <div class="view-customer-jobs-list">
               {% if hvac_system.reports %}
                 {% for report in hvac_system.reports %}
-                  <a class="view-customer-card-link" href="{{ report.file_path }}" target="_blank" rel="noopener noreferrer">
-                    <h4>{{ report.report_number }}</h4>
-                    <p><strong>Date Generated:</strong> {{ report.date_generated }}</p>
-                    <p><strong>Diagnostics Date:</strong> {{ report.diagnostics_date_performed }}</p>
-                  </a>
+                  <article class="hvac-component-card hvac-component-card--report">
+                    <div class="hvac-component-card-header">
+                      <div class="hvac-component-card-icon hvac-component-card-icon--report" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="20" height="20" focusable="false"><path d="M7 3h7l5 5v13H7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5M10 12h6M10 16h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                      </div>
+                      <div class="hvac-component-card-heading-text">
+                        <p class="hvac-component-card-system-type">System Health Report</p>
+                        <h4>{{ report.report_number }}</h4>
+                      </div>
+                    </div>
+                    <div class="hvac-component-card-body">
+                      <div class="hvac-component-row">
+                        <span>Date Generated</span>
+                        <strong>{{ report.date_generated }}</strong>
+                      </div>
+                      <div class="hvac-component-row">
+                        <span>Diagnostics Date</span>
+                        <strong>{{ report.diagnostics_date_performed }}</strong>
+                      </div>
+                      <div class="hvac-component-row hvac-report-open-row">
+                        <span>File</span>
+                        <strong class="hvac-report-actions">
+                          <a class="hvac-report-action-link" href="{{ report.file_path }}" target="_blank" rel="noopener noreferrer">
+                            Open PDF
+                            <svg viewBox="0 0 24 24" width="14" height="14" focusable="false" aria-hidden="true"><path d="M7 17L17 7M10 7h7v7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                          </a>
+                          <a class="hvac-report-action-link" href="{{ report.file_path }}" download>
+                            Download
+                            <svg viewBox="0 0 24 24" width="14" height="14" focusable="false" aria-hidden="true"><path d="M12 4v10M8 10l4 4 4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                          </a>
+                        </strong>
+                      </div>
+                    </div>
+                  </article>
                 {% endfor %}
               {% else %}
                 <p>No reports have been generated yet.</p>

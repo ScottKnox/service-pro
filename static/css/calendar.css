@@ -23,18 +23,31 @@
 
 #home-calendar-prev,
 #home-calendar-next {
-  border: 1px solid #1B263B;
-  background-color: #F8F9FA;
-  color: #1B263B;
+  border: 1px solid #C7D2DF;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F3F7FC 100%);
+  color: #1E3551;
   width: 2rem;
   height: 2rem;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(15, 32, 57, 0.08);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 
 #home-calendar-prev:hover,
 #home-calendar-next:hover {
-  background-color: #DDE3EA;
+  border-color: #AFC0D4;
+  background: linear-gradient(180deg, #FFFFFF 0%, #ECF3FB 100%);
+  color: #16324D;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(15, 45, 77, 0.14);
+}
+
+#home-calendar-prev:focus-visible,
+#home-calendar-next:focus-visible {
+  outline: 2px solid #63A9D8;
+  outline-offset: 2px;
 }
 
 #home-calendar-weekdays,

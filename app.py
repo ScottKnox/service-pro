@@ -92,7 +92,14 @@ def home():
             }
         )
 
-    pending_jobs = []
+    pending_page_raw = request.args.get("pending_page", "1")
+    try:
+        pending_page = max(1, int(pending_page_raw))
+    except ValueError:
+        pending_page = 1
+
+    pending_jobs_per_page = 5
+    pending_jobs_all = []
     for job in db.jobs.find({"status": {"$regex": "^Pending$", "$options": "i"}}).sort([("date_created", -1), ("_id", -1)]):
         serialized_job = serialize_doc(job)
         customer_phone = "N/A"
@@ -103,7 +110,18 @@ def home():
                 customer_phone = (customer_doc.get("phone") or "").strip() or "N/A"
 
         serialized_job["customer_phone"] = customer_phone
-        pending_jobs.append(serialized_job)
+        pending_jobs_all.append(serialized_job)
+
+    pending_total_pages = (len(pending_jobs_all) + pending_jobs_per_page - 1) // pending_jobs_per_page
+    if pending_total_pages == 0:
+        pending_page = 1
+        pending_jobs = []
+    else:
+        if pending_page > pending_total_pages:
+            pending_page = pending_total_pages
+        pending_start = (pending_page - 1) * pending_jobs_per_page
+        pending_end = pending_start + pending_jobs_per_page
+        pending_jobs = pending_jobs_all[pending_start:pending_end]
 
     estimate_page_raw = request.args.get("estimate_page", "1")
     try:
@@ -166,6 +184,8 @@ def home():
         jobs=jobs_list,
         employee_filters=employee_filters,
         pending_jobs=pending_jobs,
+        pending_page=pending_page,
+        pending_total_pages=pending_total_pages,
         payments=[],
         payments_total_pages=0,
         estimates=estimates,

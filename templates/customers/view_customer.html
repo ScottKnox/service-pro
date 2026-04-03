@@ -172,17 +172,34 @@
             <div class="view-customer-jobs-list">
               {% if hvac_systems %}
                 {% for hvac_system in hvac_systems %}
-                  <a class="view-customer-card-link" href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id) }}">
-                    <h4>{{ hvac_system.system_type }} - {{ hvac_system.location_type }}</h4>
+                  {% set system_type_slug = hvac_system.system_type|default('', true)|lower|replace(' ', '-')|replace('/', '-') %}
+                  <a class="view-customer-card-link view-customer-hvac-card view-customer-hvac-card--{{ system_type_slug }}" href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id) }}">
+                    <div class="view-customer-hvac-card-header">
+                      <p class="view-customer-hvac-card-kicker">HVAC System</p>
+                      <h4>{{ hvac_system.system_type }}</h4>
+                    </div>
+                    <div class="view-customer-hvac-card-row">
+                      <span class="view-customer-hvac-card-label">Location</span>
+                      <span class="view-customer-hvac-card-value">{{ hvac_system.location_type|default('-', true) }}</span>
+                    </div>
                     {% if hvac_system.components %}
                       {% for component in hvac_system.components %}
-                        <p><strong>{{ component.label }}:</strong> {{ component.summary }}</p>
+                        <div class="view-customer-hvac-card-row">
+                          <span class="view-customer-hvac-card-label">{{ component.label }}</span>
+                          <span class="view-customer-hvac-card-value">{{ component.summary|default('-', true) }}</span>
+                        </div>
                       {% endfor %}
                     {% else %}
-                      <p>System details have not been saved yet.</p>
+                      <div class="view-customer-hvac-card-row">
+                        <span class="view-customer-hvac-card-label">Components</span>
+                        <span class="view-customer-hvac-card-value">System details have not been saved yet.</span>
+                      </div>
                     {% endif %}
                     {% if hvac_system.ductwork_summary %}
-                      <p><strong>Ductwork:</strong> {{ hvac_system.ductwork_summary }}</p>
+                      <div class="view-customer-hvac-card-row">
+                        <span class="view-customer-hvac-card-label">Ductwork</span>
+                        <span class="view-customer-hvac-card-value">{{ hvac_system.ductwork_summary }}</span>
+                      </div>
                     {% endif %}
                   </a>
                 {% endfor %}

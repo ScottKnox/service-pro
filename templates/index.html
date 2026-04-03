@@ -34,7 +34,8 @@
 					{% for job in jobs %}
 					{% set date_parts = job.scheduled_date.split('/') %}
 					{% set job_iso_date = date_parts[2] + '-' + date_parts[0] + '-' + date_parts[1] if date_parts|length == 3 else '' %}
-					<a class="home-job" href="{{ url_for('jobs.view_job', jobId=job._id) }}" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
+					{% set job_status_key = (job.job_status|default(job.status, true)|default('', true)|string|trim|lower) %}
+					<a class="home-job{% if job_status_key in ['completed', 'complete', 'done'] %} is-completed{% endif %}" href="{{ url_for('jobs.view_job', jobId=job._id) }}" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
 						<div class="home-job-card-content">
 							<div class="home-job-card-column home-job-card-column--left">
 								<strong>Customer:</strong> {{ job.customer_name|default('Unknown Customer', true) }}
@@ -92,9 +93,8 @@
 						{% for job in pending_jobs %}
 							<div class="home-call-row" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
 								<a class="home-call-cell" href="{{ url_for('jobs.view_job', jobId=job._id) }}">
-									<strong>Date Created:</strong> {{ job.date_created|default('N/A', true) }}
-									<br/><strong>Customer:</strong> {{ job.customer_name|default('Unknown Customer', true) }}
-									<br/><strong>Phone:</strong> {{ job.customer_phone|default('N/A', true) }}
+									{{ job.date_created|default('N/A', true) }} - {{ job.customer_name|default('Unknown Customer', true) }}
+									<br/>{{ job.customer_phone|default('N/A', true) }}
 								</a>
 								{% if job.customer_phone and job.customer_phone != 'N/A' %}
 									<a class="home-call-mobile-button" href="tel:{{ job.customer_phone|replace(' ', '') }}" aria-label="Call {{ job.customer_name|default('customer', true) }}">
@@ -110,7 +110,19 @@
 					{% endif %}
 					<p id="home-calls-needed-empty">No pending jobs for the selected employee(s).</p>
 				</div>
-				
+				{% if pending_total_pages|default(0, true) > 0 %}
+				<div id="home-calls-pages">
+					<span>Page:</span>
+					{% set call_pages = pending_total_pages %}
+					{% set active_call_page = pending_page|default(1, true) %}
+					{% for page_num in range(1, call_pages + 1) %}
+						<a class="{% if page_num == active_call_page %}is-active{% endif %}" href="{{ url_for('home', pending_page=page_num) }}" data-page="{{ page_num }}">{{ page_num }}</a>
+					{% endfor %}
+				</div>
+				{% endif %}
+				<div class="home-latest-action">
+					<a class="home-latest-action-link" href="{{ url_for('jobs.jobs', status='Pending') }}">Manage Jobs</a>
+				</div>
 			</div>
 			<div class="home-latest-column">
 				<h2>Estimates</h2>
@@ -138,13 +150,13 @@
 				</div>
 				{% endif %}
 				<div class="home-latest-action">
-					<a class="home-latest-action-link" href="#">Manage Jobs</a>
+					<a class="home-latest-action-link" href="{{ url_for('jobs.jobs', status='Estimating') }}">Manage Jobs</a>
 				</div>
 			</div>
 			<div class="home-latest-column">
 				<h2>Payments Due</h2>
 				<div id="home-payments-due-list">
-					<p>No payments available.</p>
+					<p id="home-payments-empty-server">No payments available.</p>
 				</div>
 				{% if payments_total_pages|default(0, true) > 0 %}
 				<div id="home-payments-pages">

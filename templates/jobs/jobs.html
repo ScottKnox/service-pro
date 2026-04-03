@@ -4,7 +4,7 @@
 
 {% block content %}
   <div id="main-container">
-    <div id="manage-jobs-header">
+    <div id="manage-jobs-header" class="resource-page resource-jobs">
       <h1>Manage Jobs</h1>
 
       <div id="jobs-controls-row">
@@ -15,6 +15,12 @@
             <details class="jobs-filter-group">
               <summary>Assigned Employee</summary>
               <div class="jobs-filter-content" id="jobs-filter-employee-options">
+              </div>
+            </details>
+
+            <details class="jobs-filter-group">
+              <summary>Status</summary>
+              <div class="jobs-filter-content" id="jobs-filter-status-options">
               </div>
             </details>
 
@@ -72,6 +78,7 @@
                     class="jobs-card"
                     href="{{ url_for('jobs.view_job', jobId=job._id) }}"
                     data-filter-employee="{{ job.assigned_employee|default('', true) }}"
+                    data-filter-status="{{ job.status|default('', true) }}"
                     data-filter-city="{{ job.city|default('', true) }}"
                     data-filter-state="{{ job.state|default('', true) }}"
                     data-filter-date="{{ job.scheduled_date|default('', true) }}"

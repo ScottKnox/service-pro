@@ -217,24 +217,23 @@ p {
 
 #home-calls-needed-empty,
 #home-calls-needed-empty-server,
-#home-estimates-empty {
+#home-estimates-empty,
+#home-estimates-empty-server,
+#home-payments-empty-server {
   display: none;
   margin: 0;
-  padding: 0.5rem 0.75rem;
+  padding: 0.65rem 0.85rem;
   text-align: center;
-  color: #666;
-  border: 1px dashed #C5C7CB;
-  background-color: #FFFFFF;
+  color: #41536A;
+  border: 1px solid #D8E0EA;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
+  box-shadow: 0 4px 12px rgba(16, 33, 55, 0.06);
 }
 
-#home-estimates-empty-server {
+#home-estimates-empty-server,
+#home-payments-empty-server {
   display: block;
-  margin: 0;
-  padding: 0.5rem 0.75rem;
-  text-align: center;
-  color: #666;
-  border: 1px dashed #C5C7CB;
-  background-color: #FFFFFF;
 }
 
 #home-payments-due-list {
@@ -337,20 +336,29 @@ p {
 }
 
 #home-jobs-pages,
+#home-calls-pages,
+#home-estimates-pages,
+#home-payments-pages,
 .list-pages {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 0.75rem;
+  margin-top: 1rem;
 }
 
 #home-jobs-pages span,
+#home-calls-pages span,
+#home-estimates-pages span,
+#home-payments-pages span,
 .list-pages span {
   color: #1B263B;
   font-weight: 600;
 }
 
 #home-jobs-pages a,
+#home-calls-pages a,
+#home-estimates-pages a,
+#home-payments-pages a,
 .list-pages a {
   color: #1B263B;
   text-decoration: none;
@@ -358,11 +366,17 @@ p {
 }
 
 #home-jobs-pages a.is-active,
+#home-calls-pages a.is-active,
+#home-estimates-pages a.is-active,
+#home-payments-pages a.is-active,
 .list-pages a.is-active {
   text-decoration: underline;
 }
 
 #home-jobs-pages a:hover,
+#home-calls-pages a:hover,
+#home-estimates-pages a:hover,
+#home-payments-pages a:hover,
 .list-pages a:hover {
   color: #0077B6;
 }
@@ -376,9 +390,41 @@ p {
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
+#home-jobs-list .home-job {
+  border-top: 3px solid #1F6B35;
+}
+
+#home-calls-needed-list .home-call-cell,
+#home-outstanding-estimates-list .home-estimate-cell {
+  border-top: 3px solid #D97706;
+}
+
+#home-jobs-list .home-job.is-completed {
+  border-color: #CBD5E1;
+  border-top-color: #94A3B8;
+  background: linear-gradient(180deg, #F8FAFC 0%, #EEF2F7 100%);
+  color: #64748B;
+}
+
+#home-jobs-list .home-job.is-completed .home-job-card-content strong,
+#home-jobs-list .home-job.is-completed .home-job-time-display,
+#home-jobs-list .home-job.is-completed .home-job-card-column {
+  color: #64748B;
+}
+
+#home-jobs-list .home-job.is-completed .home-job-card-content {
+  opacity: 0.85;
+  filter: saturate(0.35);
+}
+
 .home-job:hover {
   background-color: #F1F5F9;
   border-color: #A9B0BA;
+}
+
+#home-jobs-list .home-job.is-completed:hover {
+  background: linear-gradient(180deg, #F8FAFC 0%, #EEF2F7 100%);
+  border-color: #CBD5E1;
 }
 
 .home-job-card-content {
@@ -1011,6 +1057,262 @@ p {
   font-size: 0.95rem;
 }
 
+/* Unified card language across resource pages */
+.jobs-card,
+.customer-card,
+.admin-link-card,
+.view-customer-card-link,
+.view-customer-estimate-item,
+.home-job,
+.home-call-cell,
+.home-payment-cell,
+.home-estimate-cell,
+.equipment-part-card-link,
+.note-card {
+  border: 1px solid #D8E0EA;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
+  box-shadow: 0 4px 12px rgba(16, 33, 55, 0.06);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.jobs-card:hover,
+.customer-card:hover,
+.admin-link-card:hover,
+.view-customer-card-link:hover,
+.view-customer-estimate-item:hover,
+.home-job:hover,
+.home-call-cell:hover,
+.home-payment-cell:hover,
+.home-estimate-cell:hover,
+.equipment-part-card-link:hover,
+.note-card:hover {
+  border-color: #B7C7DA;
+  box-shadow: 0 10px 22px rgba(16, 45, 77, 0.12);
+  transform: translateY(-1px);
+}
+
+.jobs-card,
+.customer-card,
+.admin-link-card,
+.view-customer-card-link,
+.view-customer-estimate-item,
+.home-job,
+.home-call-cell,
+.home-payment-cell,
+.home-estimate-cell,
+.equipment-part-card-link {
+  overflow: hidden;
+}
+
+.jobs-card {
+  border-top: 3px solid #1B4D8C;
+}
+
+.customer-card {
+  border-top: 3px solid #0F766E;
+}
+
+.admin-link-card {
+  border-top: 3px solid #7C3AED;
+}
+
+.view-customer-card-link,
+.view-customer-estimate-item,
+.home-job,
+.home-call-cell,
+.home-payment-cell,
+.home-estimate-cell,
+.equipment-part-card-link {
+  border-top: 3px solid #2563EB;
+}
+
+.jobs-card-row,
+.customer-card-row {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #E3EAF2;
+}
+
+.jobs-card-row:last-child,
+.customer-card-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.jobs-card-label,
+.customer-card-label {
+  color: #4B5E76;
+  letter-spacing: 0.06em;
+}
+
+.jobs-card-value,
+.customer-card-value {
+  color: #102237;
+  font-weight: 700;
+}
+
+.admin-link-card h3 {
+  font-size: 1.15rem;
+  color: #122238;
+}
+
+.admin-link-card p {
+  color: #41536A;
+  line-height: 1.45;
+}
+
+.view-customer-card-link,
+.view-customer-estimate-item {
+  padding: 0.7rem 0.85rem;
+}
+
+.view-customer-card-link h4,
+.view-customer-estimate-item h4 {
+  color: #11243A;
+  font-size: 1.02rem;
+  margin-bottom: 0.25rem;
+}
+
+.view-customer-card-link p,
+.view-customer-estimate-item p {
+  color: #41536A;
+}
+
+.home-job-card-content,
+.home-call-cell,
+.home-payment-cell,
+.home-estimate-cell {
+  line-height: 1.5;
+}
+
+.home-job-card-column--left {
+  border-right: 1px solid #E3EAF2;
+}
+
+.note-card {
+  border-top: 3px solid #4F46E5;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8F9FF 100%);
+}
+
+.note-card-date {
+  color: #5E6B82;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+}
+
+.note-card-text {
+  color: #1C2D42;
+}
+
+/* Resource-specific card polish */
+.resource-page .jobs-controls-right-top h2,
+.resource-page #all-customers-title-row h2 {
+  letter-spacing: 0.01em;
+  color: #11243A;
+}
+
+.resource-customers .customer-card {
+  border-top-color: #0F766E;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F1FBF8 100%);
+}
+
+.resource-customers .customer-card:hover {
+  border-color: #97D1C6;
+}
+
+.resource-customers .customer-status-chip.is-active {
+  background-color: #D8F5ED;
+  color: #0B5C52;
+}
+
+.resource-employees .customer-card {
+  border-top-color: #0E7490;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F0FAFD 100%);
+}
+
+.resource-employees .customer-card:hover {
+  border-color: #9FD1DF;
+}
+
+.resource-employees .customer-status-chip.is-active {
+  background-color: #DBF2F8;
+  color: #0B5A70;
+}
+
+.resource-jobs .jobs-card {
+  border-top-color: #1B4D8C;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F3F8FF 100%);
+}
+
+.resource-jobs .jobs-card:hover {
+  border-color: #9FC0EC;
+}
+
+.resource-services .jobs-card {
+  border-top-color: #0F766E;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F2FBF8 100%);
+}
+
+.resource-services .jobs-card:hover {
+  border-color: #9AD6CA;
+}
+
+.resource-parts .jobs-card {
+  border-top-color: #7C3AED;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F6F2FF 100%);
+}
+
+.resource-parts .jobs-card:hover {
+  border-color: #C2ACEF;
+}
+
+.resource-invoices .jobs-card {
+  border-top-color: #0B5E55;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F0FBF8 100%);
+}
+
+.resource-invoices .jobs-card:hover {
+  border-color: #8ECFC1;
+}
+
+.resource-admin .admin-link-card {
+  border-top-color: #334155;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F4F7FB 100%);
+}
+
+.resource-admin .admin-link-card:hover {
+  border-color: #A3B4C9;
+}
+
+@media (max-width: 640px) {
+  .jobs-card-row,
+  .customer-card-row {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+    align-items: start;
+  }
+
+  .jobs-card-value,
+  .customer-card-value {
+    text-align: left;
+  }
+
+  .home-job-card-content {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .home-job-card-column--left {
+    border-right: 0;
+    border-bottom: 1px solid #E3EAF2;
+    padding-bottom: 0.55rem;
+  }
+
+  .home-job-card-column--right {
+    padding-left: 0.4rem;
+  }
+}
+
 .create-job-form-section-header {
   margin: 0.25rem 0 0;
   padding-bottom: 0.4rem;
@@ -1446,6 +1748,28 @@ p {
   border-right: 0;
 }
 
+#view-hvac-components-columns {
+  grid-template-columns: 1fr;
+}
+
+#view-hvac-components-columns .view-customer-section-column:first-child {
+  border-right: 0;
+}
+
+#view-hvac-diagnostics-reports-columns {
+  grid-template-columns: 1fr 1fr;
+}
+
+#view-hvac-diagnostic-columns,
+#view-hvac-diagnostic-sections-columns {
+  grid-template-columns: 1fr;
+}
+
+#view-hvac-diagnostic-columns .view-customer-section-column:first-child,
+#view-hvac-diagnostic-sections-columns .view-customer-section-column:first-child {
+  border-right: 0;
+}
+
 #view-customer-account-columns {
   margin-top: 1rem;
 }
@@ -1534,10 +1858,477 @@ p {
   padding: 0.25rem 0;
 }
 
+.view-customer-hvac-card {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid #D3DBE6;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
+  box-shadow: 0 4px 14px rgba(22, 44, 77, 0.08);
+}
+
+.view-customer-hvac-card-header {
+  padding: 0.8rem 0.9rem 0.72rem;
+  border-bottom: 1px solid #DDE5F0;
+  background: linear-gradient(180deg, #F7FAFF 0%, #EDF4FD 100%);
+}
+
+.view-customer-hvac-card-kicker {
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #4A5D78;
+}
+
+.view-customer-hvac-card-header h4 {
+  margin: 0.2rem 0 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #1B263B;
+}
+
+.view-customer-hvac-card-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.66rem 0.9rem;
+  border-bottom: 1px solid #E4EAF2;
+}
+
+.view-customer-hvac-card-row:last-child {
+  border-bottom: 0;
+}
+
+.view-customer-hvac-card-label {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #344054;
+}
+
+.view-customer-hvac-card-value {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1B263B;
+  text-align: right;
+}
+
+.view-customer-hvac-card--heat-pump {
+  border-top: 3px solid #2563EB;
+}
+
+.view-customer-hvac-card--heat-pump .view-customer-hvac-card-header {
+  background: linear-gradient(180deg, #EFF6FF 0%, #E4EEFF 100%);
+}
+
+.view-customer-hvac-card--heat-pump .view-customer-hvac-card-kicker {
+  color: #1E3A8A;
+}
+
+.view-customer-hvac-card--split {
+  border-top: 3px solid #0F766E;
+}
+
+.view-customer-hvac-card--split .view-customer-hvac-card-header {
+  background: linear-gradient(180deg, #ECFDF5 0%, #DFF7EE 100%);
+}
+
+.view-customer-hvac-card--split .view-customer-hvac-card-kicker {
+  color: #115E59;
+}
+
+.view-customer-hvac-card--package {
+  border-top: 3px solid #D97706;
+}
+
+.view-customer-hvac-card--package .view-customer-hvac-card-header {
+  background: linear-gradient(180deg, #FFFBEB 0%, #FFF3D8 100%);
+}
+
+.view-customer-hvac-card--package .view-customer-hvac-card-kicker {
+  color: #92400E;
+}
+
+.view-customer-hvac-card--mini-split {
+  border-top: 3px solid #7C3AED;
+}
+
+.view-customer-hvac-card--mini-split .view-customer-hvac-card-header {
+  background: linear-gradient(180deg, #F5F3FF 0%, #ECE7FF 100%);
+}
+
+.view-customer-hvac-card--mini-split .view-customer-hvac-card-kicker {
+  color: #5B21B6;
+}
+
 .hvac-diagnostics-row {
   display: flex;
   align-items: stretch;
   gap: 0.5rem;
+}
+
+.hvac-system-diagnostics-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.hvac-system-diagnostics-link .hvac-component-card {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.hvac-system-diagnostics-link:hover .hvac-component-card,
+.hvac-system-diagnostics-link:focus-visible .hvac-component-card {
+  border-color: #AFC6E4;
+  box-shadow: 0 8px 18px rgba(15, 76, 129, 0.14);
+  transform: translateY(-1px);
+}
+
+.hvac-system-diagnostics-link:focus-visible {
+  outline: none;
+}
+
+.hvac-system-diagnostics-card {
+  flex: 1;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(22, 44, 77, 0.08);
+}
+
+.hvac-system-diagnostics-card .hvac-component-card-header {
+  background: linear-gradient(180deg, #F7FAFF 0%, #EDF4FD 100%);
+}
+
+.hvac-system-diagnostics-card .hvac-component-row span {
+  font-weight: 600;
+}
+
+.hvac-system-diagnostics-card .hvac-component-row strong {
+  font-weight: 700;
+}
+
+.hvac-diagnostic-sections-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  padding: 0.25rem 0;
+}
+
+.hvac-diagnostic-section-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(22, 44, 77, 0.08);
+}
+
+.hvac-components-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  padding: 0.25rem 0;
+}
+
+.hvac-component-card {
+  display: block;
+  border: 1px solid #D6DCE5;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hvac-component-card--detail-page {
+  min-height: 100%;
+}
+
+.hvac-component-card--air-handler {
+  border-top: 3px solid #2B6CB0;
+}
+
+.hvac-component-card--condenser {
+  border-top: 3px solid #0F766E;
+}
+
+.hvac-component-card--unit-package {
+  border-top: 3px solid #92400E;
+}
+
+.hvac-component-card--unit-mini {
+  border-top: 3px solid #7C3AED;
+}
+
+.hvac-component-card--ductwork {
+  border-top: 3px solid #4B5563;
+}
+
+.hvac-component-card--diagnostics {
+  border-top: 3px solid #1B4D8C;
+}
+
+.hvac-component-card--report {
+  border-top: 3px solid #0B5E55;
+}
+
+.hvac-component-card:hover {
+  border-color: #B9C7DA;
+  box-shadow: 0 2px 8px rgba(27, 38, 59, 0.08);
+}
+
+.hvac-component-card-header {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid #DDE4EE;
+}
+
+.hvac-component-card-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #1B263B;
+  background-color: #EAF1F8;
+  border: 1px solid #C9D7E7;
+  flex-shrink: 0;
+}
+
+.hvac-component-card-icon--air-handler {
+  color: #1D4E89;
+  background-color: #E7F0FA;
+  border-color: #B7CEE9;
+}
+
+.hvac-component-card-icon--condenser {
+  color: #115E59;
+  background-color: #E6F5F3;
+  border-color: #B9E1DC;
+}
+
+.hvac-component-card-icon--unit-package {
+  color: #7C2D12;
+  background-color: #FFF1E7;
+  border-color: #F6D0B5;
+}
+
+.hvac-component-card-icon--unit-mini {
+  color: #5B21B6;
+  background-color: #F2EBFF;
+  border-color: #D9C3FF;
+}
+
+.hvac-component-card-icon--ductwork {
+  color: #374151;
+  background-color: #F0F3F6;
+  border-color: #D6DCE5;
+}
+
+.hvac-component-card-icon--diagnostics {
+  color: #0F4C81;
+  background-color: #E8F2FD;
+  border-color: #BDD8F6;
+}
+
+.hvac-component-card-icon--report {
+  color: #0B5E55;
+  background-color: #E8F8F5;
+  border-color: #B8E5DC;
+}
+
+.hvac-component-card-system-type {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #475467;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hvac-component-card-heading-text h4 {
+  margin: 0.15rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1B263B;
+}
+
+.hvac-component-card-body {
+  padding: 0.1rem 0.85rem;
+}
+
+.hvac-component-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.62rem 0;
+  border-bottom: 1px solid #E4E9F0;
+}
+
+.hvac-component-row:last-child {
+  border-bottom: 0;
+}
+
+.hvac-component-row span {
+  font-size: 0.92rem;
+  color: #344054;
+}
+
+.hvac-component-row strong {
+  font-size: 0.92rem;
+  color: #1B263B;
+  font-weight: 700;
+  text-align: right;
+}
+
+.hvac-component-card--diagnostics .hvac-component-row strong {
+  max-width: 58%;
+  word-break: break-word;
+}
+
+.hvac-component-card--report .hvac-component-card-header {
+  background: linear-gradient(180deg, #F5FCFA 0%, #EAF8F4 100%);
+}
+
+.hvac-component-card--report .hvac-component-row strong {
+  max-width: 62%;
+  word-break: break-word;
+}
+
+.hvac-component-card--report .hvac-report-open-row span {
+  color: #1F4B46;
+  font-weight: 700;
+}
+
+.hvac-report-open-affordance {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #0B5E55;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.hvac-report-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.hvac-report-action-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #0B5E55;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+}
+
+.hvac-report-action-link:hover,
+.hvac-report-action-link:focus-visible {
+  color: #084C45;
+  text-decoration: underline;
+}
+
+.hvac-component-card--report:hover .hvac-report-open-affordance,
+.hvac-component-card--report:focus-visible .hvac-report-open-affordance {
+  color: #084C45;
+}
+
+.hvac-component-card--report:hover,
+.hvac-component-card--report:focus-visible {
+  border-color: #92CFC1;
+  box-shadow: 0 8px 18px rgba(11, 94, 85, 0.14);
+  transform: translateY(-1px);
+}
+
+.hvac-system-kpi-grid {
+  margin-top: 0.95rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.hvac-system-kpi-card {
+  border: 1px solid #D6DCE5;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
+  padding: 0.8rem 0.85rem;
+}
+
+.hvac-system-kpi-card h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #2A3A54;
+}
+
+.hvac-system-kpi-value {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #1B263B;
+  line-height: 1.1;
+}
+
+.hvac-system-kpi-value span {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2A3A54;
+  margin-left: 0.25rem;
+}
+
+.hvac-system-kpi-meta {
+  margin: 0.45rem 0 0.55rem;
+  font-size: 0.9rem;
+  color: #3E4A59;
+}
+
+.hvac-system-kpi-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.hvac-system-kpi-chip.is-normal {
+  color: #1F6B35;
+  background-color: #EAF6EE;
+  border-color: #B8DDBF;
+}
+
+.hvac-system-kpi-chip.is-high {
+  color: #8E4A06;
+  background-color: #FFF3E4;
+  border-color: #F4C996;
+}
+
+.hvac-system-kpi-chip.is-alert {
+  color: #9B1C1C;
+  background-color: #FDECEC;
+  border-color: #F4B7B7;
+}
+
+.hvac-system-kpi-chip.is-info {
+  color: #0D4E8C;
+  background-color: #E6F1FB;
+  border-color: #B9D7F2;
+}
+
+.hvac-system-kpi-chip.is-no-data {
+  color: #4B5563;
+  background-color: #F3F4F6;
+  border-color: #D1D5DB;
 }
 
 .hvac-diagnostics-section {
@@ -1597,6 +2388,43 @@ p {
 }
 
 @media (max-width: 640px) {
+  #view-hvac-diagnostics-reports-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .view-customer-hvac-card-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+
+  .view-customer-hvac-card-value {
+    text-align: left;
+  }
+
+  .hvac-system-kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .hvac-components-grid {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .hvac-diagnostic-sections-grid {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .hvac-system-kpi-card {
+    padding: 0.72rem 0.75rem;
+  }
+
+  .hvac-system-kpi-value {
+    font-size: 1.45rem;
+  }
+
   .hvac-diagnostics-section {
     margin-bottom: 0.75rem;
   }
@@ -1610,6 +2438,15 @@ p {
   .hvac-diagnostics-section-content {
     padding: 0.75rem 0.75rem 0.35rem;
   }
+
+  .hvac-diagnostics-row {
+    flex-direction: column;
+  }
+
+  .hvac-generate-report-button {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .hvac-diagnostics-row .view-customer-card-link {
@@ -1619,19 +2456,22 @@ p {
 .hvac-generate-report-form {
   margin: 0;
   display: inline-flex;
+  align-items: stretch;
 }
 
 .hvac-generate-report-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  padding: 0.5rem;
+  gap: 0.45rem;
+  min-width: 56px;
+  padding: 0.5rem 0.85rem;
   border: 1px solid #1F6B35;
   border-radius: 4px;
   background-color: #EAF6EE;
   color: #1F6B35;
   text-decoration: none;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -1659,8 +2499,8 @@ p {
 
 .view-customer-card-link:hover,
 .view-customer-estimate-item:hover {
-  background-color: #F1F5F9;
-  border-color: #A9B0BA;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F5F9FD 100%);
+  border-color: #B7C7DA;
 }
 
 #view-job-panel {
@@ -2148,11 +2988,15 @@ p {
   }
 
   #home-jobs-pages,
+  #home-estimates-pages,
+  #home-payments-pages,
   .list-pages {
     gap: 0.10rem;
   }
 
   #home-jobs-pages a,
+  #home-estimates-pages a,
+  #home-payments-pages a,
   .list-pages a {
     display: inline-flex;
     align-items: center;
@@ -2163,6 +3007,243 @@ p {
     border-radius: 4px;
   }
 
+}
+
+/* Unified button language across app resources */
+#login-button,
+#customers-search-form button,
+.jobs-controls-right-actions button,
+.jobs-controls-right-actions a,
+#add-customer-form-actions button,
+#create-job-form-actions button,
+#create-service-form-actions button,
+#view-customer-actions-row a,
+#view-customer-actions-row button,
+#view-job-actions-row a,
+#view-job-actions-row button,
+#view-service-actions-row a,
+#view-service-actions-row button,
+.customers-add-button,
+.customers-controls-right a,
+#add-job-service-button,
+#add-job-part-button,
+#jobs-clear-date-filters,
+.home-latest-action-link,
+.home-call-mobile-button,
+.estimate-email-btn,
+.hvac-generate-report-button,
+.job-row-remove-button {
+  border-radius: 10px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 3px 8px rgba(15, 32, 57, 0.08);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+#login-button:hover,
+#customers-search-form button:hover,
+.jobs-controls-right-actions button:hover,
+.jobs-controls-right-actions a:hover,
+#add-customer-form-actions button:hover,
+#create-job-form-actions button:hover,
+#create-service-form-actions button:hover,
+#view-customer-actions-row a:hover,
+#view-customer-actions-row button:hover,
+#view-job-actions-row a:hover,
+#view-job-actions-row button:hover,
+#view-service-actions-row a:hover,
+#view-service-actions-row button:hover,
+.customers-add-button:hover,
+.customers-controls-right a:hover,
+#add-job-service-button:hover,
+#add-job-part-button:hover,
+#jobs-clear-date-filters:hover,
+.home-latest-action-link:hover,
+.home-call-mobile-button:hover,
+.estimate-email-btn:hover,
+.hvac-generate-report-button:hover,
+.job-row-remove-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(15, 45, 77, 0.14);
+}
+
+#login-button:focus-visible,
+#customers-search-form button:focus-visible,
+.jobs-controls-right-actions button:focus-visible,
+.jobs-controls-right-actions a:focus-visible,
+#add-customer-form-actions button:focus-visible,
+#create-job-form-actions button:focus-visible,
+#create-service-form-actions button:focus-visible,
+#view-customer-actions-row a:focus-visible,
+#view-customer-actions-row button:focus-visible,
+#view-job-actions-row a:focus-visible,
+#view-job-actions-row button:focus-visible,
+#view-service-actions-row a:focus-visible,
+#view-service-actions-row button:focus-visible,
+.customers-add-button:focus-visible,
+.customers-controls-right a:focus-visible,
+#add-job-service-button:focus-visible,
+#add-job-part-button:focus-visible,
+#jobs-clear-date-filters:focus-visible,
+.home-latest-action-link:focus-visible,
+.home-call-mobile-button:focus-visible,
+.estimate-email-btn:focus-visible,
+.hvac-generate-report-button:focus-visible,
+.job-row-remove-button:focus-visible {
+  outline: 2px solid #63A9D8;
+  outline-offset: 2px;
+}
+
+#login-button,
+#customers-search-form button,
+.jobs-controls-right-actions button,
+.jobs-controls-right-actions a,
+#add-customer-form-actions button,
+#create-job-form-actions button,
+#create-service-form-actions button,
+#view-customer-actions-row a,
+#view-customer-actions-row button,
+#view-job-actions-row a,
+#view-job-actions-row button,
+#view-service-actions-row a,
+#view-service-actions-row button {
+  border-color: #16324D;
+  background: linear-gradient(180deg, #1F3B5A 0%, #18324C 100%);
+  color: #F8F9FA;
+}
+
+#login-button:hover,
+#customers-search-form button:hover,
+.jobs-controls-right-actions button:hover,
+.jobs-controls-right-actions a:hover,
+#add-customer-form-actions button:hover,
+#create-job-form-actions button:hover,
+#create-service-form-actions button:hover,
+#view-customer-actions-row a:hover,
+#view-customer-actions-row button:hover,
+#view-job-actions-row a:hover,
+#view-job-actions-row button:hover,
+#view-service-actions-row a:hover,
+#view-service-actions-row button:hover {
+  border-color: #21476E;
+  background: linear-gradient(180deg, #254A70 0%, #1E3E60 100%);
+}
+
+.customers-add-button,
+.customers-controls-right a,
+#add-job-service-button,
+#add-job-part-button,
+#jobs-clear-date-filters,
+.home-latest-action-link {
+  border-color: #C7D2DF;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F3F7FC 100%);
+  color: #1E3551;
+}
+
+.customers-add-button:hover,
+.customers-controls-right a:hover,
+#add-job-service-button:hover,
+#add-job-part-button:hover,
+#jobs-clear-date-filters:hover,
+.home-latest-action-link:hover {
+  border-color: #AFC0D4;
+  background: linear-gradient(180deg, #FFFFFF 0%, #ECF3FB 100%);
+  color: #16324D;
+}
+
+.home-call-mobile-button,
+.estimate-email-btn,
+.hvac-generate-report-button {
+  border-color: #227241;
+  background: linear-gradient(180deg, #F0FAF4 0%, #E0F4E8 100%);
+  color: #1C6238;
+}
+
+.home-call-mobile-button:hover,
+.estimate-email-btn:hover,
+.hvac-generate-report-button:hover {
+  border-color: #1F6B35;
+  background: linear-gradient(180deg, #E9F8EF 0%, #D7F0E0 100%);
+}
+
+.job-row-remove-button {
+  border-color: #C73737;
+  background: linear-gradient(180deg, #FFF4F4 0%, #FEEAEA 100%);
+  color: #9B1D1D;
+}
+
+.job-row-remove-button:hover {
+  border-color: #B91C1C;
+  background: linear-gradient(180deg, #FEEEEE 0%, #FDE2E2 100%);
+  color: #8E1A1A;
+}
+
+#view-customer-actions-row .view-customer-action-link.is-disabled,
+#view-customer-actions-row .view-customer-action-link.is-disabled:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+@media (max-width: 768px) {
+  #view-customer-actions-row,
+  #view-job-actions-row,
+  #view-service-actions-row {
+    gap: 0.5rem;
+  }
+
+  #view-customer-actions-row form,
+  #view-job-actions-row form,
+  #view-service-actions-row form {
+    display: block;
+    flex: 1 1 calc(50% - 0.5rem);
+    min-width: 0;
+  }
+
+  #view-customer-actions-row a,
+  #view-customer-actions-row button,
+  #view-job-actions-row a,
+  #view-job-actions-row button,
+  #view-service-actions-row a,
+  #view-service-actions-row button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 2.55rem;
+    padding: 0.55rem 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #customers-search-form button,
+  .jobs-controls-right-actions button,
+  .jobs-controls-right-actions a,
+  .customers-controls-right a {
+    min-height: 2.5rem;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 540px) {
+  #view-customer-actions-row form,
+  #view-job-actions-row form,
+  #view-service-actions-row form {
+    flex-basis: 100%;
+  }
+
+  .customers-controls-right,
+  .jobs-controls-right-actions {
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  #customers-search-form button,
+  .jobs-controls-right-actions button,
+  .jobs-controls-right-actions a,
+  .customers-controls-right a {
+    width: 100%;
+  }
 }
 
 
