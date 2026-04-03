@@ -38,6 +38,20 @@ HVAC_COMPONENT_FIELD_BY_COLLECTION = {
 
 SYSTEM_TYPE_OPTIONS = ("Heat Pump", "Split", "Package", "Mini Split")
 
+TONNAGE_OPTIONS = (
+    ".50 Ton (6000 BTU)",
+    ".75 Ton (9000 BTU)",
+    "1 Ton (12000 BTU)",
+    "1.5 Tons (18000 BTU)",
+    "2 Ton (24000 BTU)",
+    "2.5 Tons (30000 BTU)",
+    "3 Ton (36000 BTU)",
+    "3.5 Tons (42000 BTU)",
+    "4 Ton (48000 BTU)",
+    "4.5 Ton (54000 BTU)",
+    "5 Ton (60000 BTU)",
+)
+
 LOCATION_TYPE_OPTIONS = (
     "Primary Residence",
     "Shop Building",
@@ -49,6 +63,16 @@ LOCATION_TYPE_OPTIONS = (
 
 DUCTWORK_SYSTEM_TYPES = {"Split", "Heat Pump", "Package"}
 
+DUCTWORK_TYPE_OPTIONS = (
+    "Sheet Metal and Flex",
+    "Fiberglass Lined Sheet Metal and Flex",
+    "Sheet Metal",
+    "Flex",
+    "Fiberboard",
+)
+
+INSULATED_OPTIONS = ("No", "Yes")
+
 REFRIGERANT_TYPE_OPTIONS = (
     "R-22",
     "R-410A",
@@ -59,12 +83,35 @@ REFRIGERANT_TYPE_OPTIONS = (
     "Other",
 )
 
+ELECTRICAL_STATUS_OPTIONS = (
+    "Within Spec",
+    "Out of Spec",
+    "Near End of Life",
+    "Failed",
+)
+
+DIAGNOSTIC_YES_NO_OPTIONS = (
+    "Yes",
+    "No",
+)
+
+MANUFACTURER_OPTIONS = (
+    "Trane",
+    "Lennox",
+    "Carrier",
+    "Goodman",
+    "Amana",
+    "Rheem",
+    "Daikin",
+    "American Standard",
+)
+
 HVAC_DIAGNOSTIC_SECTIONS = (
     (
         "Airflow",
         (
-            {"name": "supplySideStaticPressure", "label": "Supply Side Static Pressure", "type": "text", "required": False},
-            {"name": "returnSideStaticPressure", "label": "Return Side Static Pressure", "type": "text", "required": False},
+            {"name": "supplyStaticPressure", "label": "Supply Static Pressure", "type": "text", "required": False},
+            {"name": "returnStaticPressure", "label": "Return Static Pressure", "type": "text", "required": False},
             {
                 "name": "totalExternalStaticPressure",
                 "label": "Total External Static Pressure",
@@ -73,13 +120,20 @@ HVAC_DIAGNOSTIC_SECTIONS = (
                 "readonly": True,
             },
             {
-                "name": "correctStaticPressureForFanSpeed",
-                "label": "Correct Static Pressure for Fan Speed",
+                "name": "designStaticPressure",
+                "label": "Design Static Pressure",
                 "type": "text",
                 "required": False,
             },
-            {"name": "fanSpeed", "label": "Fan Speed", "type": "text", "required": False},
-            {"name": "cfm", "label": "CFM", "type": "text", "required": False},
+            {"name": "actualCfm", "label": "Actual CFM", "type": "text", "required": False},
+            {
+                "name": "designCfm",
+                "label": "Design CFM",
+                "type": "text",
+                "required": False,
+                "readonly": True,
+            },
+            {"name": "temperatureDelta", "label": "Temperature Delta", "type": "text", "required": False},
             {
                 "name": "staticPressureNotes",
                 "label": "Static Pressure Notes",
@@ -98,135 +152,210 @@ HVAC_DIAGNOSTIC_SECTIONS = (
                 "required": False,
                 "options": REFRIGERANT_TYPE_OPTIONS,
             },
-            {"name": "outsideTemperature", "label": "Outside Temperature", "type": "text", "required": False},
-            {"name": "temperatureDelta", "label": "Temperature Delta", "type": "text", "required": False},
+            {"name": "suctionPressure", "label": "Suction Pressure", "type": "text", "required": False},
             {
-                "name": "correctTempuratureDelta",
-                "label": "Correct Tempurature Delta",
-                "type": "text",
-                "required": False,
-            },
-            {"name": "lowSidePressure", "label": "Low Side Pressure", "type": "text", "required": False},
-            {
-                "name": "correctLowSidePressure",
-                "label": "Correct Low Side Pressure",
+                "name": "targetSuctionPressure",
+                "label": "Target Suction Pressure",
                 "type": "text",
                 "required": False,
             },
             {"name": "highSidePressure", "label": "High Side Pressure", "type": "text", "required": False},
             {
-                "name": "correctHighSidePressure",
-                "label": "Correct High Side Pressure",
+                "name": "targetHighSidePressure",
+                "label": "Target High Side Pressure",
                 "type": "text",
                 "required": False,
             },
             {"name": "superheat", "label": "Superheat", "type": "text", "required": False},
-            {"name": "correctSuperheat", "label": "Correct Superheat", "type": "text", "required": False},
+            {"name": "targetSuperheat", "label": "Target Superheat", "type": "text", "required": False},
             {"name": "subcooling", "label": "Subcooling", "type": "text", "required": False},
-            {"name": "correctSubcooling", "label": "Correct Subcooling", "type": "text", "required": False},
+            {"name": "targetSubcooling", "label": "Target Subcooling", "type": "text", "required": False},
+            {
+                "name": "notesOnRefrigerant",
+                "label": "Notes on Refrigerant",
+                "type": "textarea",
+                "required": False,
+            },
         ),
     ),
     (
         "Electrical",
         (
             {
-                "name": "highVoltageToDisconnect",
-                "label": "High Voltage to Disconnect",
-                "type": "text",
-                "required": False,
-            },
-            {
-                "name": "correctHighVoltageToDisconnect",
-                "label": "Correct High Voltage to Disconnect",
-                "type": "text",
-                "required": False,
-            },
-            {"name": "contactorVoltage", "label": "Contactor Voltage", "type": "text", "required": False},
-            {
-                "name": "correctContactorVoltage",
-                "label": "Correct Contactor Voltage",
-                "type": "text",
-                "required": False,
-            },
-            {
-                "name": "lowVoltageTransformerRToC",
-                "label": "Low Voltage Transformer R to C",
-                "type": "text",
-                "required": False,
-            },
-            {
-                "name": "correctLowVoltageTransformerRToC",
-                "label": "Correct Low Voltage Transformer R to C",
-                "type": "text",
-                "required": False,
-            },
-            {
-                "name": "wygToCThermostatVoltage",
-                "label": "W/Y/G to C Thermostat Voltage",
-                "type": "text",
-                "required": False,
-            },
-            {
-                "name": "correctWygToCThermostateVoltage",
-                "label": "Correct W/Y/G to C Thermostate Voltage",
-                "type": "text",
-                "required": False,
-            },
-            {
-                "name": "voltageDropCheck",
-                "label": "Voltage Drop Check",
+                "name": "supplyVoltage",
+                "label": "Supply Voltage",
                 "type": "select",
                 "required": False,
-                "options": ("Pass", "Fail"),
+                "options": ELECTRICAL_STATUS_OPTIONS,
             },
             {
-                "name": "voltageDropNotes",
-                "label": "Voltage Drop Notes",
-                "type": "textarea",
+                "name": "compressorRla",
+                "label": "Compressor RLA",
+                "type": "select",
                 "required": False,
+                "options": ELECTRICAL_STATUS_OPTIONS,
+            },
+            {
+                "name": "capacitors",
+                "label": "Capacitors",
+                "type": "select",
+                "required": False,
+                "options": ELECTRICAL_STATUS_OPTIONS,
+            },
+            {
+                "name": "thermostat",
+                "label": "Thermostat",
+                "type": "select",
+                "required": False,
+                "options": ELECTRICAL_STATUS_OPTIONS,
+            },
+            {
+                "name": "transformers",
+                "label": "Transformers",
+                "type": "select",
+                "required": False,
+                "options": ELECTRICAL_STATUS_OPTIONS,
             },
             {
                 "name": "blowerMotorVoltage",
                 "label": "Blower Motor Voltage",
+                "type": "select",
+                "required": False,
+                "options": ELECTRICAL_STATUS_OPTIONS,
+            },
+            {
+                "name": "condenserFanVoltage",
+                "label": "Condenser Fan Voltage",
+                "type": "select",
+                "required": False,
+                "options": ELECTRICAL_STATUS_OPTIONS,
+            },
+            {
+                "name": "electricalNotes",
+                "label": "Electrical Notes",
+                "type": "textarea",
+                "required": False,
+            },
+        ),
+    ),
+    (
+        "Ductwork",
+        (
+            {
+                "name": "properlySized",
+                "label": "Properly Sized?",
+                "type": "select",
+                "required": False,
+                "options": DIAGNOSTIC_YES_NO_OPTIONS,
+            },
+            {
+                "name": "leaks",
+                "label": "Leaks?",
+                "type": "select",
+                "required": False,
+                "options": DIAGNOSTIC_YES_NO_OPTIONS,
+            },
+            {
+                "name": "wellInsulated",
+                "label": "Well-Insulated?",
+                "type": "select",
+                "required": False,
+                "options": DIAGNOSTIC_YES_NO_OPTIONS,
+            },
+            {
+                "name": "wellSupported",
+                "label": "Well-Supported?",
+                "type": "select",
+                "required": False,
+                "options": DIAGNOSTIC_YES_NO_OPTIONS,
+            },
+            {
+                "name": "damaged",
+                "label": "Damaged?",
+                "type": "select",
+                "required": False,
+                "options": DIAGNOSTIC_YES_NO_OPTIONS,
+            },
+            {
+                "name": "clean",
+                "label": "Clean?",
+                "type": "select",
+                "required": False,
+                "options": DIAGNOSTIC_YES_NO_OPTIONS,
+            },
+            {
+                "name": "dampersFunctioningProperly",
+                "label": "Dampers Functioning Properly?",
+                "type": "select",
+                "required": False,
+                "options": DIAGNOSTIC_YES_NO_OPTIONS,
+            },
+            {
+                "name": "notesOnDuctwork",
+                "label": "Notes on Ductwork",
+                "type": "textarea",
+                "required": False,
+            },
+        ),
+    ),
+    (
+        "Indoor Air Quality",
+        (
+            {
+                "name": "relativeHumidity",
+                "label": "Relative Humidity",
                 "type": "text",
                 "required": False,
             },
             {
-                "name": "correctBlowerMotorVoltage",
-                "label": "Correct Blower Motor Voltage",
-                "type": "text",
-                "required": False,
-            },
-            {"name": "fanMotorVoltage", "label": "Fan Motor Voltage", "type": "text", "required": False},
-            {
-                "name": "correctFanMotorVoltage",
-                "label": "Correct Fan Motor Voltage",
+                "name": "carbonDioxide",
+                "label": "Carbon Dioxide (CO2)",
                 "type": "text",
                 "required": False,
             },
             {
-                "name": "compressorVoltage",
-                "label": "Compressor Voltage",
+                "name": "carbonMonoxide",
+                "label": "Carbon Monoxide",
                 "type": "text",
                 "required": False,
             },
             {
-                "name": "correctCompressorVoltage",
-                "label": "Correct Compressor Voltage",
+                "name": "iaqTemperature",
+                "label": "Temperature",
                 "type": "text",
                 "required": False,
             },
             {
-                "name": "capacitorTerminalVoltage",
-                "label": "Capacitor Terminal Voltage",
+                "name": "vocLevels",
+                "label": "VOC Levels",
                 "type": "text",
                 "required": False,
             },
             {
-                "name": "correctCapacitorTerminalVoltage",
-                "label": "Correct Capacitor Terminal Voltage",
+                "name": "pm25",
+                "label": "PM 2.5",
                 "type": "text",
                 "required": False,
+            },
+            {
+                "name": "pm10",
+                "label": "PM10",
+                "type": "text",
+                "required": False,
+            },
+            {
+                "name": "moldOrMildew",
+                "label": "Mold / Mildew",
+                "type": "select",
+                "required": False,
+                "options": DIAGNOSTIC_YES_NO_OPTIONS,
+            },
+            {
+                "name": "odors",
+                "label": "Odors",
+                "type": "select",
+                "required": False,
+                "options": DIAGNOSTIC_YES_NO_OPTIONS,
             },
         ),
     ),
@@ -237,6 +366,12 @@ HVAC_DIAGNOSTIC_FIELDS = tuple(
     for _section_label, fields in HVAC_DIAGNOSTIC_SECTIONS
     for field in fields
 )
+
+HVAC_DIAGNOSTIC_FIELD_TYPES = {
+    field["name"]: field.get("type", "text")
+    for _section_label, fields in HVAC_DIAGNOSTIC_SECTIONS
+    for field in fields
+}
 
 HVAC_FORM_PREFIX_BY_COLLECTION = {
     "airHandlers": "air_handler",
@@ -255,7 +390,7 @@ def _build_hvac_component(form_data, prefix):
         "model_name": form_data.get(f"{prefix}_model_name", "").strip(),
         "model_number": form_data.get(f"{prefix}_model_number", "").strip(),
         "serial_number": form_data.get(f"{prefix}_serial_number", "").strip(),
-        "brand": form_data.get(f"{prefix}_brand", "").strip(),
+        "manufacturer": form_data.get(f"{prefix}_manufacturer", "").strip(),
         "install_year": form_data.get(f"{prefix}_install_year", "").strip(),
     }
 
@@ -263,7 +398,10 @@ def _build_hvac_component(form_data, prefix):
 def _build_hvac_ductwork(form_data):
     ductwork = {
         "type": form_data.get("ductwork_type", "").strip(),
-        "size": form_data.get("ductwork_size", "").strip(),
+        "insulated": form_data.get("ductwork_insulated", "").strip(),
+        "supply_branches": form_data.get("ductwork_supply_branches", "").strip(),
+        "returns": form_data.get("ductwork_returns", "").strip(),
+        "notes_on_sizing": form_data.get("ductwork_notes_on_sizing", "").strip(),
         "install_year": form_data.get("ductwork_install_year", "").strip(),
     }
     return ductwork if any(ductwork.values()) else None
@@ -279,7 +417,10 @@ def _extract_hvac_ductwork(source):
 
     normalized_ductwork = {
         "type": str(ductwork.get("type", "")).strip(),
-        "size": str(ductwork.get("size", "")).strip(),
+        "insulated": str(ductwork.get("insulated", "")).strip(),
+        "supply_branches": str(ductwork.get("supply_branches", "")).strip(),
+        "returns": str(ductwork.get("returns", "")).strip(),
+        "notes_on_sizing": str(ductwork.get("notes_on_sizing", "")).strip(),
         "install_year": str(ductwork.get("install_year", "")).strip(),
     }
     return normalized_ductwork if any(normalized_ductwork.values()) else None
@@ -292,6 +433,10 @@ def _build_hvac_system_document(customer_id, system_type, location_type, form_da
         "location_type": location_type,
     }
 
+    tonnage = str(form_data.get("tonnage", "")).strip()
+    if tonnage:
+        document["tonnage"] = tonnage
+
     if system_type in DUCTWORK_SYSTEM_TYPES:
         ductwork = _build_hvac_ductwork(form_data)
         if ductwork:
@@ -300,32 +445,74 @@ def _build_hvac_system_document(customer_id, system_type, location_type, form_da
     return document
 
 
+def _get_missing_ductwork_fields(ductwork_data):
+    ductwork_type = str(ductwork_data.get("type", "")).strip()
+    if not ductwork_type:
+        return []
+
+    required_fields = ("insulated", "supply_branches", "returns", "install_year")
+    return [
+        field_name
+        for field_name in required_fields
+        if not str(ductwork_data.get(field_name, "")).strip()
+    ]
+
+
+def _validate_ductwork_data(ductwork_data):
+    required_fields = {
+        "insulated": "Insulated",
+        "supply_branches": "Supply Branches",
+        "returns": "Returns",
+        "install_year": "Install Year",
+    }
+    missing_fields = [
+        required_fields[field_name]
+        for field_name in _get_missing_ductwork_fields(ductwork_data)
+    ]
+    if not missing_fields:
+        return ""
+
+    if len(missing_fields) == 1:
+        return f"{missing_fields[0]} is required when a ductwork type is selected."
+
+    if len(missing_fields) == 2:
+        missing_text = f"{missing_fields[0]} and {missing_fields[1]}"
+    else:
+        missing_text = ", ".join(missing_fields[:-1]) + f", and {missing_fields[-1]}"
+
+    return f"{missing_text} are required when a ductwork type is selected."
+
+
 def _build_empty_hvac_form_data():
     return {
         "system_type": "",
+        "tonnage": "",
         "location_type": "",
         "air_handler_model_name": "",
         "air_handler_model_number": "",
         "air_handler_serial_number": "",
-        "air_handler_brand": "",
+        "air_handler_manufacturer": "",
         "air_handler_install_year": "",
         "condenser_model_name": "",
         "condenser_model_number": "",
         "condenser_serial_number": "",
-        "condenser_brand": "",
+        "condenser_manufacturer": "",
         "condenser_install_year": "",
         "furnace_model_name": "",
         "furnace_model_number": "",
         "furnace_serial_number": "",
-        "furnace_brand": "",
+        "furnace_manufacturer": "",
         "furnace_install_year": "",
         "unit_model_name": "",
         "unit_model_number": "",
         "unit_serial_number": "",
-        "unit_brand": "",
+        "unit_manufacturer": "",
         "unit_install_year": "",
         "ductwork_type": "",
-        "ductwork_size": "",
+        "ductwork_insulated": "",
+        "ductwork_supply_branches": "",
+        "ductwork_returns": "",
+        "ductwork_notes_on_sizing": "",
         "ductwork_install_year": "",
     }
 
@@ -354,11 +541,11 @@ def _build_hvac_component_document(form_data, component_base_document, collectio
 
 def _summarize_hvac_component(component):
     summary_parts = []
-    brand = str(component.get("brand", "")).strip()
+    manufacturer = str(component.get("manufacturer", "")).strip()
     model_name = str(component.get("model_name", "")).strip()
 
-    if brand:
-        summary_parts.append(brand)
+    if manufacturer:
+        summary_parts.append(manufacturer)
     if model_name:
         summary_parts.append(model_name)
 
@@ -375,12 +562,9 @@ def _summarize_ductwork(component):
 
     summary_parts = []
     ductwork_type = str(ductwork.get("type", "")).strip()
-    ductwork_size = str(ductwork.get("size", "")).strip()
 
     if ductwork_type:
         summary_parts.append(ductwork_type)
-    if ductwork_size:
-        summary_parts.append(f"Size {ductwork_size}")
 
     return " | ".join(summary_parts)
 
@@ -390,7 +574,7 @@ def _format_hvac_component_detail(component):
         "model_name": str(component.get("model_name", "")).strip() or "-",
         "model_number": str(component.get("model_number", "")).strip() or "-",
         "serial_number": str(component.get("serial_number", "")).strip() or "-",
-        "brand": str(component.get("brand", "")).strip() or "-",
+        "manufacturer": str(component.get("manufacturer", "")).strip() or "-",
         "install_year": str(component.get("install_year", "")).strip() or "-",
     }
 
@@ -399,11 +583,30 @@ def _format_diagnostics_key(key):
     return str(key).replace("_", " ").strip().title()
 
 
-def _build_hvac_diagnostics_entry(form_data):
-    entry = {
-        field_name: str(form_data.get(field_name, "")).strip()
-        for field_name, _label in HVAC_DIAGNOSTIC_FIELDS
-    }
+def _calculate_design_cfm_from_tonnage(tonnage_value):
+    tonnage_text = str(tonnage_value or "").strip()
+    if not tonnage_text:
+        return ""
+
+    tonnage_match = re.match(r"^(\d+(?:\.\d+)?)", tonnage_text)
+    if not tonnage_match:
+        return ""
+
+    tonnage_number = float(tonnage_match.group(1))
+    design_cfm = tonnage_number * 400
+    if design_cfm.is_integer():
+        return str(int(design_cfm))
+
+    return str(design_cfm)
+
+
+def _build_hvac_diagnostics_entry(form_data, hvac_system=None):
+    entry = {}
+    for field_name, _label in HVAC_DIAGNOSTIC_FIELDS:
+        entry[field_name] = str(form_data.get(field_name, "")).strip()
+
+    if hvac_system is not None:
+        entry["designCfm"] = _calculate_design_cfm_from_tonnage(hvac_system.get("tonnage", ""))
     entry["date_performed"] = datetime.now().strftime("%m/%d/%Y")
     return entry
 
@@ -526,7 +729,10 @@ def _build_hvac_ductwork_component(hvac_system):
     ductwork = _extract_hvac_ductwork(hvac_system)
     details = {
         "type": "-",
-        "size": "-",
+        "insulated": "-",
+        "supply_branches": "-",
+        "returns": "-",
+        "notes_on_sizing": "-",
         "install_year": "-",
     }
     summary = "No ductwork details saved yet."
@@ -534,7 +740,10 @@ def _build_hvac_ductwork_component(hvac_system):
     if ductwork:
         details = {
             "type": ductwork.get("type", "").strip() or "-",
-            "size": ductwork.get("size", "").strip() or "-",
+            "insulated": ductwork.get("insulated", "").strip() or "-",
+            "supply_branches": ductwork.get("supply_branches", "").strip() or "-",
+            "returns": ductwork.get("returns", "").strip() or "-",
+            "notes_on_sizing": ductwork.get("notes_on_sizing", "").strip() or "-",
             "install_year": ductwork.get("install_year", "").strip() or "-",
         }
         summary = _summarize_ductwork(hvac_system) or summary
@@ -569,7 +778,10 @@ def _build_hvac_component_view_payload(db, customer_id, reference_type, referenc
         ductwork = _extract_hvac_ductwork(serialized_system) or {}
         details = {
             "type": str(ductwork.get("type", "")).strip() or "-",
-            "size": str(ductwork.get("size", "")).strip() or "-",
+            "insulated": str(ductwork.get("insulated", "")).strip() or "-",
+            "supply_branches": str(ductwork.get("supply_branches", "")).strip() or "-",
+            "returns": str(ductwork.get("returns", "")).strip() or "-",
+            "notes_on_sizing": str(ductwork.get("notes_on_sizing", "")).strip() or "-",
             "install_year": str(ductwork.get("install_year", "")).strip() or "-",
         }
         component_label = "Ductwork"
@@ -654,6 +866,7 @@ def _build_hvac_detail_payload(db, customer_id, reference_type, reference_id):
         "reference_id": reference_id,
         "title": f"{serialized_system.get('system_type', 'HVAC System')} - {serialized_system.get('location_type', 'Location not set')}",
         "system_type": serialized_system.get("system_type", "HVAC System"),
+        "tonnage": str(serialized_system.get("tonnage", "")).strip() or "-",
         "location_type": serialized_system.get("location_type", "Location not set"),
         "components": components,
         "diagnostics": diagnostics,
@@ -973,15 +1186,20 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
     error = ""
-    form_data = {field_name: "" for field_name, _label in HVAC_DIAGNOSTIC_FIELDS}
+    form_data = {
+        field_name: ""
+        for field_name, _label in HVAC_DIAGNOSTIC_FIELDS
+    }
+    form_data["designCfm"] = _calculate_design_cfm_from_tonnage(hvac_system.get("tonnage", ""))
 
     if request.method == "POST":
         form_data = {
             field_name: request.form.get(field_name, "").strip()
             for field_name, _label in HVAC_DIAGNOSTIC_FIELDS
         }
+        form_data["designCfm"] = _calculate_design_cfm_from_tonnage(hvac_system.get("tonnage", ""))
 
-        diagnostics_entry = _build_hvac_diagnostics_entry(form_data)
+        diagnostics_entry = _build_hvac_diagnostics_entry(form_data, hvac_system)
         existing_diagnostics = _sort_diagnostics_by_date_desc(hvac_system.get("diagnostics", []))
         diagnostics_history = _sort_diagnostics_by_date_desc([diagnostics_entry, *existing_diagnostics])
 
@@ -1130,18 +1348,47 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
 
     if component_key == "ductwork":
         ductwork = _extract_hvac_ductwork(serialized_system) or {}
+        error = ""
+        ductwork_error_fields = []
         form_data = {
             "type": ductwork.get("type", ""),
-            "size": ductwork.get("size", ""),
+            "insulated": ductwork.get("insulated", ""),
+            "supply_branches": ductwork.get("supply_branches", ""),
+            "returns": ductwork.get("returns", ""),
+            "notes_on_sizing": ductwork.get("notes_on_sizing", ""),
             "install_year": ductwork.get("install_year", ""),
         }
 
         if request.method == "POST":
             form_data = {
                 "type": request.form.get("type", "").strip(),
-                "size": request.form.get("size", "").strip(),
+                "insulated": request.form.get("insulated", "").strip(),
+                "supply_branches": request.form.get("supply_branches", "").strip(),
+                "returns": request.form.get("returns", "").strip(),
+                "notes_on_sizing": request.form.get("notes_on_sizing", "").strip(),
                 "install_year": request.form.get("install_year", "").strip(),
             }
+            error = _validate_ductwork_data(form_data)
+            ductwork_error_fields = _get_missing_ductwork_fields(form_data)
+            if error:
+                return render_template(
+                    "equipment/update_hvac_component.html",
+                    customerId=customerId,
+                    customer=serialize_doc(customer),
+                    hvac_system=serialized_system,
+                    reference_type=reference_type,
+                    reference_id=reference_id,
+                    component_label="Ductwork",
+                    component_key=component_key,
+                    field_prefix="",
+                    is_ductwork=True,
+                    form_data=form_data,
+                    ductwork_type_options=DUCTWORK_TYPE_OPTIONS,
+                    insulated_options=INSULATED_OPTIONS,
+                    ductwork_error_fields=ductwork_error_fields,
+                    error=error,
+                )
+
             if any(form_data.values()):
                 db.hvacSystems.update_one(
                     {"_id": hvac_system["_id"], "customer_id": customerId},
@@ -1174,6 +1421,10 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
             field_prefix="",
             is_ductwork=True,
             form_data=form_data,
+            ductwork_type_options=DUCTWORK_TYPE_OPTIONS,
+            insulated_options=INSULATED_OPTIONS,
+            ductwork_error_fields=ductwork_error_fields,
+            error=error,
         )
 
     existing_component = _find_existing_hvac_component(db, customerId, serialized_system, component_key)
@@ -1183,7 +1434,7 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
         "model_name": str(serialized_component.get("model_name", "")).strip(),
         "model_number": str(serialized_component.get("model_number", "")).strip(),
         "serial_number": str(serialized_component.get("serial_number", "")).strip(),
-        "brand": str(serialized_component.get("brand", "")).strip(),
+            "manufacturer": str(serialized_component.get("manufacturer", "")).strip(),
         "install_year": str(serialized_component.get("install_year", "")).strip(),
     }
 
@@ -1192,7 +1443,7 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
             "model_name": request.form.get("model_name", "").strip(),
             "model_number": request.form.get("model_number", "").strip(),
             "serial_number": request.form.get("serial_number", "").strip(),
-            "brand": request.form.get("brand", "").strip(),
+            "manufacturer": request.form.get("manufacturer", "").strip(),
             "install_year": request.form.get("install_year", "").strip(),
         }
         component_document = {
@@ -1232,6 +1483,7 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
         field_prefix=field_prefix,
         is_ductwork=False,
         form_data=form_data,
+        manufacturer_options=MANUFACTURER_OPTIONS,
     )
 
 
@@ -1267,6 +1519,7 @@ def add_equipment(customerId):
         return redirect(url_for("customers.customers"))
 
     error = ""
+    ductwork_error_fields = []
     form_data = _build_empty_hvac_form_data()
     if request.method == "POST":
         for field_name in form_data:
@@ -1280,6 +1533,18 @@ def add_equipment(customerId):
         elif location_type not in LOCATION_TYPE_OPTIONS:
             error = "Please select a valid location type."
         else:
+            ductwork_data = {
+                "type": form_data.get("ductwork_type", ""),
+                "insulated": form_data.get("ductwork_insulated", ""),
+                "supply_branches": form_data.get("ductwork_supply_branches", ""),
+                "returns": form_data.get("ductwork_returns", ""),
+                "notes_on_sizing": form_data.get("ductwork_notes_on_sizing", ""),
+                "install_year": form_data.get("ductwork_install_year", ""),
+            }
+            error = _validate_ductwork_data(ductwork_data)
+            ductwork_error_fields = _get_missing_ductwork_fields(ductwork_data)
+
+        if not error:
             base_document = _build_hvac_system_document(customerId, system_type, location_type, form_data)
 
             inserted_hvac_system = db.hvacSystems.insert_one(base_document)
@@ -1320,7 +1585,12 @@ def add_equipment(customerId):
         submit_label="Save HVAC System",
         form_data=form_data,
         system_type_options=SYSTEM_TYPE_OPTIONS,
+        tonnage_options=TONNAGE_OPTIONS,
         location_type_options=LOCATION_TYPE_OPTIONS,
+        ductwork_type_options=DUCTWORK_TYPE_OPTIONS,
+        insulated_options=INSULATED_OPTIONS,
+        manufacturer_options=MANUFACTURER_OPTIONS,
+        ductwork_error_fields=ductwork_error_fields,
     )
 
 

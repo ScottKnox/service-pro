@@ -18,24 +18,60 @@
         </ol>
       </nav>
 
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
       <form id="add-customer-form" action="{{ url_for('customers.update_hvac_component', customerId=customerId, reference_type=reference_type, reference_id=reference_id, component_key=component_key) }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% set ductwork_error_fields = ductwork_error_fields|default([]) %}
 
         {% if is_ductwork %}
           <div class="add-customer-form-row">
             <div class="add-customer-form-field">
               <label for="ductwork-type">Type</label>
-              <input id="ductwork-type" name="type" type="text" autocomplete="off" value="{{ form_data.type|default('') }}">
+              <select id="ductwork-type" name="type" class="{% if 'type' in ductwork_error_fields %}form-field-input-error{% endif %}">
+                <option value="">-- Select a ductwork type --</option>
+                {% for option in ductwork_type_options|default(['Sheet Metal and Flex', 'Fiberglass Lined Sheet Metal and Flex', 'Sheet Metal', 'Flex', 'Fiberboard']) %}
+                  <option value="{{ option }}" {% if form_data.type|default('') == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
+              <span class="field-validation-error {% if 'type' in ductwork_error_fields %}is-visible{% endif %}" data-ductwork-error-for="type">Type is required.</span>
             </div>
             <div class="add-customer-form-field">
-              <label for="ductwork-size">Size</label>
-              <input id="ductwork-size" name="size" type="text" autocomplete="off" value="{{ form_data.size|default('') }}">
+              <label for="ductwork-insulated">Insulated?</label>
+              <select id="ductwork-insulated" name="insulated" class="{% if 'insulated' in ductwork_error_fields %}form-field-input-error{% endif %}">
+                <option value="">-- Select one --</option>
+                {% for option in insulated_options|default(['No', 'Yes']) %}
+                  <option value="{{ option }}" {% if form_data.insulated|default('') == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
+              <span class="field-validation-error {% if 'insulated' in ductwork_error_fields %}is-visible{% endif %}" data-ductwork-error-for="insulated">Insulated is required when a ductwork type is selected.</span>
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="ductwork-supply-branches">Supply Branches</label>
+              <input id="ductwork-supply-branches" name="supply_branches" type="number" inputmode="numeric" min="0" step="1" value="{{ form_data.supply_branches|default('') }}" class="{% if 'supply_branches' in ductwork_error_fields %}form-field-input-error{% endif %}">
+              <span class="field-validation-error {% if 'supply_branches' in ductwork_error_fields %}is-visible{% endif %}" data-ductwork-error-for="supply_branches">Supply Branches is required when a ductwork type is selected.</span>
+            </div>
+            <div class="add-customer-form-field">
+              <label for="ductwork-returns">Returns</label>
+              <input id="ductwork-returns" name="returns" type="number" inputmode="numeric" min="0" step="1" value="{{ form_data.returns|default('') }}" class="{% if 'returns' in ductwork_error_fields %}form-field-input-error{% endif %}">
+              <span class="field-validation-error {% if 'returns' in ductwork_error_fields %}is-visible{% endif %}" data-ductwork-error-for="returns">Returns is required when a ductwork type is selected.</span>
             </div>
           </div>
           <div class="add-customer-form-row">
             <div class="add-customer-form-field">
               <label for="ductwork-install-year">Install Year</label>
-              <input id="ductwork-install-year" name="install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.install_year|default('') }}">
+              <input id="ductwork-install-year" name="install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.install_year|default('') }}" class="{% if 'install_year' in ductwork_error_fields %}form-field-input-error{% endif %}">
+              <span class="field-validation-error {% if 'install_year' in ductwork_error_fields %}is-visible{% endif %}" data-ductwork-error-for="install_year">Install Year is required when a ductwork type is selected.</span>
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="ductwork-notes-on-sizing">Notes on Sizing</label>
+              <textarea id="ductwork-notes-on-sizing" name="notes_on_sizing" rows="4">{{ form_data.notes_on_sizing|default('') }}</textarea>
             </div>
           </div>
         {% else %}
@@ -55,8 +91,13 @@
               <input id="serial-number" name="serial_number" type="text" autocomplete="off" value="{{ form_data.serial_number|default('') }}">
             </div>
             <div class="add-customer-form-field">
-              <label for="brand">Brand</label>
-              <input id="brand" name="brand" type="text" autocomplete="organization" value="{{ form_data.brand|default('') }}">
+              <label for="manufacturer">Manufacturer</label>
+              <select id="manufacturer" name="manufacturer">
+                <option value="">-- Select a manufacturer --</option>
+                {% for option in manufacturer_options|default([]) %}
+                  <option value="{{ option }}" {% if form_data.manufacturer|default('') == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
           <div class="add-customer-form-row">
@@ -73,4 +114,101 @@
       </form>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  {% if is_ductwork %}
+    <script defer>
+      (function () {
+        const form = document.getElementById('add-customer-form');
+        const ductworkTypeSelect = document.getElementById('ductwork-type');
+        const ductworkInsulatedSelect = document.getElementById('ductwork-insulated');
+        const submitButton = form ? form.querySelector('button[type="submit"]') : null;
+        const ductworkFieldConfigs = [
+          { key: 'insulated', field: ductworkInsulatedSelect },
+          { key: 'supply_branches', field: document.getElementById('ductwork-supply-branches') },
+          { key: 'returns', field: document.getElementById('ductwork-returns') },
+          { key: 'install_year', field: document.getElementById('ductwork-install-year') },
+        ].filter(function (config) {
+          return Boolean(config.field);
+        }).map(function (config) {
+          return {
+            key: config.key,
+            field: config.field,
+            errorElement: form ? form.querySelector('[data-ductwork-error-for="' + config.key + '"]') : null,
+          };
+        });
+        const ductworkRequiredFields = ductworkFieldConfigs.map(function (config) {
+          return config.field;
+        });
+        if (!ductworkTypeSelect || !ductworkInsulatedSelect || !submitButton) {
+          return;
+        }
+
+        function syncDuctworkInsulated() {
+          const insulatedTypes = new Set(['Fiberglass Lined Sheet Metal and Flex', 'Fiberboard']);
+          if (!ductworkTypeSelect.value) {
+            ductworkInsulatedSelect.value = '';
+            return;
+          }
+
+          if (insulatedTypes.has(ductworkTypeSelect.value)) {
+            ductworkInsulatedSelect.value = 'Yes';
+          }
+        }
+
+        function syncSubmitState() {
+          const hasDuctworkType = ductworkTypeSelect.value.trim() !== '';
+          const ductworkComplete = ductworkRequiredFields.every(function (field) {
+            return field.value.trim() !== '';
+          });
+
+          submitButton.disabled = hasDuctworkType && !ductworkComplete;
+        }
+
+        function syncDuctworkFieldErrors() {
+          const hasDuctworkType = ductworkTypeSelect.value.trim() !== '';
+          ductworkFieldConfigs.forEach(function (config) {
+            const hasValue = config.field.value.trim() !== '';
+            if (hasValue) {
+              config.field.dataset.hadValue = 'true';
+            }
+
+            const shouldShowError = hasDuctworkType && !hasValue && config.field.dataset.hadValue === 'true';
+            config.field.classList.toggle('form-field-input-error', shouldShowError);
+
+            if (config.errorElement) {
+              config.errorElement.classList.toggle('is-visible', shouldShowError);
+            }
+          });
+        }
+
+        ductworkTypeSelect.addEventListener('change', function () {
+          syncDuctworkInsulated();
+          syncDuctworkFieldErrors();
+          syncSubmitState();
+        });
+        ductworkFieldConfigs.forEach(function (config) {
+          if (config.field.classList.contains('form-field-input-error')) {
+            config.field.dataset.hadValue = 'true';
+          }
+
+          ['input', 'change', 'blur'].forEach(function (eventName) {
+            config.field.addEventListener(eventName, function () {
+              if (config.field.value.trim() !== '') {
+                config.field.dataset.hadValue = 'true';
+              }
+              syncDuctworkFieldErrors();
+              syncSubmitState();
+            });
+          });
+        });
+
+        syncDuctworkInsulated();
+        syncDuctworkFieldErrors();
+        syncSubmitState();
+      })();
+    </script>
+  {% endif %}
 {% endblock %}

@@ -66,8 +66,20 @@
                     <strong>{{ component.details.type }}</strong>
                   </div>
                   <div class="hvac-component-row">
-                    <span>Size</span>
-                    <strong>{{ component.details.size }}</strong>
+                    <span>Insulated</span>
+                    <strong>{{ component.details.insulated }}</strong>
+                  </div>
+                  <div class="hvac-component-row">
+                    <span>Supply Branches</span>
+                    <strong>{{ component.details.supply_branches }}</strong>
+                  </div>
+                  <div class="hvac-component-row">
+                    <span>Returns</span>
+                    <strong>{{ component.details.returns }}</strong>
+                  </div>
+                  <div class="hvac-component-row">
+                    <span>Notes on Sizing</span>
+                    <strong>{{ component.details.notes_on_sizing }}</strong>
                   </div>
                   <div class="hvac-component-row">
                     <span>Install Year</span>
@@ -75,8 +87,8 @@
                   </div>
                 {% else %}
                   <div class="hvac-component-row">
-                    <span>Brand</span>
-                    <strong>{{ component.details.brand }}</strong>
+                    <span>Manufacturer</span>
+                    <strong>{{ component.details.manufacturer }}</strong>
                   </div>
                   <div class="hvac-component-row">
                     <span>Model Name</span>

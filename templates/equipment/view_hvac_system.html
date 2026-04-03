@@ -37,6 +37,10 @@
                 <p>{{ hvac_system.system_type }}</p>
               </div>
               <div class="view-customer-detail-item">
+                <h4>Tonnage</h4>
+                <p>{{ hvac_system.tonnage }}</p>
+              </div>
+              <div class="view-customer-detail-item">
                 <h4>Location Type</h4>
                 <p>{{ hvac_system.location_type }}</p>
               </div>
@@ -171,8 +175,20 @@
                           <strong>{{ component.details.type }}</strong>
                         </div>
                         <div class="hvac-component-row">
-                          <span>Size</span>
-                          <strong>{{ component.details.size }}</strong>
+                          <span>Insulated</span>
+                          <strong>{{ component.details.insulated }}</strong>
+                        </div>
+                        <div class="hvac-component-row">
+                          <span>Supply Branches</span>
+                          <strong>{{ component.details.supply_branches }}</strong>
+                        </div>
+                        <div class="hvac-component-row">
+                          <span>Returns</span>
+                          <strong>{{ component.details.returns }}</strong>
+                        </div>
+                        <div class="hvac-component-row">
+                          <span>Notes on Sizing</span>
+                          <strong>{{ component.details.notes_on_sizing }}</strong>
                         </div>
                         <div class="hvac-component-row">
                           <span>Install Year</span>
@@ -184,8 +200,8 @@
                           <strong>{{ component.label }}</strong>
                         </div>
                         <div class="hvac-component-row">
-                          <span>Brand</span>
-                          <strong>{{ component.details.brand }}</strong>
+                          <span>Manufacturer</span>
+                          <strong>{{ component.details.manufacturer }}</strong>
                         </div>
                         <div class="hvac-component-row">
                           <span>Model Number</span>
@@ -240,8 +256,8 @@
                         <strong>{{ diagnostics_values.get('totalExternalStaticPressure') or '-' }}</strong>
                       </div>
                       <div class="hvac-component-row">
-                        <span>CFM</span>
-                        <strong>{{ diagnostics_values.get('cfm') or '-' }}</strong>
+                        <span>Actual CFM</span>
+                        <strong>{{ diagnostics_values.get('actualCfm') or '-' }}</strong>
                       </div>
                       <div class="hvac-component-row">
                         <span>Refrigerant Type</span>
@@ -252,8 +268,8 @@
                         <strong>{{ diagnostics_values.get('temperatureDelta') or '-' }}</strong>
                       </div>
                       <div class="hvac-component-row">
-                        <span>Low Side Pressure</span>
-                        <strong>{{ diagnostics_values.get('lowSidePressure') or '-' }}</strong>
+                        <span>Suction Pressure</span>
+                        <strong>{{ diagnostics_values.get('suctionPressure') or '-' }}</strong>
                       </div>
                       <div class="hvac-component-row">
                         <span>High Side Pressure</span>

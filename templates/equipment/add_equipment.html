@@ -15,6 +15,20 @@
         #add-customer-form section .add-customer-form-row + .add-customer-form-row {
           margin-top: 0.45rem;
         }
+
+        #add-customer-form .form-field-input-error {
+          border-color: #d32f2f;
+          box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.12);
+          background: linear-gradient(180deg, #fff8f8 0%, #ffffff 100%);
+        }
+
+        #add-customer-form .field-validation-error {
+          min-height: 1.1rem;
+        }
+
+        #add-customer-form #ductwork-section .add-customer-form-field {
+          align-content: start;
+        }
       </style>
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
@@ -31,6 +45,7 @@
 
       <form id="add-customer-form" action="{{ form_action|default(url_for('customers.add_equipment', customerId=customerId)) }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% set ductwork_error_fields = ductwork_error_fields|default([]) %}
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="system-type">System Type</label>
@@ -41,6 +56,18 @@
               {% endfor %}
             </select>
           </div>
+          <div class="add-customer-form-field">
+            <label for="tonnage">Tonnage</label>
+            <select id="tonnage" name="tonnage">
+              <option value="">-- Select tonnage --</option>
+              {% for option in tonnage_options|default(['.50 Ton (6000 BTU)', '.75 Ton (9000 BTU)', '1 Ton (12000 BTU)', '1.5 Tons (18000 BTU)', '2 Ton (24000 BTU)', '2.5 Tons (30000 BTU)', '3 Ton (36000 BTU)', '3.5 Tons (42000 BTU)', '4 Ton (48000 BTU)', '4.5 Ton (54000 BTU)', '5 Ton (60000 BTU)']) %}
+                <option value="{{ option }}" {% if form_data.tonnage|default('') == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="location-type">Location Type</label>
             <select id="location-type" name="location_type" required>
@@ -70,8 +97,13 @@
               <input id="air-handler-serial-number" name="air_handler_serial_number" type="text" autocomplete="off" value="{{ form_data.air_handler_serial_number|default('') }}">
             </div>
             <div class="add-customer-form-field">
-              <label for="air-handler-brand">Brand</label>
-              <input id="air-handler-brand" name="air_handler_brand" type="text" autocomplete="organization" value="{{ form_data.air_handler_brand|default('') }}">
+              <label for="air-handler-manufacturer">Manufacturer</label>
+              <select id="air-handler-manufacturer" name="air_handler_manufacturer">
+                <option value="">-- Select a manufacturer --</option>
+                {% for option in manufacturer_options|default([]) %}
+                  <option value="{{ option }}" {% if form_data.air_handler_manufacturer|default('') == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
           <div class="add-customer-form-row">
@@ -100,8 +132,13 @@
               <input id="condenser-serial-number" name="condenser_serial_number" type="text" autocomplete="off" value="{{ form_data.condenser_serial_number|default('') }}">
             </div>
             <div class="add-customer-form-field">
-              <label for="condenser-brand">Brand</label>
-              <input id="condenser-brand" name="condenser_brand" type="text" autocomplete="organization" value="{{ form_data.condenser_brand|default('') }}">
+              <label for="condenser-manufacturer">Manufacturer</label>
+              <select id="condenser-manufacturer" name="condenser_manufacturer">
+                <option value="">-- Select a manufacturer --</option>
+                {% for option in manufacturer_options|default([]) %}
+                  <option value="{{ option }}" {% if form_data.condenser_manufacturer|default('') == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
           <div class="add-customer-form-row">
@@ -130,8 +167,13 @@
               <input id="furnace-serial-number" name="furnace_serial_number" type="text" autocomplete="off" value="{{ form_data.furnace_serial_number|default('') }}">
             </div>
             <div class="add-customer-form-field">
-              <label for="furnace-brand">Brand</label>
-              <input id="furnace-brand" name="furnace_brand" type="text" autocomplete="organization" value="{{ form_data.furnace_brand|default('') }}">
+              <label for="furnace-manufacturer">Manufacturer</label>
+              <select id="furnace-manufacturer" name="furnace_manufacturer">
+                <option value="">-- Select a manufacturer --</option>
+                {% for option in manufacturer_options|default([]) %}
+                  <option value="{{ option }}" {% if form_data.furnace_manufacturer|default('') == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
           <div class="add-customer-form-row">
@@ -160,8 +202,13 @@
               <input id="unit-serial-number" name="unit_serial_number" type="text" autocomplete="off" value="{{ form_data.unit_serial_number|default('') }}">
             </div>
             <div class="add-customer-form-field">
-              <label for="unit-brand">Brand</label>
-              <input id="unit-brand" name="unit_brand" type="text" autocomplete="organization" value="{{ form_data.unit_brand|default('') }}">
+              <label for="unit-manufacturer">Manufacturer</label>
+              <select id="unit-manufacturer" name="unit_manufacturer">
+                <option value="">-- Select a manufacturer --</option>
+                {% for option in manufacturer_options|default([]) %}
+                  <option value="{{ option }}" {% if form_data.unit_manufacturer|default('') == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
           <div class="add-customer-form-row">
@@ -177,17 +224,48 @@
           <div class="add-customer-form-row">
             <div class="add-customer-form-field">
               <label for="ductwork-type">Type</label>
-              <input id="ductwork-type" name="ductwork_type" type="text" autocomplete="off" value="{{ form_data.ductwork_type|default('') }}">
+              <select id="ductwork-type" name="ductwork_type" class="{% if 'type' in ductwork_error_fields %}form-field-input-error{% endif %}">
+                <option value="">-- Select a ductwork type --</option>
+                {% for option in ductwork_type_options|default(['Sheet Metal and Flex', 'Fiberglass Lined Sheet Metal and Flex', 'Sheet Metal', 'Flex', 'Fiberboard']) %}
+                  <option value="{{ option }}" {% if form_data.ductwork_type|default('') == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
+              <span class="field-validation-error {% if 'type' in ductwork_error_fields %}is-visible{% endif %}" data-ductwork-error-for="type">Type is required.</span>
             </div>
             <div class="add-customer-form-field">
-              <label for="ductwork-size">Size</label>
-              <input id="ductwork-size" name="ductwork_size" type="text" autocomplete="off" value="{{ form_data.ductwork_size|default('') }}">
+              <label for="ductwork-insulated">Insulated?</label>
+              <select id="ductwork-insulated" name="ductwork_insulated" class="{% if 'insulated' in ductwork_error_fields %}form-field-input-error{% endif %}">
+                <option value="">-- Select one --</option>
+                {% for option in insulated_options|default(['No', 'Yes']) %}
+                  <option value="{{ option }}" {% if form_data.ductwork_insulated|default('') == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
+              <span class="field-validation-error {% if 'insulated' in ductwork_error_fields %}is-visible{% endif %}" data-ductwork-error-for="insulated">Insulated is required when a ductwork type is selected.</span>
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="ductwork-supply-branches">Supply Branches</label>
+              <input id="ductwork-supply-branches" name="ductwork_supply_branches" type="number" inputmode="numeric" min="0" step="1" value="{{ form_data.ductwork_supply_branches|default('') }}" class="{% if 'supply_branches' in ductwork_error_fields %}form-field-input-error{% endif %}">
+              <span class="field-validation-error {% if 'supply_branches' in ductwork_error_fields %}is-visible{% endif %}" data-ductwork-error-for="supply_branches">Supply Branches is required when a ductwork type is selected.</span>
+            </div>
+            <div class="add-customer-form-field">
+              <label for="ductwork-returns">Returns</label>
+              <input id="ductwork-returns" name="ductwork_returns" type="number" inputmode="numeric" min="0" step="1" value="{{ form_data.ductwork_returns|default('') }}" class="{% if 'returns' in ductwork_error_fields %}form-field-input-error{% endif %}">
+              <span class="field-validation-error {% if 'returns' in ductwork_error_fields %}is-visible{% endif %}" data-ductwork-error-for="returns">Returns is required when a ductwork type is selected.</span>
             </div>
           </div>
           <div class="add-customer-form-row">
             <div class="add-customer-form-field">
               <label for="ductwork-install-year">Install Year</label>
-              <input id="ductwork-install-year" name="ductwork_install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.ductwork_install_year|default('') }}">
+              <input id="ductwork-install-year" name="ductwork_install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.ductwork_install_year|default('') }}" class="{% if 'install_year' in ductwork_error_fields %}form-field-input-error{% endif %}">
+              <span class="field-validation-error {% if 'install_year' in ductwork_error_fields %}is-visible{% endif %}" data-ductwork-error-for="install_year">Install Year is required when a ductwork type is selected.</span>
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="ductwork-notes-on-sizing">Notes on Sizing</label>
+              <textarea id="ductwork-notes-on-sizing" name="ductwork_notes_on_sizing" rows="4">{{ form_data.ductwork_notes_on_sizing|default('') }}</textarea>
             </div>
           </div>
         </section>
@@ -204,7 +282,28 @@
   {{ super() }}
   <script defer>
     (function () {
+      const form = document.getElementById('add-customer-form');
       const systemTypeSelect = document.getElementById('system-type');
+      const ductworkTypeSelect = document.getElementById('ductwork-type');
+      const ductworkInsulatedSelect = document.getElementById('ductwork-insulated');
+      const submitButton = form ? form.querySelector('button[type="submit"]') : null;
+      const ductworkFieldConfigs = [
+        { key: 'insulated', field: ductworkInsulatedSelect },
+        { key: 'supply_branches', field: document.getElementById('ductwork-supply-branches') },
+        { key: 'returns', field: document.getElementById('ductwork-returns') },
+        { key: 'install_year', field: document.getElementById('ductwork-install-year') },
+      ].filter(function (config) {
+        return Boolean(config.field);
+      }).map(function (config) {
+        return {
+          key: config.key,
+          field: config.field,
+          errorElement: form ? form.querySelector('[data-ductwork-error-for="' + config.key + '"]') : null,
+        };
+      });
+      const ductworkRequiredFields = ductworkFieldConfigs.map(function (config) {
+        return config.field;
+      });
       const sections = {
         airHandler: document.getElementById('air-handler-section'),
         condenser: document.getElementById('condenser-section'),
@@ -253,8 +352,88 @@
         }
       }
 
+      function syncDuctworkInsulated() {
+        if (!ductworkTypeSelect || !ductworkInsulatedSelect) {
+          return;
+        }
+
+        const insulatedTypes = new Set(['Fiberglass Lined Sheet Metal and Flex', 'Fiberboard']);
+        if (!ductworkTypeSelect.value) {
+          ductworkInsulatedSelect.value = '';
+          return;
+        }
+
+        if (insulatedTypes.has(ductworkTypeSelect.value)) {
+          ductworkInsulatedSelect.value = 'Yes';
+        }
+      }
+
+      function syncSubmitState() {
+        if (!submitButton || !ductworkTypeSelect || sections.ductwork.hidden) {
+          if (submitButton) {
+            submitButton.disabled = false;
+          }
+          return;
+        }
+
+        const hasDuctworkType = ductworkTypeSelect.value.trim() !== '';
+        const ductworkComplete = ductworkRequiredFields.every(function (field) {
+          return field.value.trim() !== '';
+        });
+
+        submitButton.disabled = hasDuctworkType && !ductworkComplete;
+      }
+
+      function syncDuctworkFieldErrors() {
+        if (!ductworkTypeSelect) {
+          return;
+        }
+
+        const hasDuctworkType = ductworkTypeSelect.value.trim() !== '';
+        ductworkFieldConfigs.forEach(function (config) {
+          const hasValue = config.field.value.trim() !== '';
+          if (hasValue) {
+            config.field.dataset.hadValue = 'true';
+          }
+
+          const shouldShowError = hasDuctworkType && !hasValue && config.field.dataset.hadValue === 'true';
+          config.field.classList.toggle('form-field-input-error', shouldShowError);
+
+          if (config.errorElement) {
+            config.errorElement.classList.toggle('is-visible', shouldShowError);
+          }
+        });
+      }
+
       systemTypeSelect.addEventListener('change', syncSections);
+      if (ductworkTypeSelect) {
+        ductworkTypeSelect.addEventListener('change', function () {
+          syncDuctworkInsulated();
+          syncDuctworkFieldErrors();
+          syncSubmitState();
+        });
+      }
+
+      ductworkFieldConfigs.forEach(function (config) {
+        if (config.field.classList.contains('form-field-input-error')) {
+          config.field.dataset.hadValue = 'true';
+        }
+
+        ['input', 'change', 'blur'].forEach(function (eventName) {
+          config.field.addEventListener(eventName, function () {
+            if (config.field.value.trim() !== '') {
+              config.field.dataset.hadValue = 'true';
+            }
+            syncDuctworkFieldErrors();
+            syncSubmitState();
+          });
+        });
+      });
+
       syncSections();
+      syncDuctworkInsulated();
+      syncDuctworkFieldErrors();
+      syncSubmitState();
     })();
   </script>
 {% endblock %}
