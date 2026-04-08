@@ -57,6 +57,35 @@ def require_login():
             session.clear()
             return redirect(url_for("auth.login"))
 
+    # For cancelled subscriptions, only block create/add actions — employees
+    # can still browse existing data.
+    _restricted_endpoints = {
+        "customers.add_customer",
+        "jobs.create_job",
+        "customers.add_equipment",       # Add HVAC System
+        "customers.add_hvac_diagnostics",
+        "employees.add_employee",
+        "catalog.create_service",
+        "catalog.create_part",
+    }
+    if request.endpoint and request.endpoint in _restricted_endpoints:
+        employee_id = session.get("employee_id")
+        if employee_id and ObjectId.is_valid(employee_id):
+            try:
+                db = ensure_connection_or_500()
+                employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"subscription_id": 1})
+                if employee:
+                    subscription_id = (employee.get("subscription_id") or "").strip()
+                    if subscription_id:
+                        sub = db.subscriptions.find_one(
+                            {"subscription_id": subscription_id},
+                            {"status": 1},
+                        )
+                        if sub and (sub.get("status") or "").strip().lower() == "cancelled":
+                            return redirect(url_for("admin_bp.reactivate_subscription"))
+            except Exception:
+                pass
+
 
 @app.route("/")
 def home():

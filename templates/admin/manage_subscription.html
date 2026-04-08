@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Subscription | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-jobs-header" class="resource-page resource-admin resource-subscription">
+      <h1>Manage Subscription</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('admin_bp.subscription') }}">Subscription</a></li>
+          <li aria-current="page">Manage</li>
+        </ol>
+      </nav>
+
+      <div class="jobs-controls-right-top">
+        <h2>User Add-On Management</h2>
+      </div>
+
+      {% if subscription_issue %}
+        <p class="form-field-note">There was an issue loading the subscription for the user.</p>
+      {% else %}
+        {% if updated %}
+          <p class="form-field-note">Add-on removed from the subscription.</p>
+        {% endif %}
+
+        <div class="subscription-detail-grid">
+          <article class="subscription-panel-card">
+            <h3>Current Plan Capacity</h3>
+            <div class="subscription-detail-row">
+              <span>Current Users</span>
+              <strong>{{ subscription.current_users }}</strong>
+            </div>
+            <div class="subscription-detail-row">
+              <span>Active Employees</span>
+              <strong>{{ subscription.active_employees }}</strong>
+            </div>
+            <div class="subscription-detail-row">
+              <span>Max Users</span>
+              <strong>{{ subscription.max_active_employees }}</strong>
+            </div>
+            <div class="subscription-detail-row">
+              <span>Monthly Total</span>
+              <strong>${{ '%.2f'|format(subscription.monthly_total) }}</strong>
+            </div>
+          </article>
+
+          <article class="subscription-panel-card">
+            <h3>Remove Add-Ons</h3>
+            {% if subscription.add_ons %}
+              {% for addon in subscription.add_ons %}
+                <div class="subscription-addon-card">
+                  <p class="subscription-addon-name">{{ addon.name }}</p>
+                  <p class="subscription-addon-description">{{ addon.description }}</p>
+                  <div class="subscription-detail-row">
+                    <span>Monthly Cost</span>
+                    <strong>${{ '%.2f'|format(addon.price) }}</strong>
+                  </div>
+                  <form action="{{ url_for('admin_bp.manage_subscription') }}" method="post" class="subscription-addon-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="addon_id" value="{{ addon.id }}">
+                    <button type="submit">Remove Add-On</button>
+                  </form>
+                </div>
+              {% endfor %}
+            {% else %}
+              <p class="subscription-empty">There are no add-ons to manage.</p>
+            {% endif %}
+          </article>
+        </div>
+
+        <div class="view-customer-actions subscription-actions">
+          <a class="home-latest-action-link" href="{{ url_for('admin_bp.subscription') }}">Back to Subscription</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

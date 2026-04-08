@@ -79,6 +79,19 @@ def add_employee():
                 form_data=form_data,
             )
 
+        current_employee_id = session.get("employee_id")
+        current_employee = None
+        if current_employee_id and ObjectId.is_valid(current_employee_id):
+            current_employee = db.employees.find_one({"_id": ObjectId(current_employee_id)})
+
+        current_subscription_id = (current_employee or {}).get("subscription_id", "").strip()
+        if not current_subscription_id:
+            return render_template(
+                "employees/add_employee.html",
+                error="The current employee is missing a subscription_id. Add that in Mongo and try again.",
+                form_data=form_data,
+            )
+
         employee_count = db.employees.count_documents({}) + 1
         employee = {
             "first_name": first_name,
@@ -92,6 +105,7 @@ def add_employee():
             "status": "active",
             "date_added": datetime.now().strftime("%m/%d/%Y"),
             "employee_id": f"EMP-{employee_count:05d}",
+            "subscription_id": current_subscription_id,
         }
         inserted = db.employees.insert_one(employee)
         current_app.logger.info(

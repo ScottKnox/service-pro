@@ -1284,6 +1284,269 @@ p {
   border-color: #A3B4C9;
 }
 
+.subscription-actions form {
+  margin: 0;
+}
+
+.subscription-actions {
+  margin-top: 0.85rem;
+}
+
+.subscription-cancel-copy {
+  margin: 0.4rem 0 0.7rem;
+  color: #2A3F57;
+}
+
+.subscription-cancel-feature-list {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  color: #2A3F57;
+}
+
+.subscription-cancel-feature-list li {
+  margin-bottom: 0.35rem;
+}
+
+.subscription-cancel-form {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.subscription-cancel-reason-label {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #2A3F57;
+  margin: 2rem 0 0.75rem 0;
+  padding: 0;
+}
+
+.subscription-cancel-reason-field {
+  width: 100%;
+  margin-bottom: 1.2rem;
+}
+
+.subscription-cancel-reason-field textarea {
+  display: block;
+  width: 100%;
+  max-width: none;
+  min-height: 300px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.subscription-cancel-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.subscription-cancel-actions-row .home-latest-action-link,
+.subscription-cancel-actions-row .subscription-remove-button {
+  margin: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .subscription-cancel-reason-label {
+    font-size: 1.2rem;
+    margin-top: 1.4rem;
+  }
+
+  .subscription-cancel-reason-field {
+    margin-bottom: 1rem;
+  }
+
+  .subscription-cancel-reason-field textarea {
+    min-height: 220px;
+    font-size: 1rem;
+  }
+
+  .subscription-cancel-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .subscription-cancel-actions-row .home-latest-action-link,
+  .subscription-cancel-actions-row .subscription-remove-button {
+    width: 100%;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Reactivate subscription page */
+.reactivate-subscription-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 2rem;
+  margin-top: 2rem;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+
+.reactivate-subscription-message {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  max-width: 540px;
+  line-height: 1.5;
+  margin-bottom: 2rem;
+}
+
+.reactivate-subscription-button {
+  background: linear-gradient(180deg, #3B5BA9 0%, #2d4a8e 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.subscription-cancel-button,
+.subscription-remove-button {
+  border: 1px solid #D26B6B;
+  background: linear-gradient(180deg, #FFF2F2 0%, #FFE5E5 100%);
+  color: #8E1E1E;
+  border-radius: 8px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+
+.subscription-cancel-button:hover,
+.subscription-remove-button:hover {
+  background: linear-gradient(180deg, #FFE9E9 0%, #FFD9D9 100%);
+  border-color: #C04F4F;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.10);
+}
+
+.subscription-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.subscription-summary-card,
+.subscription-panel-card {
+  border: 1px solid #D8E0EA;
+  border-top: 3px solid #334155;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
+  box-shadow: 0 4px 12px rgba(16, 33, 55, 0.06);
+  padding: 1rem;
+}
+
+.subscription-summary-kicker {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4B5E76;
+}
+
+.subscription-summary-card h3,
+.subscription-panel-card h3 {
+  margin: 0.25rem 0 0;
+  color: #102237;
+}
+
+.subscription-summary-amount {
+  margin: 0.5rem 0 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0B5E55;
+}
+
+.subscription-summary-note {
+  margin: 0.35rem 0 0;
+  color: #4B5563;
+}
+
+.subscription-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.subscription-detail-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid #E3EAF2;
+}
+
+.subscription-detail-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.subscription-detail-row span {
+  color: #4B5E76;
+}
+
+.subscription-detail-row strong {
+  color: #102237;
+}
+
+.subscription-addon-card {
+  border: 1px solid #D8E0EA;
+  border-radius: 10px;
+  background-color: #FFFFFF;
+  padding: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.subscription-addon-name {
+  margin: 0;
+  font-weight: 700;
+  color: #102237;
+}
+
+.subscription-addon-description {
+  margin: 0.35rem 0 0.45rem;
+  color: #4B5563;
+}
+
+.subscription-addon-form {
+  margin-top: 0.75rem;
+}
+
+.subscription-empty {
+  margin: 0.5rem 0 0;
+  color: #4B5563;
+}
+
+@media (max-width: 900px) {
+  .subscription-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .subscription-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 640px) {
   .jobs-card-row,
   .customer-card-row {
@@ -3241,12 +3504,24 @@ p {
   color: #1E3551;
 }
 
+.resource-subscription #view-customer-actions-row a.home-latest-action-link {
+  border-color: #C7D2DF;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F3F7FC 100%);
+  color: #1E3551;
+}
+
 .customers-add-button:hover,
 .customers-controls-right a:hover,
 #add-job-service-button:hover,
 #add-job-part-button:hover,
 #jobs-clear-date-filters:hover,
 .home-latest-action-link:hover {
+  border-color: #AFC0D4;
+  background: linear-gradient(180deg, #FFFFFF 0%, #ECF3FB 100%);
+  color: #16324D;
+}
+
+.resource-subscription #view-customer-actions-row a.home-latest-action-link:hover {
   border-color: #AFC0D4;
   background: linear-gradient(180deg, #FFFFFF 0%, #ECF3FB 100%);
   color: #16324D;

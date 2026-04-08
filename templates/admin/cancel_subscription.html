@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Cancel Subscription | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-jobs-header" class="resource-page resource-admin resource-subscription">
+      <h1>Cancel Subscription</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('admin_bp.subscription') }}">Subscription</a></li>
+          <li aria-current="page">Cancel</li>
+        </ol>
+      </nav>
+
+      {% if subscription_issue %}
+        <p class="form-field-note">There was an issue loading the subscription for the user.</p>
+      {% else %}
+        <article class="subscription-panel-card">
+          <h3>Are you sure you want to cancel?</h3>
+          <p class="subscription-cancel-copy">
+            Before you leave, here are upcoming features included at no extra cost if you stay:
+          </p>
+          <ul class="subscription-cancel-feature-list">
+            <li>Upcoming feature placeholder one.</li>
+            <li>Upcoming feature placeholder two.</li>
+            <li>Upcoming feature placeholder three.</li>
+          </ul>
+
+          <p class="subscription-cancel-reason-label">Why did you decide to leave?</p>
+
+          <form action="{{ url_for('admin_bp.cancel_subscription') }}" method="post" class="subscription-cancel-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+            <div class="form-field subscription-cancel-reason-field">
+              <textarea id="cancellation_reason" name="cancellation_reason" rows="8" placeholder="e.g., We found a more affordable solution, or our business needs have changed..."></textarea>
+            </div>
+
+            <div class="subscription-cancel-actions-row">
+              <a class="home-latest-action-link" href="{{ url_for('admin_bp.subscription') }}">No, Keep My Subscription.</a>
+              <button type="submit" class="subscription-remove-button">Yes, Cancel</button>
+            </div>
+          </form>
+        </article>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

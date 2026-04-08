@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Subscription | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-jobs-header" class="resource-page resource-admin resource-subscription">
+      <h1>Subscription</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li aria-current="page">Subscription</li>
+        </ol>
+      </nav>
+
+      <div class="jobs-controls-right-top">
+        <h2>Plan Overview</h2>
+      </div>
+
+      {% if subscription_issue %}
+        <p class="form-field-note">There was an issue loading the subscription for the user.</p>
+      {% else %}
+        {% if cancellation_message %}
+          <p class="form-field-note">The subscription was marked as cancelled.</p>
+        {% endif %}
+
+        <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
+          <h2 id="view-customer-actions-header">Actions</h2>
+          <div id="view-customer-actions-row">
+            <a href="{{ url_for('admin_bp.manage_subscription') }}">Manage Subscription</a>
+            {% if not subscription.is_cancelled %}
+              <a href="{{ url_for('admin_bp.cancel_subscription') }}">Cancel Subscription</a>
+            {% endif %}
+          </div>
+        </section>
+
+        <div class="subscription-summary-grid">
+          <article class="subscription-summary-card">
+            <p class="subscription-summary-kicker">Current Plan</p>
+            <h3>{{ subscription.plan_name }}</h3>
+            <p class="subscription-summary-amount">${{ '%.2f'|format(subscription.monthly_total) }} / month</p>
+            <p class="subscription-summary-note">Base plan ${{ '%.2f'|format(subscription.plan_price) }} + add-ons</p>
+          </article>
+
+          <article class="subscription-summary-card">
+            <p class="subscription-summary-kicker">Usage</p>
+            <h3>{{ subscription.active_employees }} Active Users</h3>
+            <p class="subscription-summary-amount">{{ subscription.max_active_employees }} Max Allowed</p>
+          </article>
+
+          <article class="subscription-summary-card">
+            <p class="subscription-summary-kicker">Billing</p>
+            <h3>{{ subscription.status }}</h3>
+            <p class="subscription-summary-amount">Renews {{ subscription.renews_on }}</p>
+          </article>
+        </div>
+
+        <div class="subscription-detail-grid">
+          <article class="subscription-panel-card">
+            <h3>Subscription Details</h3>
+            <div class="subscription-detail-row">
+              <span>Subscription ID</span>
+              <strong>{{ subscription.subscription_id }}</strong>
+            </div>
+            <div class="subscription-detail-row">
+              <span>Description</span>
+              <strong>{{ subscription.description or '-' }}</strong>
+            </div>
+            <div class="subscription-detail-row">
+              <span>Billing Cycle</span>
+              <strong>{{ subscription.billing_cycle }}</strong>
+            </div>
+            <div class="subscription-detail-row">
+              <span>Started On</span>
+              <strong>{{ subscription.started_on }}</strong>
+            </div>
+            {% if subscription.is_cancelled and subscription.ended_on %}
+            <div class="subscription-detail-row">
+              <span>Ended On</span>
+              <strong>{{ subscription.ended_on }}</strong>
+            </div>
+            {% endif %}
+            <div class="subscription-detail-row">
+              <span>Next Billing Date</span>
+              <strong>{{ subscription.next_billing_date }}</strong>
+            </div>
+          </article>
+
+          <article class="subscription-panel-card">
+            <h3>Add-Ons</h3>
+            {% if subscription.add_ons %}
+              {% for addon in subscription.add_ons %}
+                <div class="subscription-addon-card">
+                  <p class="subscription-addon-name">{{ addon.name }}</p>
+                  <p class="subscription-addon-description">{{ addon.description }}</p>
+                  <div class="subscription-detail-row">
+                    <span>Monthly Cost</span>
+                    <strong>${{ '%.2f'|format(addon.price) }}</strong>
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <p class="subscription-empty">No active add-ons.</p>
+            {% endif %}
+          </article>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

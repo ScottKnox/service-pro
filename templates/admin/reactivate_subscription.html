@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Reactivate Subscription | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-jobs-header" class="resource-page resource-admin resource-subscription">
+      <h1>Subscription Inactive</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li aria-current="page">Reactivate Subscription</li>
+        </ol>
+      </nav>
+
+      <div class="reactivate-subscription-panel">
+        <p class="reactivate-subscription-message">
+          Your subscription is not currently active. To reactivate, click below.
+        </p>
+        <button class="reactivate-subscription-button" type="button" disabled>
+          Reactivate Subscription
+        </button>
+      </div>
+    </div>
+  </div>
+{% endblock %}
