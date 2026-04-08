@@ -3654,6 +3654,168 @@ p {
   }
 }
 
+#business-logo-section {
+  margin-top: 1.25rem;
+}
+
+.business-logo-status {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.business-logo-status.is-success {
+  color: #1f6b35;
+  background-color: #eaf6ee;
+  border: 1px solid #b9debf;
+}
+
+.business-logo-status.is-error {
+  color: #9f1239;
+  background-color: #fff1f2;
+  border: 1px solid #fecdd3;
+}
+
+.business-logo-placeholder {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  text-align: center;
+  color: #5b6473;
+  border: 2px dashed #b8c1cc;
+  border-radius: 12px;
+  background: #eef1f4;
+  box-shadow: none;
+}
+
+.business-logo-placeholder-icon {
+  color: #7b8696;
+  font-size: 1rem;
+}
+
+.business-logo-note {
+  margin: 0.55rem 0 0;
+  color: #56657a;
+  font-size: 0.9rem;
+}
+
+.business-logo-preview-shell {
+  margin: 0;
+  padding: 0.85rem;
+  border: 1px solid #d8e0ea;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fafc 100%);
+  box-shadow: 0 4px 12px rgba(16, 33, 55, 0.06);
+  text-align: center;
+}
+
+.business-logo-preview-image {
+  max-width: 100%;
+  max-height: 140px;
+  width: auto;
+  height: auto;
+}
+
+.business-logo-upload-form {
+  margin-top: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: stretch;
+}
+
+.business-logo-upload-input {
+  flex: 1 1 320px;
+  min-height: 44px;
+  padding: 0.35rem;
+  border: 1px solid #c7cfda;
+  border-radius: 10px;
+  background-color: #ffffff;
+  color: #1f2937;
+  box-sizing: border-box;
+}
+
+.business-logo-upload-input::file-selector-button {
+  margin-right: 0.65rem;
+  padding: 0.52rem 0.9rem 0.52rem 2.05rem;
+  border: 1px solid #1b263b;
+  border-radius: 8px;
+  background-color: #1b263b;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23f8f9fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3Cpath d='M20 16.5a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 16.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 0.72rem center;
+  color: #f8f9fa;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.business-logo-upload-input::-webkit-file-upload-button {
+  margin-right: 0.65rem;
+  padding: 0.52rem 0.9rem 0.52rem 2.05rem;
+  border: 1px solid #1b263b;
+  border-radius: 8px;
+  background-color: #1b263b;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23f8f9fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3Cpath d='M20 16.5a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 16.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 0.72rem center;
+  color: #f8f9fa;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.business-logo-upload-input:hover::file-selector-button,
+.business-logo-upload-input:hover::-webkit-file-upload-button {
+  background-color: #27364f;
+  border-color: #27364f;
+}
+
+.business-logo-upload-button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0.55rem 1rem 0.55rem 2.1rem;
+  border: 1px solid #1b263b;
+  border-radius: 8px;
+  background-color: #1b263b;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23f8f9fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3Cpath d='M20 16.5a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 16.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 0.72rem center;
+  color: #f8f9fa;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.business-logo-upload-button:hover {
+  background-color: #27364f;
+  border-color: #27364f;
+}
+
+@media (max-width: 640px) {
+  .business-logo-upload-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .business-logo-upload-input,
+  .business-logo-upload-button {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .business-logo-upload-input::file-selector-button,
+  .business-logo-upload-input::-webkit-file-upload-button {
+    width: 100%;
+    margin-right: 0;
+    margin-bottom: 0.45rem;
+  }
+}
+
 
 
 

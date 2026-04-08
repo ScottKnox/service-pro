@@ -48,6 +48,50 @@
                 <p>{{ business.get('invoice_email_template', '') }}</p>
               </div>
             </div>
+
+            <div id="business-logo-section">
+              <h3>Custom Logo</h3>
+
+              {% if logo_status_message %}
+                <p class="business-logo-status {{ 'is-success' if logo_status_kind == 'success' else 'is-error' }}">
+                  {{ logo_status_message }}
+                </p>
+              {% endif %}
+
+              {% if logo_url %}
+                <div class="business-logo-preview-shell">
+                  <img src="{{ logo_url }}" alt="Business custom logo" class="business-logo-preview-image" />
+                </div>
+              {% else %}
+                <p class="business-logo-placeholder">
+                  <i class="fas fa-cloud-upload-alt business-logo-placeholder-icon" aria-hidden="true"></i>
+                  <span>Upload your business logo</span>
+                </p>
+              {% endif %}
+
+              <p class="business-logo-note">
+                Recommended file type: PNG, JPG, JPEG, or WEBP. Maximum file size: 2 MB. Recommended resolution: 300x100 to 2400x1400.
+              </p>
+
+              <form
+                action="{{ url_for('business.upload_logo') }}"
+                method="POST"
+                enctype="multipart/form-data"
+                class="business-logo-upload-form"
+              >
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <input
+                  type="file"
+                  name="custom_logo_file"
+                  accept=".png,.jpg,.jpeg,.webp"
+                  required
+                  class="business-logo-upload-input"
+                />
+                <button type="submit" class="business-logo-upload-button">
+                  {{ 'Upload Logo' if not logo_url else 'Update Logo' }}
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       </section>

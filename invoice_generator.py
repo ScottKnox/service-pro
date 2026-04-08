@@ -1,13 +1,49 @@
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as ReportImage
 from reportlab.lib import colors
 from datetime import datetime
 import os
 
+from PIL import Image as PILImage
 
-def generate_invoice(job_id, job, customer):
+
+def _resolve_logo_path(business_logo_path):
+    if business_logo_path and os.path.exists(business_logo_path):
+        return business_logo_path
+
+    default_logo_path = os.path.join(os.path.dirname(__file__), "logos", "company_logo.png")
+    if os.path.exists(default_logo_path):
+        return default_logo_path
+
+    return ""
+
+
+def _append_logo(story, business_logo_path):
+    logo_path = _resolve_logo_path(business_logo_path)
+    if not logo_path:
+        return
+
+    try:
+        with PILImage.open(logo_path) as logo_image:
+            width, height = logo_image.size
+        if not width or not height:
+            return
+
+        max_width = 2.5 * inch
+        max_height = 1.0 * inch
+        scale = min(max_width / width, max_height / height)
+
+        report_logo = ReportImage(logo_path, width=width * scale, height=height * scale)
+        report_logo.hAlign = "CENTER"
+        story.append(report_logo)
+        story.append(Spacer(1, 0.12 * inch))
+    except Exception:
+        return
+
+
+def generate_invoice(job_id, job, customer, business_logo_path=""):
     """
     Generate a PDF invoice for a completed job.
 
@@ -55,6 +91,8 @@ def generate_invoice(job_id, job, customer):
         fontSize=11,
         textColor=colors.HexColor("#1B263B"),
     )
+
+    _append_logo(story, business_logo_path)
 
     # Title
     story.append(Paragraph("INVOICE", title_style))
@@ -242,7 +280,7 @@ def generate_invoice(job_id, job, customer):
     return filepath
 
 
-def generate_quote(job_id, job, customer):
+def generate_quote(job_id, job, customer, business_logo_path=""):
     """
     Generate a PDF quote for a job in Estimate status.
 
@@ -290,6 +328,8 @@ def generate_quote(job_id, job, customer):
         fontSize=11,
         textColor=colors.HexColor("#1B263B"),
     )
+
+    _append_logo(story, business_logo_path)
 
     # Title
     story.append(Paragraph("ESTIMATE / QUOTE", title_style))

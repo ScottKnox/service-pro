@@ -15,6 +15,34 @@ from utils.formatters import format_date
 bp = Blueprint("jobs", __name__)
 
 
+def resolve_current_business_logo_path(db):
+    employee_id = session.get("employee_id")
+    if not employee_id or not ObjectId.is_valid(employee_id):
+        return ""
+
+    employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"business": 1})
+    if not employee:
+        return ""
+
+    business_ref = employee.get("business")
+    business_oid = None
+    if isinstance(business_ref, ObjectId):
+        business_oid = business_ref
+    elif isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
+        business_oid = ObjectId(business_ref)
+
+    if not business_oid:
+        return ""
+
+    business = db.businesses.find_one({"_id": business_oid}, {"custom_logo": 1})
+    custom_logo = os.path.basename(str((business or {}).get("custom_logo") or "").strip())
+    if not custom_logo:
+        return ""
+
+    logo_path = os.path.join(current_app.root_path, "static", "uploads", "logos", custom_logo)
+    return logo_path if os.path.exists(logo_path) else ""
+
+
 def resolve_job_status(scheduled_date, scheduled_time, services, parts, existing_status=""):
     """Derive job status from scheduling and line items while preserving terminal states."""
     normalized_existing = str(existing_status or "").strip().lower()
@@ -233,7 +261,8 @@ def complete_job(jobId):
         if customer_doc:
             customer = serialize_doc(customer_doc)
 
-    invoice_path = generate_invoice(jobId, job, customer)
+    business_logo_path = resolve_current_business_logo_path(db)
+    invoice_path = generate_invoice(jobId, job, customer, business_logo_path=business_logo_path)
     filename = os.path.basename(invoice_path)
 
     current_timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
@@ -305,7 +334,8 @@ def create_quote(jobId):
         if customer_doc:
             customer = serialize_doc(customer_doc)
 
-    quote_path = generate_quote(jobId, job, customer)
+    business_logo_path = resolve_current_business_logo_path(db)
+    quote_path = generate_quote(jobId, job, customer, business_logo_path=business_logo_path)
     filename = os.path.basename(quote_path)
 
     db.estimates.delete_many({"job_id": jobId})
