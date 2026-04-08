@@ -18,12 +18,16 @@
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
           {% set current_position = (session.get('employee_position', '')|lower) %}
+          {% set current_employee_id = session.get('employee_id', '') %}
           {% if current_position in ['owner', 'co-owner', 'manager'] %}
             <a href="{{ url_for('employees.update_employee', employeeId=employeeId) }}">Update Employee</a>
             <form method="POST" action="{{ url_for('employees.delete_employee', employeeId=employeeId) }}" onsubmit="return confirm('Delete this employee? This cannot be undone.');">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit">Delete Employee</button>
             </form>
+          {% endif %}
+          {% if current_employee_id == employeeId %}
+            <a href="{{ url_for('auth.logout') }}">Logout</a>
           {% endif %}
         </div>
       </section>

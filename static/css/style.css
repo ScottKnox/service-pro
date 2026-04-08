@@ -124,7 +124,6 @@ p {
   width: 60vw;
   height: auto;
   margin: 0 auto;
-  border: 1px solid #808080;
 }
 
 .home-scheduling-row {
@@ -759,13 +758,17 @@ p {
   line-height: 1.2;
 }
 
-.jobs-status-chip.is-pending {
+.jobs-status-chip.is-pending,
+.jobs-status-chip.is-estimating {
   background-color: #FDE6C8;
   color: #9A4D00;
 }
 
-.jobs-status-chip.is-scheduled,
-.jobs-status-chip.is-estimating,
+.jobs-status-chip.is-scheduled {
+  background-color: #FEF3C7;
+  color: #B45309;
+}
+
 .jobs-status-chip.is-started {
   background-color: #DDF5E3;
   color: #1F6B35;

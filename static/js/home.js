@@ -9,11 +9,12 @@ window.homePageFilter = {
 
   getHighlightedJobDates: function() {
     const jobElements = document.querySelectorAll(".home-job");
-    const highlightedDates = new Set();
+    const jobsByDate = new Map();
 
     jobElements.forEach((job) => {
       const jobDate = job.dataset.jobDate;
       const jobEmployee = job.dataset.assignedEmployee;
+      const isCompleted = job.classList.contains("is-completed");
 
       if (!jobDate) {
         return;
@@ -23,10 +24,28 @@ window.homePageFilter = {
         return;
       }
 
-      highlightedDates.add(jobDate);
+      if (!jobsByDate.has(jobDate)) {
+        jobsByDate.set(jobDate, { total: 0, completed: 0 });
+      }
+      const dayStats = jobsByDate.get(jobDate);
+      dayStats.total += 1;
+      if (isCompleted) {
+        dayStats.completed += 1;
+      }
     });
 
-    return highlightedDates;
+    const pendingDates = new Set();
+    const completedDates = new Set();
+
+    jobsByDate.forEach((stats, date) => {
+      if (stats.completed === stats.total && stats.total > 0) {
+        completedDates.add(date);
+      } else if (stats.total > 0) {
+        pendingDates.add(date);
+      }
+    });
+
+    return { pending: pendingDates, completed: completedDates };
   },
   
   filterAndDisplay: function() {
@@ -361,8 +380,10 @@ function formatHomeJobTimes() {
       button.className = "home-calendar-day";
       button.textContent = String(day);
 
-      if (highlightedJobDates.has(key)) {
+      if (highlightedJobDates.pending.has(key)) {
         button.classList.add("has-jobs");
+      } else if (highlightedJobDates.completed.has(key)) {
+        button.classList.add("has-jobs-completed");
       }
 
       if (selectedDays.has(key)) {

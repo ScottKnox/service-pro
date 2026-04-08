@@ -85,6 +85,13 @@
   font-weight: 700;
 }
 
+.home-calendar-day.has-jobs-completed {
+  border-color: #9CA3AF;
+  background-color: #F0F1F2;
+  color: #9CA3AF;
+  font-weight: 700;
+}
+
 .home-calendar-day.is-selected {
   background-color: #000000;
   color: #F8F9FA;
@@ -96,6 +103,13 @@
   color: #F8F9FA;
   border-color: #000000;
   box-shadow: inset 0 0 0 2px #1F6B35;
+}
+
+.home-calendar-day.has-jobs-completed.is-selected {
+  background-color: #000000;
+  color: #F8F9FA;
+  border-color: #000000;
+  box-shadow: inset 0 0 0 2px #9CA3AF;
 }
 
 .home-calendar-day.is-empty {

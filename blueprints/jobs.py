@@ -25,7 +25,7 @@ def resolve_job_status(scheduled_date, scheduled_time, services, parts, existing
     has_line_items = bool(services or parts)
 
     if has_schedule and has_line_items:
-        return "Ready"
+        return "Scheduled"
     if has_schedule:
         return "Scheduled"
     if has_line_items:

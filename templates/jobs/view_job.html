@@ -64,20 +64,48 @@
       </div>
       {% endif %}
 
+      <section id="view-job-progress" aria-label="Job progress">
+        <h2>Progress</h2>
+        <div class="progress-steps">
+          {% set steps = [{'key': 'pending', 'label': 'Pending'}, {'key': 'estimating', 'label': 'Estimating'}, {'key': 'scheduled', 'label': 'Scheduled'}, {'key': 'started', 'label': 'Started'}, {'key': 'completed', 'label': 'Completed'}] %}
+          {% set current_idx = 0 %}
+          {% if job_status_normalized == 'estimating' %}
+            {% set current_idx = 1 %}
+          {% elif job_status_normalized == 'scheduled' %}
+            {% set current_idx = 2 %}
+          {% elif job_status_normalized == 'started' %}
+            {% set current_idx = 3 %}
+          {% elif job_status_normalized == 'completed' %}
+            {% set current_idx = 4 %}
+          {% endif %}
+          {% for step in steps %}
+            {% set step_i = loop.index0 %}
+            <div class="progress-step step-{{ step.key }}{% if step_i < current_idx %} is-done{% elif step_i == current_idx %} is-active{% endif %}">
+              <div class="progress-step-circle">
+                {% if step_i < current_idx or (step_i == current_idx and step.key == 'completed') %}
+                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="currentColor"/>
+                  </svg>
+                {% else %}
+                  <span>{{ step_i + 1 }}</span>
+                {% endif %}
+              </div>
+              <div class="progress-step-label">{{ step.label }}</div>
+            </div>
+            {% if step_i < steps|length - 1 %}
+            <div class="progress-step-connector{% if step_i < current_idx %} is-done{% elif step_i == current_idx %} is-active-right{% endif %}"></div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </section>
+
       <section id="view-job-details" aria-label="Job details">
         <h2>Job Details</h2>
         <div class="view-job-section-row" id="view-job-details-columns">
           <div class="view-job-section-column view-job-details-column">
             <h3>Details</h3>
             <div id="view-job-details-list">
-              <div class="view-job-detail-item">
-                <h4>Status</h4>
-                <p>
-                  {% set job_status = job.status|default('N/A', true) %}
-                  {% set detail_job_status_normalized = job_status|lower %}
-                  <span class="job-status-chip{% if detail_job_status_normalized == 'pending' %} is-pending{% elif detail_job_status_normalized == 'scheduled' %} is-scheduled{% elif detail_job_status_normalized == 'estimating' %} is-estimating{% elif detail_job_status_normalized == 'started' %} is-started{% endif %}">{{ job_status }}</span>
-                </p>
-              </div>
+              {% set detail_job_status_normalized = job.status|default('', true)|lower %}
               <div class="view-job-detail-item">
                 <h4>Customer</h4>
                 <div class="view-job-customer-row">

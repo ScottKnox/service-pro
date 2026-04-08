@@ -1,3 +1,171 @@
+/* ── Job Status Progress Bar ── */
+#view-job-progress {
+  padding: 1.25rem 0 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.progress-steps {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 52px;
+}
+
+.progress-step-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background-color: #F3F4F6;
+  border: 2px solid #D1D5DB;
+  color: #9CA3AF;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.progress-step-connector {
+  flex: 1;
+  height: 3px;
+  background-color: #E5E7EB;
+  margin-top: 17px;
+  min-width: 12px;
+  transition: background-color 0.2s;
+}
+
+.progress-step-connector.is-done {
+  background-color: #1F6B35;
+}
+
+.progress-step-connector.is-active-right {
+  background-color: #E5E7EB;
+}
+
+.progress-step-label {
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #9CA3AF;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+/* Active / Done shared */
+.progress-step.is-active .progress-step-circle,
+.progress-step.is-done .progress-step-circle {
+  border-color: transparent;
+  color: #fff;
+}
+
+.progress-step.is-active .progress-step-label {
+  font-weight: 700;
+}
+
+.progress-step.is-done .progress-step-label {
+  font-weight: 600;
+}
+
+/* Pending */
+.progress-step.step-pending.is-active .progress-step-circle {
+  background-color: #9A4D00;
+}
+.progress-step.step-pending.is-done .progress-step-circle {
+  background-color: #1F6B35;
+}
+.progress-step.step-pending.is-active .progress-step-label {
+  color: #9A4D00;
+}
+.progress-step.step-pending.is-done .progress-step-label {
+  color: #1F6B35;
+}
+
+/* Estimating */
+.progress-step.step-estimating.is-active .progress-step-circle {
+  background-color: #9A4D00;
+}
+.progress-step.step-estimating.is-done .progress-step-circle {
+  background-color: #1F6B35;
+}
+.progress-step.step-estimating.is-active .progress-step-label {
+  color: #9A4D00;
+}
+.progress-step.step-estimating.is-done .progress-step-label {
+  color: #1F6B35;
+}
+
+/* Scheduled */
+.progress-step.step-scheduled.is-active .progress-step-circle {
+  background-color: #F59E0B;
+}
+.progress-step.step-scheduled.is-done .progress-step-circle {
+  background-color: #1F6B35;
+}
+.progress-step.step-scheduled.is-active .progress-step-label {
+  color: #F59E0B;
+}
+.progress-step.step-scheduled.is-done .progress-step-label {
+  color: #1F6B35;
+}
+
+/* Started */
+.progress-step.step-started.is-active .progress-step-circle,
+.progress-step.step-started.is-done .progress-step-circle {
+  background-color: #1F6B35;
+}
+.progress-step.step-started.is-active .progress-step-label {
+  color: #1F6B35;
+}
+.progress-step.step-started.is-done .progress-step-label {
+  color: #1F6B35;
+}
+
+/* Completed */
+.progress-step.step-completed.is-active .progress-step-circle,
+.progress-step.step-completed.is-done .progress-step-circle {
+  background-color: #1F6B35;
+}
+.progress-step.step-completed.is-active .progress-step-label,
+.progress-step.step-completed.is-done .progress-step-label {
+  color: #1F6B35;
+}
+
+/* Mobile */
+@media (max-width: 520px) {
+  .progress-step-circle {
+    width: 28px;
+    height: 28px;
+    font-size: 0.72rem;
+  }
+
+  .progress-step-connector {
+    margin-top: 13px;
+    min-width: 8px;
+  }
+
+  .progress-step-label {
+    font-size: 0.58rem;
+  }
+
+  .progress-step {
+    min-width: 36px;
+  }
+}
+
+/* ── / Job Status Progress Bar ── */
+
 .estimate-card-wrapper {
   display: flex;
   align-items: stretch;
