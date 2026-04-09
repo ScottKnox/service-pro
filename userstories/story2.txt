@@ -1,0 +1,12 @@
+In order for our app users to quickly understand the status of their jobs
+we need a job progress bar in the view job page
+
+Users currently don't know where their job's current status is, in relation to other job statuses. If it's in estimating
+status currently, they don't know that's after pending, but before started. Let's add a job status progress bar
+under the actions bar, and remove the Status field in the Details section, on the View Job page. Add a progress bar
+that is color coded with each progress state, using the same chip card colors we are using now for each respective status.
+Progress through the statuses of Pending, Estimating, Scheduled, Started, and Completed, and update the progress bar
+color along the way. Have labels under each portion of the progress bar for each status that is reached. Make 
+sure the progress bar is well-styled and matched the sites sizing and format as best as possible for this new feature. 
+
+Thank you Copilot!

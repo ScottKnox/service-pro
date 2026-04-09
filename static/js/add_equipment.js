@@ -185,7 +185,7 @@
         '</select>' +
       '</div>' +
       '<div class="add-customer-form-field">' +
-        '<label for="part-price-' + nextIndex + '">Price</label>' +
+        '<label for="part-price-' + nextIndex + '">Unit Cost</label>' +
         '<input id="part-price-' + nextIndex + '" name="part_price[]" type="text" placeholder="$0.00" />' +
       '</div>';
 

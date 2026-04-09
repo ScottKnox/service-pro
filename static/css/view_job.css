@@ -259,6 +259,33 @@
   outline-offset: 1px;
 }
 
+.view-job-line-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.view-job-line-divider {
+  color: #9CA3AF;
+  font-size: 0.8rem;
+  margin: 0 0.1rem;
+}
+
+.view-job-line-item strong {
+  color: #374151;
+}
+
+@media (max-width: 640px) {
+  .view-job-line-item {
+    gap: 0.25rem;
+  }
+
+  .view-job-line-divider {
+    margin: 0 0.05rem;
+  }
+}
+
 button[disabled] {
   opacity: 0.5;
   cursor: not-allowed;

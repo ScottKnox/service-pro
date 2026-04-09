@@ -95,13 +95,13 @@
                 <select id="part-name-{{ loop.index }}" name="part_name[]">
                   <option value="">-- Select a part --</option>
                   {% for catalog_part in parts %}
-                    <option value="{{ catalog_part.part_name }}" {% if part.name|default('') == catalog_part.part_name %}selected{% endif %}>{{ catalog_part.part_name }}</option>
+                    <option value="{{ catalog_part.part_code }}" {% if catalog_part.part_code == part.code|default('', true) or part.name|default('') == catalog_part.part_name %}selected{% endif %}>{{ catalog_part.part_name }} ({{ catalog_part.part_code }})</option>
                   {% endfor %}
                 </select>
               </div>
 
               <div class="add-customer-form-field">
-                <label for="part-price-{{ loop.index }}">Price</label>
+                <label for="part-price-{{ loop.index }}">Unit Cost</label>
                 <input id="part-price-{{ loop.index }}" name="part_price[]" type="text" value="{{ part.price|default('') }}" placeholder="$0.00" />
               </div>
             </div>
@@ -113,13 +113,13 @@
                 <select id="part-name-1" name="part_name[]">
                   <option value="">-- Select a part --</option>
                   {% for part in parts %}
-                    <option value="{{ part.part_name }}">{{ part.part_name }}</option>
+                    <option value="{{ part.part_code }}">{{ part.part_name }} ({{ part.part_code }})</option>
                   {% endfor %}
                 </select>
               </div>
 
               <div class="add-customer-form-field">
-                <label for="part-price-1">Price</label>
+                <label for="part-price-1">Unit Cost</label>
                 <input id="part-price-1" name="part_price[]" type="text" placeholder="$0.00" />
               </div>
             </div>
@@ -132,7 +132,7 @@
 
         <template id="part-options-template">
           {% for part in parts %}
-            <option value="{{ part.part_name }}">{{ part.part_name }}</option>
+            <option value="{{ part.part_code }}">{{ part.part_name }} ({{ part.part_code }})</option>
           {% endfor %}
         </template>
 

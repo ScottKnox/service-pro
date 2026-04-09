@@ -24,14 +24,9 @@
           <p>Browse every generated invoice and open the PDF for any completed job.</p>
         </a>
 
-        <a class="admin-link-card" href="{{ url_for('catalog.manage_services') }}">
-          <h3>Manage Services</h3>
-          <p>Review service offerings and maintain default service pricing.</p>
-        </a>
-
-        <a class="admin-link-card" href="{{ url_for('catalog.manage_parts') }}">
-          <h3>Manage Parts</h3>
-          <p>Maintain the parts catalog and default pricing for offered parts.</p>
+        <a class="admin-link-card" href="{{ url_for('catalog.manage_price_book') }}">
+          <h3>Manage Price Book</h3>
+          <p>Manage services, parts, and materials your company offers.</p>
         </a>
 
         {% if session.get('employee_position', '').lower() == 'owner' %}

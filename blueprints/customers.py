@@ -12,6 +12,20 @@ from utils.catalog import build_job_parts_from_form, build_part_catalog
 
 bp = Blueprint("customers", __name__)
 
+
+def _resolve_current_business_id(db):
+    employee_id = session.get("employee_id")
+    if not employee_id or not ObjectId.is_valid(employee_id):
+        return None
+
+    employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"business": 1})
+    business_ref = (employee or {}).get("business")
+    if isinstance(business_ref, ObjectId):
+        return business_ref
+    if isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
+        return ObjectId(business_ref)
+    return None
+
 EMAIL_VALIDATION_MESSAGE = "Enter a valid email address."
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
@@ -1613,10 +1627,14 @@ def view_equipment(customerId, equipmentId):
     ]
     part_lookup = {}
 
+    business_id = _resolve_current_business_id(db)
     if equipment_part_names:
+        part_query = {"part_name": {"$in": equipment_part_names}}
+        if business_id:
+            part_query["business_id"] = business_id
         matching_parts = [
             serialize_doc(part)
-            for part in db.parts.find({"part_name": {"$in": equipment_part_names}})
+            for part in db.parts.find(part_query)
         ]
         part_lookup = {part.get("part_name"): part for part in matching_parts}
 
@@ -1629,7 +1647,7 @@ def view_equipment(customerId, equipmentId):
                 "name": part_name or "-",
                 "price": part.get("price", ""),
                 "part_id": matched_part.get("_id") if matched_part else None,
-                "product_link": matched_part.get("product_link", "") if matched_part else "",
+                "code": matched_part.get("part_code", "") if matched_part else part.get("code", ""),
             }
         )
 
@@ -1655,7 +1673,9 @@ def update_equipment(customerId, equipmentId):
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
     error = ""
-    part_docs = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+    business_id = _resolve_current_business_id(db)
+    part_query = {"business_id": business_id} if business_id else {"_id": None}
+    part_docs = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
     part_catalog = build_part_catalog(part_docs)
     if request.method == "POST":
         equipment_name = request.form.get("equipment_name", "").strip()

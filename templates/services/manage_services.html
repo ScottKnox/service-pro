@@ -10,37 +10,109 @@
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('catalog.manage_price_book') }}">Manage Price Book</a></li>
           <li aria-current="page">Manage Services</li>
         </ol>
       </nav>
 
-      <div class="jobs-controls-right-top">
-        <h2>All Services</h2>
-        <div class="jobs-controls-right-actions">
-          <a href="{{ url_for('catalog.create_service') }}">Create Service</a>
-        </div>
-      </div>
+      <div id="jobs-controls-row" data-catalog-filter-root>
+        <div class="jobs-controls-left">
+          <h2>Filter Services</h2>
 
-      <div id="jobs-list-container">
-        <div id="jobs-list-grid">
-          {% for service in services %}
-            <a class="jobs-card" href="{{ url_for('catalog.view_service', serviceId=service._id) }}">
-              <div class="jobs-card-row">
-                <span class="jobs-card-label">Service</span>
-                <span class="jobs-card-value">{{ service.service_type }}</span>
+          <div class="jobs-filter-list">
+            <details class="jobs-filter-group" open>
+              <summary>Category</summary>
+              <div class="jobs-filter-content">
+                {% if service_categories %}
+                  {% for category in service_categories %}
+                    <label for="service-category-{{ loop.index }}">
+                      <input id="service-category-{{ loop.index }}" type="checkbox" name="filter_category" value="{{ category }}" /> {{ category }}
+                    </label>
+                  {% endfor %}
+                {% else %}
+                  <p>No categories available.</p>
+                {% endif %}
               </div>
-              <div class="jobs-card-row">
-                <span class="jobs-card-label">Price</span>
-                <span class="jobs-card-value">{{ service.service_default_price }}</span>
+            </details>
+
+            <details class="jobs-filter-group" open>
+              <summary>Service Code</summary>
+              <div class="jobs-filter-content">
+                {% if service_codes %}
+                  {% for code in service_codes %}
+                    <label for="service-code-{{ loop.index }}">
+                      <input id="service-code-{{ loop.index }}" type="checkbox" name="filter_code" value="{{ code }}" /> {{ code }}
+                    </label>
+                  {% endfor %}
+                {% else %}
+                  <p>No codes available.</p>
+                {% endif %}
               </div>
-              <div class="jobs-card-row">
-                <span class="jobs-card-label">Duration</span>
-                <span class="jobs-card-value">{{ service.service_duration or '-' }}</span>
+            </details>
+          </div>
+        </div>
+
+        <div class="jobs-controls-right">
+          <div class="jobs-controls-right-top">
+            <h2>All Services</h2>
+            <div class="jobs-controls-right-actions">
+              <a href="{{ url_for('catalog.create_service') }}">Create Service</a>
+            </div>
+          </div>
+
+          <div class="jobs-controls-right-bottom">
+            <div id="jobs-list-container">
+              <div id="jobs-list-grid">
+                {% if services %}
+                  {% for service in services %}
+                    <a
+                      class="jobs-card"
+                      href="{{ url_for('catalog.view_service', serviceId=service._id) }}"
+                      data-catalog-card
+                      data-filter-category="{{ service.category }}"
+                      data-filter-code="{{ service.service_code }}"
+                    >
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Service</span>
+                        <span class="jobs-card-value">{{ service.service_name }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Code</span>
+                        <span class="jobs-card-value">{{ service.service_code }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Category</span>
+                        <span class="jobs-card-value">{{ service.category }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Materials Cost</span>
+                        <span class="jobs-card-value">{{ service.materials_cost_display }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Estimated Hours</span>
+                        <span class="jobs-card-value">{{ service.estimated_hours_display }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Standard Price</span>
+                        <span class="jobs-card-value">{{ service.standard_price_display }}</span>
+                      </div>
+                    </a>
+                  {% endfor %}
+                {% else %}
+                  <p>No services have been created yet.</p>
+                {% endif %}
               </div>
-            </a>
-          {% endfor %}
+              {% if services %}
+                <p id="catalog-filter-no-results" hidden>No services match the selected filters.</p>
+              {% endif %}
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/catalog_filters.js') }}" defer></script>
 {% endblock %}

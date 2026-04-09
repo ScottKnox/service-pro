@@ -186,9 +186,14 @@
             <div id="view-job-services-list">
               {% if job.services %}
                 {% for service in job.services %}
-                  <div class="view-job-detail-item">
-                    <h4>{{ service.type }}</h4>
-                    <p>{{ service.price }}{% if service.duration %} • {{ service.duration }}{% endif %}</p>
+                  <div class="view-job-detail-item view-job-line-item">
+                    <span><strong>Service Name:</strong> {{ service.name|default(service.type, true)|default(service.service_code, true)|default('N/A', true) }}</span>
+                    <span class="view-job-line-divider" aria-hidden="true">•</span>
+                    <span><strong>Price:</strong> {{ service.standard_price|default(service.price, true)|default('N/A', true) }}</span>
+                    {% if service.estimated_hours or service.duration %}
+                    <span class="view-job-line-divider" aria-hidden="true">•</span>
+                    <span><strong>Estimated Hours:</strong> {{ service.estimated_hours|default(service.duration, true) }}</span>
+                    {% endif %}
                   </div>
                 {% endfor %}
               {% else %}
@@ -203,9 +208,10 @@
             <div id="view-job-parts-list">
               {% if job.parts %}
                 {% for part in job.parts %}
-                  <div class="view-job-detail-item">
-                    <h4>{{ part.name }}</h4>
-                    <p>{{ part.price }}</p>
+                  <div class="view-job-detail-item view-job-line-item">
+                    <span><strong>Part Name:</strong> {{ part.name|default(part.part_code, true)|default('N/A', true) }}</span>
+                    <span class="view-job-line-divider" aria-hidden="true">•</span>
+                    <span><strong>Unit Cost:</strong> {{ part.unit_cost|default(part.price, true)|default('N/A', true) }}</span>
                   </div>
                 {% endfor %}
               {% else %}

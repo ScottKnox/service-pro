@@ -14,7 +14,7 @@
         </ol>
       </nav>
 
-      <form id="create-job-form" action="{{ url_for('jobs.create_job', customerId=customerId) }}" method="post" data-services-catalog='{{ services_catalog_json|safe }}' data-parts-catalog='{{ parts_catalog_json|safe }}' data-schedule-required="false">
+      <form id="create-job-form" action="{{ url_for('jobs.create_job', customerId=customerId) }}" method="post" data-services-catalog='{{ services_catalog|tojson }}' data-parts-catalog='{{ parts_catalog|tojson }}' data-schedule-required="false">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="customer_id" value="{{ customerId }}" />
 
@@ -155,23 +155,23 @@
         <div id="job-services-list">
           <div class="add-customer-form-row job-service-row" data-service-index="1">
             <div class="add-customer-form-field">
-              <label for="service-type-1">Service Type</label>
-              <select id="service-type-1" name="service_type[]">
+              <label for="service-code-1">Service</label>
+              <select id="service-code-1" name="service_code[]">
                 <option value="">-- Select a service --</option>
                 {% for service in services %}
-                  <option value="{{ service.service_type }}">{{ service.service_type }}</option>
+                  <option value="{{ service.service_code }}">{{ service.service_name }} ({{ service.service_code }})</option>
                 {% endfor %}
               </select>
             </div>
 
             <div class="add-customer-form-field">
-              <label for="service-price-1">Price</label>
-              <input id="service-price-1" name="service_price[]" type="text" placeholder="$0.00" />
+              <label for="service-standard-price-1">Standard Price</label>
+              <input id="service-standard-price-1" name="service_standard_price[]" type="text" placeholder="$0.00" />
             </div>
 
             <div class="add-customer-form-field">
-              <label for="service-duration-1">Duration</label>
-              <input id="service-duration-1" name="service_duration[]" type="text" placeholder="e.g. 2 hours" />
+              <label for="service-estimated-hours-1">Estimated Hours</label>
+              <input id="service-estimated-hours-1" name="service_estimated_hours[]" type="number" step="0.25" min="0" placeholder="0" />
             </div>
           </div>
         </div>
@@ -182,7 +182,7 @@
 
         <template id="service-options-template">
           {% for service in services %}
-            <option value="{{ service.service_type }}">{{ service.service_type }}</option>
+            <option value="{{ service.service_code }}">{{ service.service_name }} ({{ service.service_code }})</option>
           {% endfor %}
         </template>
 
@@ -191,18 +191,18 @@
         <div id="job-parts-list">
           <div class="add-customer-form-row job-part-row" data-part-index="1">
             <div class="add-customer-form-field">
-              <label for="part-name-1">Part</label>
-              <select id="part-name-1" name="part_name[]">
+              <label for="part-code-1">Part</label>
+              <select id="part-code-1" name="part_code[]">
                 <option value="">-- Select a part --</option>
                 {% for part in parts %}
-                  <option value="{{ part.part_name }}">{{ part.part_name }}</option>
+                  <option value="{{ part.part_code }}">{{ part.part_name }} ({{ part.part_code }})</option>
                 {% endfor %}
               </select>
             </div>
 
             <div class="add-customer-form-field">
-              <label for="part-price-1">Price</label>
-              <input id="part-price-1" name="part_price[]" type="text" placeholder="$0.00" />
+              <label for="part-unit-cost-1">Unit Cost</label>
+              <input id="part-unit-cost-1" name="part_unit_cost[]" type="text" placeholder="$0.00" />
             </div>
           </div>
         </div>
@@ -213,7 +213,7 @@
 
         <template id="part-options-template">
           {% for part in parts %}
-            <option value="{{ part.part_name }}">{{ part.part_name }}</option>
+            <option value="{{ part.part_code }}">{{ part.part_name }} ({{ part.part_code }})</option>
           {% endfor %}
         </template>
 

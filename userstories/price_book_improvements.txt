@@ -1,0 +1,24 @@
+In order for our app users to better manage their price book and improve invoicing / estimates
+we need to greatly improve our price book functionality
+
+Start by combining, on the Admin page, the Manage Services and Manage Parts cards into one Manage Price Book card. 
+Make the text say "Manage services, parts, and materials your company offers." Make it lead to a new manage price book page
+that has both of the current Manage Services and Manage Parts card buttons. 
+
+When the user goes to either page, we need to update those pages with a filtering column on the left like we have on the 
+manage jobs page. The filter sections for the Services page should include the following filter sections: Category, and Code. 
+The filter sections for the Parts page should include the following filter sections: 
+Each filter section will be populated with checkbox values from the services and parts retrieved for the business from Mongo. 
+
+For that to be accurate, we need to make a lot of updates to our data model for both services and parts, as well as update our add / view / update pages for each. 
+For services, the updated data model should be: _id, service_name, service_code, description, materials_cost, estimated_hours, and standard_price.
+I will manually remove the old schema from mongo, so no need for backwards compatibility. Make sure all form fields updated for the new schema fields are the proper type for each respective field. 
+
+For parts, the updated data model should be: _id, part_name, part_code, description, unit_cost. Same considerations as with updating our services functionality. 
+
+Do not bother yet updating our invoicing and estimates scripts. We're going to do large, separate stories to refactor those and improve customization for the business. 
+
+Do update other pages on the site that list parts or services, to use the new data model site-wide. 
+
+Thank you Copilot!
+

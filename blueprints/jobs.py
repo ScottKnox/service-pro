@@ -81,6 +81,20 @@ def build_employee_options(db):
     return employee_options
 
 
+def resolve_current_business_id(db):
+    employee_id = session.get("employee_id")
+    if not employee_id or not ObjectId.is_valid(employee_id):
+        return None
+
+    employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"business": 1})
+    business_ref = (employee or {}).get("business")
+    if isinstance(business_ref, ObjectId):
+        return business_ref
+    if isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
+        return ObjectId(business_ref)
+    return None
+
+
 @bp.route("/jobs")
 def jobs():
     db = ensure_connection_or_500()
@@ -99,13 +113,16 @@ def create_job(customerId):
         return redirect(url_for("customers.customers"))
 
     if request.method == "POST":
-        selected_service_types = request.form.getlist("service_type[]")
-        entered_service_prices = request.form.getlist("service_price[]")
-        entered_service_durations = request.form.getlist("service_duration[]")
-        selected_part_names = request.form.getlist("part_name[]")
-        entered_part_prices = request.form.getlist("part_price[]")
-        service_docs = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
-        part_docs = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+        business_id = resolve_current_business_id(db)
+        selected_service_types = request.form.getlist("service_code[]") or request.form.getlist("service_type[]")
+        entered_service_prices = request.form.getlist("service_standard_price[]") or request.form.getlist("service_price[]")
+        entered_service_durations = request.form.getlist("service_estimated_hours[]") or request.form.getlist("service_duration[]")
+        selected_part_names = request.form.getlist("part_code[]") or request.form.getlist("part_name[]")
+        entered_part_prices = request.form.getlist("part_unit_cost[]") or request.form.getlist("part_price[]")
+        service_query = {"business_id": business_id} if business_id else {"_id": None}
+        part_query = {"business_id": business_id} if business_id else {"_id": None}
+        service_docs = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
+        part_docs = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
         service_catalog = build_service_catalog(service_docs)
         part_catalog = build_part_catalog(part_docs)
         services, services_total = build_job_services_from_form(
@@ -161,11 +178,14 @@ def create_job(customerId):
         current_app.logger.info("Job created: id=%s customer_id=%s by employee_id=%s", str(inserted.inserted_id), customerId, session.get("employee_id"))
         return redirect(url_for("jobs.view_job", jobId=str(inserted.inserted_id)))
 
-    services = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
-    parts = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+    business_id = resolve_current_business_id(db)
+    service_query = {"business_id": business_id} if business_id else {"_id": None}
+    part_query = {"business_id": business_id} if business_id else {"_id": None}
+    services = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
+    parts = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
     employee_options = build_employee_options(db)
-    services_catalog_json = json.dumps(build_service_catalog(services))
-    parts_catalog_json = json.dumps(build_part_catalog(parts))
+    services_catalog = build_service_catalog(services)
+    parts_catalog = build_part_catalog(parts)
 
     return render_template(
         "jobs/create_job.html",
@@ -174,8 +194,8 @@ def create_job(customerId):
         services=services,
         parts=parts,
         employee_options=employee_options,
-        services_catalog_json=services_catalog_json,
-        parts_catalog_json=parts_catalog_json,
+        services_catalog=services_catalog,
+        parts_catalog=parts_catalog,
     )
 
 
@@ -404,13 +424,16 @@ def update_job(jobId):
         return redirect(url_for("jobs.jobs"))
 
     if request.method == "POST":
-        selected_service_types = request.form.getlist("service_type[]")
-        entered_service_prices = request.form.getlist("service_price[]")
-        entered_service_durations = request.form.getlist("service_duration[]")
-        selected_part_names = request.form.getlist("part_name[]")
-        entered_part_prices = request.form.getlist("part_price[]")
-        service_docs = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
-        part_docs = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+        business_id = resolve_current_business_id(db)
+        selected_service_types = request.form.getlist("service_code[]") or request.form.getlist("service_type[]")
+        entered_service_prices = request.form.getlist("service_standard_price[]") or request.form.getlist("service_price[]")
+        entered_service_durations = request.form.getlist("service_estimated_hours[]") or request.form.getlist("service_duration[]")
+        selected_part_names = request.form.getlist("part_code[]") or request.form.getlist("part_name[]")
+        entered_part_prices = request.form.getlist("part_unit_cost[]") or request.form.getlist("part_price[]")
+        service_query = {"business_id": business_id} if business_id else {"_id": None}
+        part_query = {"business_id": business_id} if business_id else {"_id": None}
+        service_docs = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
+        part_docs = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
         service_catalog = build_service_catalog(service_docs)
         part_catalog = build_part_catalog(part_docs)
         services, services_total = build_job_services_from_form(
@@ -483,11 +506,14 @@ def update_job(jobId):
         if customer_doc:
             customer = serialize_doc(customer_doc)
 
-    services = [serialize_doc(service) for service in db.services.find().sort("service_type", 1)]
-    parts = [serialize_doc(part) for part in db.parts.find().sort("part_name", 1)]
+    business_id = resolve_current_business_id(db)
+    service_query = {"business_id": business_id} if business_id else {"_id": None}
+    part_query = {"business_id": business_id} if business_id else {"_id": None}
+    services = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
+    parts = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
     employee_options = build_employee_options(db)
-    services_catalog_json = json.dumps(build_service_catalog(services))
-    parts_catalog_json = json.dumps(build_part_catalog(parts))
+    services_catalog = build_service_catalog(services)
+    parts_catalog = build_part_catalog(parts)
 
     return render_template(
         "jobs/update_job.html",
@@ -497,8 +523,8 @@ def update_job(jobId):
         services=services,
         parts=parts,
         employee_options=employee_options,
-        services_catalog_json=services_catalog_json,
-        parts_catalog_json=parts_catalog_json,
+        services_catalog=services_catalog,
+        parts_catalog=parts_catalog,
     )
 
 

@@ -1,0 +1,20 @@
+{
+    "subscription_id": "guid",
+    "subscription_name": "string",
+    "description": "string",
+    "status": "active",
+    "start_date": "2024-01-01T00:00:00Z",
+    "end_date": "2024-12-31T23:59:59",
+    "price": "149.99",
+    "billing_cycle": "monthly",
+    "current_users": 1,
+    "max_users": 10,
+    "add_ons": [
+        {
+            "add_on_id": "guid",
+            "name": "string",
+            "description": "string",
+            "price": "49.99"
+        }
+    ]
+}

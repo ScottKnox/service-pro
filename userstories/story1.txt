@@ -1,0 +1,24 @@
+In order for our app users to manage their active subscription with Service Pro,
+we need a subscription management page in the admin section.
+
+Let's add a "Subscription" card to the Admin page. When clicked, it should go to a new page titled Subscription 
+that allows the user to manage their active subscription. We currently do not have this modeled on the employees
+model in Mongo, but should. I will add a subscriptions collection in Mongo later, for now, simply add a subscription id
+field to our employees that will act as a foreign key to that collection. Mock the page out for now as if it 
+returned a valid subscription from mongo for the foreign key id. 
+
+Feel free to have some creativity in how the page looks to best represent a subscription for the user. Show the 
+subscription price they're paying, relevant dates, how many employees they do (and can) have actie on their plan,
+as well as an "Add-Ons" section that will contain any add-ons my customers choose to get over time. 
+For now, that will simply be the ability to add additional users to their plan. Show a card with mocked info for 
+an additional user add-on. Try to match the styling we've used across the site on this page. 
+
+Finally, add a button for Manage Subscription, and Cancel Subscription. If they click Manage Subscription, go to 
+a new page that lets them remove add-ons. (keep it all mocked for now, and we'll wire it up later) Service Pro will 
+only have one plan to choose from, so no need to offer changing to another subscription. Just managing their 
+user add-ons for now. 
+
+Currently, they can have 5 users on their plan, for $149.99 a month. So use that as part of building the above. 
+For each additional 5 users, it's $49.99 a month. 
+
+Thank you Copilot!

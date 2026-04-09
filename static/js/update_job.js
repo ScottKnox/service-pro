@@ -40,7 +40,7 @@
     });
 
     // Check if at least one service is selected (only show error if touched)
-    const serviceSelects = document.querySelectorAll('select[id^="service-type-"]');
+    const serviceSelects = document.querySelectorAll('select[id^="service-code-"]');
     let hasSelectedService = false;
     serviceSelects.forEach(function (select) {
       if (select.value.trim() !== '') {
@@ -93,22 +93,22 @@
     selectElement.addEventListener('change', function () {
       servicesTouched = true; // Mark services as touched
       const selectedService = this.value;
-      const serviceIndex = this.id.split('-')[2]; // Extract index from id like 'service-type-1'
-      const priceInput = document.getElementById('service-price-' + serviceIndex);
-      const durationInput = document.getElementById('service-duration-' + serviceIndex);
+      const serviceIndex = this.id.split('-')[2]; // Extract index from id like 'service-code-1'
+      const priceInput = document.getElementById('service-standard-price-' + serviceIndex);
+      const durationInput = document.getElementById('service-estimated-hours-' + serviceIndex);
       const serviceDetails = selectedService ? servicesCatalog[selectedService] : null;
       
       if (priceInput) {
-        if (serviceDetails && serviceDetails.price) {
-          priceInput.value = serviceDetails.price;
+        if (serviceDetails && serviceDetails.standard_price) {
+          priceInput.value = serviceDetails.standard_price;
         } else if (!selectedService) {
           priceInput.value = '$0.00';
         }
       }
 
       if (durationInput) {
-        if (serviceDetails && serviceDetails.duration) {
-          durationInput.value = serviceDetails.duration;
+        if (serviceDetails && serviceDetails.estimated_hours) {
+          durationInput.value = serviceDetails.estimated_hours;
         } else if (!selectedService) {
           durationInput.value = '';
         }
@@ -119,7 +119,7 @@
   }
 
   // Attach listeners to initial service selects
-  const initialSelects = document.querySelectorAll('select[id^="service-type-"]');
+  const initialSelects = document.querySelectorAll('select[id^="service-code-"]');
   initialSelects.forEach(function (select) {
     attachPriceUpdateListener(select);
   });
@@ -147,19 +147,19 @@
 
     row.innerHTML =
       '<div class="add-customer-form-field">' +
-        '<label for="service-type-' + nextIndex + '">Service Type</label>' +
-        '<select id="service-type-' + nextIndex + '" name="service_type[]">' +
+        '<label for="service-code-' + nextIndex + '">Service</label>' +
+        '<select id="service-code-' + nextIndex + '" name="service_code[]">' +
           '<option value="">-- Select a service --</option>' +
           optionHtml +
         '</select>' +
       '</div>' +
       '<div class="add-customer-form-field">' +
-        '<label for="service-price-' + nextIndex + '">Price</label>' +
-        '<input id="service-price-' + nextIndex + '" name="service_price[]" type="text" placeholder="$0.00" />' +
+        '<label for="service-standard-price-' + nextIndex + '">Standard Price</label>' +
+        '<input id="service-standard-price-' + nextIndex + '" name="service_standard_price[]" type="text" placeholder="$0.00" />' +
       '</div>' +
       '<div class="add-customer-form-field">' +
-        '<label for="service-duration-' + nextIndex + '">Duration</label>' +
-        '<input id="service-duration-' + nextIndex + '" name="service_duration[]" type="text" placeholder="e.g. 2 hours" />' +
+        '<label for="service-estimated-hours-' + nextIndex + '">Estimated Hours</label>' +
+        '<input id="service-estimated-hours-' + nextIndex + '" name="service_estimated_hours[]" type="number" step="0.25" min="0" placeholder="0" />' +
       '</div>';
 
     servicesList.appendChild(row);
@@ -177,12 +177,12 @@
     selectElement.addEventListener('change', function () {
       const selectedPart = this.value;
       const partIndex = this.id.split('-')[2];
-      const priceInput = document.getElementById('part-price-' + partIndex);
+      const priceInput = document.getElementById('part-unit-cost-' + partIndex);
       const partDetails = selectedPart ? partsCatalog[selectedPart] : null;
 
       if (priceInput) {
-        if (partDetails && partDetails.price) {
-          priceInput.value = partDetails.price;
+        if (partDetails && partDetails.unit_cost) {
+          priceInput.value = partDetails.unit_cost;
         } else if (!selectedPart) {
           priceInput.value = '$0.00';
         }
@@ -190,7 +190,7 @@
     });
   }
 
-  const initialPartSelects = document.querySelectorAll('select[id^="part-name-"]');
+  const initialPartSelects = document.querySelectorAll('select[id^="part-code-"]');
   initialPartSelects.forEach(function (select) {
     attachPartPriceUpdateListener(select);
   });
@@ -208,15 +208,15 @@
 
       row.innerHTML =
         '<div class="add-customer-form-field">' +
-          '<label for="part-name-' + nextIndex + '">Part</label>' +
-          '<select id="part-name-' + nextIndex + '" name="part_name[]">' +
+          '<label for="part-code-' + nextIndex + '">Part</label>' +
+          '<select id="part-code-' + nextIndex + '" name="part_code[]">' +
             '<option value="">-- Select a part --</option>' +
             optionHtml +
           '</select>' +
         '</div>' +
         '<div class="add-customer-form-field">' +
-          '<label for="part-price-' + nextIndex + '">Price</label>' +
-          '<input id="part-price-' + nextIndex + '" name="part_price[]" type="text" placeholder="$0.00" />' +
+          '<label for="part-unit-cost-' + nextIndex + '">Unit Cost</label>' +
+          '<input id="part-unit-cost-' + nextIndex + '" name="part_unit_cost[]" type="text" placeholder="$0.00" />' +
         '</div>';
 
       partsList.appendChild(row);

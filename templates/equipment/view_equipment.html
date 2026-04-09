@@ -61,20 +61,13 @@
                         {% if part.part_id %}
                           <a class="view-customer-card-link equipment-part-card-link" href="{{ url_for('catalog.view_part', partId=part.part_id) }}">
                             <h4>{{ part.name }}</h4>
-                            <p>{% if part.price %}{{ part.price }}{% else %}-{% endif %}</p>
+                            <p>{% if part.code %}{{ part.code }} • {% endif %}{% if part.price %}{{ part.price }}{% else %}-{% endif %}</p>
                           </a>
                         {% else %}
                           <div class="view-customer-card-link equipment-part-card-link">
                             <h4>{{ part.name }}</h4>
-                            <p>{% if part.price %}{{ part.price }}{% else %}-{% endif %}</p>
+                            <p>{% if part.code %}{{ part.code }} • {% endif %}{% if part.price %}{{ part.price }}{% else %}-{% endif %}</p>
                           </div>
-                        {% endif %}
-                        {% if part.product_link %}
-                          <a class="home-call-mobile-button equipment-part-buy-button" href="{{ part.product_link }}" target="_blank" rel="noopener noreferrer" aria-label="Buy {{ part.name }}">
-                            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-                              <path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM6.2 6l.6 3h11.4a1 1 0 0 1 1 .8l.9 4a1 1 0 0 1-1 1.2H8a1 1 0 0 1-1-.8L4.1 3H2a1 1 0 1 1 0-2h2.9a1 1 0 0 1 1 .8L6.2 4H20a1 1 0 1 1 0 2H6.2z" fill="currentColor"/>
-                            </svg>
-                          </a>
                         {% endif %}
                       </div>
                     {% endfor %}

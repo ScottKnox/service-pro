@@ -10,35 +10,101 @@
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('catalog.manage_price_book') }}">Manage Price Book</a></li>
           <li aria-current="page">Manage Parts</li>
         </ol>
       </nav>
 
-      <div class="jobs-controls-right-top">
-        <h2>All Parts</h2>
-        <div class="jobs-controls-right-actions">
-          <a href="{{ url_for('catalog.create_part') }}">Create Part</a>
-        </div>
-      </div>
+      <div id="jobs-controls-row" data-catalog-filter-root>
+        <div class="jobs-controls-left">
+          <h2>Filter Parts</h2>
 
-      <div class="resource-list-grid">
-        {% if parts %}
-          {% for part in parts %}
-            <a class="jobs-card" href="{{ url_for('catalog.view_part', partId=part._id) }}">
-              <div class="jobs-card-row">
-                <span class="jobs-card-label">Part Name</span>
-                <span class="jobs-card-value">{{ part.part_name }}</span>
+          <div class="jobs-filter-list">
+            <details class="jobs-filter-group" open>
+              <summary>Category</summary>
+              <div class="jobs-filter-content">
+                {% if part_categories %}
+                  {% for category in part_categories %}
+                    <label for="part-category-{{ loop.index }}">
+                      <input id="part-category-{{ loop.index }}" type="checkbox" name="filter_category" value="{{ category }}" /> {{ category }}
+                    </label>
+                  {% endfor %}
+                {% else %}
+                  <p>No categories available.</p>
+                {% endif %}
               </div>
-              <div class="jobs-card-row">
-                <span class="jobs-card-label">Default Price</span>
-                <span class="jobs-card-value">{{ part.part_default_price }}</span>
+            </details>
+
+            <details class="jobs-filter-group" open>
+              <summary>Part Code</summary>
+              <div class="jobs-filter-content">
+                {% if part_codes %}
+                  {% for code in part_codes %}
+                    <label for="part-code-{{ loop.index }}">
+                      <input id="part-code-{{ loop.index }}" type="checkbox" name="filter_code" value="{{ code }}" /> {{ code }}
+                    </label>
+                  {% endfor %}
+                {% else %}
+                  <p>No codes available.</p>
+                {% endif %}
               </div>
-            </a>
-          {% endfor %}
-        {% else %}
-          <p>No parts have been created yet.</p>
-        {% endif %}
+            </details>
+          </div>
+        </div>
+
+        <div class="jobs-controls-right">
+          <div class="jobs-controls-right-top">
+            <h2>All Parts</h2>
+            <div class="jobs-controls-right-actions">
+              <a href="{{ url_for('catalog.create_part') }}">Create Part</a>
+            </div>
+          </div>
+
+          <div class="jobs-controls-right-bottom">
+            <div id="jobs-list-container">
+              <div id="jobs-list-grid">
+                {% if parts %}
+                  {% for part in parts %}
+                    <a
+                      class="jobs-card"
+                      href="{{ url_for('catalog.view_part', partId=part._id) }}"
+                      data-catalog-card
+                      data-filter-category="{{ part.category }}"
+                      data-filter-code="{{ part.part_code }}"
+                    >
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Part</span>
+                        <span class="jobs-card-value">{{ part.part_name }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Code</span>
+                        <span class="jobs-card-value">{{ part.part_code }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Category</span>
+                        <span class="jobs-card-value">{{ part.category }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Unit Cost</span>
+                        <span class="jobs-card-value">{{ part.unit_cost_display }}</span>
+                      </div>
+                    </a>
+                  {% endfor %}
+                {% else %}
+                  <p>No parts have been created yet.</p>
+                {% endif %}
+              </div>
+              {% if parts %}
+                <p id="catalog-filter-no-results" hidden>No parts match the selected filters.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/catalog_filters.js') }}" defer></script>
 {% endblock %}

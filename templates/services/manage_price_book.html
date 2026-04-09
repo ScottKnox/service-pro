@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Price Book | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-jobs-header" class="resource-page resource-admin">
+      <h1>Manage Price Book</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li aria-current="page">Manage Price Book</li>
+        </ol>
+      </nav>
+
+      <div class="jobs-controls-right-top">
+        <h2>Catalog Tools</h2>
+      </div>
+
+      <div class="admin-links-grid">
+        <a class="admin-link-card" href="{{ url_for('catalog.manage_services') }}">
+          <h3>Manage Services</h3>
+          <p>Review service codes, pricing, materials costs, estimated hours, and descriptions.</p>
+        </a>
+
+        <a class="admin-link-card" href="{{ url_for('catalog.manage_parts') }}">
+          <h3>Manage Parts</h3>
+          <p>Maintain part codes, descriptions, and unit costs for the items you sell and install.</p>
+        </a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
