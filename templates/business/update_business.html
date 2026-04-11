@@ -25,10 +25,77 @@
             <label for="company-name">Company Name</label>
             <input id="company-name" name="company_name" type="text" value="{{ business.get('company_name', '') }}" />
           </div>
+        </div>
 
+        <h2 class="create-job-form-section-header">Tax Configuration</h2>
+
+        <div class="add-customer-form-row">
           <div class="add-customer-form-field">
-            <label for="tax-rate">Tax Rate (%)</label>
-            <input id="tax-rate" name="tax_rate" type="number" step="0.01" value="{{ business.get('tax_rate', '0') }}" />
+            <label for="tax-parts">Tax Parts?</label>
+            <select id="tax-parts" name="tax_parts">
+              <option value="no" {% if business.get('tax_parts', 'no') == 'no' %}selected{% endif %}>No</option>
+              <option value="yes" {% if business.get('tax_parts', 'no') == 'yes' %}selected{% endif %}>Yes</option>
+            </select>
+          </div>
+          <div class="add-customer-form-field">
+            <label for="tax-parts-rate">Tax Parts Rate (%)</label>
+            <input id="tax-parts-rate" name="tax_parts_rate" type="number" step="0.01" min="0" value="{{ business.get('tax_parts_rate', business.get('tax_rate', '0')) }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="tax-repair-labor">Tax Repair Labor?</label>
+            <select id="tax-repair-labor" name="tax_repair_labor">
+              <option value="no" {% if business.get('tax_repair_labor', 'no') == 'no' %}selected{% endif %}>No</option>
+              <option value="yes" {% if business.get('tax_repair_labor', 'no') == 'yes' %}selected{% endif %}>Yes</option>
+            </select>
+          </div>
+          <div class="add-customer-form-field">
+            <label for="tax-repair-labor-rate">Tax Repair Labor Rate (%)</label>
+            <input id="tax-repair-labor-rate" name="tax_repair_labor_rate" type="number" step="0.01" min="0" value="{{ business.get('tax_repair_labor_rate', '0') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="tax-installation">Tax Installation?</label>
+            <select id="tax-installation" name="tax_installation">
+              <option value="no" {% if business.get('tax_installation', 'no') == 'no' %}selected{% endif %}>No</option>
+              <option value="yes" {% if business.get('tax_installation', 'no') == 'yes' %}selected{% endif %}>Yes</option>
+            </select>
+          </div>
+          <div class="add-customer-form-field">
+            <label for="tax-installation-rate">Tax Installation Rate (%)</label>
+            <input id="tax-installation-rate" name="tax_installation_rate" type="number" step="0.01" min="0" value="{{ business.get('tax_installation_rate', '0') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="tax-fabrication">Tax Fabrication?</label>
+            <select id="tax-fabrication" name="tax_fabrication">
+              <option value="no" {% if business.get('tax_fabrication', 'no') == 'no' %}selected{% endif %}>No</option>
+              <option value="yes" {% if business.get('tax_fabrication', 'no') == 'yes' %}selected{% endif %}>Yes</option>
+            </select>
+          </div>
+          <div class="add-customer-form-field">
+            <label for="tax-fabrication-rate">Tax Fabrication Rate (%)</label>
+            <input id="tax-fabrication-rate" name="tax_fabrication_rate" type="number" step="0.01" min="0" value="{{ business.get('tax_fabrication_rate', '0') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="tax-materials">Tax Materials?</label>
+            <select id="tax-materials" name="tax_materials">
+              <option value="no" {% if business.get('tax_materials', 'no') == 'no' %}selected{% endif %}>No</option>
+              <option value="yes" {% if business.get('tax_materials', 'no') == 'yes' %}selected{% endif %}>Yes</option>
+            </select>
+          </div>
+          <div class="add-customer-form-field">
+            <label for="tax-materials-rate">Tax Materials Rate (%)</label>
+            <input id="tax-materials-rate" name="tax_materials_rate" type="number" step="0.01" min="0" value="{{ business.get('tax_materials_rate', '0') }}" />
           </div>
         </div>
 

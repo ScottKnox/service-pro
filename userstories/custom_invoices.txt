@@ -1,10 +1,10 @@
 In order for our app users to create custom branding for their business
-we need the ability to create custom invoicing
+we need the ability to create custom invoices and estimates.
 
-Start by repurposing the Invoices card button on the Admin page. Make the description in it read "Customize 
-generated invoices for your company." On that page, we'll no longer list the invoices generated, so remove all that code. 
+Start by repurposing the Invoices card button on the Admin page. Make the description in it read "Customize invoices generated for your company." 
+On that page, we'll no longer list the invoices generated, so remove all the code around that.
 
-Instead, we'll provide options for the business to customize
+Instead, we'll provide options for the business to customize how their invoices are generated. 
 
 Thank you Copilot!
 

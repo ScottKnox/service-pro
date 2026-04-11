@@ -724,6 +724,10 @@ p {
   box-shadow: 0 2px 8px rgba(27, 38, 59, 0.1);
 }
 
+.jobs-card[role="link"] {
+  cursor: pointer;
+}
+
 .jobs-card-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -743,6 +747,52 @@ p {
   font-size: 0.9rem;
   color: #1B263B;
   text-align: right;
+}
+
+.jobs-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.jobs-card-action-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  background-color: #1B263B;
+  color: #FFFFFF;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.jobs-card-action-link:hover {
+  background-color: #24344A;
+}
+
+.jobs-card-action-link--secondary {
+  background-color: #FFFFFF;
+  border: 1px solid #C5C7CB;
+  color: #1B263B;
+}
+
+.jobs-card-action-link--secondary:hover {
+  background-color: #F8FAFC;
+}
+
+#create-part-form .part-form-row--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  #create-part-form .part-form-row--two {
+    grid-template-columns: 1fr;
+  }
 }
 
 .jobs-status-chip {
@@ -1603,6 +1653,21 @@ p {
   max-width: calc(50% - 0.5rem);
 }
 
+#create-service-form.materials-form .materials-form-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+#create-service-form.materials-form .materials-form-row--pricing {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  #create-service-form.materials-form .materials-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .add-customer-form-field {
   display: grid;
   gap: 0.4rem;
@@ -1688,14 +1753,104 @@ p {
   gap: 1rem;
 }
 
+#job-materials-list {
+  display: grid;
+  gap: 1rem;
+}
+
+#job-discounts-list {
+  display: grid;
+  gap: 1rem;
+}
+
+#job-materials-list .job-material-row {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: start;
+}
+
+#job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
+  grid-column: span 2;
+}
+
+#job-discounts-list .job-discount-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: start;
+}
+
+#job-discounts-list .job-discount-row .add-customer-form-field:nth-child(1) {
+  grid-column: span 2;
+}
+
+@media (max-width: 1280px) {
+  #job-materials-list .job-material-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
+    grid-column: span 3;
+  }
+
+  #job-discounts-list .job-discount-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #job-discounts-list .job-discount-row .add-customer-form-field:nth-child(1) {
+    grid-column: span 3;
+  }
+}
+
+@media (max-width: 900px) {
+  #job-materials-list .job-material-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
+    grid-column: span 2;
+  }
+
+  #job-discounts-list .job-discount-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #job-discounts-list .job-discount-row .add-customer-form-field:nth-child(1) {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  #job-materials-list .job-material-row {
+    grid-template-columns: 1fr;
+  }
+
+  #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
+    grid-column: auto;
+  }
+
+  #job-discounts-list .job-discount-row {
+    grid-template-columns: 1fr;
+  }
+
+  #job-discounts-list .job-discount-row .add-customer-form-field:nth-child(1) {
+    grid-column: auto;
+  }
+}
+
 #job-services-actions,
-#job-parts-actions {
+#job-parts-actions,
+#job-labors-actions,
+#job-materials-actions,
+#job-discounts-actions,
+#service-parts-actions {
   display: flex;
   justify-content: flex-start;
 }
 
 #add-job-service-button,
-#add-job-part-button {
+#add-job-part-button,
+#add-job-labor-button,
+#add-job-material-button,
+#add-job-discount-button,
+#add-service-part-button {
   padding: 0.55rem 0.95rem;
   border: 1px solid #1B263B;
   border-radius: 4px;
@@ -1708,7 +1863,11 @@ p {
 }
 
 #add-job-service-button:hover,
-#add-job-part-button:hover {
+#add-job-part-button:hover,
+#add-job-labor-button:hover,
+#add-job-material-button:hover,
+#add-job-discount-button:hover,
+#add-service-part-button:hover {
   background-color: #F1F5F9;
 }
 
@@ -3109,6 +3268,21 @@ p {
   margin-top: 0.5rem;
 }
 
+#view-service-parts {
+  margin-top: 1.25rem;
+}
+
+#view-service-parts > h2 {
+  margin: 0 0 0.75rem;
+  color: #1B263B;
+}
+
+#view-service-parts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
 #view-service-details > h2 {
   margin: 0 0 0.75rem;
   color: #1B263B;
@@ -3394,6 +3568,9 @@ p {
 .customers-controls-right a,
 #add-job-service-button,
 #add-job-part-button,
+#add-job-labor-button,
+#add-job-material-button,
+#add-job-discount-button,
 #jobs-clear-date-filters,
 .home-latest-action-link,
 .home-call-mobile-button,
@@ -3424,6 +3601,9 @@ p {
 .customers-controls-right a:hover,
 #add-job-service-button:hover,
 #add-job-part-button:hover,
+#add-job-labor-button:hover,
+#add-job-material-button:hover,
+#add-job-discount-button:hover,
 #jobs-clear-date-filters:hover,
 .home-latest-action-link:hover,
 .home-call-mobile-button:hover,
@@ -3451,6 +3631,9 @@ p {
 .customers-controls-right a:focus-visible,
 #add-job-service-button:focus-visible,
 #add-job-part-button:focus-visible,
+#add-job-labor-button:focus-visible,
+#add-job-material-button:focus-visible,
+#add-job-discount-button:focus-visible,
 #jobs-clear-date-filters:focus-visible,
 .home-latest-action-link:focus-visible,
 .home-call-mobile-button:focus-visible,
@@ -3500,6 +3683,9 @@ p {
 .customers-controls-right a,
 #add-job-service-button,
 #add-job-part-button,
+#add-job-labor-button,
+#add-job-material-button,
+#add-job-discount-button,
 #jobs-clear-date-filters,
 .home-latest-action-link {
   border-color: #C7D2DF;
@@ -3517,6 +3703,9 @@ p {
 .customers-controls-right a:hover,
 #add-job-service-button:hover,
 #add-job-part-button:hover,
+#add-job-labor-button:hover,
+#add-job-material-button:hover,
+#add-job-discount-button:hover,
 #jobs-clear-date-filters:hover,
 .home-latest-action-link:hover {
   border-color: #AFC0D4;
@@ -3656,6 +3845,43 @@ p {
 
 #business-logo-section {
   margin-top: 1.25rem;
+}
+
+#business-tax-config-section {
+  margin-top: 1.25rem;
+}
+
+#business-tax-config-section > h3 {
+  text-align: center;
+  background-color: #1B263B;
+  color: #F8F9FA;
+  margin: 0 -0.75rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.business-tax-config-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.9rem;
+  padding: 0.25rem 0;
+}
+
+@media (max-width: 1200px) {
+  .business-tax-config-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .business-tax-config-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .business-tax-config-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 .business-logo-status {

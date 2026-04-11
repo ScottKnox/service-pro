@@ -1,0 +1,17 @@
+In order for our app users add aterials to their jobs and invoices
+we need the ability to define materials for the business 
+
+Invoices will eventually have a materials section added that will show itemized materials for each job. (do not implement this yet)
+Let's add a "materials" card to our price book page, which will link to a new Manage Materials page. Make this similar in style to the Manage Parts page.
+The filters section can have Category and Manufacturer as a filter options, with checkboxes for those values. The "Create" button on the page should 
+say "Create Materials" and link to a new create materials page. On the page add these form fields for a new data model I've added to Mongo: "materials" is the collection name. 
+Add the fields business_id as a foreign key to the business, material_name, category, part_number, manufacturer, quantity_used, size, unit_of_measure, price, purchase_link.
+The last nine should be on the create form. Make the form fields fit the data being entered. Make unit of measure a select box with common units of measure as options.
+
+Save these to mongo when submitted. If any material card on the Manage Materials page is clicked, take the user to a view material page. 
+Have a similar actions bar to our parts and services pages that allows updating and deleting material for the business. 
+
+The final step for this user story is to update our Create Job, Update Job, and View Job pages to allow adding materials similarly to how we 
+do for services and parts. Display material information after the Labor section on the view page. 
+
+Thank you Copilot!

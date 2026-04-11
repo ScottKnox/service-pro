@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Update Materials | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="create-service-panel">
+      <h1>Update Materials</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('catalog.manage_price_book') }}">Manage Price Book</a></li>
+          <li><a href="{{ url_for('catalog.manage_materials') }}">Manage Materials</a></li>
+          <li><a href="{{ url_for('catalog.view_material', materialId=materialId) }}">View Material</a></li>
+          <li aria-current="page">Update Materials</li>
+        </ol>
+      </nav>
+
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
+      <form id="create-service-form" class="materials-form" action="{{ url_for('catalog.update_material', materialId=materialId) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <h2 class="create-job-form-section-header">Material Details</h2>
+
+        <div class="add-customer-form-row materials-form-row materials-form-row--identity">
+          <div class="add-customer-form-field">
+            <label for="material-name">Material Name</label>
+            <input id="material-name" name="material_name" type="text" placeholder="Enter material name" value="{{ form_data.material_name|default('', true) }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="material-category">Category</label>
+            <input id="material-category" name="category" type="text" placeholder="Enter category" value="{{ form_data.category|default('', true) }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="material-part-number">Part Number</label>
+            <input id="material-part-number" name="part_number" type="text" placeholder="Enter part number" value="{{ form_data.part_number|default('', true) }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row materials-form-row materials-form-row--usage">
+          <div class="add-customer-form-field">
+            <label for="material-manufacturer">Manufacturer</label>
+            <input id="material-manufacturer" name="manufacturer" type="text" placeholder="Enter manufacturer" value="{{ form_data.manufacturer|default('', true) }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="material-default-quantity-used">Default Quantity Used</label>
+            <input id="material-default-quantity-used" name="default_quantity_used" type="number" step="0.25" min="0" placeholder="0" value="{{ form_data.default_quantity_used|default('', true) }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="material-uom">Unit of Measure</label>
+            <select id="material-uom" name="unit_of_measure">
+              <option value="">-- Select a unit --</option>
+              {% for option in uom_options %}
+                <option value="{{ option }}" {% if form_data.unit_of_measure == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+        </div>
+
+        <div class="add-customer-form-row materials-form-row materials-form-row--pricing">
+          <div class="add-customer-form-field">
+            <label for="material-price">Price</label>
+            <input id="material-price" name="price" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.price|default('', true) }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="material-purchase-link">Purchase Link</label>
+            <input id="material-purchase-link" name="purchase_link" type="url" placeholder="https://example.com/material" value="{{ form_data.purchase_link|default('', true) }}" />
+          </div>
+        </div>
+
+        <div id="create-service-form-actions">
+          <button type="submit">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

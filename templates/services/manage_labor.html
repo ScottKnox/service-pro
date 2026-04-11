@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Labor | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-jobs-header" class="resource-page resource-services">
+      <h1>Manage Labor</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('catalog.manage_price_book') }}">Manage Price Book</a></li>
+          <li aria-current="page">Manage Labor</li>
+        </ol>
+      </nav>
+
+      <div id="jobs-controls-row" data-catalog-filter-root>
+        <div class="jobs-controls-left">
+          <h2>Filter Labor</h2>
+
+          <div class="jobs-filter-list">
+            <details class="jobs-filter-group" open>
+              <summary>Category</summary>
+              <div class="jobs-filter-content">
+                {% if labor_categories %}
+                  {% for category in labor_categories %}
+                    <label for="labor-category-{{ loop.index }}">
+                      <input id="labor-category-{{ loop.index }}" type="checkbox" name="filter_category" value="{{ category }}" /> {{ category }}
+                    </label>
+                  {% endfor %}
+                {% else %}
+                  <p>No categories available.</p>
+                {% endif %}
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="jobs-controls-right">
+          <div class="jobs-controls-right-top">
+            <h2>All Labor</h2>
+            <div class="jobs-controls-right-actions">
+              <a href="{{ url_for('catalog.create_labor') }}">Define Labor</a>
+            </div>
+          </div>
+
+          <div class="jobs-controls-right-bottom">
+            <div id="jobs-list-container">
+              <div id="jobs-list-grid">
+                {% if labors %}
+                  {% for labor in labors %}
+                    <a
+                      class="jobs-card"
+                      href="{{ url_for('catalog.view_labor', laborId=labor._id) }}"
+                      data-catalog-card
+                      data-filter-category="{{ labor.labor_category }}"
+                    >
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Description</span>
+                        <span class="jobs-card-value">{{ labor.labor_description }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Category</span>
+                        <span class="jobs-card-value">{{ labor.labor_category }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Default Hours</span>
+                        <span class="jobs-card-value">{{ labor.labor_default_hours_display }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Hourly Rate</span>
+                        <span class="jobs-card-value">{{ labor.labor_hourly_rate_display }}</span>
+                      </div>
+                    </a>
+                  {% endfor %}
+                {% else %}
+                  <p>No labor definitions have been created yet.</p>
+                {% endif %}
+              </div>
+              {% if labors %}
+                <p id="catalog-filter-no-results" hidden>No labor matches the selected filters.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/catalog_filters.js') }}" defer></script>
+{% endblock %}

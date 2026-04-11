@@ -24,7 +24,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Part Details</h2>
 
-        <div class="add-customer-form-row">
+        <div class="add-customer-form-row part-form-row--two">
           <div class="add-customer-form-field">
             <label for="part-name">Part Name</label>
             <input id="part-name" name="part_name" type="text" placeholder="Enter part name" value="{{ form_data.part_name|default('', true) }}" required />
@@ -39,19 +39,27 @@
             <label for="part-category">Category</label>
             <input id="part-category" name="category" type="text" placeholder="Enter part category" value="{{ form_data.category|default('', true) }}" required />
           </div>
+
+          <div class="add-customer-form-field">
+            <label for="part-manufacturer">Manufacturer</label>
+            <input id="part-manufacturer" name="manufacturer" type="text" placeholder="Enter part manufacturer" value="{{ form_data.manufacturer|default('', true) }}" required />
+          </div>
         </div>
 
-        <div class="add-customer-form-row add-customer-form-row--single">
+        <div class="add-customer-form-row add-customer-form-row--top-aligned part-form-row--two">
           <div class="add-customer-form-field">
             <label for="part-description">Description</label>
             <textarea id="part-description" name="description" rows="4" placeholder="Describe the part">{{ form_data.description|default('', true) }}</textarea>
           </div>
-        </div>
 
-        <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="unit-cost">Unit Cost</label>
             <input id="unit-cost" name="unit_cost" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.unit_cost|default('', true) }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="purchase-link">Purchase Link</label>
+            <input id="purchase-link" name="purchase_link" type="url" placeholder="https://supplier.example.com/part" value="{{ form_data.purchase_link|default('', true) }}" />
           </div>
         </div>
 

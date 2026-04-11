@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Discounts | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-jobs-header" class="resource-page resource-parts">
+      <h1>Manage Discounts</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('catalog.manage_price_book') }}">Manage Price Book</a></li>
+          <li aria-current="page">Manage Discounts</li>
+        </ol>
+      </nav>
+
+      <div id="jobs-controls-row" data-catalog-filter-root>
+        <div class="jobs-controls-left">
+          <h2>Filter Discounts</h2>
+
+          <div class="jobs-filter-list">
+            <details class="jobs-filter-group" open>
+              <summary>Category</summary>
+              <div class="jobs-filter-content">
+                {% if discount_categories %}
+                  {% for category in discount_categories %}
+                    <label for="discount-category-{{ loop.index }}">
+                      <input id="discount-category-{{ loop.index }}" type="checkbox" name="filter_category" value="{{ category }}" /> {{ category }}
+                    </label>
+                  {% endfor %}
+                {% else %}
+                  <p>No categories available.</p>
+                {% endif %}
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="jobs-controls-right">
+          <div class="jobs-controls-right-top">
+            <h2>All Discounts</h2>
+            <div class="jobs-controls-right-actions">
+              <a href="{{ url_for('catalog.create_discount') }}">Add Discount</a>
+            </div>
+          </div>
+
+          <div class="jobs-controls-right-bottom">
+            <div id="jobs-list-container">
+              <div id="jobs-list-grid">
+                {% if discounts %}
+                  {% for discount in discounts %}
+                    <a
+                      class="jobs-card"
+                      href="{{ url_for('catalog.view_discount', discountId=discount._id) }}"
+                      data-catalog-card
+                      data-filter-category="{{ discount.discount_category }}"
+                    >
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Discount</span>
+                        <span class="jobs-card-value">{{ discount.discount_name }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Category</span>
+                        <span class="jobs-card-value">{{ discount.discount_category }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Percent</span>
+                        <span class="jobs-card-value">{{ discount.discount_percentage_display }}%</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Amount</span>
+                        <span class="jobs-card-value">{{ discount.discount_amount_display }}</span>
+                      </div>
+                    </a>
+                  {% endfor %}
+                {% else %}
+                  <p>No discounts have been created yet.</p>
+                {% endif %}
+              </div>
+              {% if discounts %}
+                <p id="catalog-filter-no-results" hidden>No discounts match the selected filters.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/catalog_filters.js') }}" defer></script>
+{% endblock %}

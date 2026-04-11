@@ -8,7 +8,18 @@ from flask_mail import Message
 
 from invoice_generator import generate_invoice, generate_quote
 from mongo import ensure_connection_or_500, object_id_or_404, serialize_doc
-from utils.catalog import build_part_catalog, build_service_catalog, build_job_parts_from_form, build_job_services_from_form
+from utils.catalog import (
+    build_discount_catalog,
+    build_job_discounts_from_form,
+    build_job_labors_from_form,
+    build_job_materials_from_form,
+    build_job_parts_from_form,
+    build_job_services_from_form,
+    build_labor_catalog,
+    build_material_catalog,
+    build_part_catalog,
+    build_service_catalog,
+)
 from utils.currency import currency_to_float, normalize_currency
 from utils.formatters import format_date
 
@@ -43,14 +54,14 @@ def resolve_current_business_logo_path(db):
     return logo_path if os.path.exists(logo_path) else ""
 
 
-def resolve_job_status(scheduled_date, scheduled_time, services, parts, existing_status=""):
+def resolve_job_status(scheduled_date, scheduled_time, services, parts, labors, materials, discounts, existing_status=""):
     """Derive job status from scheduling and line items while preserving terminal states."""
     normalized_existing = str(existing_status or "").strip().lower()
     if normalized_existing in {"started", "completed"}:
         return str(existing_status)
 
     has_schedule = bool(str(scheduled_date).strip()) and bool(str(scheduled_time).strip())
-    has_line_items = bool(services or parts)
+    has_line_items = bool(services or parts or labors or materials or discounts)
 
     if has_schedule and has_line_items:
         return "Scheduled"
@@ -119,12 +130,31 @@ def create_job(customerId):
         entered_service_durations = request.form.getlist("service_estimated_hours[]") or request.form.getlist("service_duration[]")
         selected_part_names = request.form.getlist("part_code[]") or request.form.getlist("part_name[]")
         entered_part_prices = request.form.getlist("part_unit_cost[]") or request.form.getlist("part_price[]")
+        selected_labor_descriptions = request.form.getlist("labor_description[]")
+        entered_labor_hours = request.form.getlist("labor_hours[]")
+        entered_labor_rates = request.form.getlist("labor_hourly_rate[]")
+        selected_material_names = request.form.getlist("material_name[]")
+        entered_material_quantities = request.form.getlist("material_quantity_used[]")
+        entered_material_units = request.form.getlist("material_unit_of_measure[]")
+        entered_material_prices = request.form.getlist("material_price[]")
+        selected_discount_names = request.form.getlist("discount_name[]")
+        entered_discount_percentages = request.form.getlist("discount_percentage[]")
+        entered_discount_amounts = request.form.getlist("discount_amount[]")
         service_query = {"business_id": business_id} if business_id else {"_id": None}
         part_query = {"business_id": business_id} if business_id else {"_id": None}
+        labor_query = {"business_id": business_id} if business_id else {"_id": None}
+        material_query = {"business_id": business_id} if business_id else {"_id": None}
+        discount_query = {"business_id": business_id} if business_id else {"_id": None}
         service_docs = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
         part_docs = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
+        labor_docs = [serialize_doc(labor) for labor in db.labors.find(labor_query).sort("labor_description", 1)]
+        material_docs = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
+        discount_docs = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
         service_catalog = build_service_catalog(service_docs)
         part_catalog = build_part_catalog(part_docs)
+        labor_catalog = build_labor_catalog(labor_docs)
+        material_catalog = build_material_catalog(material_docs)
+        discount_catalog = build_discount_catalog(discount_docs)
         services, services_total = build_job_services_from_form(
             selected_service_types,
             entered_service_prices,
@@ -136,12 +166,31 @@ def create_job(customerId):
             entered_part_prices,
             part_catalog,
         )
-        total = services_total + parts_total
+        labors, labor_total = build_job_labors_from_form(
+            selected_labor_descriptions,
+            entered_labor_hours,
+            entered_labor_rates,
+            labor_catalog,
+        )
+        materials, materials_total = build_job_materials_from_form(
+            selected_material_names,
+            entered_material_quantities,
+            entered_material_units,
+            entered_material_prices,
+            material_catalog,
+        )
+        discounts, discounts_total = build_job_discounts_from_form(
+            selected_discount_names,
+            entered_discount_percentages,
+            entered_discount_amounts,
+            discount_catalog,
+        )
+        total = services_total + parts_total + labor_total + materials_total - discounts_total
 
         primary_service = services[0]["type"] if services else "No services added."
         scheduled_date = format_date(request.form.get("job_date", ""))
         scheduled_time = request.form.get("job_time", "").strip()
-        job_status = resolve_job_status(scheduled_date, scheduled_time, services, parts)
+        job_status = resolve_job_status(scheduled_date, scheduled_time, services, parts, labors, materials, discounts)
 
         assigned_employee = request.form.get("job_assigned_employee", "").strip()
         
@@ -161,6 +210,9 @@ def create_job(customerId):
             "job_type": primary_service,
             "services": services,
             "parts": parts,
+            "labors": labors,
+            "materials": materials,
+            "discounts": discounts,
             "status": job_status,
             "scheduled_date": scheduled_date,
             "scheduled_time": scheduled_time,
@@ -181,11 +233,21 @@ def create_job(customerId):
     business_id = resolve_current_business_id(db)
     service_query = {"business_id": business_id} if business_id else {"_id": None}
     part_query = {"business_id": business_id} if business_id else {"_id": None}
+    labor_query = {"business_id": business_id} if business_id else {"_id": None}
+    material_query = {"business_id": business_id} if business_id else {"_id": None}
+    discount_query = {"business_id": business_id} if business_id else {"_id": None}
     services = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
     parts = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
+    labors = [serialize_doc(labor) for labor in db.labors.find(labor_query).sort("labor_description", 1)]
+    materials = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
+    discounts = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
     employee_options = build_employee_options(db)
     services_catalog = build_service_catalog(services)
     parts_catalog = build_part_catalog(parts)
+    labors_catalog = build_labor_catalog(labors)
+    materials_catalog = build_material_catalog(materials)
+    discounts_catalog = build_discount_catalog(discounts)
+    parts_by_id = {p["_id"]: p["part_code"] for p in parts}
 
     return render_template(
         "jobs/create_job.html",
@@ -193,9 +255,16 @@ def create_job(customerId):
         customer=serialize_doc(customer),
         services=services,
         parts=parts,
+        labors=labors,
+        materials=materials,
+        discounts=discounts,
         employee_options=employee_options,
         services_catalog=services_catalog,
         parts_catalog=parts_catalog,
+        labors_catalog=labors_catalog,
+        materials_catalog=materials_catalog,
+        discounts_catalog=discounts_catalog,
+        parts_by_id=parts_by_id,
     )
 
 
@@ -430,12 +499,31 @@ def update_job(jobId):
         entered_service_durations = request.form.getlist("service_estimated_hours[]") or request.form.getlist("service_duration[]")
         selected_part_names = request.form.getlist("part_code[]") or request.form.getlist("part_name[]")
         entered_part_prices = request.form.getlist("part_unit_cost[]") or request.form.getlist("part_price[]")
+        selected_labor_descriptions = request.form.getlist("labor_description[]")
+        entered_labor_hours = request.form.getlist("labor_hours[]")
+        entered_labor_rates = request.form.getlist("labor_hourly_rate[]")
+        selected_material_names = request.form.getlist("material_name[]")
+        entered_material_quantities = request.form.getlist("material_quantity_used[]")
+        entered_material_units = request.form.getlist("material_unit_of_measure[]")
+        entered_material_prices = request.form.getlist("material_price[]")
+        selected_discount_names = request.form.getlist("discount_name[]")
+        entered_discount_percentages = request.form.getlist("discount_percentage[]")
+        entered_discount_amounts = request.form.getlist("discount_amount[]")
         service_query = {"business_id": business_id} if business_id else {"_id": None}
         part_query = {"business_id": business_id} if business_id else {"_id": None}
+        labor_query = {"business_id": business_id} if business_id else {"_id": None}
+        material_query = {"business_id": business_id} if business_id else {"_id": None}
+        discount_query = {"business_id": business_id} if business_id else {"_id": None}
         service_docs = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
         part_docs = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
+        labor_docs = [serialize_doc(labor) for labor in db.labors.find(labor_query).sort("labor_description", 1)]
+        material_docs = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
+        discount_docs = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
         service_catalog = build_service_catalog(service_docs)
         part_catalog = build_part_catalog(part_docs)
+        labor_catalog = build_labor_catalog(labor_docs)
+        material_catalog = build_material_catalog(material_docs)
+        discount_catalog = build_discount_catalog(discount_docs)
         services, services_total = build_job_services_from_form(
             selected_service_types,
             entered_service_prices,
@@ -447,7 +535,26 @@ def update_job(jobId):
             entered_part_prices,
             part_catalog,
         )
-        total = services_total + parts_total
+        labors, labor_total = build_job_labors_from_form(
+            selected_labor_descriptions,
+            entered_labor_hours,
+            entered_labor_rates,
+            labor_catalog,
+        )
+        materials, materials_total = build_job_materials_from_form(
+            selected_material_names,
+            entered_material_quantities,
+            entered_material_units,
+            entered_material_prices,
+            material_catalog,
+        )
+        discounts, discounts_total = build_job_discounts_from_form(
+            selected_discount_names,
+            entered_discount_percentages,
+            entered_discount_amounts,
+            discount_catalog,
+        )
+        total = services_total + parts_total + labor_total + materials_total - discounts_total
 
         primary_service = services[0]["type"] if services else "No services added."
         scheduled_date = format_date(request.form.get("job_date", ""))
@@ -457,6 +564,9 @@ def update_job(jobId):
             scheduled_time,
             services,
             parts,
+            labors,
+            materials,
+            discounts,
             existing_status=job.get("status", ""),
         )
 
@@ -467,6 +577,9 @@ def update_job(jobId):
             "job_type": primary_service,
             "services": services,
             "parts": parts,
+            "labors": labors,
+            "materials": materials,
+            "discounts": discounts,
             "status": job_status,
             "scheduled_date": scheduled_date,
             "scheduled_time": scheduled_time,
@@ -509,11 +622,21 @@ def update_job(jobId):
     business_id = resolve_current_business_id(db)
     service_query = {"business_id": business_id} if business_id else {"_id": None}
     part_query = {"business_id": business_id} if business_id else {"_id": None}
+    labor_query = {"business_id": business_id} if business_id else {"_id": None}
+    material_query = {"business_id": business_id} if business_id else {"_id": None}
+    discount_query = {"business_id": business_id} if business_id else {"_id": None}
     services = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
     parts = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
+    labors = [serialize_doc(labor) for labor in db.labors.find(labor_query).sort("labor_description", 1)]
+    materials = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
+    discounts = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
     employee_options = build_employee_options(db)
     services_catalog = build_service_catalog(services)
     parts_catalog = build_part_catalog(parts)
+    labors_catalog = build_labor_catalog(labors)
+    materials_catalog = build_material_catalog(materials)
+    discounts_catalog = build_discount_catalog(discounts)
+    parts_by_id = {p["_id"]: p["part_code"] for p in parts}
 
     return render_template(
         "jobs/update_job.html",
@@ -522,9 +645,16 @@ def update_job(jobId):
         customer=customer,
         services=services,
         parts=parts,
+        labors=labors,
+        materials=materials,
+        discounts=discounts,
         employee_options=employee_options,
         services_catalog=services_catalog,
         parts_catalog=parts_catalog,
+        labors_catalog=labors_catalog,
+        materials_catalog=materials_catalog,
+        discounts_catalog=discounts_catalog,
+        parts_by_id=parts_by_id,
     )
 
 

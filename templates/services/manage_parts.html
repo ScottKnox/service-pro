@@ -49,6 +49,30 @@
                 {% endif %}
               </div>
             </details>
+
+            <details class="jobs-filter-group" open>
+              <summary>Manufacturer</summary>
+              <div class="jobs-filter-content">
+                {% if part_manufacturers %}
+                  {% for manufacturer in part_manufacturers %}
+                    <label for="part-manufacturer-{{ loop.index }}">
+                      <input id="part-manufacturer-{{ loop.index }}" type="checkbox" name="filter_manufacturer" value="{{ manufacturer }}" /> {{ manufacturer }}
+                    </label>
+                  {% endfor %}
+                  {% if has_unspecified_manufacturer %}
+                    <label for="part-manufacturer-unspecified">
+                      <input id="part-manufacturer-unspecified" type="checkbox" name="filter_manufacturer" value="" /> Unspecified
+                    </label>
+                  {% endif %}
+                {% elif has_unspecified_manufacturer %}
+                  <label for="part-manufacturer-unspecified">
+                    <input id="part-manufacturer-unspecified" type="checkbox" name="filter_manufacturer" value="" /> Unspecified
+                  </label>
+                {% else %}
+                  <p>No manufacturers available.</p>
+                {% endif %}
+              </div>
+            </details>
           </div>
         </div>
 
@@ -65,12 +89,16 @@
               <div id="jobs-list-grid">
                 {% if parts %}
                   {% for part in parts %}
-                    <a
+                    <div
                       class="jobs-card"
-                      href="{{ url_for('catalog.view_part', partId=part._id) }}"
                       data-catalog-card
+                      data-card-link-url="{{ url_for('catalog.view_part', partId=part._id) }}"
                       data-filter-category="{{ part.category }}"
                       data-filter-code="{{ part.part_code }}"
+                      data-filter-manufacturer="{{ part.manufacturer|default('', true) }}"
+                      role="link"
+                      tabindex="0"
+                      aria-label="View part {{ part.part_name }}"
                     >
                       <div class="jobs-card-row">
                         <span class="jobs-card-label">Part</span>
@@ -85,10 +113,19 @@
                         <span class="jobs-card-value">{{ part.category }}</span>
                       </div>
                       <div class="jobs-card-row">
+                        <span class="jobs-card-label">Manufacturer</span>
+                        <span class="jobs-card-value">{{ part.manufacturer or '-' }}</span>
+                      </div>
+                      <div class="jobs-card-row">
                         <span class="jobs-card-label">Unit Cost</span>
                         <span class="jobs-card-value">{{ part.unit_cost_display }}</span>
                       </div>
-                    </a>
+                      <div class="jobs-card-actions">
+                        {% if part.purchase_link %}
+                          <a class="jobs-card-action-link jobs-card-action-link--secondary" href="{{ part.purchase_link }}" target="_blank" rel="noopener noreferrer">Open Link</a>
+                        {% endif %}
+                      </div>
+                    </div>
                   {% endfor %}
                 {% else %}
                   <p>No parts have been created yet.</p>

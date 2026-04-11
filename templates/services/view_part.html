@@ -43,8 +43,20 @@
             <p>{{ part.category }}</p>
           </div>
           <div class="view-service-detail-item">
+            <h4>Manufacturer</h4>
+            <p>{{ part.manufacturer or '-' }}</p>
+          </div>
+          <div class="view-service-detail-item">
             <h4>Description</h4>
             <p>{{ part.description or '-' }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Purchase Link</h4>
+            {% if part.purchase_link %}
+              <p><a href="{{ part.purchase_link }}" target="_blank" rel="noopener noreferrer">{{ part.purchase_link }}</a></p>
+            {% else %}
+              <p>-</p>
+            {% endif %}
           </div>
           <div class="view-service-detail-item">
             <h4>Unit Cost</h4>

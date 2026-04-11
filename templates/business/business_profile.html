@@ -34,11 +34,6 @@
               </div>
 
               <div class="view-customer-detail-item">
-                <h4>Tax Rate (%)</h4>
-                <p>{{ business.get('tax_rate', '0') }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
                 <h4>Quote Email Template</h4>
                 <p>{{ business.get('quote_email_template', '') }}</p>
               </div>
@@ -91,6 +86,52 @@
                   {{ 'Upload Logo' if not logo_url else 'Update Logo' }}
                 </button>
               </form>
+            </div>
+
+            <div id="business-tax-config-section">
+              <h3>Tax Configuration</h3>
+              <div class="business-tax-config-list">
+                <div class="view-customer-detail-item">
+                  <h4>Tax Parts?</h4>
+                  <p>{{ 'Yes' if business.get('tax_parts', 'no')|lower == 'yes' else 'No' }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Tax Parts Rate (%)</h4>
+                  <p>{{ business.get('tax_parts_rate', business.get('tax_rate', '0')) }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Tax Repair Labor?</h4>
+                  <p>{{ 'Yes' if business.get('tax_repair_labor', 'no')|lower == 'yes' else 'No' }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Tax Repair Labor Rate (%)</h4>
+                  <p>{{ business.get('tax_repair_labor_rate', '0') }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Tax Installation?</h4>
+                  <p>{{ 'Yes' if business.get('tax_installation', 'no')|lower == 'yes' else 'No' }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Tax Installation Rate (%)</h4>
+                  <p>{{ business.get('tax_installation_rate', '0') }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Tax Fabrication?</h4>
+                  <p>{{ 'Yes' if business.get('tax_fabrication', 'no')|lower == 'yes' else 'No' }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Tax Fabrication Rate (%)</h4>
+                  <p>{{ business.get('tax_fabrication_rate', '0') }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Tax Materials?</h4>
+                  <p>{{ 'Yes' if business.get('tax_materials', 'no')|lower == 'yes' else 'No' }}</p>
+                </div>
+                <div class="view-customer-detail-item">
+                  <h4>Tax Materials Rate (%)</h4>
+                  <p>{{ business.get('tax_materials_rate', '0') }}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

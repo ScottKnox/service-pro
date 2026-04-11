@@ -51,9 +51,15 @@ def internal_error(e):
 def require_login():
     """Redirect unauthenticated users to login for all protected endpoints."""
     open_endpoints = {"auth.login", "auth.logout", "static", "home", "error_page"}
-    if request.endpoint not in open_endpoints:
+    endpoint = request.endpoint
+    if endpoint is None:
+        return
+
+    if endpoint not in open_endpoints:
         employee_id = session.get("employee_id")
-        if not employee_id or not ObjectId.is_valid(employee_id):
+        if not employee_id:
+            return redirect(url_for("auth.login"))
+        if not ObjectId.is_valid(employee_id):
             session.clear()
             return redirect(url_for("auth.login"))
 

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Update Labor | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="create-service-panel">
+      <h1>Update Labor</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('catalog.manage_price_book') }}">Manage Price Book</a></li>
+          <li><a href="{{ url_for('catalog.manage_labor') }}">Manage Labor</a></li>
+          <li><a href="{{ url_for('catalog.view_labor', laborId=laborId) }}">View Labor</a></li>
+          <li aria-current="page">Update Labor</li>
+        </ol>
+      </nav>
+
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
+      <form id="create-service-form" action="{{ url_for('catalog.update_labor', laborId=laborId) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <h2 class="create-job-form-section-header">Labor Details</h2>
+
+        <div class="add-customer-form-row add-customer-form-row--single">
+          <div class="add-customer-form-field">
+            <label for="labor-description">Labor Description</label>
+            <input id="labor-description" name="labor_description" type="text" placeholder="Enter labor description" value="{{ form_data.labor_description|default('', true) }}" required />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="labor-category">Category</label>
+            <input id="labor-category" name="labor_category" type="text" placeholder="Enter labor category" value="{{ form_data.labor_category|default('', true) }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="labor-default-hours">Default Hours</label>
+            <input id="labor-default-hours" name="labor_default_hours" type="number" step="0.25" min="0" placeholder="0" value="{{ form_data.labor_default_hours|default('', true) }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="labor-hourly-rate">Hourly Rate</label>
+            <input id="labor-hourly-rate" name="labor_hourly_rate" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.labor_hourly_rate|default('', true) }}" required />
+          </div>
+        </div>
+
+        <div id="create-service-form-actions">
+          <button type="submit">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

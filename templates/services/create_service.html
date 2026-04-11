@@ -20,7 +20,7 @@
         <p class="form-field-error">{{ error }}</p>
       {% endif %}
 
-      <form id="create-service-form" action="{{ url_for('catalog.create_service') }}" method="post">
+      <form id="create-service-form" action="{{ url_for('catalog.create_service') }}" method="post" data-parts-catalog='{{ parts_catalog_by_id|tojson }}'>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Service Details</h2>
 
@@ -65,10 +65,65 @@
           </div>
         </div>
 
+        <h2 class="create-job-form-section-header">Add Parts</h2>
+        <p class="form-field-note">Adding parts to a service will include them automatically on jobs, invoices, and estimates. Leave blank to add parts manually each time.</p>
+
+        <div id="service-parts-list">
+          {% if selected_part_ids %}
+            {% for part_id in selected_part_ids %}
+              <div class="add-customer-form-row service-part-row" data-part-index="{{ loop.index }}">
+                <div class="add-customer-form-field">
+                  <label for="service-part-id-{{ loop.index }}">Part</label>
+                  <select id="service-part-id-{{ loop.index }}" name="part_id[]">
+                    <option value="">-- Select a part --</option>
+                    {% for part in parts %}
+                      <option value="{{ part._id }}" {% if part._id == part_id %}selected{% endif %}>{{ part.part_name }} ({{ part.part_code }})</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="add-customer-form-field">
+                  <label for="service-part-cost-{{ loop.index }}">Unit Cost</label>
+                  <input id="service-part-cost-{{ loop.index }}" name="part_cost_display[]" type="text" placeholder="$0.00" readonly />
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="add-customer-form-row service-part-row" data-part-index="1">
+              <div class="add-customer-form-field">
+                <label for="service-part-id-1">Part</label>
+                <select id="service-part-id-1" name="part_id[]">
+                  <option value="">-- Select a part --</option>
+                  {% for part in parts %}
+                    <option value="{{ part._id }}">{{ part.part_name }} ({{ part.part_code }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="add-customer-form-field">
+                <label for="service-part-cost-1">Unit Cost</label>
+                <input id="service-part-cost-1" name="part_cost_display[]" type="text" placeholder="$0.00" readonly />
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        <div id="service-parts-actions">
+          <button id="add-service-part-button" type="button">Add Part</button>
+        </div>
+
+        <template id="service-part-options-template">
+          {% for part in parts %}
+            <option value="{{ part._id }}">{{ part.part_name }} ({{ part.part_code }})</option>
+          {% endfor %}
+        </template>
+
         <div id="create-service-form-actions">
           <button type="submit">Save Service</button>
         </div>
       </form>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/service_form.js') }}"></script>
 {% endblock %}

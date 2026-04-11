@@ -60,6 +60,36 @@
           </div>
         </div>
       </section>
+
+      <section id="view-service-parts" aria-label="Associated parts">
+        <h2>Associated Parts</h2>
+        {% if associated_parts %}
+          <div id="view-service-parts-grid">
+            {% for part in associated_parts %}
+              <a class="jobs-card" href="{{ url_for('catalog.view_part', partId=part._id) }}" aria-label="View part {{ part.part_name }}">
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Part</span>
+                  <span class="jobs-card-value">{{ part.part_name }}</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Code</span>
+                  <span class="jobs-card-value">{{ part.part_code }}</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Category</span>
+                  <span class="jobs-card-value">{{ part.category }}</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Unit Cost</span>
+                  <span class="jobs-card-value">{{ part.unit_cost_display }}</span>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p>No parts associated with this service.</p>
+        {% endif %}
+      </section>
     </div>
   </div>
 {% endblock %}

@@ -195,9 +195,21 @@ def update_business():
 
     if request.method == "POST":
         company_name = request.form.get("company_name", "").strip()
-        tax_rate = request.form.get("tax_rate", "0").strip()
+        tax_parts = request.form.get("tax_parts", "no").strip().lower()
+        tax_parts_rate = request.form.get("tax_parts_rate", "0").strip()
+        tax_repair_labor = request.form.get("tax_repair_labor", "no").strip().lower()
+        tax_repair_labor_rate = request.form.get("tax_repair_labor_rate", "0").strip()
+        tax_installation = request.form.get("tax_installation", "no").strip().lower()
+        tax_installation_rate = request.form.get("tax_installation_rate", "0").strip()
+        tax_fabrication = request.form.get("tax_fabrication", "no").strip().lower()
+        tax_fabrication_rate = request.form.get("tax_fabrication_rate", "0").strip()
+        tax_materials = request.form.get("tax_materials", "no").strip().lower()
+        tax_materials_rate = request.form.get("tax_materials_rate", "0").strip()
         quote_email_template = request.form.get("quote_email_template", "").strip()
         invoice_email_template = request.form.get("invoice_email_template", "").strip()
+
+        # Preserve legacy top-level tax_rate for compatibility with existing invoice logic
+        tax_rate = tax_parts_rate
 
         db.businesses.update_one(
             {"_id": business_oid},
@@ -205,6 +217,16 @@ def update_business():
                 "$set": {
                     "company_name": company_name,
                     "tax_rate": tax_rate,
+                    "tax_parts": tax_parts,
+                    "tax_parts_rate": tax_parts_rate,
+                    "tax_repair_labor": tax_repair_labor,
+                    "tax_repair_labor_rate": tax_repair_labor_rate,
+                    "tax_installation": tax_installation,
+                    "tax_installation_rate": tax_installation_rate,
+                    "tax_fabrication": tax_fabrication,
+                    "tax_fabrication_rate": tax_fabrication_rate,
+                    "tax_materials": tax_materials,
+                    "tax_materials_rate": tax_materials_rate,
                     "quote_email_template": quote_email_template,
                     "invoice_email_template": invoice_email_template,
                 }
@@ -218,4 +240,14 @@ def update_business():
         return redirect(url_for("error_page", error="no_business"))
 
     business = serialize_doc(business)
+    business["tax_parts"] = str(business.get("tax_parts") or "no").strip().lower()
+    business["tax_parts_rate"] = str(business.get("tax_parts_rate") or business.get("tax_rate") or "0").strip()
+    business["tax_repair_labor"] = str(business.get("tax_repair_labor") or "no").strip().lower()
+    business["tax_repair_labor_rate"] = str(business.get("tax_repair_labor_rate") or "0").strip()
+    business["tax_installation"] = str(business.get("tax_installation") or "no").strip().lower()
+    business["tax_installation_rate"] = str(business.get("tax_installation_rate") or "0").strip()
+    business["tax_fabrication"] = str(business.get("tax_fabrication") or "no").strip().lower()
+    business["tax_fabrication_rate"] = str(business.get("tax_fabrication_rate") or "0").strip()
+    business["tax_materials"] = str(business.get("tax_materials") or "no").strip().lower()
+    business["tax_materials_rate"] = str(business.get("tax_materials_rate") or "0").strip()
     return render_template("business/update_business.html", business=business)

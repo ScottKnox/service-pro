@@ -1,0 +1,13 @@
+In order for our businesses to define tax behavior for their jobs
+we need the ability to define tax behavior in the businesses settings
+
+On the Business Profile page, let's refactor the Tax Rate field into a new section under the custom logo section. Title the section "Tax Configuration"
+
+Add additional fields displayed for: "Tax Parts?" "Tax Repair Labor?" "Tax Installation?" "Tax Fabrication?" "Tax Materials?" Also,
+add a Tax Rate value for each type of tax configuration. 
+
+Each configuration will display Yes/No values and tax rate values specific to them, that come from the Business Update page, where the 
+user can use a select box to choose between each value for each tax option, and configure a Tax Rate for it. Add all these form fields to the business update page, and update the business model to Mongo to save these field
+updates to the business object. 
+
+Thank you Copilot!

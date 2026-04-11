@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Materials | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-jobs-header" class="resource-page resource-parts">
+      <h1>Manage Materials</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('catalog.manage_price_book') }}">Manage Price Book</a></li>
+          <li aria-current="page">Manage Materials</li>
+        </ol>
+      </nav>
+
+      <div id="jobs-controls-row" data-catalog-filter-root>
+        <div class="jobs-controls-left">
+          <h2>Filter Materials</h2>
+
+          <div class="jobs-filter-list">
+            <details class="jobs-filter-group" open>
+              <summary>Category</summary>
+              <div class="jobs-filter-content">
+                {% if material_categories %}
+                  {% for category in material_categories %}
+                    <label for="material-category-{{ loop.index }}">
+                      <input id="material-category-{{ loop.index }}" type="checkbox" name="filter_category" value="{{ category }}" /> {{ category }}
+                    </label>
+                  {% endfor %}
+                {% else %}
+                  <p>No categories available.</p>
+                {% endif %}
+              </div>
+            </details>
+
+            <details class="jobs-filter-group" open>
+              <summary>Manufacturer</summary>
+              <div class="jobs-filter-content">
+                {% if material_manufacturers %}
+                  {% for manufacturer in material_manufacturers %}
+                    <label for="material-manufacturer-{{ loop.index }}">
+                      <input id="material-manufacturer-{{ loop.index }}" type="checkbox" name="filter_manufacturer" value="{{ manufacturer }}" /> {{ manufacturer }}
+                    </label>
+                  {% endfor %}
+                {% else %}
+                  <p>No manufacturers available.</p>
+                {% endif %}
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="jobs-controls-right">
+          <div class="jobs-controls-right-top">
+            <h2>All Materials</h2>
+            <div class="jobs-controls-right-actions">
+              <a href="{{ url_for('catalog.create_material') }}">Create Materials</a>
+            </div>
+          </div>
+
+          <div class="jobs-controls-right-bottom">
+            <div id="jobs-list-container">
+              <div id="jobs-list-grid">
+                {% if materials %}
+                  {% for material in materials %}
+                    <a
+                      class="jobs-card"
+                      href="{{ url_for('catalog.view_material', materialId=material._id) }}"
+                      data-catalog-card
+                      data-filter-category="{{ material.category }}"
+                      data-filter-manufacturer="{{ material.manufacturer }}"
+                    >
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Material</span>
+                        <span class="jobs-card-value">{{ material.material_name }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Part Number</span>
+                        <span class="jobs-card-value">{{ material.part_number }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Category</span>
+                        <span class="jobs-card-value">{{ material.category }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Manufacturer</span>
+                        <span class="jobs-card-value">{{ material.manufacturer }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Price</span>
+                        <span class="jobs-card-value">{{ material.price_display }}</span>
+                      </div>
+                    </a>
+                  {% endfor %}
+                {% else %}
+                  <p>No materials have been created yet.</p>
+                {% endif %}
+              </div>
+              {% if materials %}
+                <p id="catalog-filter-no-results" hidden>No materials match the selected filters.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/catalog_filters.js') }}" defer></script>
+{% endblock %}

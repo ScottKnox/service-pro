@@ -28,6 +28,21 @@
           <h3>Manage Parts</h3>
           <p>Maintain part codes, descriptions, and unit costs for the items you sell and install.</p>
         </a>
+
+        <a class="admin-link-card" href="{{ url_for('catalog.manage_labor') }}">
+          <h3>Manage Labor</h3>
+          <p>Define labor categories, default hours, and hourly rates for your business.</p>
+        </a>
+
+        <a class="admin-link-card" href="{{ url_for('catalog.manage_materials') }}">
+          <h3>Manage Materials</h3>
+          <p>Maintain material details, manufacturers, quantities, and pricing used on jobs.</p>
+        </a>
+
+        <a class="admin-link-card" href="{{ url_for('catalog.manage_discounts') }}">
+          <h3>Discounts</h3>
+          <p>Define discount categories, percentages, and amounts your team can apply to jobs.</p>
+        </a>
       </div>
     </div>
   </div>
