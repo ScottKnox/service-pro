@@ -44,6 +44,8 @@ def _parse_nonnegative_float(raw_value, field_label):
 def _parse_optional_nonnegative_float(raw_value, field_label, default=0.0):
     value_text = str(raw_value or "").strip()
     if not value_text:
+        if default is None:
+            return None, ""
         return float(default), ""
 
     try:
@@ -111,6 +113,22 @@ def _serialize_material(material):
     return serialized
 
 
+def _serialize_equipment(equipment):
+    serialized = serialize_doc(equipment)
+    serialized["equipment_name"] = str(serialized.get("equipment_name") or "").strip()
+    serialized["manufacturer"] = str(serialized.get("manufacturer") or "").strip()
+    serialized["category"] = str(serialized.get("category") or "").strip()
+    serialized["sku"] = str(serialized.get("sku") or "").strip()
+    serialized["description"] = str(serialized.get("description") or "").strip()
+    serialized["notes"] = str(serialized.get("notes") or "").strip()
+    serialized["purchase_link"] = str(serialized.get("purchase_link") or "").strip()
+    default_quantity = serialized.get("default_quantity_installed")
+    serialized["default_quantity_installed"] = str(default_quantity or "").strip()
+    serialized["default_quantity_installed_display"] = _format_hours_display(default_quantity)
+    serialized["default_price_display"] = _format_currency_display(serialized.get("default_price"))
+    return serialized
+
+
 def _serialize_discount(discount):
     serialized = serialize_doc(discount)
     serialized["discount_category"] = str(serialized.get("discount_category") or "").strip()
@@ -122,6 +140,15 @@ def _serialize_discount(discount):
 def _build_filter_values(items, key):
     values = sorted({str(item.get(key) or "").strip() for item in items if str(item.get(key) or "").strip()})
     return values
+
+
+def _build_category_options(db, collection_name, field_name, business_id):
+    if not business_id:
+        return []
+
+    values = db[collection_name].distinct(field_name, {"business_id": business_id})
+    cleaned = sorted({str(value or "").strip() for value in values if str(value or "").strip()})
+    return cleaned
 
 
 def _service_form_data(service=None):
@@ -171,6 +198,21 @@ def _material_form_data(material=None):
         "unit_of_measure": str(material.get("unit_of_measure") or "").strip(),
         "price": str(material.get("price") or "").strip(),
         "purchase_link": str(material.get("purchase_link") or "").strip(),
+    }
+
+
+def _equipment_form_data(equipment=None):
+    equipment = equipment or {}
+    return {
+        "equipment_name": str(equipment.get("equipment_name") or "").strip(),
+        "manufacturer": str(equipment.get("manufacturer") or "").strip(),
+        "category": str(equipment.get("category") or "").strip(),
+        "sku": str(equipment.get("sku") or "").strip(),
+        "description": str(equipment.get("description") or "").strip(),
+        "notes": str(equipment.get("notes") or "").strip(),
+        "purchase_link": str(equipment.get("purchase_link") or "").strip(),
+        "default_price": str(equipment.get("default_price") or "").strip(),
+        "default_quantity_installed": str(equipment.get("default_quantity_installed") or "").strip(),
     }
 
 
@@ -255,6 +297,21 @@ def manage_materials():
     )
 
 
+@bp.route("/equipment")
+def manage_equipment():
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    query = {"business_id": business_id} if business_id else {"_id": None}
+    equipment_items = [_serialize_equipment(equipment) for equipment in db.equipment.find(query).sort("equipment_name", 1)]
+
+    return render_template(
+        "services/manage_equipment.html",
+        equipment_items=equipment_items,
+        equipment_categories=_build_filter_values(equipment_items, "category"),
+        equipment_manufacturers=_build_filter_values(equipment_items, "manufacturer"),
+    )
+
+
 @bp.route("/discounts")
 def manage_discounts():
     db = ensure_connection_or_500()
@@ -279,6 +336,7 @@ def create_service():
     error = ""
     form_data = _service_form_data()
     selected_part_ids = []
+    category_options = _build_category_options(db, "services", "category", business_id)
 
     if request.method == "POST":
         form_data = _service_form_data(request.form)
@@ -321,7 +379,7 @@ def create_service():
         part["_id"]: {"unit_cost": part["unit_cost_display"], "part_name": part["part_name"], "part_code": part["part_code"]}
         for part in parts
     }
-    return render_template("services/create_service.html", error=error, form_data=form_data, parts=parts, parts_catalog_by_id=parts_catalog_by_id, selected_part_ids=selected_part_ids)
+    return render_template("services/create_service.html", error=error, form_data=form_data, parts=parts, parts_catalog_by_id=parts_catalog_by_id, selected_part_ids=selected_part_ids, category_options=category_options)
 
 
 @bp.route("/services/<serviceId>")
@@ -362,6 +420,7 @@ def update_service(serviceId):
     error = ""
     form_data = _service_form_data(service)
     selected_part_ids = [str(pid) for pid in service.get("part_ids", [])]
+    category_options = _build_category_options(db, "services", "category", business_id)
 
     if request.method == "POST":
         form_data = _service_form_data(request.form)
@@ -416,6 +475,7 @@ def update_service(serviceId):
         parts=parts,
         parts_catalog_by_id=parts_catalog_by_id,
         selected_part_ids=selected_part_ids,
+        category_options=category_options,
     )
 
 
@@ -439,6 +499,7 @@ def create_part():
 
     error = ""
     form_data = _part_form_data()
+    category_options = _build_category_options(db, "parts", "category", business_id)
 
     if request.method == "POST":
         form_data = _part_form_data(request.form)
@@ -470,7 +531,7 @@ def create_part():
             )
             return redirect(url_for("catalog.manage_parts"))
 
-    return render_template("services/create_part.html", error=error, form_data=form_data)
+    return render_template("services/create_part.html", error=error, form_data=form_data, category_options=category_options)
 
 
 @bp.route("/parts/<partId>")
@@ -500,6 +561,7 @@ def update_part(partId):
 
     error = ""
     form_data = _part_form_data(part)
+    category_options = _build_category_options(db, "parts", "category", business_id)
 
     if request.method == "POST":
         form_data = _part_form_data(request.form)
@@ -535,7 +597,7 @@ def update_part(partId):
             )
             return redirect(url_for("catalog.view_part", partId=partId))
 
-    return render_template("services/update_part.html", partId=partId, error=error, form_data=form_data)
+    return render_template("services/update_part.html", partId=partId, error=error, form_data=form_data, category_options=category_options)
 
 
 @bp.route("/parts/<partId>/delete", methods=["POST"])
@@ -558,6 +620,7 @@ def create_labor():
 
     error = ""
     form_data = _labor_form_data()
+    category_options = _build_category_options(db, "labors", "labor_category", business_id)
 
     if request.method == "POST":
         form_data = _labor_form_data(request.form)
@@ -582,7 +645,7 @@ def create_labor():
             )
             return redirect(url_for("catalog.manage_labor"))
 
-    return render_template("services/create_labor.html", error=error, form_data=form_data)
+    return render_template("services/create_labor.html", error=error, form_data=form_data, category_options=category_options)
 
 
 @bp.route("/labor/<laborId>")
@@ -612,6 +675,7 @@ def update_labor(laborId):
 
     error = ""
     form_data = _labor_form_data(labor)
+    category_options = _build_category_options(db, "labors", "labor_category", business_id)
 
     if request.method == "POST":
         form_data = _labor_form_data(request.form)
@@ -638,7 +702,7 @@ def update_labor(laborId):
             )
             return redirect(url_for("catalog.view_labor", laborId=laborId))
 
-    return render_template("services/update_labor.html", laborId=laborId, error=error, form_data=form_data)
+    return render_template("services/update_labor.html", laborId=laborId, error=error, form_data=form_data, category_options=category_options)
 
 
 @bp.route("/labor/<laborId>/delete", methods=["POST"])
@@ -662,6 +726,7 @@ def create_material():
     error = ""
     form_data = _material_form_data()
     uom_options = _material_uom_options()
+    category_options = _build_category_options(db, "materials", "category", business_id)
 
     if request.method == "POST":
         form_data = _material_form_data(request.form)
@@ -688,7 +753,7 @@ def create_material():
             )
             return redirect(url_for("catalog.manage_materials"))
 
-    return render_template("services/create_materials.html", error=error, form_data=form_data, uom_options=uom_options)
+    return render_template("services/create_materials.html", error=error, form_data=form_data, uom_options=uom_options, category_options=category_options)
 
 
 @bp.route("/materials/<materialId>")
@@ -719,6 +784,7 @@ def update_material(materialId):
     error = ""
     form_data = _material_form_data(material)
     uom_options = _material_uom_options()
+    category_options = _build_category_options(db, "materials", "category", business_id)
 
     if request.method == "POST":
         form_data = _material_form_data(request.form)
@@ -747,7 +813,7 @@ def update_material(materialId):
             )
             return redirect(url_for("catalog.view_material", materialId=materialId))
 
-    return render_template("services/update_materials.html", materialId=materialId, error=error, form_data=form_data, uom_options=uom_options)
+    return render_template("services/update_materials.html", materialId=materialId, error=error, form_data=form_data, uom_options=uom_options, category_options=category_options)
 
 
 @bp.route("/materials/<materialId>/delete", methods=["POST"])
@@ -761,6 +827,117 @@ def delete_material(materialId):
     return redirect(url_for("catalog.manage_materials"))
 
 
+@bp.route("/equipment/create", methods=["GET", "POST"])
+def create_equipment():
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    if not business_id:
+        return redirect(url_for("admin_bp.admin"))
+
+    error = ""
+    form_data = _equipment_form_data()
+    category_options = _build_category_options(db, "equipment", "category", business_id)
+
+    if request.method == "POST":
+        form_data = _equipment_form_data(request.form)
+        default_price, error = _parse_optional_nonnegative_float(form_data["default_price"], "Default Price")
+        if not error:
+            default_quantity_installed, error = _parse_optional_nonnegative_float(form_data["default_quantity_installed"], "Default Quantity Installed")
+
+        if not error and not form_data["equipment_name"]:
+            error = "Equipment Name is required."
+
+        if not error:
+            db.equipment.insert_one(
+                {
+                    "business_id": business_id,
+                    "equipment_name": form_data["equipment_name"],
+                    "manufacturer": form_data["manufacturer"],
+                    "category": form_data["category"],
+                    "sku": form_data["sku"],
+                    "description": form_data["description"],
+                    "notes": form_data["notes"],
+                    "purchase_link": form_data["purchase_link"],
+                    "default_price": default_price,
+                    "default_quantity_installed": default_quantity_installed,
+                }
+            )
+            return redirect(url_for("catalog.manage_equipment"))
+
+    return render_template("services/create_equipment.html", error=error, form_data=form_data, category_options=category_options)
+
+
+@bp.route("/equipment/<equipmentId>")
+def view_equipment(equipmentId):
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    query = {"_id": object_id_or_404(equipmentId)}
+    if business_id:
+        query["business_id"] = business_id
+    equipment = db.equipment.find_one(query)
+    if not equipment:
+        return redirect(url_for("catalog.manage_equipment"))
+
+    return render_template("services/view_equipment.html", equipmentId=equipmentId, equipment=_serialize_equipment(equipment))
+
+
+@bp.route("/equipment/<equipmentId>/update", methods=["GET", "POST"])
+def update_equipment(equipmentId):
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    query = {"_id": object_id_or_404(equipmentId)}
+    if business_id:
+        query["business_id"] = business_id
+    equipment = db.equipment.find_one(query)
+    if not equipment:
+        return redirect(url_for("catalog.manage_equipment"))
+
+    error = ""
+    form_data = _equipment_form_data(equipment)
+    category_options = _build_category_options(db, "equipment", "category", business_id)
+
+    if request.method == "POST":
+        form_data = _equipment_form_data(request.form)
+        default_price, error = _parse_optional_nonnegative_float(form_data["default_price"], "Default Price")
+        if not error:
+            default_quantity_installed, error = _parse_optional_nonnegative_float(form_data["default_quantity_installed"], "Default Quantity Installed")
+
+        if not error and not form_data["equipment_name"]:
+            error = "Equipment Name is required."
+
+        if not error:
+            db.equipment.update_one(
+                query,
+                {
+                    "$set": {
+                        "equipment_name": form_data["equipment_name"],
+                        "manufacturer": form_data["manufacturer"],
+                        "category": form_data["category"],
+                        "sku": form_data["sku"],
+                        "description": form_data["description"],
+                        "notes": form_data["notes"],
+                        "purchase_link": form_data["purchase_link"],
+                        "default_price": default_price,
+                        "default_quantity_installed": default_quantity_installed,
+                    }
+                },
+            )
+            return redirect(url_for("catalog.view_equipment", equipmentId=equipmentId))
+
+    return render_template("services/update_equipment.html", equipmentId=equipmentId, error=error, form_data=form_data, category_options=category_options)
+
+
+@bp.route("/equipment/<equipmentId>/delete", methods=["POST"])
+def delete_equipment(equipmentId):
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    query = {"_id": object_id_or_404(equipmentId)}
+    if business_id:
+        query["business_id"] = business_id
+    db.equipment.delete_one(query)
+    return redirect(url_for("catalog.manage_equipment"))
+
+
 @bp.route("/discounts/create", methods=["GET", "POST"])
 def create_discount():
     db = ensure_connection_or_500()
@@ -770,6 +947,7 @@ def create_discount():
 
     error = ""
     form_data = _discount_form_data()
+    category_options = _build_category_options(db, "discounts", "discount_category", business_id)
 
     if request.method == "POST":
         form_data = _discount_form_data(request.form)
@@ -802,7 +980,7 @@ def create_discount():
             )
             return redirect(url_for("catalog.manage_discounts"))
 
-    return render_template("services/create_discount.html", error=error, form_data=form_data)
+    return render_template("services/create_discount.html", error=error, form_data=form_data, category_options=category_options)
 
 
 @bp.route("/discounts/<discountId>")
@@ -832,6 +1010,7 @@ def update_discount(discountId):
 
     error = ""
     form_data = _discount_form_data(discount)
+    category_options = _build_category_options(db, "discounts", "discount_category", business_id)
 
     if request.method == "POST":
         form_data = _discount_form_data(request.form)
@@ -866,7 +1045,7 @@ def update_discount(discountId):
             )
             return redirect(url_for("catalog.view_discount", discountId=discountId))
 
-    return render_template("services/update_discount.html", discountId=discountId, error=error, form_data=form_data)
+    return render_template("services/update_discount.html", discountId=discountId, error=error, form_data=form_data, category_options=category_options)
 
 
 @bp.route("/discounts/<discountId>/delete", methods=["POST"])

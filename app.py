@@ -73,6 +73,7 @@ def require_login():
         "employees.add_employee",
         "catalog.create_service",
         "catalog.create_part",
+        "catalog.create_equipment",
     }
     if request.endpoint and request.endpoint in _restricted_endpoints:
         employee_id = session.get("employee_id")

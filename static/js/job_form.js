@@ -7,6 +7,7 @@
   const partsCatalog = form && form.dataset.partsCatalog ? JSON.parse(form.dataset.partsCatalog) : {};
   const laborsCatalog = form && form.dataset.laborsCatalog ? JSON.parse(form.dataset.laborsCatalog) : {};
   const materialsCatalog = form && form.dataset.materialsCatalog ? JSON.parse(form.dataset.materialsCatalog) : {};
+  const equipmentsCatalog = form && form.dataset.equipmentsCatalog ? JSON.parse(form.dataset.equipmentsCatalog) : {};
   const discountsCatalog = form && form.dataset.discountsCatalog ? JSON.parse(form.dataset.discountsCatalog) : {};
   const partsById = form && form.dataset.partsById ? JSON.parse(form.dataset.partsById) : {};
 
@@ -205,6 +206,9 @@
   const materialsList = document.getElementById("job-materials-list");
   const materialOptionsTemplate = document.getElementById("material-options-template");
   const materialUnitOptionsTemplate = document.getElementById("material-unit-options-template");
+  const addEquipmentButton = document.getElementById("add-job-equipment-button");
+  const equipmentsList = document.getElementById("job-equipments-list");
+  const equipmentOptionsTemplate = document.getElementById("equipment-options-template");
   const addDiscountButton = document.getElementById("add-job-discount-button");
   const discountsList = document.getElementById("job-discounts-list");
   const discountOptionsTemplate = document.getElementById("discount-options-template");
@@ -239,6 +243,10 @@
     return rowElement ? rowElement.querySelector('select[name="material_name[]"]') : null;
   }
 
+  function getEquipmentSelect(rowElement) {
+    return rowElement ? rowElement.querySelector('select[name="equipment_name[]"]') : null;
+  }
+
   function getDiscountSelect(rowElement) {
     return rowElement ? rowElement.querySelector('select[name="discount_name[]"]') : null;
   }
@@ -263,6 +271,11 @@
     return !!(select && select.value.trim() !== '');
   }
 
+  function isEquipmentRowPopulated(rowElement) {
+    const select = getEquipmentSelect(rowElement);
+    return !!(select && select.value.trim() !== '');
+  }
+
   function isDiscountRowPopulated(rowElement) {
     const select = getDiscountSelect(rowElement);
     return !!(select && select.value.trim() !== '');
@@ -282,6 +295,8 @@
           ? (laborsList ? laborsList.querySelectorAll('.job-labor-row') : [])
           : rowType === 'material'
             ? (materialsList ? materialsList.querySelectorAll('.job-material-row') : [])
+            : rowType === 'equipment'
+              ? (equipmentsList ? equipmentsList.querySelectorAll('.job-equipment-row') : [])
             : (discountsList ? discountsList.querySelectorAll('.job-discount-row') : []);
     const hasMultipleRows = rowCollection.length > 1;
 
@@ -293,14 +308,16 @@
           ? isLaborRowPopulated(rowElement)
           : rowType === 'material'
             ? isMaterialRowPopulated(rowElement)
+            : rowType === 'equipment'
+              ? isEquipmentRowPopulated(rowElement)
             : isDiscountRowPopulated(rowElement);
 
     removeWrap.style.display = (isPopulated || hasMultipleRows) ? '' : 'none';
   }
 
   function refreshRemoveButtons(rowType) {
-    const listElement = rowType === 'service' ? servicesList : rowType === 'part' ? partsList : rowType === 'labor' ? laborsList : rowType === 'material' ? materialsList : discountsList;
-    const selector = rowType === 'service' ? '.job-service-row' : rowType === 'part' ? '.job-part-row' : rowType === 'labor' ? '.job-labor-row' : rowType === 'material' ? '.job-material-row' : '.job-discount-row';
+    const listElement = rowType === 'service' ? servicesList : rowType === 'part' ? partsList : rowType === 'labor' ? laborsList : rowType === 'material' ? materialsList : rowType === 'equipment' ? equipmentsList : discountsList;
+    const selector = rowType === 'service' ? '.job-service-row' : rowType === 'part' ? '.job-part-row' : rowType === 'labor' ? '.job-labor-row' : rowType === 'material' ? '.job-material-row' : rowType === 'equipment' ? '.job-equipment-row' : '.job-discount-row';
 
     if (!listElement) {
       return;
@@ -490,6 +507,41 @@
     return row;
   }
 
+  function createEquipmentRow() {
+    const nextIndex = getNextRowIndex(equipmentsList, '.job-equipment-row', 'equipmentIndex');
+    const row = document.createElement("div");
+    row.className = "add-customer-form-row job-equipment-row";
+    row.dataset.equipmentIndex = String(nextIndex);
+
+    const optionHtml = equipmentOptionsTemplate.innerHTML;
+
+    row.innerHTML =
+      '<div class="add-customer-form-field">' +
+        '<label for="equipment-name-' + nextIndex + '">Equipment</label>' +
+        '<select id="equipment-name-' + nextIndex + '" name="equipment_name[]">' +
+          '<option value="">-- Select equipment --</option>' +
+          optionHtml +
+        '</select>' +
+      '</div>' +
+      '<div class="add-customer-form-field">' +
+        '<label for="equipment-quantity-installed-' + nextIndex + '">Quantity Installed</label>' +
+        '<input id="equipment-quantity-installed-' + nextIndex + '" name="equipment_quantity_installed[]" type="number" step="0.25" min="0" placeholder="0" />' +
+      '</div>' +
+      '<div class="add-customer-form-field">' +
+        '<label for="equipment-price-' + nextIndex + '">Price</label>' +
+        '<input id="equipment-price-' + nextIndex + '" name="equipment_price[]" type="text" placeholder="$0.00" />' +
+      '</div>';
+
+    const newSelect = row.querySelector('select');
+    if (newSelect) {
+      attachEquipmentDefaultsListener(newSelect);
+    }
+
+    attachRowRemoveButton(row, 'equipment');
+    updateRemoveButtonVisibility(row, 'equipment');
+    return row;
+  }
+
   function ensureAtLeastOneServiceRow() {
     if (!servicesList || !serviceOptionsTemplate) {
       return;
@@ -545,6 +597,17 @@
     }
   }
 
+  function ensureAtLeastOneEquipmentRow() {
+    if (!equipmentsList || !equipmentOptionsTemplate) {
+      return;
+    }
+
+    const rows = equipmentsList.querySelectorAll('.job-equipment-row');
+    if (rows.length === 0) {
+      equipmentsList.appendChild(createEquipmentRow());
+    }
+  }
+
   function attachRowRemoveButton(rowElement, rowType) {
     if (!rowElement || rowElement.querySelector('.job-row-remove-button')) {
       return;
@@ -556,7 +619,7 @@
     const removeButton = document.createElement('button');
     removeButton.type = 'button';
     removeButton.className = 'job-row-remove-button';
-    removeButton.textContent = rowType === 'service' ? 'Remove Service' : rowType === 'part' ? 'Remove Part' : rowType === 'labor' ? 'Remove Labor' : rowType === 'material' ? 'Remove Material' : 'Remove Discount';
+    removeButton.textContent = rowType === 'service' ? 'Remove Service' : rowType === 'part' ? 'Remove Part' : rowType === 'labor' ? 'Remove Labor' : rowType === 'material' ? 'Remove Material' : rowType === 'equipment' ? 'Remove Equipment' : 'Remove Discount';
 
     removeButton.addEventListener('click', function () {
       rowElement.remove();
@@ -573,6 +636,9 @@
       } else if (rowType === 'material') {
         ensureAtLeastOneMaterialRow();
         refreshRemoveButtons('material');
+      } else if (rowType === 'equipment') {
+        ensureAtLeastOneEquipmentRow();
+        refreshRemoveButtons('equipment');
       } else {
         ensureAtLeastOneDiscountRow();
         refreshRemoveButtons('discount');
@@ -831,6 +897,64 @@
     addMaterialButton.addEventListener("click", function () {
       materialsList.appendChild(createMaterialRow());
       refreshRemoveButtons('material');
+
+      validateForm();
+    });
+  }
+
+  function attachEquipmentDefaultsListener(selectElement) {
+    selectElement.addEventListener('change', function () {
+      const selectedEquipment = this.value;
+      const equipmentIndex = this.id.split('-')[2];
+      const quantityInput = document.getElementById('equipment-quantity-installed-' + equipmentIndex);
+      const priceInput = document.getElementById('equipment-price-' + equipmentIndex);
+      const equipmentDetails = selectedEquipment ? equipmentsCatalog[selectedEquipment] : null;
+
+      if (quantityInput) {
+        if (equipmentDetails && equipmentDetails.default_quantity_installed) {
+          quantityInput.value = equipmentDetails.default_quantity_installed;
+        } else if (!selectedEquipment) {
+          quantityInput.value = '';
+        }
+      }
+
+      if (priceInput) {
+        if (equipmentDetails && equipmentDetails.default_price) {
+          priceInput.value = equipmentDetails.default_price;
+        } else if (!selectedEquipment) {
+          priceInput.value = '$0.00';
+        }
+      }
+
+      const equipmentRow = this.closest('.job-equipment-row');
+      if (equipmentRow) {
+        updateRemoveButtonVisibility(equipmentRow, 'equipment');
+      }
+
+      refreshRemoveButtons('equipment');
+    });
+  }
+
+  const initialEquipmentSelects = document.querySelectorAll('select[id^="equipment-name-"]');
+  initialEquipmentSelects.forEach(function (select) {
+    attachEquipmentDefaultsListener(select);
+    if (select.value) {
+      select.dispatchEvent(new Event('change'));
+    }
+  });
+
+  const initialEquipmentRows = equipmentsList ? equipmentsList.querySelectorAll('.job-equipment-row') : [];
+  initialEquipmentRows.forEach(function (row) {
+    attachRowRemoveButton(row, 'equipment');
+  });
+
+  ensureAtLeastOneEquipmentRow();
+  refreshRemoveButtons('equipment');
+
+  if (addEquipmentButton && equipmentsList && equipmentOptionsTemplate) {
+    addEquipmentButton.addEventListener("click", function () {
+      equipmentsList.appendChild(createEquipmentRow());
+      refreshRemoveButtons('equipment');
 
       validateForm();
     });

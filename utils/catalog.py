@@ -1,4 +1,4 @@
-"""Service, parts, labor, materials, and discount catalog building utilities."""
+"""Service, parts, labor, materials, equipment, and discount catalog building utilities."""
 
 from utils.currency import normalize_currency
 
@@ -90,6 +90,28 @@ def build_material_catalog(materials):
             "unit_of_measure": str(material.get("unit_of_measure") or "").strip(),
             "price": normalize_currency(material.get("price", 0)),
             "purchase_link": str(material.get("purchase_link") or "").strip(),
+        }
+
+    return catalog
+
+
+def build_equipment_catalog(equipments):
+    """Build an equipment catalog dictionary from equipment documents."""
+    catalog = {}
+    for equipment in equipments:
+        equipment_name = str(equipment.get("equipment_name") or "").strip()
+        if not equipment_name:
+            continue
+
+        catalog[equipment_name] = {
+            "equipment_name": equipment_name,
+            "manufacturer": str(equipment.get("manufacturer") or "").strip(),
+            "category": str(equipment.get("category") or "").strip(),
+            "sku": str(equipment.get("sku") or "").strip(),
+            "description": str(equipment.get("description") or "").strip(),
+            "notes": str(equipment.get("notes") or "").strip(),
+            "default_price": normalize_currency(equipment.get("default_price", 0)),
+            "default_quantity_installed": _format_hours_value(equipment.get("default_quantity_installed", "")),
         }
 
     return catalog
@@ -290,6 +312,60 @@ def build_job_materials_from_form(
         total += line_total
 
     return materials, total
+
+
+def build_job_equipments_from_form(
+    equipment_names,
+    equipment_quantities,
+    equipment_prices,
+    equipment_catalog,
+):
+    """
+    Build a list of equipment rows from form input and catalog defaults.
+
+    Returns:
+        tuple: (equipments_list, total_price)
+    """
+    equipments = []
+    total = 0.0
+
+    for index, raw_name in enumerate(equipment_names):
+        equipment_name = (raw_name or "").strip()
+        if not equipment_name:
+            continue
+
+        catalog_entry = equipment_catalog.get(equipment_name, {})
+        entered_quantity = equipment_quantities[index] if index < len(equipment_quantities) else ""
+        entered_price = equipment_prices[index] if index < len(equipment_prices) else ""
+
+        quantity = _format_hours_value(
+            entered_quantity if (entered_quantity or "").strip() else catalog_entry.get("default_quantity_installed", "")
+        )
+        unit_price = normalize_currency(
+            entered_price if (entered_price or "").strip() else catalog_entry.get("default_price", "$0.00")
+        )
+
+        try:
+            quantity_value = float(quantity or 0)
+        except ValueError:
+            quantity_value = 0.0
+        price_value = float(unit_price.replace("$", "").replace(",", ""))
+        line_total = quantity_value * price_value
+
+        equipments.append(
+            {
+                "equipment_name": equipment_name,
+                "manufacturer": catalog_entry.get("manufacturer", ""),
+                "category": catalog_entry.get("category", ""),
+                "sku": catalog_entry.get("sku", ""),
+                "quantity_installed": quantity,
+                "price": unit_price,
+                "line_total": normalize_currency(line_total),
+            }
+        )
+        total += line_total
+
+    return equipments, total
 
 
 def build_job_discounts_from_form(discount_names, discount_percentages, discount_amounts, discount_catalog):

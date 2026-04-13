@@ -32,7 +32,19 @@
 
           <div class="add-customer-form-field">
             <label for="material-category">Category</label>
-            <input id="material-category" name="category" type="text" placeholder="Enter category" value="{{ form_data.category|default('', true) }}" />
+            <div class="category-input-toggle" data-category-field>
+              <select id="material-category" name="category" data-category-select>
+                <option value="">-- Select a category --</option>
+                {% for category in category_options %}
+                  <option value="{{ category }}" {% if form_data.category == category %}selected{% endif %}>{{ category }}</option>
+                {% endfor %}
+                {% if form_data.category and form_data.category not in category_options %}
+                  <option value="{{ form_data.category }}" selected>{{ form_data.category }}</option>
+                {% endif %}
+              </select>
+              <button class="category-toggle-button" type="button" data-category-toggle aria-label="Add new category" title="Add new category">+</button>
+              <input data-category-input type="text" placeholder="Enter new material category" hidden disabled />
+            </div>
           </div>
 
           <div class="add-customer-form-field">
@@ -82,4 +94,8 @@
       </form>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/category_field_toggle.js') }}"></script>
 {% endblock %}

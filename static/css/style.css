@@ -785,6 +785,83 @@ p {
   background-color: #F8FAFC;
 }
 
+.catalog-compact-list {
+  gap: 0.75rem;
+}
+
+.catalog-compact-list .jobs-card {
+  border: 1px solid #A8B1BD;
+  border-top: 3px solid #334155;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F4F7FB 100%);
+}
+
+.catalog-compact-list .jobs-card:hover {
+  border-color: #8F9BAE;
+  background: linear-gradient(180deg, #FFFFFF 0%, #EFF3F8 100%);
+}
+
+@media (min-width: 1200px) {
+  .catalog-compact-list {
+    display: flex !important;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin-top: 0.5rem;
+  }
+
+  .catalog-compact-list .jobs-card {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.65rem 0.8rem;
+    min-height: 4.25rem;
+  }
+
+  .catalog-compact-list .jobs-card-row {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    padding: 0;
+    border: 0;
+    grid-template-columns: none;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .catalog-compact-list .jobs-card-label {
+    font-size: 0.74rem;
+    letter-spacing: 0.04em;
+  }
+
+  .catalog-compact-list .jobs-card-value {
+    text-align: left;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 18rem;
+  }
+
+  .catalog-compact-list .jobs-card-actions {
+    margin-top: 0;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 1199px) {
+  .catalog-compact-list .jobs-card {
+    gap: 0.55rem;
+    padding: 0.85rem;
+    min-height: 7rem;
+  }
+}
+
+@media (max-width: 699px) {
+  .catalog-compact-list .jobs-card {
+    min-height: 0;
+  }
+}
+
 #create-part-form .part-form-row--two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -1302,21 +1379,21 @@ p {
 }
 
 .resource-services .jobs-card {
-  border-top-color: #0F766E;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F2FBF8 100%);
+  border-top-color: #334155;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F4F7FB 100%);
 }
 
 .resource-services .jobs-card:hover {
-  border-color: #9AD6CA;
+  border-color: #A3B4C9;
 }
 
 .resource-parts .jobs-card {
-  border-top-color: #7C3AED;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F6F2FF 100%);
+  border-top-color: #334155;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F4F7FB 100%);
 }
 
 .resource-parts .jobs-card:hover {
-  border-color: #C2ACEF;
+  border-color: #A3B4C9;
 }
 
 .resource-invoices .jobs-card {
@@ -1629,13 +1706,15 @@ p {
   }
 }
 
-.create-job-form-section-header {
-  margin: 0.25rem 0 0;
-  padding-bottom: 0.4rem;
-  color: #1B263B;
-  font-size: 1.1rem;
+#create-job-form .create-job-form-section-header {
+  margin: 1rem 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  color: #F8F9FA;
+  font-size: 1.05rem;
   font-weight: 700;
-  border-bottom: 1px solid #D1D5DB;
+  text-align: left;
+  background-color: #1B263B;
+  border-radius: 4px;
 }
 
 .add-customer-form-row {
@@ -1713,6 +1792,35 @@ p {
   background-repeat: no-repeat;
   padding-right: 2.25rem;
   cursor: pointer;
+}
+
+.category-input-toggle {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.category-input-toggle input[data-category-input] {
+  grid-column: 1 / -1;
+}
+
+.category-toggle-button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid #1B263B;
+  border-radius: 4px;
+  background-color: #FFFFFF;
+  color: #1B263B;
+  font-size: 1.2rem;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.category-toggle-button:hover {
+  background-color: #F1F5F9;
 }
 
 .add-customer-form-field input:focus,
@@ -1839,6 +1947,7 @@ p {
 #job-parts-actions,
 #job-labors-actions,
 #job-materials-actions,
+#job-equipments-actions,
 #job-discounts-actions,
 #service-parts-actions {
   display: flex;
@@ -1849,6 +1958,7 @@ p {
 #add-job-part-button,
 #add-job-labor-button,
 #add-job-material-button,
+#add-job-equipment-button,
 #add-job-discount-button,
 #add-service-part-button {
   padding: 0.55rem 0.95rem;
@@ -1866,6 +1976,7 @@ p {
 #add-job-part-button:hover,
 #add-job-labor-button:hover,
 #add-job-material-button:hover,
+#add-job-equipment-button:hover,
 #add-job-discount-button:hover,
 #add-service-part-button:hover {
   background-color: #F1F5F9;

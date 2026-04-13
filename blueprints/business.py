@@ -195,6 +195,17 @@ def update_business():
 
     if request.method == "POST":
         company_name = request.form.get("company_name", "").strip()
+        warranty_info = request.form.get("warranty_info", "").strip()
+        address_line_1 = request.form.get("address_line_1", "").strip()
+        address_line_2 = request.form.get("address_line_2", "").strip()
+        city = request.form.get("city", "").strip()
+        state = request.form.get("state", "").strip().upper()
+        zip_code = request.form.get("zip_code", "").strip()
+        phone_number = request.form.get("phone_number", "").strip()
+        fax_number = request.form.get("fax_number", "").strip()
+        email = request.form.get("email", "").strip()
+        website = request.form.get("website", "").strip()
+        license_number = request.form.get("license_number", "").strip()
         tax_parts = request.form.get("tax_parts", "no").strip().lower()
         tax_parts_rate = request.form.get("tax_parts_rate", "0").strip()
         tax_repair_labor = request.form.get("tax_repair_labor", "no").strip().lower()
@@ -216,6 +227,17 @@ def update_business():
             {
                 "$set": {
                     "company_name": company_name,
+                    "warranty_info": warranty_info,
+                    "address_line_1": address_line_1,
+                    "address_line_2": address_line_2,
+                    "city": city,
+                    "state": state,
+                    "zip_code": zip_code,
+                    "phone_number": phone_number,
+                    "fax_number": fax_number,
+                    "email": email,
+                    "website": website,
+                    "license_number": license_number,
                     "tax_rate": tax_rate,
                     "tax_parts": tax_parts,
                     "tax_parts_rate": tax_parts_rate,
@@ -250,4 +272,15 @@ def update_business():
     business["tax_fabrication_rate"] = str(business.get("tax_fabrication_rate") or "0").strip()
     business["tax_materials"] = str(business.get("tax_materials") or "no").strip().lower()
     business["tax_materials_rate"] = str(business.get("tax_materials_rate") or "0").strip()
+    business["address_line_1"] = str(business.get("address_line_1") or "").strip()
+    business["address_line_2"] = str(business.get("address_line_2") or "").strip()
+    business["city"] = str(business.get("city") or "").strip()
+    business["state"] = str(business.get("state") or "").strip().upper()
+    business["zip_code"] = str(business.get("zip_code") or "").strip()
+    business["phone_number"] = str(business.get("phone_number") or "").strip()
+    business["fax_number"] = str(business.get("fax_number") or "").strip()
+    business["email"] = str(business.get("email") or "").strip()
+    business["website"] = str(business.get("website") or "").strip()
+    business["license_number"] = str(business.get("license_number") or "").strip()
+    business["warranty_info"] = str(business.get("warranty_info") or "").strip()
     return render_template("business/update_business.html", business=business)

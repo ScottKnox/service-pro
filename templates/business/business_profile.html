@@ -30,7 +30,62 @@
             <div id="view-customer-details-list">
               <div class="view-customer-detail-item">
                 <h4>Company Name</h4>
-                <p>{{ business.get('business_name', '') }}</p>
+                <p>{{ business.get('company_name', business.get('business_name', '')) }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Address Line 1</h4>
+                <p>{{ business.get('address_line_1', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Address Line 2</h4>
+                <p>{{ business.get('address_line_2', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>City</h4>
+                <p>{{ business.get('city', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>State</h4>
+                <p>{{ business.get('state', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Zip Code</h4>
+                <p>{{ business.get('zip_code', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Phone Number</h4>
+                <p>{{ business.get('phone_number', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Fax Number</h4>
+                <p>{{ business.get('fax_number', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Email</h4>
+                <p>{{ business.get('email', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Website</h4>
+                <p>{{ business.get('website', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>License Number</h4>
+                <p>{{ business.get('license_number', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Warranty Info</h4>
+                <p>{{ business.get('warranty_info', '')|replace('\n', '<br/>')|safe }}</p>
               </div>
 
               <div class="view-customer-detail-item">

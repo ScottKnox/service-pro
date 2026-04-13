@@ -27,6 +27,68 @@
           </div>
         </div>
 
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="business-warranty-info">Warranty Info</label>
+            <textarea id="business-warranty-info" name="warranty_info" rows="4" placeholder="Enter your warranty details...">{{ business.get('warranty_info', '') }}</textarea>
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="business-address-line-1">Address Line 1</label>
+            <input id="business-address-line-1" name="address_line_1" type="text" value="{{ business.get('address_line_1', '') }}" />
+          </div>
+          <div class="add-customer-form-field">
+            <label for="business-address-line-2">Address Line 2</label>
+            <input id="business-address-line-2" name="address_line_2" type="text" value="{{ business.get('address_line_2', '') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="business-city">City</label>
+            <input id="business-city" name="city" type="text" value="{{ business.get('city', '') }}" />
+          </div>
+          <div class="add-customer-form-field">
+            <label for="business-state">State</label>
+            <input id="business-state" name="state" type="text" maxlength="2" value="{{ business.get('state', '') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="business-zip-code">Zip Code</label>
+            <input id="business-zip-code" name="zip_code" type="text" value="{{ business.get('zip_code', '') }}" />
+          </div>
+          <div class="add-customer-form-field">
+            <label for="business-license-number">License Number</label>
+            <input id="business-license-number" name="license_number" type="text" value="{{ business.get('license_number', '') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="business-phone-number">Phone Number</label>
+            <input id="business-phone-number" name="phone_number" type="text" value="{{ business.get('phone_number', '') }}" />
+          </div>
+          <div class="add-customer-form-field">
+            <label for="business-fax-number">Fax Number</label>
+            <input id="business-fax-number" name="fax_number" type="text" value="{{ business.get('fax_number', '') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="business-email">Email</label>
+            <input id="business-email" name="email" type="email" value="{{ business.get('email', '') }}" />
+          </div>
+          <div class="add-customer-form-field">
+            <label for="business-website">Website</label>
+            <input id="business-website" name="website" type="text" value="{{ business.get('website', '') }}" />
+          </div>
+        </div>
+
         <h2 class="create-job-form-section-header">Tax Configuration</h2>
 
         <div class="add-customer-form-row">

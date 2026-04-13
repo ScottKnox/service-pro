@@ -15,7 +15,7 @@
         </ol>
       </nav>
 
-      <form id="create-job-form" action="{{ url_for('jobs.update_job', jobId=jobId) }}" method="post" data-services-catalog='{{ services_catalog|tojson }}' data-parts-catalog='{{ parts_catalog|tojson }}' data-labors-catalog='{{ labors_catalog|tojson }}' data-materials-catalog='{{ materials_catalog|tojson }}' data-discounts-catalog='{{ discounts_catalog|tojson }}' data-parts-by-id='{{ parts_by_id|tojson }}' data-schedule-required="false">
+      <form id="create-job-form" action="{{ url_for('jobs.update_job', jobId=jobId) }}" method="post" data-services-catalog='{{ services_catalog|tojson }}' data-parts-catalog='{{ parts_catalog|tojson }}' data-labors-catalog='{{ labors_catalog|tojson }}' data-materials-catalog='{{ materials_catalog|tojson }}' data-equipments-catalog='{{ equipments_catalog|tojson }}' data-discounts-catalog='{{ discounts_catalog|tojson }}' data-parts-by-id='{{ parts_by_id|tojson }}' data-schedule-required="false">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Client Details</h2>
 
@@ -278,6 +278,68 @@
         <template id="part-options-template">
           {% for part in parts %}
             <option value="{{ part.part_code }}">{{ part.part_name }} ({{ part.part_code }})</option>
+          {% endfor %}
+        </template>
+
+        <h2 class="create-job-form-section-header">Equipment Installed</h2>
+
+        <div id="job-equipments-list">
+          {% if job.equipments %}
+            {% for equipment in job.equipments %}
+            <div class="add-customer-form-row job-equipment-row" data-equipment-index="{{ loop.index }}">
+              <div class="add-customer-form-field">
+                <label for="equipment-name-{{ loop.index }}">Equipment</label>
+                <select id="equipment-name-{{ loop.index }}" name="equipment_name[]">
+                  <option value="">-- Select equipment --</option>
+                  {% for available_equipment in equipments %}
+                    <option value="{{ available_equipment.equipment_name }}" {% if available_equipment.equipment_name == equipment.equipment_name %}selected{% endif %}>{{ available_equipment.equipment_name }}{% if available_equipment.sku %} ({{ available_equipment.sku }}){% endif %}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="add-customer-form-field">
+                <label for="equipment-quantity-installed-{{ loop.index }}">Quantity Installed</label>
+                <input id="equipment-quantity-installed-{{ loop.index }}" name="equipment_quantity_installed[]" type="number" step="0.25" min="0" placeholder="0" value="{{ equipment.quantity_installed|default('', true) }}" />
+              </div>
+
+              <div class="add-customer-form-field">
+                <label for="equipment-price-{{ loop.index }}">Price</label>
+                <input id="equipment-price-{{ loop.index }}" name="equipment_price[]" type="text" placeholder="$0.00" value="{{ equipment.price|default('', true) }}" />
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="add-customer-form-row job-equipment-row" data-equipment-index="1">
+              <div class="add-customer-form-field">
+                <label for="equipment-name-1">Equipment</label>
+                <select id="equipment-name-1" name="equipment_name[]">
+                  <option value="">-- Select equipment --</option>
+                  {% for equipment in equipments %}
+                    <option value="{{ equipment.equipment_name }}">{{ equipment.equipment_name }}{% if equipment.sku %} ({{ equipment.sku }}){% endif %}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="add-customer-form-field">
+                <label for="equipment-quantity-installed-1">Quantity Installed</label>
+                <input id="equipment-quantity-installed-1" name="equipment_quantity_installed[]" type="number" step="0.25" min="0" placeholder="0" />
+              </div>
+
+              <div class="add-customer-form-field">
+                <label for="equipment-price-1">Price</label>
+                <input id="equipment-price-1" name="equipment_price[]" type="text" placeholder="$0.00" />
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        <div id="job-equipments-actions">
+          <button id="add-job-equipment-button" type="button">Add Equipment</button>
+        </div>
+
+        <template id="equipment-options-template">
+          {% for equipment in equipments %}
+            <option value="{{ equipment.equipment_name }}">{{ equipment.equipment_name }}{% if equipment.sku %} ({{ equipment.sku }}){% endif %}</option>
           {% endfor %}
         </template>
 

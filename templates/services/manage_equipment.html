@@ -1,32 +1,32 @@
 {% extends "base.html" %}
 
-{% block title %}Manage Materials | Steady Work{% endblock %}
+{% block title %}Manage Equipment | Steady Work{% endblock %}
 
 {% block content %}
   <div id="main-container">
     <div id="manage-jobs-header" class="resource-page resource-parts">
-      <h1>Manage Materials</h1>
+      <h1>Manage Equipment</h1>
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
           <li><a href="{{ url_for('catalog.manage_price_book') }}">Manage Price Book</a></li>
-          <li aria-current="page">Manage Materials</li>
+          <li aria-current="page">Manage Equipment</li>
         </ol>
       </nav>
 
       <div id="jobs-controls-row" data-catalog-filter-root>
         <div class="jobs-controls-left">
-          <h2>Filter Materials</h2>
+          <h2>Filter Equipment</h2>
 
           <div class="jobs-filter-list">
             <details class="jobs-filter-group" open>
               <summary>Category</summary>
               <div class="jobs-filter-content">
-                {% if material_categories %}
-                  {% for category in material_categories %}
-                    <label for="material-category-{{ loop.index }}">
-                      <input id="material-category-{{ loop.index }}" type="checkbox" name="filter_category" value="{{ category }}" /> {{ category }}
+                {% if equipment_categories %}
+                  {% for category in equipment_categories %}
+                    <label for="equipment-category-{{ loop.index }}">
+                      <input id="equipment-category-{{ loop.index }}" type="checkbox" name="filter_category" value="{{ category }}" /> {{ category }}
                     </label>
                   {% endfor %}
                 {% else %}
@@ -38,10 +38,10 @@
             <details class="jobs-filter-group" open>
               <summary>Manufacturer</summary>
               <div class="jobs-filter-content">
-                {% if material_manufacturers %}
-                  {% for manufacturer in material_manufacturers %}
-                    <label for="material-manufacturer-{{ loop.index }}">
-                      <input id="material-manufacturer-{{ loop.index }}" type="checkbox" name="filter_manufacturer" value="{{ manufacturer }}" /> {{ manufacturer }}
+                {% if equipment_manufacturers %}
+                  {% for manufacturer in equipment_manufacturers %}
+                    <label for="equipment-manufacturer-{{ loop.index }}">
+                      <input id="equipment-manufacturer-{{ loop.index }}" type="checkbox" name="filter_manufacturer" value="{{ manufacturer }}" /> {{ manufacturer }}
                     </label>
                   {% endfor %}
                 {% else %}
@@ -54,52 +54,52 @@
 
         <div class="jobs-controls-right">
           <div class="jobs-controls-right-top">
-            <h2>All Materials</h2>
+            <h2>All Equipment</h2>
             <div class="jobs-controls-right-actions">
-              <a href="{{ url_for('catalog.create_material') }}">Create Materials</a>
+              <a href="{{ url_for('catalog.create_equipment') }}">Add Equipment</a>
             </div>
           </div>
 
           <div class="jobs-controls-right-bottom">
             <div id="jobs-list-container">
               <div id="jobs-list-grid" class="catalog-compact-list">
-                {% if materials %}
-                  {% for material in materials %}
+                {% if equipment_items %}
+                  {% for equipment in equipment_items %}
                     <a
                       class="jobs-card"
-                      href="{{ url_for('catalog.view_material', materialId=material._id) }}"
+                      href="{{ url_for('catalog.view_equipment', equipmentId=equipment._id) }}"
                       data-catalog-card
-                      data-filter-category="{{ material.category }}"
-                      data-filter-manufacturer="{{ material.manufacturer }}"
+                      data-filter-category="{{ equipment.category }}"
+                      data-filter-manufacturer="{{ equipment.manufacturer }}"
                     >
                       <div class="jobs-card-row">
-                        <span class="jobs-card-label">Material</span>
-                        <span class="jobs-card-value">{{ material.material_name }}</span>
-                      </div>
-                      <div class="jobs-card-row">
-                        <span class="jobs-card-label">Part Number</span>
-                        <span class="jobs-card-value">{{ material.part_number }}</span>
-                      </div>
-                      <div class="jobs-card-row">
-                        <span class="jobs-card-label">Category</span>
-                        <span class="jobs-card-value">{{ material.category }}</span>
+                        <span class="jobs-card-label">Equipment</span>
+                        <span class="jobs-card-value">{{ equipment.equipment_name }}</span>
                       </div>
                       <div class="jobs-card-row">
                         <span class="jobs-card-label">Manufacturer</span>
-                        <span class="jobs-card-value">{{ material.manufacturer }}</span>
+                        <span class="jobs-card-value">{{ equipment.manufacturer|default('-', true) }}</span>
                       </div>
                       <div class="jobs-card-row">
-                        <span class="jobs-card-label">Price</span>
-                        <span class="jobs-card-value">{{ material.price_display }}</span>
+                        <span class="jobs-card-label">Category</span>
+                        <span class="jobs-card-value">{{ equipment.category|default('-', true) }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">SKU</span>
+                        <span class="jobs-card-value">{{ equipment.sku|default('-', true) }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Default Price</span>
+                        <span class="jobs-card-value">{{ equipment.default_price_display }}</span>
                       </div>
                     </a>
                   {% endfor %}
                 {% else %}
-                  <p>No materials have been created yet.</p>
+                  <p>No equipment has been created yet.</p>
                 {% endif %}
               </div>
-              {% if materials %}
-                <p id="catalog-filter-no-results" hidden>No materials match the selected filters.</p>
+              {% if equipment_items %}
+                <p id="catalog-filter-no-results" hidden>No equipment matches the selected filters.</p>
               {% endif %}
             </div>
           </div>

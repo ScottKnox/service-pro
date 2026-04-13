@@ -35,7 +35,19 @@
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="discount-category">Category</label>
-            <input id="discount-category" name="discount_category" type="text" placeholder="Enter discount category" value="{{ form_data.discount_category|default('', true) }}" required />
+            <div class="category-input-toggle" data-category-field>
+              <select id="discount-category" name="discount_category" data-category-select required>
+                <option value="">-- Select a category --</option>
+                {% for category in category_options %}
+                  <option value="{{ category }}" {% if form_data.discount_category == category %}selected{% endif %}>{{ category }}</option>
+                {% endfor %}
+                {% if form_data.discount_category and form_data.discount_category not in category_options %}
+                  <option value="{{ form_data.discount_category }}" selected>{{ form_data.discount_category }}</option>
+                {% endif %}
+              </select>
+              <button class="category-toggle-button" type="button" data-category-toggle aria-label="Add new category" title="Add new category">+</button>
+              <input data-category-input type="text" placeholder="Enter new discount category" hidden disabled />
+            </div>
           </div>
 
           <div class="add-customer-form-field">
@@ -55,4 +67,8 @@
       </form>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/category_field_toggle.js') }}"></script>
 {% endblock %}

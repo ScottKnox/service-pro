@@ -34,7 +34,19 @@
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="labor-category">Category</label>
-            <input id="labor-category" name="labor_category" type="text" placeholder="Enter labor category" value="{{ form_data.labor_category|default('', true) }}" required />
+            <div class="category-input-toggle" data-category-field>
+              <select id="labor-category" name="labor_category" data-category-select required>
+                <option value="">-- Select a category --</option>
+                {% for category in category_options %}
+                  <option value="{{ category }}" {% if form_data.labor_category == category %}selected{% endif %}>{{ category }}</option>
+                {% endfor %}
+                {% if form_data.labor_category and form_data.labor_category not in category_options %}
+                  <option value="{{ form_data.labor_category }}" selected>{{ form_data.labor_category }}</option>
+                {% endif %}
+              </select>
+              <button class="category-toggle-button" type="button" data-category-toggle aria-label="Add new category" title="Add new category">+</button>
+              <input data-category-input type="text" placeholder="Enter new labor category" hidden disabled />
+            </div>
           </div>
 
           <div class="add-customer-form-field">
@@ -54,4 +66,8 @@
       </form>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/category_field_toggle.js') }}"></script>
 {% endblock %}

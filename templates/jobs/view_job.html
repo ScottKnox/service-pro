@@ -13,6 +13,8 @@
           {{ job.labors[0].description|default('Labor Job', true) }}
         {% elif job.materials %}
           {{ job.materials[0].material_name|default('Material Job', true) }}
+        {% elif job.equipments %}
+          {{ job.equipments[0].equipment_name|default('Equipment Job', true) }}
         {% elif job.discounts %}
           {{ job.discounts[0].discount_name|default('Discount Job', true) }}
         {% else %}
@@ -34,7 +36,7 @@
           {% if job_status_normalized == "estimate" or job_status_normalized == "estimating" or job_status_normalized == "pending" %}
           <form method="POST" action="{{ url_for('jobs.create_quote', jobId=jobId) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit"{% if job_status_normalized == "pending" or (not job.services and not job.parts and not job.labors and not job.materials and not job.discounts) %} disabled{% endif %}>Create Quote</button>
+            <button type="submit"{% if job_status_normalized == "pending" or (not job.services and not job.parts and not job.labors and not job.materials and not job.equipments and not job.discounts) %} disabled{% endif %}>Create Quote</button>
           </form>
           {% endif %}
           {% if job_status_normalized == "pending" or job_status_normalized == "estimating" %}
@@ -66,7 +68,7 @@
 
       {% if job_status_normalized == "pending" %}
       <div id="view-job-pending-note" style="border: 1px solid #FFA500; background-color: #FFF8DC; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
-        <p style="color: #B8860B; font-weight: 600; margin: 0;">You must add services, parts, labor, materials, or discounts to a job before creating a Quote.</p>
+        <p style="color: #B8860B; font-weight: 600; margin: 0;">You must add services, parts, labor, materials, equipment, or discounts to a job before creating a Quote.</p>
       </div>
       {% endif %}
 
@@ -285,6 +287,32 @@
               {% endif %}
             </div>
           </div>
+        </div>
+
+        <div class="view-job-section-row" id="view-job-equipment-row">
+          <div class="view-job-section-column view-job-details-column">
+            <h3>Equipment</h3>
+            <div id="view-job-equipment-list">
+              {% if job.equipments %}
+                {% for equipment in job.equipments %}
+                  <div class="view-job-detail-item view-job-line-item">
+                    <span><strong>Equipment:</strong> {{ equipment.equipment_name|default('N/A', true) }}</span>
+                    <span class="view-job-line-divider" aria-hidden="true">•</span>
+                    <span><strong>Qty:</strong> {{ equipment.quantity_installed|default('0', true) }}</span>
+                    <span class="view-job-line-divider" aria-hidden="true">•</span>
+                    <span><strong>Price:</strong> {{ equipment.price|default('N/A', true) }}</span>
+                    <span class="view-job-line-divider" aria-hidden="true">•</span>
+                    <span><strong>Line Total:</strong> {{ equipment.line_total|default('N/A', true) }}</span>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="view-job-detail-item">
+                  <p>No equipment added.</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="view-job-section-column view-job-details-column"></div>
         </div>
 
         <div class="view-job-section-row" id="view-job-invoices-estimates-row">
