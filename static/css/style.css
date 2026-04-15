@@ -1513,6 +1513,10 @@ p {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.reporting-kpi-row--four-column {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .reporting-kpi {
   border: 1px solid #D8E0EA;
   border-radius: 10px;
@@ -1533,11 +1537,141 @@ p {
   font-size: 1.12rem;
 }
 
+.reporting-kpi-trend {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin-top: 0.1rem;
+  display: block;
+}
+
+.reporting-kpi .reporting-kpi-trend--up {
+  color: #0B6B52;
+}
+
+.reporting-kpi .reporting-kpi-trend--down {
+  color: #B91C1C;
+}
+
 .reporting-chart-shell {
   margin-top: 0.9rem;
   display: flex;
   align-items: flex-start;
   width: 100%;
+}
+
+.reporting-jobs-table-shell {
+  margin-top: 0.9rem;
+  border: 1px solid #D8E0EA;
+  border-radius: 10px;
+  overflow-x: auto;
+  background-color: #FFFFFF;
+}
+
+.reporting-jobs-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.reporting-jobs-table thead th {
+  background: linear-gradient(180deg, #EFF6FF 0%, #E2ECFA 100%);
+  color: #0E3A67;
+  font-size: 0.83rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 700;
+  padding: 0.58rem 0.65rem;
+  border-bottom: 1px solid #CFDAE8;
+  text-align: right;
+}
+
+.reporting-jobs-table thead th:first-child {
+  text-align: left;
+}
+
+.reporting-jobs-table tbody th,
+.reporting-jobs-table tbody td {
+  padding: 0.56rem 0.65rem;
+  border-bottom: 1px solid #E2EAF3;
+}
+
+.reporting-jobs-table tbody th {
+  color: #1B263B;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.reporting-jobs-table tbody td {
+  color: #0E3A67;
+  text-align: right;
+  font-weight: 600;
+}
+
+.reporting-jobs-table tbody tr:nth-child(even) {
+  background-color: #F8FAFC;
+}
+
+.reporting-jobs-table tbody tr:last-child th,
+.reporting-jobs-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.reporting-jobs-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-top: 1px solid #E2EAF3;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+}
+
+.reporting-jobs-pagination-summary {
+  color: #4B5E76;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.reporting-jobs-pagination-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.reporting-jobs-page-link {
+  border: 1px solid #CBD5E1;
+  border-radius: 999px;
+  background-color: #FFFFFF;
+  color: #0E3A67;
+  padding: 0.28rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.reporting-jobs-page-link:hover {
+  border-color: #9FB2C8;
+  background-color: #F8FAFC;
+}
+
+.reporting-jobs-page-link.is-active {
+  border-color: #1B4D8C;
+  background: linear-gradient(180deg, #EFF6FF 0%, #E6F0FF 100%);
+  color: #0E3A67;
+}
+
+.reporting-chart-wrapper {
+  width: 100%;
+}
+
+.reporting-chart-title {
+  margin: 0 0 0.45rem;
+  color: #11243A;
+  font-size: 0.95rem;
 }
 
 .reporting-list-block {
@@ -1707,6 +1841,90 @@ p {
   color: #8B1E1E;
 }
 
+/* ── Customer Health ─────────────────────────────────────────── */
+
+.reporting-kpi-row--three-column {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.reporting-health-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+.reporting-health-dot--overdue {
+  background-color: #F2B8B8;
+  border-color: #E58B8B;
+}
+
+.reporting-health-dot--due {
+  background-color: #F7DCA3;
+  border-color: #F2C36B;
+}
+
+.reporting-health-dot--good {
+  background-color: #BFE6C8;
+  border-color: #9BD3AE;
+}
+
+.reporting-kpi--health-overdue {
+  border-color: #E58B8B;
+  border-width: 2px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FDEFF0 100%);
+}
+
+.reporting-kpi--health-overdue strong {
+  color: #8B1E1E;
+}
+
+.reporting-kpi--health-due {
+  border-color: #F2C36B;
+  border-width: 2px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF8EC 100%);
+}
+
+.reporting-kpi--health-due strong {
+  color: #8A4B00;
+}
+
+.reporting-kpi--health-good {
+  border-color: #9BD3AE;
+  border-width: 2px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F2FBF5 100%);
+}
+
+.reporting-kpi--health-good strong {
+  color: #14532D;
+}
+
+.reporting-mini-list-item--health-overdue {
+  border-left: 3px solid #E58B8B;
+}
+
+.reporting-mini-list-item--health-due {
+  border-left: 3px solid #F2C36B;
+}
+
+.reporting-mini-list-item--health-good {
+  border-left: 3px solid #9BD3AE;
+}
+
+@media (max-width: 1024px) {
+  .reporting-kpi-row--three-column {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .reporting-kpi-row--three-column {
+    grid-template-columns: 1fr;
+  }
+}
+
 .reporting-chart {
   width: 100%;
   max-width: none;
@@ -1740,6 +1958,39 @@ p {
   fill: #1B4D8C;
   stroke: #FFFFFF;
   stroke-width: 1;
+}
+
+.reporting-bar {
+  rx: 4;
+  ry: 4;
+  opacity: 0.88;
+}
+
+.reporting-bar--pending {
+  fill: #94A3B8;
+}
+
+.reporting-bar--estimating {
+  fill: #60A5FA;
+}
+
+.reporting-bar--scheduled {
+  fill: #1B4D8C;
+}
+
+.reporting-bar--started {
+  fill: #F59E0B;
+}
+
+.reporting-bar--completed {
+  fill: #0B5E55;
+}
+
+.reporting-bar-value {
+  fill: #0E3A67;
+  font-size: 12px;
+  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 600;
 }
 
 .reporting-axis-label-x,
@@ -1779,6 +2030,10 @@ p {
   .reporting-kpi-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .reporting-kpi-row--four-column {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 900px) {
@@ -1806,6 +2061,19 @@ p {
 
   .reporting-kpi-row--two-column {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reporting-kpi-row--four-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reporting-jobs-pagination {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reporting-jobs-pagination-links {
+    justify-content: flex-start;
   }
 
   .reporting-day-label {

@@ -96,11 +96,42 @@ def _nice_axis_max(value):
     return nice * magnitude
 
 
-def _build_daily_revenue_report(db, days=15):
-    today = datetime.now().date()
-    date_window = [today - timedelta(days=offset) for offset in range(days - 1, -1, -1)]
-    totals_by_day = {date_key: 0.0 for date_key in date_window}
-    completed_jobs_count = 0
+def _build_revenue_performance_report(db):
+    today = datetime.now()
+    today_date = today.date()
+
+    # Month to date: 1st of this month → today
+    mtd_start = today_date.replace(day=1)
+    mtd_end = today_date
+
+    # Last month to date: 1st of previous month → same day-of-month
+    if today_date.month == 1:
+        lmtd_year, lmtd_month = today_date.year - 1, 12
+    else:
+        lmtd_year, lmtd_month = today_date.year, today_date.month - 1
+    lmtd_day = min(today_date.day, monthrange(lmtd_year, lmtd_month)[1])
+    lmtd_start = datetime(lmtd_year, lmtd_month, 1).date()
+    lmtd_end = datetime(lmtd_year, lmtd_month, lmtd_day).date()
+
+    # Year to date: Jan 1 this year → today
+    ytd_start = today_date.replace(month=1, day=1)
+    ytd_end = today_date
+
+    # Last year to date: Jan 1 last year → same month/day last year
+    lytd_year = today_date.year - 1
+    lytd_day = min(today_date.day, monthrange(lytd_year, today_date.month)[1])
+    lytd_start = datetime(lytd_year, 1, 1).date()
+    lytd_end = datetime(lytd_year, today_date.month, lytd_day).date()
+
+    # 7-day chart window
+    chart_days = 7
+    date_window = [today_date - timedelta(days=offset) for offset in range(chart_days - 1, -1, -1)]
+    totals_by_day = {d: 0.0 for d in date_window}
+
+    mtd_total = 0.0
+    lmtd_total = 0.0
+    ytd_total = 0.0
+    lytd_total = 0.0
 
     completed_jobs = db.jobs.find(
         {"status": {"$regex": "^Completed$", "$options": "i"}},
@@ -111,32 +142,47 @@ def _build_daily_revenue_report(db, days=15):
         completed_at = _parse_completed_datetime(job.get("dateCompleted"))
         if not completed_at:
             continue
-
         completed_day = completed_at.date()
-        if completed_day not in totals_by_day:
-            continue
+        amount = currency_to_float(job.get("total"))
 
-        totals_by_day[completed_day] += currency_to_float(job.get("total"))
-        completed_jobs_count += 1
+        if mtd_start <= completed_day <= mtd_end:
+            mtd_total += amount
+        if lmtd_start <= completed_day <= lmtd_end:
+            lmtd_total += amount
+        if ytd_start <= completed_day <= ytd_end:
+            ytd_total += amount
+        if lytd_start <= completed_day <= lytd_end:
+            lytd_total += amount
+        if completed_day in totals_by_day:
+            totals_by_day[completed_day] += amount
 
+    def _pct_change(current, previous):
+        if previous == 0:
+            return 100.0 if current > 0 else None
+        return round(((current - previous) / previous) * 100, 1)
+
+    mtd_change = _pct_change(mtd_total, lmtd_total)
+    ytd_change = _pct_change(ytd_total, lytd_total)
+
+    # 7-day line chart
     daily_points = [
         {
-            "label": date_key.strftime("%b %d"),
-            "iso_date": date_key.isoformat(),
-            "total": round(totals_by_day[date_key], 2),
+            "label": d.strftime("%b %d"),
+            "iso_date": d.isoformat(),
+            "total": round(totals_by_day[d], 2),
         }
-        for date_key in date_window
+        for d in date_window
     ]
 
-    max_revenue = max((point["total"] for point in daily_points), default=0.0)
+    max_revenue = max((p["total"] for p in daily_points), default=0.0)
     axis_max = _nice_axis_max(max_revenue)
 
     chart_width = 900
-    chart_height = 260
+    chart_height = 240
     plot_left = 72
     plot_right = 860
     plot_top = 20
-    plot_bottom = 196
+    plot_bottom = 178
     plot_width = plot_right - plot_left
     plot_height = plot_bottom - plot_top
     point_count = max(1, len(daily_points) - 1)
@@ -144,57 +190,45 @@ def _build_daily_revenue_report(db, days=15):
     chart_points = []
     for index, point in enumerate(daily_points):
         x = plot_left + (plot_width * index / point_count)
-        if axis_max <= 0:
-            y = plot_bottom
-        else:
-            y = plot_bottom - (point["total"] / axis_max) * plot_height
-        chart_points.append(
-            {
-                "x": round(x, 2),
-                "y": round(y, 2),
-                "label": point["label"],
-                "total": point["total"],
-                "iso_date": point["iso_date"],
-            }
-        )
+        y = plot_bottom if axis_max <= 0 else plot_bottom - (point["total"] / axis_max) * plot_height
+        chart_points.append({
+            "x": round(x, 2),
+            "y": round(y, 2),
+            "label": point["label"],
+            "total": point["total"],
+        })
 
-    polyline_points = " ".join(f"{point['x']},{point['y']}" for point in chart_points)
+    polyline_points = " ".join(f"{p['x']},{p['y']}" for p in chart_points)
 
-    tick_count = 4
     y_ticks = []
-    for index in range(tick_count + 1):
-        ratio = index / tick_count
-        tick_value = round(axis_max * ratio, 2)
-        tick_y = round(plot_bottom - (plot_height * ratio), 2)
-        y_ticks.append({"y": tick_y, "value": tick_value})
-
-    total_revenue = round(sum(point["total"] for point in daily_points), 2)
-    average_daily_revenue = round(total_revenue / max(1, len(daily_points)), 2)
-    highest_day = max(daily_points, key=lambda point: point["total"], default={"label": "-", "total": 0.0})
+    for i in range(5):
+        ratio = i / 4
+        y_ticks.append({
+            "y": round(plot_bottom - (plot_height * ratio), 2),
+            "value": round(axis_max * ratio, 2),
+        })
 
     return {
-        "viewport": {
-            "width": chart_width,
-            "height": chart_height,
+        "stats": {
+            "mtd": round(mtd_total, 2),
+            "lmtd": round(lmtd_total, 2),
+            "ytd": round(ytd_total, 2),
+            "lytd": round(lytd_total, 2),
+            "mtd_change": mtd_change,
+            "ytd_change": ytd_change,
         },
-        "daily_points": daily_points,
-        "chart_points": chart_points,
-        "polyline_points": polyline_points,
-        "y_ticks": y_ticks,
-        "axis_max": axis_max,
-        "plot": {
-            "left": plot_left,
-            "right": plot_right,
-            "top": plot_top,
-            "bottom": plot_bottom,
-        },
-        "summary": {
-            "window_days": days,
-            "total_revenue": total_revenue,
-            "average_daily_revenue": average_daily_revenue,
-            "completed_jobs": completed_jobs_count,
-            "highest_day_label": highest_day.get("label", "-"),
-            "highest_day_total": highest_day.get("total", 0.0),
+        "chart": {
+            "viewport": {"width": chart_width, "height": chart_height},
+            "chart_points": chart_points,
+            "polyline_points": polyline_points,
+            "y_ticks": y_ticks,
+            "plot": {
+                "left": plot_left,
+                "right": plot_right,
+                "top": plot_top,
+                "bottom": plot_bottom,
+            },
+            "window_days": chart_days,
         },
     }
 
@@ -298,6 +332,127 @@ def _build_accounts_receivable_summary(db):
     }
 
 
+def _build_customer_health_report(db):
+    """Return mocked customer health buckets using real customer records."""
+    customer_docs = list(
+        db.customers.find({}, {"first_name": 1, "last_name": 1, "company": 1})
+        .sort([("last_name", 1), ("first_name", 1)])
+    )
+
+    buckets = {"overdue": [], "due": [], "good": []}
+
+    for customer in customer_docs:
+        customer_id = str(customer.get("_id") or "")
+        first_name = str(customer.get("first_name") or "").strip()
+        last_name = str(customer.get("last_name") or "").strip()
+        company = str(customer.get("company") or "").strip()
+        name = f"{first_name} {last_name}".strip() or "Customer"
+        display_name = f"{name} - {company}" if company else name
+
+        # Deterministic mock assignment via last hex byte of ObjectId
+        last_byte = int(customer_id[-2:], 16) if len(customer_id) >= 2 else 0
+        entry = {"customer_id": customer_id, "display_name": display_name}
+
+        if last_byte < 51:
+            buckets["overdue"].append(entry)
+        elif last_byte < 140:
+            buckets["due"].append(entry)
+        else:
+            buckets["good"].append(entry)
+
+    top_customers = []
+    for condition in ("overdue", "due", "good"):
+        for item in buckets[condition][:5]:
+            top_customers.append(dict(item, condition=condition))
+
+    return {
+        "overdue_count": len(buckets["overdue"]),
+        "due_count": len(buckets["due"]),
+        "good_count": len(buckets["good"]),
+        "top_customers": top_customers,
+    }
+
+
+def _parse_scheduled_date(value):
+    parsed = _parse_datetime(value)
+    if parsed:
+        return parsed.date()
+
+    text_value = str(value or "").strip()
+    if not text_value:
+        return None
+
+    for date_format in ("%m/%d/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(text_value, date_format).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _build_daily_job_overview_report(db, target_date, business_id=""):
+    date_label = target_date.strftime("%m/%d/%Y")
+
+    employee_query = {"business": business_id} if business_id else {}
+    employee_docs = list(
+        db.employees.find(employee_query, {"first_name": 1, "last_name": 1}).sort([("last_name", 1), ("first_name", 1)])
+    )
+
+    rows = []
+    rows_by_name = {}
+    for employee in employee_docs:
+        first_name = str(employee.get("first_name") or "").strip()
+        last_name = str(employee.get("last_name") or "").strip()
+        employee_name = f"{first_name} {last_name}".strip() or "Employee"
+        row = {
+            "employee_name": employee_name,
+            "estimated_mock": 0,
+            "scheduled": 0,
+            "completed": 0,
+            "total": 0,
+        }
+        rows.append(row)
+        rows_by_name[employee_name] = row
+
+    jobs_cursor = db.jobs.find(
+        {"status": {"$regex": "^(Scheduled|Completed)$", "$options": "i"}},
+        {"status": 1, "assigned_employee": 1, "scheduled_date": 1, "dateCompleted": 1},
+    )
+
+    for job in jobs_cursor:
+        assigned_employee = str(job.get("assigned_employee") or "").strip()
+        if assigned_employee not in rows_by_name:
+            continue
+
+        row = rows_by_name[assigned_employee]
+        status = str(job.get("status") or "").strip().lower()
+        if status == "scheduled":
+            scheduled_date = _parse_scheduled_date(job.get("scheduled_date"))
+            if scheduled_date == target_date:
+                row["scheduled"] += 1
+        elif status == "completed":
+            completed_at = _parse_completed_datetime(job.get("dateCompleted"))
+            if completed_at and completed_at.date() == target_date:
+                row["completed"] += 1
+
+    for row in rows:
+        row["total"] = row["estimated_mock"] + row["scheduled"] + row["completed"]
+
+    summary = {
+        "estimated_mock": sum(row["estimated_mock"] for row in rows),
+        "scheduled": sum(row["scheduled"] for row in rows),
+        "completed": sum(row["completed"] for row in rows),
+        "total": sum(row["total"] for row in rows),
+        "employee_count": len(rows),
+    }
+
+    return {
+        "date_label": date_label,
+        "rows": rows,
+        "summary": summary,
+    }
+
+
 def _build_next_billing_date(start_date_value):
     start_date = _parse_datetime(start_date_value)
     if not start_date:
@@ -380,37 +535,45 @@ def admin():
 @bp.route("/reporting")
 def reporting():
     db = ensure_connection_or_500()
-    daily_revenue = _build_daily_revenue_report(db, days=15)
+    revenue_performance = _build_revenue_performance_report(db)
     accounts_receivable = _build_accounts_receivable_summary(db)
+    customer_health = _build_customer_health_report(db)
+    current_employee = _get_current_employee(db)
+    business_id = str((current_employee or {}).get("business") or "").strip()
+    today = datetime.now().date()
+    todays_jobs_overview = _build_daily_job_overview_report(db, today, business_id=business_id)
+    yesterdays_jobs_overview = _build_daily_job_overview_report(db, today - timedelta(days=1), business_id=business_id)
     return render_template(
         "admin/reporting.html",
         report_links=REPORT_LINKS,
         active_report_slug="dashboard",
         reporting_view_title="Dashboard",
-        reporting_view_subtitle="Your most important business signals in one place.",
-        daily_revenue_title="Daily Revenue",
-        daily_revenue_description="Completed job totals over the last 15 days.",
-        dashboard_context_message="This is your reporting home base. Revenue is shown first, and additional cross-report highlights will be added here.",
+        reporting_view_subtitle="Business Performance Overview",
+        dashboard_context_message="",
         accounts_receivable=accounts_receivable,
-        daily_revenue=daily_revenue,
+        revenue_performance=revenue_performance,
+        customer_health=customer_health,
+        todays_jobs_overview=todays_jobs_overview,
+        yesterdays_jobs_overview=yesterdays_jobs_overview,
     )
 
 
 @bp.route("/reporting/revenue")
 def reporting_revenue():
     db = ensure_connection_or_500()
-    daily_revenue = _build_daily_revenue_report(db, days=15)
+    revenue_performance = _build_revenue_performance_report(db)
     return render_template(
         "admin/reporting.html",
         report_links=REPORT_LINKS,
         active_report_slug="revenue",
         reporting_view_title="Revenue",
         reporting_view_subtitle="Revenue performance from completed jobs.",
-        daily_revenue_title="Daily Revenue",
-        daily_revenue_description="Completed job totals over the last 15 days.",
         dashboard_context_message="",
         accounts_receivable=None,
-        daily_revenue=daily_revenue,
+        revenue_performance=revenue_performance,
+        customer_health=None,
+        todays_jobs_overview=None,
+        yesterdays_jobs_overview=None,
     )
 
 
