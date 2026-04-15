@@ -1,7 +1,0 @@
-We need the parts model to also have manufacturer. Ensure this new field is displayed in the create / update part form, and on the view part page. 
-Also add it to the Filter options on the manage parts page, and in each part card displayed. No need for backwards compatibility for anything 
-in this story, I will reset the mongo data. 
-
-Also, on the Add Discount page, let's make the discount percentage field also a numeric field to prevent them from submitting a % sign. 
-
-Thank you Copilot!

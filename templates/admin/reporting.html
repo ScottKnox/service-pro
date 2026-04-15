@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}{{ reporting_view_title }} | Steady Work{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-jobs-header" class="resource-page resource-admin resource-reporting">
+      <h1>Reporting</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li aria-current="page">Reporting</li>
+        </ol>
+      </nav>
+
+      <div class="jobs-controls-right-top">
+        <h2>{{ reporting_view_title }}</h2>
+        {% if reporting_view_subtitle %}
+          <p class="reporting-view-subtitle">{{ reporting_view_subtitle }}</p>
+        {% endif %}
+      </div>
+
+      <div class="reporting-layout">
+        <aside class="reporting-sidebar" aria-label="Report types">
+          <h3>Reports</h3>
+          <div class="reporting-nav-stack">
+            {% for report in report_links %}
+              {% set is_active = report.slug == active_report_slug %}
+              {% if report.href %}
+                <a
+                  class="reporting-nav-link{% if is_active %} is-active{% endif %}"
+                  href="{{ url_for(report.href) }}"
+                >
+                  {{ report.label }}
+                </a>
+              {% else %}
+                <span class="reporting-nav-link is-disabled">{{ report.label }} <small>(Coming soon)</small></span>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </aside>
+
+        <section class="reporting-main" aria-label="Report content">
+          {% if dashboard_context_message %}
+            <p class="reporting-dashboard-note">{{ dashboard_context_message }}</p>
+          {% endif %}
+
+          <article class="reporting-card">
+            <header class="reporting-card-header">
+              <div>
+                <h3>{{ daily_revenue_title }}</h3>
+                <p>{{ daily_revenue_description }}</p>
+              </div>
+            </header>
+
+            <div class="reporting-kpi-row">
+              <div class="reporting-kpi">
+                <span>{{ daily_revenue.summary.window_days }}-Day Revenue</span>
+                <strong>${{ "%.2f"|format(daily_revenue.summary.total_revenue) }}</strong>
+              </div>
+              <div class="reporting-kpi">
+                <span>Avg / Day</span>
+                <strong>${{ "%.2f"|format(daily_revenue.summary.average_daily_revenue) }}</strong>
+              </div>
+              <div class="reporting-kpi">
+                <span>Completed Jobs</span>
+                <strong>{{ daily_revenue.summary.completed_jobs }}</strong>
+              </div>
+              <div class="reporting-kpi">
+                <span>Highest Day</span>
+                <strong>{{ daily_revenue.summary.highest_day_label }} (${{ "%.2f"|format(daily_revenue.summary.highest_day_total) }})</strong>
+              </div>
+            </div>
+
+            <div class="reporting-chart-shell">
+              <svg
+                class="reporting-chart"
+                viewBox="0 0 {{ daily_revenue.viewport.width }} {{ daily_revenue.viewport.height }}"
+                role="img"
+                aria-label="Daily Revenue line chart"
+              >
+                <rect x="0" y="0" width="{{ daily_revenue.viewport.width }}" height="{{ daily_revenue.viewport.height }}" fill="none"></rect>
+
+                {% for point in daily_revenue.chart_points %}
+                  <line
+                    x1="{{ point.x }}"
+                    y1="{{ daily_revenue.plot.top }}"
+                    x2="{{ point.x }}"
+                    y2="{{ daily_revenue.plot.bottom }}"
+                    class="reporting-grid-x"
+                  ></line>
+                {% endfor %}
+
+                {% for tick in daily_revenue.y_ticks %}
+                  <line
+                    x1="{{ daily_revenue.plot.left }}"
+                    y1="{{ tick.y }}"
+                    x2="{{ daily_revenue.plot.right }}"
+                    y2="{{ tick.y }}"
+                    class="reporting-grid-y"
+                  ></line>
+                  <text x="{{ daily_revenue.plot.left - 8 }}" y="{{ tick.y + 3.5 }}" text-anchor="end" class="reporting-axis-label-y">${{ "%.0f"|format(tick.value) }}</text>
+                {% endfor %}
+
+                <line
+                  x1="{{ daily_revenue.plot.left }}"
+                  y1="{{ daily_revenue.plot.bottom }}"
+                  x2="{{ daily_revenue.plot.right }}"
+                  y2="{{ daily_revenue.plot.bottom }}"
+                  class="reporting-axis"
+                ></line>
+                <line
+                  x1="{{ daily_revenue.plot.left }}"
+                  y1="{{ daily_revenue.plot.top }}"
+                  x2="{{ daily_revenue.plot.left }}"
+                  y2="{{ daily_revenue.plot.bottom }}"
+                  class="reporting-axis"
+                ></line>
+
+                {% if daily_revenue.polyline_points %}
+                  <polyline points="{{ daily_revenue.polyline_points }}" class="reporting-line"></polyline>
+                {% endif %}
+
+                {% for point in daily_revenue.chart_points %}
+                  <circle cx="{{ point.x }}" cy="{{ point.y }}" r="3.3" class="reporting-point"></circle>
+                {% endfor %}
+
+                {% for point in daily_revenue.chart_points %}
+                  <text x="{{ point.x }}" y="{{ daily_revenue.viewport.height - 22 }}" text-anchor="middle" class="reporting-axis-label-x reporting-day-label{% if loop.index0 is odd %} reporting-day-label-alt{% endif %}{% if loop.index0 % 3 != 0 %} reporting-day-label-hide-sm{% endif %}">{{ point.label }}</text>
+                {% endfor %}
+
+                <text x="{{ (daily_revenue.plot.left + daily_revenue.plot.right) / 2 }}" y="{{ daily_revenue.viewport.height - 6 }}" text-anchor="middle" class="reporting-axis-label-x reporting-axis-title-x">Last {{ daily_revenue.summary.window_days }} Days</text>
+                <text x="18" y="{{ (daily_revenue.plot.top + daily_revenue.plot.bottom) / 2 }}" transform="rotate(-90 18 {{ (daily_revenue.plot.top + daily_revenue.plot.bottom) / 2 }})" text-anchor="middle" class="reporting-axis-label-y reporting-axis-title-y">Total Revenue</text>
+              </svg>
+            </div>
+          </article>
+
+          {% if accounts_receivable %}
+            <article class="reporting-card reporting-secondary-card" data-aging-filter-root>
+              <header class="reporting-card-header">
+                <div>
+                  <h3>Accounts Receivable</h3>
+                  <p>Outstanding customer balances currently owed.</p>
+                </div>
+              </header>
+
+              <div class="reporting-kpi-row reporting-kpi-row--two-column">
+                <div class="reporting-kpi">
+                  <span>Total A/R</span>
+                  <strong>${{ "%.2f"|format(accounts_receivable.total_balance_due) }}</strong>
+                </div>
+                <div class="reporting-kpi">
+                  <span>Customers Owing</span>
+                  <strong>{{ accounts_receivable.customers_with_balance }}</strong>
+                </div>
+              </div>
+
+              {% if accounts_receivable.top_receivables %}
+                <div class="reporting-list-block">
+                  <h4>Top 5 Receivables</h4>
+                  <div class="reporting-mini-list">
+                    {% for receivable in accounts_receivable.top_receivables %}
+                      <a class="reporting-mini-list-item" data-aging-receivable="{{ receivable.severity }}" href="{{ url_for('customers.view_customer', customerId=receivable.customer_id) }}">
+                        <span>{{ receivable.display_name }}</span>
+                        <strong>${{ "%.2f"|format(receivable.balance_due) }}</strong>
+                      </a>
+                    {% endfor %}
+                  </div>
+                  <p class="reporting-mini-list-empty" data-aging-receivable-empty hidden>No top receivables in this aging bucket.</p>
+                </div>
+              {% endif %}
+
+              {% if accounts_receivable.aging_buckets %}
+                <div class="reporting-list-block">
+                  <h4>A/R Aging (Estimated)</h4>
+                  <div class="reporting-kpi-row reporting-kpi-row--two-column">
+                    {% for bucket in accounts_receivable.aging_buckets %}
+                      <div class="reporting-kpi reporting-kpi--aging reporting-kpi--aging-{{ bucket.severity }}" data-aging-bucket="{{ bucket.severity }}">
+                        <span>{{ bucket.label }}</span>
+                        <strong>${{ "%.2f"|format(bucket.amount) }}</strong>
+                        <span>{{ bucket.customers }} customer{% if bucket.customers != 1 %}s{% endif %}</span>
+                      </div>
+                    {% endfor %}
+                  </div>
+                  <p class="reporting-aging-note">Estimated from each owing customer's current balance and oldest completed job date.</p>
+
+                  <div class="reporting-aging-legend" aria-label="Aging severity legend">
+                    <button type="button" class="reporting-aging-legend-item" data-aging-filter="all" aria-pressed="true">
+                      All Buckets
+                    </button>
+                    <button type="button" class="reporting-aging-legend-item" data-aging-filter="low" aria-pressed="false">
+                      <i class="reporting-aging-dot reporting-aging-dot-low" aria-hidden="true"></i>Current
+                    </button>
+                    <button type="button" class="reporting-aging-legend-item" data-aging-filter="moderate" aria-pressed="false">
+                      <i class="reporting-aging-dot reporting-aging-dot-moderate" aria-hidden="true"></i>31-60
+                    </button>
+                    <button type="button" class="reporting-aging-legend-item" data-aging-filter="high" aria-pressed="false">
+                      <i class="reporting-aging-dot reporting-aging-dot-high" aria-hidden="true"></i>61-90
+                    </button>
+                    <button type="button" class="reporting-aging-legend-item" data-aging-filter="critical" aria-pressed="false">
+                      <i class="reporting-aging-dot reporting-aging-dot-critical" aria-hidden="true"></i>90+
+                    </button>
+                  </div>
+                </div>
+              {% endif %}
+            </article>
+          {% endif %}
+        </section>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/reporting_aging_filter.js') }}" defer></script>
+{% endblock %}
