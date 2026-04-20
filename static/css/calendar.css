@@ -1,7 +1,7 @@
 #home-calendar {
   width: 100%;
-  border: 1px solid #C5C7CB;
-  background-color: #FFFFFF;
+  border: 1px solid var(--kl-border);
+  background-color: var(--kl-surface);
   padding: 0.75rem;
   box-sizing: border-box;
 }
@@ -18,35 +18,35 @@
   margin: 0;
   text-align: center;
   font-size: 1.1rem;
-  color: #1B263B;
+  color: var(--kl-text);
 }
 
 #home-calendar-prev,
 #home-calendar-next {
-  border: 1px solid #C7D2DF;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F3F7FC 100%);
-  color: #1E3551;
+  border: 1px solid var(--kl-border);
+  background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-surface-soft) 100%);
+  color: var(--kl-text);
   width: 2rem;
   height: 2rem;
   border-radius: 10px;
   cursor: pointer;
   font-weight: 700;
-  box-shadow: 0 3px 8px rgba(15, 32, 57, 0.08);
+  box-shadow: 0 3px 8px var(--kl-shadow);
   transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 
 #home-calendar-prev:hover,
 #home-calendar-next:hover {
-  border-color: #AFC0D4;
-  background: linear-gradient(180deg, #FFFFFF 0%, #ECF3FB 100%);
-  color: #16324D;
+  border-color: var(--kl-border-strong);
+  background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-surface-softer) 100%);
+  color: var(--kl-accent-strong);
   transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(15, 45, 77, 0.14);
+  box-shadow: 0 8px 16px rgba(10, 43, 28, 0.14);
 }
 
 #home-calendar-prev:focus-visible,
 #home-calendar-next:focus-visible {
-  outline: 2px solid #63A9D8;
+  outline: 2px solid var(--kl-focus);
   outline-offset: 2px;
 }
 
@@ -59,7 +59,7 @@
 
 #home-calendar-weekdays {
   margin-bottom: 0.25rem;
-  color: #1B263B;
+  color: var(--kl-text);
   font-size: 0.85rem;
   font-weight: 600;
   text-align: center;
@@ -68,20 +68,20 @@
 .home-calendar-day {
   width: 100%;
   aspect-ratio: 1 / 1;
-  border: 1px solid #D1D5DB;
-  background-color: #F8F9FA;
-  color: #1B263B;
+  border: 1px solid var(--kl-border);
+  background-color: var(--kl-bg);
+  color: var(--kl-text);
   cursor: pointer;
 }
 
 .home-calendar-day:hover {
-  background-color: #E6EBF2;
+  background-color: var(--kl-surface-softer);
 }
 
 .home-calendar-day.has-jobs {
-  border-color: #1F6B35;
-  background-color: #EAF6EE;
-  color: #1F6B35;
+  border-color: var(--kl-accent);
+  background-color: var(--kl-accent-soft);
+  color: var(--kl-accent);
   font-weight: 700;
 }
 
@@ -102,7 +102,7 @@
   background-color: #000000;
   color: #F8F9FA;
   border-color: #000000;
-  box-shadow: inset 0 0 0 2px #1F6B35;
+  box-shadow: inset 0 0 0 2px var(--kl-accent);
 }
 
 .home-calendar-day.has-jobs-completed.is-selected {

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ reporting_view_title }} | Steady Work{% endblock %}
+{% block title %}{{ reporting_view_title }} | Klovent{% endblock %}
 
 {% block content %}
   <div id="main-container">
@@ -27,16 +27,12 @@
           <div class="reporting-nav-stack">
             {% for report in report_links %}
               {% set is_active = report.slug == active_report_slug %}
-              {% if report.href %}
-                <a
-                  class="reporting-nav-link{% if is_active %} is-active{% endif %}"
-                  href="{{ url_for(report.href) }}"
-                >
-                  {{ report.label }}
-                </a>
-              {% else %}
-                <span class="reporting-nav-link is-disabled">{{ report.label }} <small>(Coming soon)</small></span>
-              {% endif %}
+              <a
+                class="reporting-nav-link{% if is_active %} is-active{% endif %}"
+                href="{{ url_for(report.href) }}"
+              >
+                {{ report.label }}
+              </a>
             {% endfor %}
           </div>
         </aside>
@@ -46,110 +42,112 @@
             <p class="reporting-dashboard-note">{{ dashboard_context_message }}</p>
           {% endif %}
 
-          <article class="reporting-card">
-            <header class="reporting-card-header">
-              <div>
-                <h3>Revenue Performance</h3>
-                <p>Revenue totals from completed jobs.</p>
-              </div>
-            </header>
+          {% if revenue_performance %}
+            <article class="reporting-card">
+              <header class="reporting-card-header">
+                <div>
+                  <h3>Revenue Performance</h3>
+                  <p>Revenue totals from completed jobs.</p>
+                </div>
+              </header>
 
-            <div class="reporting-kpi-row">
-              <div class="reporting-kpi">
-                <span>Month to Date</span>
-                <strong>${{ "%.2f"|format(revenue_performance.stats.mtd) }}</strong>
-                {% if revenue_performance.stats.mtd_change is not none %}
-                  <span class="reporting-kpi-trend reporting-kpi-trend--{{ 'up' if revenue_performance.stats.mtd_change >= 0 else 'down' }}">
-                    {% if revenue_performance.stats.mtd_change >= 0 %}▲{% else %}▼{% endif %}
-                    {{ "%.1f"|format(revenue_performance.stats.mtd_change | abs) }}% vs last month
-                  </span>
-                {% endif %}
+              <div class="reporting-kpi-row">
+                <div class="reporting-kpi">
+                  <span>Month to Date</span>
+                  <strong>${{ "%.2f"|format(revenue_performance.stats.mtd) }}</strong>
+                  {% if revenue_performance.stats.mtd_change is not none %}
+                    <span class="reporting-kpi-trend reporting-kpi-trend--{{ 'up' if revenue_performance.stats.mtd_change >= 0 else 'down' }}">
+                      {% if revenue_performance.stats.mtd_change >= 0 %}▲{% else %}▼{% endif %}
+                      {{ "%.1f"|format(revenue_performance.stats.mtd_change | abs) }}% vs last month
+                    </span>
+                  {% endif %}
+                </div>
+                <div class="reporting-kpi">
+                  <span>Last Month to Date</span>
+                  <strong>${{ "%.2f"|format(revenue_performance.stats.lmtd) }}</strong>
+                </div>
+                <div class="reporting-kpi">
+                  <span>Year to Date</span>
+                  <strong>${{ "%.2f"|format(revenue_performance.stats.ytd) }}</strong>
+                  {% if revenue_performance.stats.ytd_change is not none %}
+                    <span class="reporting-kpi-trend reporting-kpi-trend--{{ 'up' if revenue_performance.stats.ytd_change >= 0 else 'down' }}">
+                      {% if revenue_performance.stats.ytd_change >= 0 %}▲{% else %}▼{% endif %}
+                      {{ "%.1f"|format(revenue_performance.stats.ytd_change | abs) }}% vs last year
+                    </span>
+                  {% endif %}
+                </div>
+                <div class="reporting-kpi">
+                  <span>Last Year to Date</span>
+                  <strong>${{ "%.2f"|format(revenue_performance.stats.lytd) }}</strong>
+                </div>
               </div>
-              <div class="reporting-kpi">
-                <span>Last Month to Date</span>
-                <strong>${{ "%.2f"|format(revenue_performance.stats.lmtd) }}</strong>
-              </div>
-              <div class="reporting-kpi">
-                <span>Year to Date</span>
-                <strong>${{ "%.2f"|format(revenue_performance.stats.ytd) }}</strong>
-                {% if revenue_performance.stats.ytd_change is not none %}
-                  <span class="reporting-kpi-trend reporting-kpi-trend--{{ 'up' if revenue_performance.stats.ytd_change >= 0 else 'down' }}">
-                    {% if revenue_performance.stats.ytd_change >= 0 %}▲{% else %}▼{% endif %}
-                    {{ "%.1f"|format(revenue_performance.stats.ytd_change | abs) }}% vs last year
-                  </span>
-                {% endif %}
-              </div>
-              <div class="reporting-kpi">
-                <span>Last Year to Date</span>
-                <strong>${{ "%.2f"|format(revenue_performance.stats.lytd) }}</strong>
-              </div>
-            </div>
 
-            <div class="reporting-chart-shell">
-              <div class="reporting-chart-wrapper">
-                <h4 class="reporting-chart-title">Last 7 Days</h4>
-                <svg
-                class="reporting-chart"
-                viewBox="0 0 {{ revenue_performance.chart.viewport.width }} {{ revenue_performance.chart.viewport.height }}"
-                role="img"
-                aria-label="7-day revenue line chart"
-              >
-                <rect x="0" y="0" width="{{ revenue_performance.chart.viewport.width }}" height="{{ revenue_performance.chart.viewport.height }}" fill="none"></rect>
+              <div class="reporting-chart-shell">
+                <div class="reporting-chart-wrapper">
+                  <h4 class="reporting-chart-title">Last 7 Days</h4>
+                  <svg
+                  class="reporting-chart"
+                  viewBox="0 0 {{ revenue_performance.chart.viewport.width }} {{ revenue_performance.chart.viewport.height }}"
+                  role="img"
+                  aria-label="7-day revenue line chart"
+                >
+                  <rect x="0" y="0" width="{{ revenue_performance.chart.viewport.width }}" height="{{ revenue_performance.chart.viewport.height }}" fill="none"></rect>
 
-                {% for point in revenue_performance.chart.chart_points %}
-                  <line
-                    x1="{{ point.x }}"
-                    y1="{{ revenue_performance.chart.plot.top }}"
-                    x2="{{ point.x }}"
-                    y2="{{ revenue_performance.chart.plot.bottom }}"
-                    class="reporting-grid-x"
-                  ></line>
-                {% endfor %}
+                  {% for point in revenue_performance.chart.chart_points %}
+                    <line
+                      x1="{{ point.x }}"
+                      y1="{{ revenue_performance.chart.plot.top }}"
+                      x2="{{ point.x }}"
+                      y2="{{ revenue_performance.chart.plot.bottom }}"
+                      class="reporting-grid-x"
+                    ></line>
+                  {% endfor %}
 
-                {% for tick in revenue_performance.chart.y_ticks %}
+                  {% for tick in revenue_performance.chart.y_ticks %}
+                    <line
+                      x1="{{ revenue_performance.chart.plot.left }}"
+                      y1="{{ tick.y }}"
+                      x2="{{ revenue_performance.chart.plot.right }}"
+                      y2="{{ tick.y }}"
+                      class="reporting-grid-y"
+                    ></line>
+                    <text x="{{ revenue_performance.chart.plot.left - 8 }}" y="{{ tick.y + 3.5 }}" text-anchor="end" class="reporting-axis-label-y">${{ "%.0f"|format(tick.value) }}</text>
+                  {% endfor %}
+
                   <line
                     x1="{{ revenue_performance.chart.plot.left }}"
-                    y1="{{ tick.y }}"
+                    y1="{{ revenue_performance.chart.plot.bottom }}"
                     x2="{{ revenue_performance.chart.plot.right }}"
-                    y2="{{ tick.y }}"
-                    class="reporting-grid-y"
+                    y2="{{ revenue_performance.chart.plot.bottom }}"
+                    class="reporting-axis"
                   ></line>
-                  <text x="{{ revenue_performance.chart.plot.left - 8 }}" y="{{ tick.y + 3.5 }}" text-anchor="end" class="reporting-axis-label-y">${{ "%.0f"|format(tick.value) }}</text>
-                {% endfor %}
+                  <line
+                    x1="{{ revenue_performance.chart.plot.left }}"
+                    y1="{{ revenue_performance.chart.plot.top }}"
+                    x2="{{ revenue_performance.chart.plot.left }}"
+                    y2="{{ revenue_performance.chart.plot.bottom }}"
+                    class="reporting-axis"
+                  ></line>
 
-                <line
-                  x1="{{ revenue_performance.chart.plot.left }}"
-                  y1="{{ revenue_performance.chart.plot.bottom }}"
-                  x2="{{ revenue_performance.chart.plot.right }}"
-                  y2="{{ revenue_performance.chart.plot.bottom }}"
-                  class="reporting-axis"
-                ></line>
-                <line
-                  x1="{{ revenue_performance.chart.plot.left }}"
-                  y1="{{ revenue_performance.chart.plot.top }}"
-                  x2="{{ revenue_performance.chart.plot.left }}"
-                  y2="{{ revenue_performance.chart.plot.bottom }}"
-                  class="reporting-axis"
-                ></line>
+                  {% if revenue_performance.chart.polyline_points %}
+                    <polyline points="{{ revenue_performance.chart.polyline_points }}" class="reporting-line"></polyline>
+                  {% endif %}
 
-                {% if revenue_performance.chart.polyline_points %}
-                  <polyline points="{{ revenue_performance.chart.polyline_points }}" class="reporting-line"></polyline>
-                {% endif %}
+                  {% for point in revenue_performance.chart.chart_points %}
+                    <circle cx="{{ point.x }}" cy="{{ point.y }}" r="3.3" class="reporting-point"></circle>
+                  {% endfor %}
 
-                {% for point in revenue_performance.chart.chart_points %}
-                  <circle cx="{{ point.x }}" cy="{{ point.y }}" r="3.3" class="reporting-point"></circle>
-                {% endfor %}
+                  {% for point in revenue_performance.chart.chart_points %}
+                    <text x="{{ point.x }}" y="{{ revenue_performance.chart.viewport.height - 22 }}" text-anchor="middle" class="reporting-axis-label-x reporting-day-label">{{ point.label }}</text>
+                  {% endfor %}
 
-                {% for point in revenue_performance.chart.chart_points %}
-                  <text x="{{ point.x }}" y="{{ revenue_performance.chart.viewport.height - 22 }}" text-anchor="middle" class="reporting-axis-label-x reporting-day-label">{{ point.label }}</text>
-                {% endfor %}
-
-                <text x="{{ (revenue_performance.chart.plot.left + revenue_performance.chart.plot.right) / 2 }}" y="{{ revenue_performance.chart.viewport.height - 6 }}" text-anchor="middle" class="reporting-axis-label-x reporting-axis-title-x">Last {{ revenue_performance.chart.window_days }} Days</text>
-                <text x="18" y="{{ (revenue_performance.chart.plot.top + revenue_performance.chart.plot.bottom) / 2 }}" transform="rotate(-90 18 {{ (revenue_performance.chart.plot.top + revenue_performance.chart.plot.bottom) / 2 }})" text-anchor="middle" class="reporting-axis-label-y reporting-axis-title-y">Total Revenue</text>
-              </svg>
+                  <text x="{{ (revenue_performance.chart.plot.left + revenue_performance.chart.plot.right) / 2 }}" y="{{ revenue_performance.chart.viewport.height - 6 }}" text-anchor="middle" class="reporting-axis-label-x reporting-axis-title-x">Last {{ revenue_performance.chart.window_days }} Days</text>
+                  <text x="18" y="{{ (revenue_performance.chart.plot.top + revenue_performance.chart.plot.bottom) / 2 }}" transform="rotate(-90 18 {{ (revenue_performance.chart.plot.top + revenue_performance.chart.plot.bottom) / 2 }})" text-anchor="middle" class="reporting-axis-label-y reporting-axis-title-y">Total Revenue</text>
+                </svg>
+                </div>
               </div>
-            </div>
-          </article>
+            </article>
+          {% endif %}
 
           {% if accounts_receivable %}
             <article class="reporting-card reporting-secondary-card" data-aging-filter-root>
@@ -231,22 +229,18 @@
                 </div>
               </header>
 
-              <div class="reporting-kpi-row reporting-kpi-row--four-column">
+              <div class="reporting-kpi-row reporting-kpi-row--three-column">
                 <div class="reporting-kpi">
-                  <span>Estimated (Mock)</span>
-                  <strong>{{ todays_jobs_overview.summary.estimated_mock }}</strong>
+                  <span>Estimates Sent</span>
+                  <strong>{{ todays_jobs_overview.summary.estimates_sent }}</strong>
                 </div>
                 <div class="reporting-kpi">
-                  <span>Scheduled</span>
+                  <span>Jobs Scheduled</span>
                   <strong>{{ todays_jobs_overview.summary.scheduled }}</strong>
                 </div>
                 <div class="reporting-kpi">
-                  <span>Completed</span>
+                  <span>Jobs Completed</span>
                   <strong>{{ todays_jobs_overview.summary.completed }}</strong>
-                </div>
-                <div class="reporting-kpi">
-                  <span>Total</span>
-                  <strong>{{ todays_jobs_overview.summary.total }}</strong>
                 </div>
               </div>
 
@@ -255,16 +249,16 @@
                   <thead>
                     <tr>
                       <th scope="col">Employee</th>
-                      <th scope="col">Estimated (Mock)</th>
-                      <th scope="col">Scheduled</th>
-                      <th scope="col">Completed</th>
+                      <th scope="col">Estimates Sent</th>
+                      <th scope="col">Jobs Scheduled</th>
+                      <th scope="col">Jobs Completed</th>
                     </tr>
                   </thead>
                   <tbody>
                     {% for row in todays_jobs_overview.rows %}
                       <tr data-page-item>
                         <th scope="row">{{ row.employee_name }}</th>
-                        <td>{{ row.estimated_mock }}</td>
+                        <td>{{ row.estimates_sent }}</td>
                         <td>{{ row.scheduled }}</td>
                         <td>{{ row.completed }}</td>
                       </tr>
@@ -289,22 +283,18 @@
                 </div>
               </header>
 
-              <div class="reporting-kpi-row reporting-kpi-row--four-column">
+              <div class="reporting-kpi-row reporting-kpi-row--three-column">
                 <div class="reporting-kpi">
-                  <span>Estimated (Mock)</span>
-                  <strong>{{ yesterdays_jobs_overview.summary.estimated_mock }}</strong>
+                  <span>Estimates Sent</span>
+                  <strong>{{ yesterdays_jobs_overview.summary.estimates_sent }}</strong>
                 </div>
                 <div class="reporting-kpi">
-                  <span>Scheduled</span>
+                  <span>Jobs Scheduled</span>
                   <strong>{{ yesterdays_jobs_overview.summary.scheduled }}</strong>
                 </div>
                 <div class="reporting-kpi">
-                  <span>Completed</span>
+                  <span>Jobs Completed</span>
                   <strong>{{ yesterdays_jobs_overview.summary.completed }}</strong>
-                </div>
-                <div class="reporting-kpi">
-                  <span>Total</span>
-                  <strong>{{ yesterdays_jobs_overview.summary.total }}</strong>
                 </div>
               </div>
 
@@ -313,16 +303,16 @@
                   <thead>
                     <tr>
                       <th scope="col">Employee</th>
-                      <th scope="col">Estimated (Mock)</th>
-                      <th scope="col">Scheduled</th>
-                      <th scope="col">Completed</th>
+                      <th scope="col">Estimates Sent</th>
+                      <th scope="col">Jobs Scheduled</th>
+                      <th scope="col">Jobs Completed</th>
                     </tr>
                   </thead>
                   <tbody>
                     {% for row in yesterdays_jobs_overview.rows %}
                       <tr data-page-item>
                         <th scope="row">{{ row.employee_name }}</th>
-                        <td>{{ row.estimated_mock }}</td>
+                        <td>{{ row.estimates_sent }}</td>
                         <td>{{ row.scheduled }}</td>
                         <td>{{ row.completed }}</td>
                       </tr>
@@ -400,6 +390,116 @@
             </article>
           {% endif %}
 
+          {% if show_revenue_report %}
+            <article class="reporting-card" id="rev-report">
+              <div class="reporting-card-header">
+                <h2 class="reporting-card-title">Revenue</h2>
+                <div class="rev-filter-row">
+                  <div class="rev-timeframe-group">
+                    <span class="rev-filter-label">Timeframe:</span>
+                    <button class="rev-timeframe-btn" data-days="1">1 Day</button>
+                    <button class="rev-timeframe-btn" data-days="3">3 Days</button>
+                    <button class="rev-timeframe-btn is-active" data-days="7">7 Days</button>
+                    <button class="rev-timeframe-btn" data-days="14">2 Weeks</button>
+                    <button class="rev-timeframe-btn" data-days="30">1 Month</button>
+                  </div>
+                  <div class="rev-daterange-group">
+                    <span class="rev-filter-label">Date Range:</span>
+                    <label class="rev-date-label" for="rev-start-date">Start</label>
+                    <input class="rev-date-input" type="date" id="rev-start-date" name="rev_start_date">
+                    <label class="rev-date-label" for="rev-end-date">End</label>
+                    <input class="rev-date-input" type="date" id="rev-end-date" name="rev_end_date">
+                  </div>
+                </div>
+              </div>
+
+              <div class="rev-kpi-row" id="rev-kpi-row">
+                <div class="rev-kpi-card" id="rev-kpi-total">
+                  <div class="rev-kpi-label">Total Revenue</div>
+                  <div class="rev-kpi-value" id="rev-total-revenue">—</div>
+                  <div class="rev-kpi-growth" id="rev-total-revenue-growth"></div>
+                </div>
+                <div class="rev-kpi-card" id="rev-kpi-avg">
+                  <div class="rev-kpi-label">Average Job Value</div>
+                  <div class="rev-kpi-value" id="rev-avg-job-value">—</div>
+                  <div class="rev-kpi-growth" id="rev-avg-job-value-growth"></div>
+                </div>
+                <div class="rev-kpi-card" id="rev-kpi-contracts">
+                  <div class="rev-kpi-label">Active Contracts</div>
+                  <div class="rev-kpi-value" id="rev-active-contracts">—</div>
+                  <div class="rev-kpi-growth" id="rev-active-contracts-growth"></div>
+                </div>
+                <div class="rev-kpi-card" id="rev-kpi-mom">
+                  <div class="rev-kpi-label">MOM Growth</div>
+                  <div class="rev-kpi-value" id="rev-mom-growth">—</div>
+                  <div class="rev-kpi-growth" id="rev-mom-growth-sub"></div>
+                </div>
+              </div>
+
+              <div class="reporting-chart-shell rev-chart-section">
+                <div class="reporting-chart-wrapper">
+                  <h4 class="reporting-chart-title" id="rev-chart-title">Revenue</h4>
+                  <svg class="reporting-chart" id="rev-line-chart-svg" viewBox="0 0 900 240" role="img" aria-label="Revenue line chart"></svg>
+                </div>
+              </div>
+
+              <div class="rev-breakdown-row">
+                <div class="rev-breakdown-card" id="rev-service-type-card">
+                  <h3 class="rev-section-label">Revenue by Service Type</h3>
+                  <div class="rev-service-bars" id="rev-service-bars">
+                    <div class="rev-placeholder">Loading…</div>
+                  </div>
+                </div>
+                <div class="rev-breakdown-card">
+                  <h3 class="rev-section-label">Customer Split</h3>
+                  <div class="rev-donut-wrap">
+                    <svg class="rev-donut-svg" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                      <!-- Residential 60% (216°), Commercial 30% (108°), Industrial 10% (36°) -->
+                      <circle r="46" cx="60" cy="60" fill="none" stroke="#4f8ef7" stroke-width="20"
+                        stroke-dasharray="289.27 482.12" stroke-dashoffset="0" transform="rotate(-90 60 60)"/>
+                      <circle r="46" cx="60" cy="60" fill="none" stroke="#63c08a" stroke-width="20"
+                        stroke-dasharray="144.51 482.12" stroke-dashoffset="-289.27" transform="rotate(-90 60 60)"/>
+                      <circle r="46" cx="60" cy="60" fill="none" stroke="#f6a737" stroke-width="20"
+                        stroke-dasharray="48.21 482.12" stroke-dashoffset="-433.78" transform="rotate(-90 60 60)"/>
+                    </svg>
+                    <div class="rev-donut-legend">
+                      <div class="rev-donut-legend-item">
+                        <span class="rev-donut-swatch" style="background:#4f8ef7"></span>
+                        <span>Residential</span><span class="rev-donut-pct">60%</span>
+                      </div>
+                      <div class="rev-donut-legend-item">
+                        <span class="rev-donut-swatch" style="background:#63c08a"></span>
+                        <span>Commercial</span><span class="rev-donut-pct">30%</span>
+                      </div>
+                      <div class="rev-donut-legend-item">
+                        <span class="rev-donut-swatch" style="background:#f6a737"></span>
+                        <span>Industrial</span><span class="rev-donut-pct">10%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rev-breakdown-row rev-breakdown-row--secondary">
+                <div class="rev-breakdown-card" id="rev-equipment-type-card">
+                  <h3 class="rev-section-label">Revenue by Equipment Type</h3>
+                  <div class="rev-service-bars" id="rev-equipment-bars">
+                    <div class="rev-placeholder">Loading…</div>
+                  </div>
+                </div>
+                <div class="rev-breakdown-card">
+                  <h3 class="rev-section-label">Revenue by Employee</h3>
+                  <div class="rev-donut-wrap">
+                    <svg class="rev-donut-svg" id="rev-employee-donut" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-label="Revenue by employee"></svg>
+                    <div class="rev-donut-legend" id="rev-employee-legend">
+                      <div class="rev-placeholder">Loading…</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+          {% endif %}
+
         </section>
       </div>
     </div>
@@ -410,4 +510,7 @@
   <script src="{{ url_for('static', filename='js/reporting_aging_filter.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/reporting_job_overview_pagination.js') }}" defer></script>
   <script src="{{ url_for('static', filename='js/reporting_health_filter.js') }}" defer></script>
+  {% if show_revenue_report %}
+    <script src="{{ url_for('static', filename='js/reporting_revenue.js') }}" defer></script>
+  {% endif %}
 {% endblock %}

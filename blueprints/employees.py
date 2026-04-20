@@ -5,7 +5,7 @@ from bson import ObjectId
 from flask import Blueprint, current_app, redirect, render_template, request, session, url_for
 from werkzeug.security import generate_password_hash
 
-from mongo import ensure_connection_or_500, object_id_or_404, serialize_doc
+from mongo import ensure_connection_or_500, object_id_or_404, reference_value, serialize_doc
 
 bp = Blueprint("employees", __name__)
 
@@ -91,6 +91,7 @@ def add_employee():
                 error="The current employee is missing a subscription_id. Add that in Mongo and try again.",
                 form_data=form_data,
             )
+        current_business_ref = (current_employee or {}).get("business")
 
         employee_count = db.employees.count_documents({}) + 1
         employee = {
@@ -104,8 +105,10 @@ def add_employee():
             "bio": "",
             "status": "active",
             "date_added": datetime.now().strftime("%m/%d/%Y"),
+            "created_at": datetime.utcnow(),
             "employee_id": f"EMP-{employee_count:05d}",
             "subscription_id": current_subscription_id,
+            "business": reference_value(current_business_ref),
         }
         inserted = db.employees.insert_one(employee)
         current_app.logger.info(

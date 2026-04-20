@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Update Equipment | Steady Work{% endblock %}
+{% block title %}Update Equipment | Klovent{% endblock %}
 
 {% block content %}
   <div id="main-container">
@@ -32,12 +32,21 @@
           </div>
 
           <div class="add-customer-form-field">
-            <label for="equipment-manufacturer">Manufacturer</label>
-            <input id="equipment-manufacturer" name="manufacturer" type="text" placeholder="Enter manufacturer" value="{{ form_data.manufacturer|default('', true) }}" />
+            <label for="equipment-type">Equipment Type</label>
+            <select id="equipment-type" name="equipment_type">
+              <option value="">-- Select a type --</option>
+              {% for opt in equipment_type_options %}
+                <option value="{{ opt }}" {% if form_data.equipment_type == opt %}selected{% endif %}>{{ opt }}</option>
+              {% endfor %}
+            </select>
           </div>
         </div>
 
         <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="equipment-manufacturer">Manufacturer</label>
+            <input id="equipment-manufacturer" name="manufacturer" type="text" placeholder="Enter manufacturer" value="{{ form_data.manufacturer|default('', true) }}" />
+          </div>
           <div class="add-customer-form-field">
             <label for="equipment-category">Category</label>
             <div class="category-input-toggle" data-category-field>

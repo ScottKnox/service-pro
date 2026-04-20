@@ -1,12 +1,13 @@
 import os
 import logging
+from datetime import date, datetime
 from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
 
 from bson import ObjectId
 from dotenv import load_dotenv
 from flask import abort
 from pymongo import MongoClient
-from pymongo.errors import PyMongoError
+from pymongo.errors import PyMongoError, OperationFailure
 
 load_dotenv()
 
@@ -21,6 +22,7 @@ MONGODB_URI = os.getenv("MONGODB_URI", "")
 MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME")
 
 _mongo_client = None
+_validators_initialized = False
 
 
 def _inject_credentials_into_uri(uri: str) -> str:
@@ -65,9 +67,14 @@ def build_mongodb_uri() -> str:
 
 def get_db():
     global _mongo_client
+    global _validators_initialized
     if _mongo_client is None:
         _mongo_client = MongoClient(build_mongodb_uri(), serverSelectionTimeoutMS=3000)
-    return _mongo_client[MONGODB_DB_NAME]
+    db = _mongo_client[MONGODB_DB_NAME]
+    if not _validators_initialized:
+        ensure_collection_validators(db)
+        _validators_initialized = True
+    return db
 
 
 def object_id_or_404(value: str) -> ObjectId:
@@ -79,8 +86,21 @@ def object_id_or_404(value: str) -> ObjectId:
 def serialize_doc(doc):
     if not doc:
         return None
-    serialized = {**doc, "_id": str(doc["_id"])}
-    return serialized
+
+    def _serialize_value(value):
+        if isinstance(value, ObjectId):
+            return str(value)
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, date):
+            return value.isoformat()
+        if isinstance(value, list):
+            return [_serialize_value(item) for item in value]
+        if isinstance(value, dict):
+            return {key: _serialize_value(val) for key, val in value.items()}
+        return value
+
+    return {key: _serialize_value(value) for key, value in doc.items()}
 
 
 def ensure_connection_or_500():
@@ -91,3 +111,163 @@ def ensure_connection_or_500():
     except PyMongoError as exc:
         logger.error("MongoDB connection failed: %s", exc)
         abort(500, description=f"MongoDB connection failed: {exc}")
+
+
+def coerce_object_id(value):
+    if isinstance(value, ObjectId):
+        return value
+    text = str(value or "").strip()
+    if not text or not ObjectId.is_valid(text):
+        return None
+    return ObjectId(text)
+
+
+def build_reference_filter(field_name, value):
+    oid_value = coerce_object_id(value)
+    text_value = str(value or "").strip()
+
+    predicates = []
+    if oid_value is not None:
+        predicates.append({field_name: oid_value})
+        predicates.append({field_name: str(oid_value)})
+    elif text_value:
+        predicates.append({field_name: text_value})
+
+    if not predicates:
+        return {field_name: ""}
+    if len(predicates) == 1:
+        return predicates[0]
+    return {"$or": predicates}
+
+
+def reference_value(value):
+    oid_value = coerce_object_id(value)
+    return oid_value if oid_value is not None else str(value or "").strip()
+
+
+def _ensure_collection_with_validator(db, collection_name, validator):
+    existing_names = db.list_collection_names()
+    if collection_name not in existing_names:
+        db.create_collection(collection_name, validator=validator)
+        return
+
+    try:
+        db.command(
+            {
+                "collMod": collection_name,
+                "validator": validator,
+                "validationLevel": "moderate",
+                "validationAction": "warn",
+            }
+        )
+    except OperationFailure:
+        logger.warning("Unable to apply validator for collection %s", collection_name)
+
+
+def ensure_collection_validators(db):
+    jobs_validator = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["customer_id", "status", "services", "total", "total_amount"],
+            "properties": {
+                "customer_id": {"bsonType": ["objectId"]},
+                "business_id": {"bsonType": ["objectId", "null"]},
+                "status": {"enum": ["Pending", "Scheduled", "Started", "Completed", "Paid"]},
+                "services": {"bsonType": "array"},
+                "parts": {"bsonType": "array"},
+                "materials": {"bsonType": "array"},
+                "labors": {"bsonType": "array"},
+                "equipments": {"bsonType": "array"},
+                "discounts": {"bsonType": "array"},
+                "total": {"bsonType": ["string", "null"]},
+                "total_amount": {"bsonType": ["double", "int", "long", "decimal"]},
+                "created_at": {"bsonType": ["date"]},
+                "scheduled_at": {"bsonType": ["date", "null"]},
+                "completed_at": {"bsonType": ["date", "null"]},
+            },
+        }
+    }
+
+    estimates_validator = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["customer_id", "status", "services", "total", "total_amount"],
+            "properties": {
+                "customer_id": {"bsonType": ["objectId"]},
+                "status": {"enum": ["Created", "Sent", "Accepted", "Declined"]},
+                "services": {"bsonType": "array"},
+                "parts": {"bsonType": "array"},
+                "materials": {"bsonType": "array"},
+                "labors": {"bsonType": "array"},
+                "equipments": {"bsonType": "array"},
+                "discounts": {"bsonType": "array"},
+                "total": {"bsonType": ["string", "null"]},
+                "total_amount": {"bsonType": ["double", "int", "long", "decimal"]},
+                "created_at": {"bsonType": ["date"]},
+                "sent_at": {"bsonType": ["date", "null"]},
+                "accepted_at": {"bsonType": ["date", "null"]},
+                "declined_at": {"bsonType": ["date", "null"]},
+            },
+        }
+    }
+
+    services_validator = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["business_id", "service_name", "service_type", "service_code", "standard_price", "emergency", "emergency_price"],
+            "properties": {
+                "business_id": {"bsonType": ["objectId"]},
+                "service_name": {"bsonType": "string"},
+                "service_type": {"bsonType": "string"},
+                "service_code": {"bsonType": "string"},
+                "standard_price": {"bsonType": ["double", "int", "long", "decimal"]},
+                "emergency": {"bsonType": ["bool"]},
+                "emergency_price": {"bsonType": ["double", "int", "long", "decimal"]},
+                "materials_cost": {"bsonType": ["double", "int", "long", "decimal"]},
+                "estimated_hours": {"bsonType": ["double", "int", "long", "decimal"]},
+                "part_ids": {"bsonType": "array"},
+                "material_ids": {"bsonType": "array"},
+                "service_parts": {"bsonType": "array"},
+                "service_materials": {"bsonType": "array"},
+            },
+        }
+    }
+
+    hvac_systems_validator = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["customer_id", "system_type", "location_type"],
+            "properties": {
+                "customer_id": {"bsonType": ["objectId"]},
+                "system_type": {"bsonType": "string"},
+                "location_type": {"bsonType": "string"},
+                "components": {"bsonType": ["object", "null"]},
+                "diagnostics": {"bsonType": ["array", "object"]},
+            },
+        }
+    }
+
+    subscriptions_validator = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["subscription_id", "subscription_name", "status", "price", "billing_cycle"],
+            "properties": {
+                "subscription_id": {"bsonType": "string"},
+                "subscription_name": {"bsonType": "string"},
+                "status": {"enum": ["active", "cancelled", "past_due", "trialing"]},
+                "price": {"bsonType": ["double", "int", "long", "decimal"]},
+                "price_amount": {"bsonType": ["double", "int", "long", "decimal"]},
+                "billing_cycle": {"enum": ["monthly", "quarterly", "yearly"]},
+                "start_date": {"bsonType": ["date"]},
+                "end_date": {"bsonType": ["date", "null"]},
+                "started_at": {"bsonType": ["date", "null"]},
+                "ended_at": {"bsonType": ["date", "null"]},
+            },
+        }
+    }
+
+    _ensure_collection_with_validator(db, "jobs", jobs_validator)
+    _ensure_collection_with_validator(db, "estimates", estimates_validator)
+    _ensure_collection_with_validator(db, "services", services_validator)
+    _ensure_collection_with_validator(db, "hvacSystems", hvac_systems_validator)
+    _ensure_collection_with_validator(db, "subscriptions", subscriptions_validator)

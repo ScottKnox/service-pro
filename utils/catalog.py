@@ -14,6 +14,10 @@ def _format_hours_value(value):
     return text
 
 
+def _is_truthy(value):
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def build_service_catalog(services):
     """Build a service catalog dictionary from service documents."""
     catalog = {}
@@ -22,15 +26,48 @@ def build_service_catalog(services):
         if not service_code:
             continue
 
+        service_part_entries = []
+        for entry in service.get("service_parts") or []:
+            part_id = str(entry.get("part_id") or "").strip()
+            if not part_id:
+                continue
+            service_part_entries.append(
+                {
+                    "part_id": part_id,
+                    "unit_cost": normalize_currency(entry.get("unit_cost", 0)),
+                }
+            )
+
+        service_material_entries = []
+        for entry in service.get("service_materials") or []:
+            material_id = str(entry.get("material_id") or "").strip()
+            if not material_id:
+                continue
+            default_quantity = entry.get("default_quantity_used")
+            service_material_entries.append(
+                {
+                    "material_id": material_id,
+                    "default_quantity_used": _format_hours_value(default_quantity) if default_quantity is not None else "",
+                    "unit_of_measure": str(entry.get("unit_of_measure") or "").strip(),
+                    "price": normalize_currency(entry.get("price", 0)),
+                }
+            )
+
         catalog[service_code] = {
             "name": str(service.get("service_name") or "").strip(),
+            "service_type": str(service.get("service_type") or "").strip(),
             "code": service_code,
             "description": str(service.get("description") or "").strip(),
             "price": normalize_currency(service.get("standard_price", 0)),
             "standard_price": normalize_currency(service.get("standard_price", 0)),
+            "emergency": service.get("emergency", False) if isinstance(service.get("emergency", False), bool) else _is_truthy(service.get("emergency", False)),
+            "emergency_price": normalize_currency(service.get("emergency_price", 0)),
             "materials_cost": normalize_currency(service.get("materials_cost", 0)),
             "estimated_hours": _format_hours_value(service.get("estimated_hours", "")),
-            "part_ids": [str(pid) for pid in (service.get("part_ids") or []) if pid],
+            "part_ids": [entry["part_id"] for entry in service_part_entries] or [str(pid) for pid in (service.get("part_ids") or []) if pid],
+            "material_ids": [entry["material_id"] for entry in service_material_entries] or [str(mid) for mid in (service.get("material_ids") or []) if mid],
+            "service_parts": service_part_entries,
+            "service_materials": service_material_entries,
         }
 
     return catalog
@@ -138,7 +175,7 @@ def build_discount_catalog(discounts):
     return catalog
 
 
-def build_job_services_from_form(service_codes, service_prices, service_durations, service_catalog):
+def build_job_services_from_form(service_codes, service_prices, service_durations, service_catalog, service_emergency_calls=None):
     """
     Build a list of services from form input and catalog defaults.
     
@@ -147,6 +184,7 @@ def build_job_services_from_form(service_codes, service_prices, service_duration
     """
     services = []
     total = 0.0
+    service_emergency_calls = service_emergency_calls or []
 
     for index, raw_service_code in enumerate(service_codes):
         service_code = (raw_service_code or "").strip()
@@ -156,20 +194,30 @@ def build_job_services_from_form(service_codes, service_prices, service_duration
         catalog_entry = service_catalog.get(service_code, {})
         entered_price = service_prices[index] if index < len(service_prices) else ""
         entered_duration = service_durations[index] if index < len(service_durations) else ""
+        entered_emergency_call = service_emergency_calls[index] if index < len(service_emergency_calls) else ""
+        emergency_call = _is_truthy(entered_emergency_call)
 
-        price = entered_price if (entered_price or "").strip() else catalog_entry.get("price", "$0.00")
+        if emergency_call:
+            default_price = catalog_entry.get("emergency_price") or catalog_entry.get("standard_price") or catalog_entry.get("price", "$0.00")
+        else:
+            default_price = catalog_entry.get("standard_price") or catalog_entry.get("price", "$0.00")
+
+        price = entered_price if (entered_price or "").strip() else default_price
         duration = entered_duration if (entered_duration or "").strip() else catalog_entry.get("estimated_hours", "")
         normalized_price = normalize_currency(price)
         normalized_duration = _format_hours_value(duration)
         service_name = catalog_entry.get("name") or service_code
+        service_type = catalog_entry.get("service_type") or ""
 
         services.append(
             {
+                "service_name": service_name,
                 "type": service_name,
+                "service_type": service_type,
                 "code": service_code,
                 "price": normalized_price,
                 "estimated_hours": normalized_duration,
-                "duration": normalized_duration,
+                "emergency_call": emergency_call,
             }
         )
         total += float(normalized_price.replace("$", "").replace(",", ""))

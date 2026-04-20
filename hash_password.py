@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Password hash generator for Service Pro.
+Password hash generator for Klovent.
 
 Usage:
     python hash_password.py
@@ -14,7 +14,7 @@ import getpass
 
 
 def main():
-    print("Service Pro Password Hash Generator")
+    print("Klovent Password Hash Generator")
     print("-" * 40)
     password = getpass.getpass("Enter password: ")
     confirm = getpass.getpass("Confirm password: ")

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}View Equipment | Steady Work{% endblock %}
+{% block title %}View Equipment | Klovent{% endblock %}
 
 {% block content %}
   <div id="main-container">
@@ -33,6 +33,10 @@
           <div class="view-service-detail-item">
             <h4>Equipment Name</h4>
             <p>{{ equipment.equipment_name }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Equipment Type</h4>
+            <p>{{ equipment.equipment_type|default('-', true) }}</p>
           </div>
           <div class="view-service-detail-item">
             <h4>Manufacturer</h4>

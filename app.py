@@ -8,7 +8,7 @@ from flask_mail import Mail
 from flask_wtf.csrf import CSRFProtect
 
 from blueprints import register_blueprints
-from mongo import ensure_connection_or_500, serialize_doc
+from mongo import build_reference_filter, ensure_connection_or_500, serialize_doc
 app = Flask(__name__)
 
 # Session Configuration
@@ -68,6 +68,7 @@ def require_login():
     _restricted_endpoints = {
         "customers.add_customer",
         "jobs.create_job",
+        "jobs.create_estimate",
         "customers.add_equipment",       # Add HVAC System
         "customers.add_hvac_diagnostics",
         "employees.add_employee",
@@ -106,9 +107,18 @@ def home():
     current_employee_position = (session.get("employee_position") or "").strip().lower()
     normalized_current_employee_name = " ".join(current_employee_name.lower().split())
 
+    _employee_id = session.get("employee_id")
+    _business_oid = None
+    if _employee_id and ObjectId.is_valid(_employee_id):
+        _emp_doc = db.employees.find_one({"_id": ObjectId(_employee_id)}, {"business": 1})
+        _raw_biz = (_emp_doc or {}).get("business")
+        if _raw_biz and ObjectId.is_valid(str(_raw_biz)):
+            _business_oid = ObjectId(_raw_biz) if isinstance(_raw_biz, str) else _raw_biz
+    _biz_filter = {"business_id": _business_oid} if _business_oid else {}
+
     jobs_list = [
         serialize_doc(job)
-        for job in db.jobs.find().sort([("scheduled_date", 1), ("scheduled_time", 1), ("date_created", -1)])
+        for job in db.jobs.find(_biz_filter).sort([("scheduled_date", 1), ("scheduled_time", 1), ("date_created", -1)])
     ]
     employees = [
         serialize_doc(employee)
@@ -136,12 +146,12 @@ def home():
 
     pending_jobs_per_page = 5
     pending_jobs_all = []
-    for job in db.jobs.find({"status": {"$regex": "^Pending$", "$options": "i"}}).sort([("date_created", -1), ("_id", -1)]):
+    for job in db.jobs.find({**_biz_filter, "status": {"$regex": "^Pending$", "$options": "i"}}).sort([("created_at", -1), ("_id", -1)]):
         serialized_job = serialize_doc(job)
         customer_phone = "N/A"
         customer_id = serialized_job.get("customer_id")
-        if customer_id and ObjectId.is_valid(customer_id):
-            customer_doc = db.customers.find_one({"_id": ObjectId(customer_id)}, {"phone": 1})
+        if customer_id:
+            customer_doc = db.customers.find_one(build_reference_filter("_id", customer_id), {"phone": 1})
             if customer_doc:
                 customer_phone = (customer_doc.get("phone") or "").strip() or "N/A"
 
@@ -166,38 +176,24 @@ def home():
         estimate_page = 1
 
     estimates_per_page = 5
-    estimating_jobs = [
-        serialize_doc(job)
-        for job in db.jobs.find({"status": {"$regex": "^Estimating$", "$options": "i"}}).sort([("scheduled_date", -1), ("scheduled_time", -1), ("_id", -1)])
+    active_estimates = [
+        serialize_doc(estimate)
+        for estimate in db.estimates.find({"status": {"$nin": ["Accepted", "Declined"]}}).sort([("created_at", -1), ("_id", -1)])
     ]
 
-    job_ids = [job.get("_id") for job in estimating_jobs if job.get("_id")]
-    estimate_docs = [
-        serialize_doc(estimate)
-        for estimate in db.estimates.find({"job_id": {"$in": job_ids}}).sort([("date", -1), ("_id", -1)])
-    ] if job_ids else []
-
-    latest_estimate_by_job = {}
-    for estimate_doc in estimate_docs:
-        estimate_job_id = estimate_doc.get("job_id")
-        if estimate_job_id and estimate_job_id not in latest_estimate_by_job:
-            latest_estimate_by_job[estimate_job_id] = estimate_doc
-
     estimate_items = []
-    for job in estimating_jobs:
-        job_id = job.get("_id", "")
-        estimate_doc = latest_estimate_by_job.get(job_id)
-        has_quote_file = bool(estimate_doc and estimate_doc.get("file_path"))
-        assigned_employee = (job.get("assigned_employee") or "").strip()
+    for estimate in active_estimates:
+        estimate_id = estimate.get("_id", "")
+        assigned_employee = (estimate.get("estimated_by_employee") or estimate.get("created_by_employee") or "").strip()
 
         estimate_items.append(
             {
-                "date": (estimate_doc or {}).get("date") or job.get("date_created") or "",
-                "customer_name": job.get("customer_name") or "Unknown Customer",
-                "title": (estimate_doc or {}).get("title") or job.get("job_type") or "Estimate",
-                "amount": (estimate_doc or {}).get("amount") or job.get("total") or "$0.00",
-                "href": (estimate_doc or {}).get("file_path") if has_quote_file else url_for("jobs.view_job", jobId=job_id),
-                "open_in_new_tab": has_quote_file,
+                "date": estimate.get("date_created") or "",
+                "customer_name": estimate.get("customer_name") or "Unknown Customer",
+                "title": "Estimate",
+                "amount": estimate.get("total") or "$0.00",
+                "href": url_for("jobs.view_estimate", estimateId=estimate_id),
+                "open_in_new_tab": False,
                 "assigned_employee": assigned_employee,
                 "assigned_employee_key": assigned_employee.lower().replace(" ", "-"),
             }

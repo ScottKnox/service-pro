@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Estimates | Klovent{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="manage-jobs-header" class="resource-page resource-jobs">
+      <h1>Manage Estimates</h1>
+
+      <div id="jobs-controls-row">
+        <div class="jobs-controls-left">
+          <h2>Filter Estimates</h2>
+
+          <div class="jobs-filter-list">
+            <details class="jobs-filter-group">
+              <summary>Estimated By</summary>
+              <div class="jobs-filter-content" id="estimates-filter-employee-options">
+              </div>
+            </details>
+
+            <details class="jobs-filter-group">
+              <summary>Status</summary>
+              <div class="jobs-filter-content" id="estimates-filter-status-options">
+              </div>
+            </details>
+
+            <details class="jobs-filter-group">
+              <summary>Date Range</summary>
+              <div class="jobs-filter-content jobs-filter-date-range">
+                <label for="estimates-filter-start-date">Start Date</label>
+                <input id="estimates-filter-start-date" name="estimates_filter_start_date" type="date" />
+
+                <label for="estimates-filter-end-date">End Date</label>
+                <input id="estimates-filter-end-date" name="estimates_filter_end_date" type="date" />
+
+                <button id="estimates-clear-date-filters" type="button">Clear Date Filters</button>
+              </div>
+            </details>
+
+            <details class="jobs-filter-group">
+              <summary>City</summary>
+              <div class="jobs-filter-content" id="estimates-filter-city-options">
+              </div>
+            </details>
+
+            <details class="jobs-filter-group">
+              <summary>State</summary>
+              <div class="jobs-filter-content" id="estimates-filter-state-options">
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="jobs-controls-right">
+          <div class="jobs-controls-right-top">
+            <h2>All Estimates</h2>
+
+            <div class="jobs-controls-right-actions">
+              <label for="estimates-sort-by">Sort By</label>
+              <select id="estimates-sort-by" name="estimates_sort_by" disabled>
+                <option value="date_created_desc">Date Created (Newest)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="jobs-controls-right-bottom">
+            <div id="jobs-list-container">
+              <div id="estimates-list-grid">
+                {% if estimates %}
+                  {% for estimate in estimates %}
+                    {% set estimate_status_normalized = (estimate.status|default('', true))|lower %}
+                    {% set estimated_by = estimate.estimated_by_employee|default(estimate.created_by_employee, true)|default('', true) %}
+                    <a
+                      class="jobs-card"
+                      href="{{ url_for('jobs.view_estimate', estimateId=estimate._id) }}"
+                      data-filter-employee="{{ estimated_by }}"
+                      data-filter-status="{{ estimate.status|default('', true) }}"
+                      data-filter-city="{{ estimate.city|default('', true) }}"
+                      data-filter-state="{{ estimate.state|default('', true) }}"
+                      data-filter-date="{{ estimate.date_created|default('', true) }}"
+                    >
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Status</span>
+                        <span class="jobs-card-value jobs-status-chip{% if estimate_status_normalized == 'created' %} is-pending{% elif estimate_status_normalized == 'sent' %} is-scheduled{% elif estimate_status_normalized == 'accepted' %} is-started{% elif estimate_status_normalized == 'declined' %} is-declined{% endif %}">{{ estimate.status|default('Created', true) }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Customer</span>
+                        <span class="jobs-card-value">{{ estimate.customer_name|default('Unknown Customer', true) }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Company</span>
+                        <span class="jobs-card-value">{{ estimate.company|default('-', true) }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Estimated By</span>
+                        <span class="jobs-card-value">{{ estimated_by|default('Unassigned', true) }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Date Created</span>
+                        <span class="jobs-card-value">{{ estimate.date_created|default('N/A', true) }} {{ estimate.time_created|default('', true) }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Total</span>
+                        <span class="jobs-card-value">{{ estimate.total|default('$0.00', true) }}</span>
+                      </div>
+                    </a>
+                  {% endfor %}
+                {% else %}
+                  <p>No estimates found. Create an estimate from a customer record.</p>
+                {% endif %}
+              </div>
+              {% if estimates %}
+                <p id="estimates-filter-no-results" hidden>No estimates match the selected filters.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/estimates_filters.js') }}" defer></script>
+{% endblock %}

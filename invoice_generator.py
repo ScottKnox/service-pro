@@ -72,7 +72,7 @@ def _format_time_to_am_pm(time_string):
     return f"{hours12}:{minutes:02d} {period}"
 
 
-def _build_section_table(story, heading_style, title, headers, rows, col_widths):
+def _build_section_table(story, heading_style, title, headers, rows, col_widths, section_spacing=0.22 * inch):
     if not rows:
         return
 
@@ -100,7 +100,7 @@ def _build_section_table(story, heading_style, title, headers, rows, col_widths)
         )
     )
     story.append(section_table)
-    story.append(Spacer(1, 0.22 * inch))
+    story.append(Spacer(1, section_spacing))
 
 
 def _resolve_logo_path(business_logo_path):
@@ -156,6 +156,13 @@ def _build_logo_flowable(business_logo_path, max_width=2.5 * inch, max_height=1.
         return None
 
 
+def _line_item_count(job):
+    total = 0
+    for key in ("services", "parts", "labors", "materials", "equipments"):
+        total += sum(1 for item in (job.get(key) or []) if isinstance(item, dict))
+    return total
+
+
 def generate_invoice(job_id, job, customer, business_logo_path="", business=None):
     """
     Generate a PDF invoice for a completed job.
@@ -178,6 +185,12 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
     story = []
     styles = getSampleStyleSheet()
     business = business or {}
+    compact_layout = _line_item_count(job) <= 4
+    header_spacer_height = 0.14 * inch if compact_layout else 0.2 * inch
+    info_spacer_height = 0.16 * inch if compact_layout else 0.24 * inch
+    section_spacer_height = 0.12 * inch if compact_layout else 0.22 * inch
+    line_items_to_totals_spacer_height = 0.16 * inch if compact_layout else 0.26 * inch
+    totals_spacer_height = 0.08 * inch if compact_layout else 0.14 * inch
 
     title_style = ParagraphStyle(
         "CustomTitle",
@@ -236,7 +249,7 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
     company_name = (
         str(business.get("company_name") or "").strip()
         or str(business.get("business_name") or "").strip()
-        or "Steady Work"
+        or "Klovent"
     )
 
     invoice_number = f"INV-{str(job_id)[:8].upper()}"
@@ -394,7 +407,7 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
         )
     )
     story.append(header_table)
-    story.append(Spacer(1, 0.2 * inch))
+    story.append(Spacer(1, header_spacer_height))
 
     customer_full_name = f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip() or str(job.get("customer_name") or "N/A")
     customer_company = str(customer.get("company") or job.get("company") or "N/A")
@@ -463,7 +476,7 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
         )
     )
     story.append(info_boxes)
-    story.append(Spacer(1, 0.24 * inch))
+    story.append(Spacer(1, info_spacer_height))
     story.append(Paragraph("Description of Work Performed and Materials", work_heading_style))
 
     service_rows = []
@@ -518,11 +531,11 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
             str(equipment.get("line_total") or "$0.00"),
         ])
 
-    _build_section_table(story, heading_style, "", ["Service", "Amount"], service_rows, [4.4 * inch, 2.2 * inch])
-    _build_section_table(story, heading_style, "", ["Part", "Amount"], parts_rows, [4.4 * inch, 2.2 * inch])
-    _build_section_table(story, heading_style, "", ["Description", "Hours", "Rate", "Amount"], labor_rows, [2.8 * inch, 0.8 * inch, 1.2 * inch, 1.8 * inch])
-    _build_section_table(story, heading_style, "", ["Material", "Quantity", "Amount"], material_rows, [3.2 * inch, 1.2 * inch, 2.2 * inch])
-    _build_section_table(story, heading_style, "", ["Equipment", "Qty", "Price", "Amount"], equipment_rows, [2.6 * inch, 0.8 * inch, 1.2 * inch, 2.0 * inch])
+    _build_section_table(story, heading_style, "", ["Service", "Amount"], service_rows, [4.4 * inch, 2.2 * inch], section_spacing=section_spacer_height)
+    _build_section_table(story, heading_style, "", ["Part", "Amount"], parts_rows, [4.4 * inch, 2.2 * inch], section_spacing=section_spacer_height)
+    _build_section_table(story, heading_style, "", ["Description", "Hours", "Rate", "Amount"], labor_rows, [2.8 * inch, 0.8 * inch, 1.2 * inch, 1.8 * inch], section_spacing=section_spacer_height)
+    _build_section_table(story, heading_style, "", ["Material", "Quantity", "Amount"], material_rows, [3.2 * inch, 1.2 * inch, 2.2 * inch], section_spacing=section_spacer_height)
+    _build_section_table(story, heading_style, "", ["Equipment", "Qty", "Price", "Amount"], equipment_rows, [2.6 * inch, 0.8 * inch, 1.2 * inch, 2.0 * inch], section_spacing=section_spacer_height)
 
     subtotal = (
         sum(_currency_to_float(row[1]) for row in service_rows)
@@ -701,15 +714,56 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
             ]
         )
     )
-    story.append(totals_wrap)
-    story.append(Spacer(1, 0.14 * inch))
-
-    story.append(
-        Paragraph(
-            "Thank you for your business!<br/>Please retain this invoice for your records.",
-            footer_style,
-        )
+    footer_paragraph = Paragraph(
+        "Thank you for your business!<br/>Please retain this invoice for your records.",
+        footer_style,
     )
+
+    def _estimate_story_height(flowables, avail_width, avail_height):
+        total_height = 0.0
+        for flowable in flowables:
+            try:
+                _, flowable_height = flowable.wrap(avail_width, avail_height)
+            except Exception:
+                continue
+            total_height += flowable_height
+        return total_height
+
+    current_story_height = _estimate_story_height(story, doc.width, doc.height)
+    _, totals_wrap_height = totals_wrap.wrap(doc.width, doc.height)
+    _, footer_height = footer_paragraph.wrap(doc.width, doc.height)
+    remaining_first_page_height = doc.height - current_story_height
+    overflow_risk = (totals_wrap_height + totals_spacer_height + footer_height) > remaining_first_page_height
+
+    story.append(Spacer(1, line_items_to_totals_spacer_height))
+
+    if compact_layout and overflow_risk:
+        # In overflow risk mode, prioritize totals on page one; notes/warranty can flow after.
+        totals_only_wrap = Table([[Spacer(1, 0.01 * inch), totals_table]], colWidths=[2.8 * inch, 3.8 * inch])
+        totals_only_wrap.setStyle(
+            TableStyle(
+                [
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+        )
+        story.append(totals_only_wrap)
+
+        if notes_panel:
+            story.append(Spacer(1, 0.08 * inch))
+            story.append(notes_panel)
+        if warranty_panel:
+            story.append(Spacer(1, 0.08 * inch))
+            story.append(warranty_panel)
+    else:
+        story.append(totals_wrap)
+
+    story.append(Spacer(1, totals_spacer_height))
+    story.append(footer_paragraph)
     doc.build(story)
 
     return filepath
@@ -978,3 +1032,18 @@ def generate_quote(job_id, job, customer, business_logo_path=""):
     doc.build(story)
 
     return filepath
+
+
+def generate_estimate(estimate_id, estimate, customer, business_logo_path=""):
+    """Generate a PDF estimate from an estimate document.
+
+    This reuses the quote layout generator by adapting estimate keys to the
+    expected quote payload shape.
+    """
+    estimate_payload = dict(estimate or {})
+    estimate_payload.setdefault("assigned_employee", estimate_payload.get("estimated_by_employee", ""))
+    if "estimate_notes" in estimate_payload and not estimate_payload.get("notes"):
+        note_text = str(estimate_payload.get("estimate_notes") or "").strip()
+        estimate_payload["notes"] = [{"text": note_text}] if note_text else []
+
+    return generate_quote(estimate_id, estimate_payload, customer, business_logo_path=business_logo_path)

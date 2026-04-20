@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Create Job | Klovent{% endblock %}
+{% block title %}Create Estimate | Klovent{% endblock %}
 
 {% block content %}
   <div id="main-container">
     <div id="create-job-panel">
-      <h1>Create Job</h1>
+      <h1>Create Estimate</h1>
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('jobs.jobs') }}">Jobs</a></li>
-          <li aria-current="page">Create Job</li>
+          <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li aria-current="page">Create Estimate</li>
         </ol>
       </nav>
 
-      <form id="create-job-form" action="{{ url_for('jobs.create_job', customerId=customerId) }}" method="post" data-services-catalog='{{ services_catalog|tojson }}' data-parts-catalog='{{ parts_catalog|tojson }}' data-labors-catalog='{{ labors_catalog|tojson }}' data-materials-catalog='{{ materials_catalog|tojson }}' data-equipments-catalog='{{ equipments_catalog|tojson }}' data-discounts-catalog='{{ discounts_catalog|tojson }}' data-parts-by-id='{{ parts_by_id|tojson }}' data-materials-by-id='{{ materials_by_id|tojson }}' data-schedule-required="false">
+      <form id="create-job-form" action="{{ url_for('jobs.create_estimate', customerId=customerId) }}" method="post" data-services-catalog='{{ services_catalog|tojson }}' data-parts-catalog='{{ parts_catalog|tojson }}' data-labors-catalog='{{ labors_catalog|tojson }}' data-materials-catalog='{{ materials_catalog|tojson }}' data-equipments-catalog='{{ equipments_catalog|tojson }}' data-discounts-catalog='{{ discounts_catalog|tojson }}' data-parts-by-id='{{ parts_by_id|tojson }}' data-materials-by-id='{{ materials_by_id|tojson }}' data-schedule-required="false">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="customer_id" value="{{ customerId }}" />
 
@@ -111,29 +111,15 @@
           </div>
         </div>
 
-        <p class="form-field-note">* Change if job address different than customer's</p>
+        <p class="form-field-note">* Change if estimating for address different than customer's</p>
 
-        <h2 class="create-job-form-section-header">Job Details</h2>
-        <p class="form-field-note form-field-note--compact">* Leave Scheduled Date / Time blank if you'll schedule this job later.</p>
+        <h2 class="create-job-form-section-header">Estimate Details</h2>
         <span id="error-job-details" class="form-field-error" style="display:none;"></span>
 
         <div class="add-customer-form-row job-details-layout">
           <div class="job-details-stack">
             <div class="add-customer-form-field">
-              <label for="job-date">Scheduled Date</label>
-              <input id="job-date" name="job_date" type="date" />
-            </div>
-
-            <div class="add-customer-form-field">
-              <label for="job-time">Scheduled Time</label>
-              <input id="job-time" name="job_time" type="time" />
-              <button id="clear-date-time" type="button">Clear Date and Time</button>
-            </div>
-          </div>
-
-          <div class="job-details-stack">
-            <div class="add-customer-form-field">
-              <label for="job-assigned-employee">Assigned Employee</label>
+              <label for="job-assigned-employee">Estimated By:</label>
               <select id="job-assigned-employee" name="job_assigned_employee" required>
                 <option value="">-- Select an employee --</option>
                 {% for employee in employee_options %}
@@ -143,8 +129,8 @@
             </div>
 
             <div class="add-customer-form-field">
-              <label for="job-notes">Add Note</label>
-              <textarea id="job-notes" name="job_notes" rows="4" placeholder="Access notes, parts needed, and special instructions"></textarea>
+              <label for="job-notes">Estimate Notes</label>
+              <textarea id="job-notes" name="estimate_notes" rows="4" placeholder="Add details for the customer to see on this estimate"></textarea>
             </div>
           </div>
         </div>
@@ -409,7 +395,7 @@
         </template>
 
         <div id="create-job-form-actions">
-          <button id="submit-button" type="submit">Submit</button>
+          <button id="submit-button" type="submit">Create Estimate</button>
         </div>
       </form>
     </div>

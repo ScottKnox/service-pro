@@ -10,6 +10,7 @@
   const equipmentsCatalog = form && form.dataset.equipmentsCatalog ? JSON.parse(form.dataset.equipmentsCatalog) : {};
   const discountsCatalog = form && form.dataset.discountsCatalog ? JSON.parse(form.dataset.discountsCatalog) : {};
   const partsById = form && form.dataset.partsById ? JSON.parse(form.dataset.partsById) : {};
+  const materialsById = form && form.dataset.materialsById ? JSON.parse(form.dataset.materialsById) : {};
 
   // Track user interaction for specific fields
   let servicesTouched = false;
@@ -151,19 +152,173 @@
   }
 
   // Function to update price and duration when service is selected
+  function isTruthyValue(value) {
+    return ['1', 'true', 'yes', 'on'].indexOf(String(value || '').trim().toLowerCase()) !== -1;
+  }
+
+  function getServiceRowByIndex(serviceIndex) {
+    return document.querySelector('.job-service-row[data-service-index="' + serviceIndex + '"]');
+  }
+
+  function getServicePriceInput(serviceIndex) {
+    return document.getElementById('service-price-' + serviceIndex);
+  }
+
+  function getServiceHoursInput(serviceIndex) {
+    return document.getElementById('service-hours-' + serviceIndex);
+  }
+
+  function getServiceEmergencyCheckbox(serviceIndex) {
+    return document.getElementById('service-emergency-call-' + serviceIndex);
+  }
+
+  function getServiceEmergencyHiddenInput(serviceIndex) {
+    return document.getElementById('service-emergency-call-hidden-' + serviceIndex);
+  }
+
+  function serviceSupportsEmergency(serviceDetails) {
+    if (!serviceDetails) {
+      return false;
+    }
+
+    if (typeof serviceDetails.emergency === 'boolean') {
+      return serviceDetails.emergency;
+    }
+
+    return isTruthyValue(serviceDetails.emergency);
+  }
+
+  function getServiceEmergencyWarning(serviceIndex) {
+    const checkbox = getServiceEmergencyCheckbox(serviceIndex);
+    const fieldContainer = checkbox ? checkbox.closest('.add-customer-form-field') : null;
+    if (!fieldContainer) {
+      return null;
+    }
+
+    let warning = fieldContainer.querySelector('.service-emergency-warning');
+    if (!warning) {
+      warning = document.createElement('p');
+      warning.className = 'form-field-note service-emergency-warning';
+      warning.textContent = 'This service does not have emergency pricing enabled.';
+      warning.style.display = 'none';
+      warning.style.margin = '0.35rem 0 0';
+      fieldContainer.appendChild(warning);
+    }
+
+    return warning;
+  }
+
+  function setEmergencyWarningVisible(serviceIndex, isVisible) {
+    const warning = getServiceEmergencyWarning(serviceIndex);
+    if (!warning) {
+      return;
+    }
+
+    warning.style.display = isVisible ? 'block' : 'none';
+  }
+
+  function syncEmergencyAvailability(serviceIndex, showWarningWhenUnsupported) {
+    const serviceSelect = document.getElementById('service-code-' + serviceIndex);
+    const emergencyCheckbox = getServiceEmergencyCheckbox(serviceIndex);
+    const hiddenInput = getServiceEmergencyHiddenInput(serviceIndex);
+    const serviceDetails = serviceSelect ? servicesCatalog[serviceSelect.value] : null;
+    const supportsEmergency = serviceSupportsEmergency(serviceDetails);
+
+    if (!emergencyCheckbox) {
+      return;
+    }
+
+    if (!serviceSelect || !serviceSelect.value) {
+      emergencyCheckbox.checked = false;
+      if (hiddenInput) {
+        hiddenInput.value = 'no';
+      }
+      setEmergencyWarningVisible(serviceIndex, false);
+      return;
+    }
+
+    if (!supportsEmergency) {
+      const wasChecked = emergencyCheckbox.checked;
+      emergencyCheckbox.checked = false;
+      if (hiddenInput) {
+        hiddenInput.value = 'no';
+      }
+      setEmergencyWarningVisible(serviceIndex, !!(showWarningWhenUnsupported && wasChecked));
+      return;
+    }
+
+    if (hiddenInput) {
+      hiddenInput.value = emergencyCheckbox.checked ? 'yes' : 'no';
+    }
+    setEmergencyWarningVisible(serviceIndex, false);
+  }
+
+  function setServiceRowPriceFromCatalog(serviceIndex) {
+    const serviceSelect = document.getElementById('service-code-' + serviceIndex);
+    const priceInput = getServicePriceInput(serviceIndex);
+    const serviceDetails = serviceSelect ? servicesCatalog[serviceSelect.value] : null;
+    const emergencyCheckbox = getServiceEmergencyCheckbox(serviceIndex);
+    const useEmergencyPrice = !!(emergencyCheckbox && emergencyCheckbox.checked && serviceSupportsEmergency(serviceDetails));
+
+    if (!priceInput) {
+      return;
+    }
+
+    if (!serviceSelect || !serviceSelect.value) {
+      priceInput.value = '$0.00';
+      return;
+    }
+
+    if (!serviceDetails) {
+      return;
+    }
+
+    if (useEmergencyPrice) {
+      priceInput.value = serviceDetails.emergency_price || serviceDetails.standard_price || serviceDetails.price || '$0.00';
+      return;
+    }
+
+    priceInput.value = serviceDetails.standard_price || serviceDetails.price || '$0.00';
+  }
+
+  function attachEmergencyToggleListener(checkboxElement) {
+    if (!checkboxElement) {
+      return;
+    }
+
+    checkboxElement.addEventListener('change', function () {
+      const serviceIndex = this.dataset.serviceIndex || this.id.split('-')[3];
+      const hiddenInput = getServiceEmergencyHiddenInput(serviceIndex);
+
+      syncEmergencyAvailability(serviceIndex, true);
+
+      if (hiddenInput) {
+        hiddenInput.value = this.checked ? 'yes' : 'no';
+      }
+
+      setServiceRowPriceFromCatalog(serviceIndex);
+      validateForm();
+    });
+
+    const initialServiceIndex = checkboxElement.dataset.serviceIndex || checkboxElement.id.split('-')[3];
+    syncEmergencyAvailability(initialServiceIndex, false);
+  }
+
   function attachPriceUpdateListener(selectElement) {
     selectElement.addEventListener('change', function () {
       servicesTouched = true; // Mark services as touched
       const selectedService = this.value;
       const serviceIndex = this.id.split('-')[2]; // Extract index from id like 'service-code-1'
-      const priceInput = document.getElementById('service-standard-price-' + serviceIndex);
-      const durationInput = document.getElementById('service-estimated-hours-' + serviceIndex);
+      const priceInput = getServicePriceInput(serviceIndex);
+      const durationInput = getServiceHoursInput(serviceIndex);
       const serviceDetails = selectedService ? servicesCatalog[selectedService] : null;
       
       if (priceInput) {
-        if (serviceDetails && (serviceDetails.standard_price || serviceDetails.price)) {
-          priceInput.value = serviceDetails.standard_price || serviceDetails.price;
+        if (serviceDetails && (serviceDetails.standard_price || serviceDetails.price || serviceDetails.emergency_price)) {
+          syncEmergencyAvailability(serviceIndex, true);
+          setServiceRowPriceFromCatalog(serviceIndex);
         } else if (!selectedService) {
+          syncEmergencyAvailability(serviceIndex, false);
           priceInput.value = '$0.00';
         }
       }
@@ -184,6 +339,7 @@
       refreshRemoveButtons('service');
 
       autoPopulatePartsForService(selectedService);
+      autoPopulateMaterialsForService(selectedService);
 
       validateForm();
     });
@@ -191,6 +347,11 @@
   const initialSelects = document.querySelectorAll('select[id^="service-code-"]');
   initialSelects.forEach(function (select) {
     attachPriceUpdateListener(select);
+  });
+
+  const initialEmergencyToggles = document.querySelectorAll('.service-emergency-call-toggle');
+  initialEmergencyToggles.forEach(function (checkbox) {
+    attachEmergencyToggleListener(checkbox);
   });
 
   const addServiceButton = document.getElementById("add-job-service-button");
@@ -346,17 +507,27 @@
         '</select>' +
       '</div>' +
       '<div class="add-customer-form-field">' +
-        '<label for="service-standard-price-' + nextIndex + '">Standard Price</label>' +
-        '<input id="service-standard-price-' + nextIndex + '" name="service_standard_price[]" type="text" placeholder="$0.00" />' +
+        '<label for="service-price-' + nextIndex + '">Price</label>' +
+        '<input id="service-price-' + nextIndex + '" name="service_price[]" type="text" placeholder="$0.00" />' +
       '</div>' +
       '<div class="add-customer-form-field">' +
-        '<label for="service-estimated-hours-' + nextIndex + '">Estimated Hours</label>' +
-        '<input id="service-estimated-hours-' + nextIndex + '" name="service_estimated_hours[]" type="number" step="0.25" min="0" placeholder="0" />' +
+        '<label for="service-hours-' + nextIndex + '">Hours</label>' +
+        '<input id="service-hours-' + nextIndex + '" name="service_hours[]" type="number" step="0.25" min="0" placeholder="0" />' +
+      '</div>' +
+      '<div class="add-customer-form-field service-emergency-call-field">' +
+        '<label for="service-emergency-call-' + nextIndex + '">Emergency Call?</label>' +
+        '<input id="service-emergency-call-hidden-' + nextIndex + '" name="service_emergency_call[]" type="hidden" value="no" />' +
+        '<input id="service-emergency-call-' + nextIndex + '" class="service-emergency-call-toggle" data-service-index="' + nextIndex + '" type="checkbox" />' +
       '</div>';
 
     const newSelect = row.querySelector('select');
     if (newSelect) {
       attachPriceUpdateListener(newSelect);
+    }
+
+    const newEmergencyToggle = row.querySelector('.service-emergency-call-toggle');
+    if (newEmergencyToggle) {
+      attachEmergencyToggleListener(newEmergencyToggle);
     }
 
     attachRowRemoveButton(row, 'service');
@@ -712,6 +883,13 @@
 
     const serviceDetails = serviceCode ? servicesCatalog[serviceCode] : null;
     const partIds = serviceDetails && serviceDetails.part_ids ? serviceDetails.part_ids : [];
+    const servicePartEntries = serviceDetails && serviceDetails.service_parts ? serviceDetails.service_parts : [];
+    const servicePartEntryById = {};
+    servicePartEntries.forEach(function (entry) {
+      if (entry && entry.part_id) {
+        servicePartEntryById[entry.part_id] = entry;
+      }
+    });
 
     if (!partIds.length) {
       ensureAtLeastOnePartRow();
@@ -753,14 +931,107 @@
         const idx = sel.id.replace('part-code-', '');
         const costInput = document.getElementById('part-unit-cost-' + idx);
         const partDetails = partsCatalog[partCode];
-        if (costInput && partDetails) {
-          costInput.value = partDetails.unit_cost || partDetails.price || '';
+        const servicePartEntry = servicePartEntryById[partId];
+        if (costInput) {
+          if (servicePartEntry && servicePartEntry.unit_cost) {
+            costInput.value = servicePartEntry.unit_cost;
+          } else if (partDetails) {
+            costInput.value = partDetails.unit_cost || partDetails.price || '';
+          }
         }
         updateRemoveButtonVisibility(targetRow, 'part');
       }
     });
 
     refreshRemoveButtons('part');
+  }
+
+  function autoPopulateMaterialsForService(serviceCode) {
+    if (!materialsList || !materialOptionsTemplate) return;
+
+    materialsList.querySelectorAll('.job-material-row[data-auto-populated]').forEach(function (row) {
+      row.remove();
+    });
+
+    const serviceDetails = serviceCode ? servicesCatalog[serviceCode] : null;
+    const materialIds = serviceDetails && serviceDetails.material_ids ? serviceDetails.material_ids : [];
+    const serviceMaterialEntries = serviceDetails && serviceDetails.service_materials ? serviceDetails.service_materials : [];
+    const serviceMaterialEntryById = {};
+    serviceMaterialEntries.forEach(function (entry) {
+      if (entry && entry.material_id) {
+        serviceMaterialEntryById[entry.material_id] = entry;
+      }
+    });
+
+    if (!materialIds.length) {
+      ensureAtLeastOneMaterialRow();
+      refreshRemoveButtons('material');
+      return;
+    }
+
+    const existingNames = new Set();
+    materialsList.querySelectorAll('.job-material-row').forEach(function (row) {
+      const sel = getMaterialSelect(row);
+      if (sel && sel.value.trim()) existingNames.add(sel.value.trim());
+    });
+
+    const currentRows = materialsList.querySelectorAll('.job-material-row');
+    const isOnlyEmptyRow = currentRows.length === 1 && !isMaterialRowPopulated(currentRows[0]);
+    let reusedEmptyRow = false;
+
+    materialIds.forEach(function (materialId) {
+      const materialName = materialsById[materialId];
+      if (!materialName || existingNames.has(materialName)) return;
+      existingNames.add(materialName);
+
+      let targetRow;
+      if (isOnlyEmptyRow && !reusedEmptyRow) {
+        targetRow = currentRows[0];
+        reusedEmptyRow = true;
+      } else {
+        targetRow = createMaterialRow();
+        materialsList.appendChild(targetRow);
+      }
+
+      targetRow.dataset.autoPopulated = 'true';
+
+      const sel = getMaterialSelect(targetRow);
+      if (sel) {
+        sel.value = materialName;
+        const idx = sel.id.replace('material-name-', '');
+        const quantityInput = document.getElementById('material-quantity-used-' + idx);
+        const unitInput = document.getElementById('material-unit-of-measure-' + idx);
+        const priceInput = document.getElementById('material-price-' + idx);
+        const details = materialsCatalog[materialName];
+        const serviceMaterialEntry = serviceMaterialEntryById[materialId];
+
+        if (quantityInput) {
+          if (serviceMaterialEntry && serviceMaterialEntry.default_quantity_used) {
+            quantityInput.value = serviceMaterialEntry.default_quantity_used;
+          } else if (details && details.default_quantity_used) {
+            quantityInput.value = details.default_quantity_used;
+          }
+        }
+        if (unitInput) {
+          if (serviceMaterialEntry && serviceMaterialEntry.unit_of_measure) {
+            unitInput.value = serviceMaterialEntry.unit_of_measure;
+          } else if (details && details.unit_of_measure) {
+            unitInput.value = details.unit_of_measure;
+          }
+        }
+        if (priceInput) {
+          if (serviceMaterialEntry && serviceMaterialEntry.price) {
+            priceInput.value = serviceMaterialEntry.price;
+          } else if (details && details.price) {
+            priceInput.value = details.price;
+          }
+        }
+
+        updateRemoveButtonVisibility(targetRow, 'material');
+      }
+    });
+
+    refreshRemoveButtons('material');
   }
 
   const initialPartRows = partsList ? partsList.querySelectorAll('.job-part-row') : [];

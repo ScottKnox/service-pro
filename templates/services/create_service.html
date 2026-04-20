@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Create Service | Steady Work{% endblock %}
+{% block title %}Create Service | Klovent{% endblock %}
 
 {% block content %}
   <div id="main-container">
@@ -20,7 +20,7 @@
         <p class="form-field-error">{{ error }}</p>
       {% endif %}
 
-      <form id="create-service-form" action="{{ url_for('catalog.create_service') }}" method="post" data-parts-catalog='{{ parts_catalog_by_id|tojson }}'>
+      <form id="create-service-form" action="{{ url_for('catalog.create_service') }}" method="post" data-parts-catalog='{{ parts_catalog_by_id|tojson }}' data-materials-catalog='{{ materials_catalog_by_id|tojson }}'>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Service Details</h2>
 
@@ -28,6 +28,16 @@
           <div class="add-customer-form-field">
             <label for="service-name">Service Name</label>
             <input id="service-name" name="service_name" type="text" placeholder="Enter service name" value="{{ form_data.service_name|default('', true) }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="service-type">Service Type</label>
+            <select id="service-type" name="service_type" required>
+              <option value="">-- Select a service type --</option>
+              {% for service_type in service_type_options %}
+                <option value="{{ service_type }}" {% if form_data.service_type == service_type %}selected{% endif %}>{{ service_type }}</option>
+              {% endfor %}
+            </select>
           </div>
 
           <div class="add-customer-form-field">
@@ -55,17 +65,12 @@
 
         <div class="add-customer-form-row add-customer-form-row--single">
           <div class="add-customer-form-field">
-            <label for="service-description">Description</label>
-            <textarea id="service-description" name="description" rows="4" placeholder="Describe the service offering">{{ form_data.description|default('', true) }}</textarea>
+            <label for="service-description">Invoice Description</label>
+            <textarea id="service-description" name="description" rows="4" placeholder="Invoice description you would like to show customers about the work performed. Leave blank to only show service name.">{{ form_data.description|default('', true) }}</textarea>
           </div>
         </div>
 
         <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="materials-cost">Materials Cost</label>
-            <input id="materials-cost" name="materials_cost" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.materials_cost|default('', true) }}" required />
-          </div>
-
           <div class="add-customer-form-field">
             <label for="estimated-hours">Estimated Hours</label>
             <input id="estimated-hours" name="estimated_hours" type="number" step="0.25" min="0" placeholder="0" value="{{ form_data.estimated_hours|default('', true) }}" required />
@@ -75,27 +80,32 @@
             <label for="standard-price">Standard Price</label>
             <input id="standard-price" name="standard_price" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.standard_price|default('', true) }}" required />
           </div>
+
+          <div class="add-customer-form-field">
+            <label for="emergency-price">Emergency Price</label>
+            <input id="emergency-price" name="emergency_price" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.emergency_price|default('', true) }}" required />
+          </div>
         </div>
 
         <h2 class="create-job-form-section-header">Add Parts</h2>
         <p class="form-field-note">Adding parts to a service will include them automatically on jobs, invoices, and estimates. Leave blank to add parts manually each time.</p>
 
         <div id="service-parts-list">
-          {% if selected_part_ids %}
-            {% for part_id in selected_part_ids %}
+          {% if service_part_rows %}
+            {% for row in service_part_rows %}
               <div class="add-customer-form-row service-part-row" data-part-index="{{ loop.index }}">
                 <div class="add-customer-form-field">
                   <label for="service-part-id-{{ loop.index }}">Part</label>
                   <select id="service-part-id-{{ loop.index }}" name="part_id[]">
                     <option value="">-- Select a part --</option>
                     {% for part in parts %}
-                      <option value="{{ part._id }}" {% if part._id == part_id %}selected{% endif %}>{{ part.part_name }} ({{ part.part_code }})</option>
+                      <option value="{{ part._id }}" {% if part._id == row.part_id %}selected{% endif %}>{{ part.part_name }} ({{ part.part_code }})</option>
                     {% endfor %}
                   </select>
                 </div>
                 <div class="add-customer-form-field">
                   <label for="service-part-cost-{{ loop.index }}">Unit Cost</label>
-                  <input id="service-part-cost-{{ loop.index }}" name="part_cost_display[]" type="text" placeholder="$0.00" readonly />
+                  <input id="service-part-cost-{{ loop.index }}" name="part_cost_display[]" type="text" placeholder="$0.00" value="{{ row.unit_cost|default('', true) }}" />
                 </div>
               </div>
             {% endfor %}
@@ -112,7 +122,7 @@
               </div>
               <div class="add-customer-form-field">
                 <label for="service-part-cost-1">Unit Cost</label>
-                <input id="service-part-cost-1" name="part_cost_display[]" type="text" placeholder="$0.00" readonly />
+                <input id="service-part-cost-1" name="part_cost_display[]" type="text" placeholder="$0.00" />
               </div>
             </div>
           {% endif %}
@@ -125,6 +135,169 @@
         <template id="service-part-options-template">
           {% for part in parts %}
             <option value="{{ part._id }}">{{ part.part_name }} ({{ part.part_code }})</option>
+          {% endfor %}
+        </template>
+
+        <h2 class="create-job-form-section-header">Add Materials</h2>
+        <p class="form-field-note">Adding materials to a service will include them automatically on jobs and estimates. Leave blank to add materials manually each time.</p>
+
+        <div id="service-materials-list">
+          {% if service_material_rows %}
+            {% for row in service_material_rows %}
+              <div class="add-customer-form-row service-material-row" data-material-index="{{ loop.index }}">
+                <div class="add-customer-form-field">
+                  <label for="service-material-id-{{ loop.index }}">Material</label>
+                  <select id="service-material-id-{{ loop.index }}" name="material_id[]">
+                    <option value="">-- Select a material --</option>
+                    {% for material in materials %}
+                      <option value="{{ material._id }}" {% if material._id == row.material_id %}selected{% endif %}>{{ material.material_name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="add-customer-form-field">
+                  <label for="service-material-quantity-used-{{ loop.index }}">Default Quantity Used</label>
+                  <input id="service-material-quantity-used-{{ loop.index }}" name="material_default_quantity_display[]" type="number" step="0.25" min="0" placeholder="0" value="{{ row.default_quantity_used|default('', true) }}" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label for="service-material-unit-of-measure-{{ loop.index }}">Unit of Measure</label>
+                  <select id="service-material-unit-of-measure-{{ loop.index }}" name="material_unit_of_measure_display[]">
+                    <option value="">-- Select a unit --</option>
+                    <option value="ea" {% if row.unit_of_measure == 'ea' %}selected{% endif %}>ea</option>
+                    <option value="ft" {% if row.unit_of_measure == 'ft' %}selected{% endif %}>ft</option>
+                    <option value="in" {% if row.unit_of_measure == 'in' %}selected{% endif %}>in</option>
+                    <option value="lb" {% if row.unit_of_measure == 'lb' %}selected{% endif %}>lb</option>
+                    <option value="oz" {% if row.unit_of_measure == 'oz' %}selected{% endif %}>oz</option>
+                    <option value="gal" {% if row.unit_of_measure == 'gal' %}selected{% endif %}>gal</option>
+                    <option value="qt" {% if row.unit_of_measure == 'qt' %}selected{% endif %}>qt</option>
+                    <option value="pt" {% if row.unit_of_measure == 'pt' %}selected{% endif %}>pt</option>
+                    <option value="L" {% if row.unit_of_measure == 'L' %}selected{% endif %}>L</option>
+                    <option value="mL" {% if row.unit_of_measure == 'mL' %}selected{% endif %}>mL</option>
+                    <option value="sq ft" {% if row.unit_of_measure == 'sq ft' %}selected{% endif %}>sq ft</option>
+                    <option value="cu ft" {% if row.unit_of_measure == 'cu ft' %}selected{% endif %}>cu ft</option>
+                    <option value="box" {% if row.unit_of_measure == 'box' %}selected{% endif %}>box</option>
+                    <option value="roll" {% if row.unit_of_measure == 'roll' %}selected{% endif %}>roll</option>
+                    <option value="set" {% if row.unit_of_measure == 'set' %}selected{% endif %}>set</option>
+                  </select>
+                </div>
+                <div class="add-customer-form-field">
+                  <label for="service-material-price-{{ loop.index }}">Price</label>
+                  <input id="service-material-price-{{ loop.index }}" name="material_price_display[]" type="text" placeholder="$0.00" value="{{ row.price|default('', true) }}" />
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="add-customer-form-row service-material-row" data-material-index="1">
+              <div class="add-customer-form-field">
+                <label for="service-material-id-1">Material</label>
+                <select id="service-material-id-1" name="material_id[]">
+                  <option value="">-- Select a material --</option>
+                  {% for material in materials %}
+                    <option value="{{ material._id }}">{{ material.material_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="add-customer-form-field">
+                <label for="service-material-quantity-used-1">Default Quantity Used</label>
+                <input id="service-material-quantity-used-1" name="material_default_quantity_display[]" type="number" step="0.25" min="0" placeholder="0" />
+              </div>
+              <div class="add-customer-form-field">
+                <label for="service-material-unit-of-measure-1">Unit of Measure</label>
+                <select id="service-material-unit-of-measure-1" name="material_unit_of_measure_display[]">
+                  <option value="">-- Select a unit --</option>
+                  <option value="ea">ea</option>
+                  <option value="ft">ft</option>
+                  <option value="in">in</option>
+                  <option value="lb">lb</option>
+                  <option value="oz">oz</option>
+                  <option value="gal">gal</option>
+                  <option value="qt">qt</option>
+                  <option value="pt">pt</option>
+                  <option value="L">L</option>
+                  <option value="mL">mL</option>
+                  <option value="sq ft">sq ft</option>
+                  <option value="cu ft">cu ft</option>
+                  <option value="box">box</option>
+                  <option value="roll">roll</option>
+                  <option value="set">set</option>
+                </select>
+              </div>
+              <div class="add-customer-form-field">
+                <label for="service-material-price-1">Price</label>
+                <input id="service-material-price-1" name="material_price_display[]" type="text" placeholder="$0.00" />
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        <div id="service-materials-actions">
+          <button id="add-service-material-button" type="button">Add Material</button>
+        </div>
+
+        <template id="service-material-options-template">
+          {% for material in materials %}
+            <option value="{{ material._id }}">{{ material.material_name }}</option>
+          {% endfor %}
+        </template>
+
+        <template id="service-material-unit-options-template">
+          <option value="">-- Select a unit --</option>
+          <option value="ea">ea</option>
+          <option value="ft">ft</option>
+          <option value="in">in</option>
+          <option value="lb">lb</option>
+          <option value="oz">oz</option>
+          <option value="gal">gal</option>
+          <option value="qt">qt</option>
+          <option value="pt">pt</option>
+          <option value="L">L</option>
+          <option value="mL">mL</option>
+          <option value="sq ft">sq ft</option>
+          <option value="cu ft">cu ft</option>
+          <option value="box">box</option>
+          <option value="roll">roll</option>
+          <option value="set">set</option>
+        </template>
+
+        <h2 class="create-job-form-section-header">Add Equipment</h2>
+        <p class="form-field-note">Associate equipment items with this service. Leave blank to add equipment manually each time.</p>
+
+        <div id="service-equipment-list">
+          {% if service_equipment_rows %}
+            {% for row in service_equipment_rows %}
+              <div class="add-customer-form-row service-equipment-row" data-equipment-index="{{ loop.index }}">
+                <div class="add-customer-form-field">
+                  <label for="service-equipment-id-{{ loop.index }}">Equipment</label>
+                  <select id="service-equipment-id-{{ loop.index }}" name="equipment_id[]">
+                    <option value="">-- Select equipment --</option>
+                    {% for eq in equipment_items %}
+                      <option value="{{ eq._id }}" {% if eq._id == row.equipment_id %}selected{% endif %}>{{ eq.equipment_name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="add-customer-form-row service-equipment-row" data-equipment-index="1">
+              <div class="add-customer-form-field">
+                <label for="service-equipment-id-1">Equipment</label>
+                <select id="service-equipment-id-1" name="equipment_id[]">
+                  <option value="">-- Select equipment --</option>
+                  {% for eq in equipment_items %}
+                    <option value="{{ eq._id }}">{{ eq.equipment_name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        <div id="service-equipment-actions">
+          <button id="add-service-equipment-button" type="button">Add Equipment</button>
+        </div>
+
+        <template id="service-equipment-options-template">
+          {% for eq in equipment_items %}
+            <option value="{{ eq._id }}">{{ eq.equipment_name }}</option>
           {% endfor %}
         </template>
 

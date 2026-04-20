@@ -6,7 +6,7 @@ import re
 from bson import ObjectId
 from flask import Blueprint, current_app, redirect, render_template, request, session, url_for
 
-from mongo import ensure_connection_or_500, object_id_or_404, serialize_doc
+from mongo import build_reference_filter, ensure_connection_or_500, object_id_or_404, reference_value, serialize_doc
 from hvac_report_generator import generate_hvac_system_health_report
 from utils.catalog import build_job_parts_from_form, build_part_catalog
 
@@ -442,7 +442,7 @@ def _extract_hvac_ductwork(source):
 
 def _build_hvac_system_document(customer_id, system_type, location_type, form_data):
     document = {
-        "customer_id": customer_id,
+        "customer_id": reference_value(customer_id),
         "system_type": system_type,
         "location_type": location_type,
     }
@@ -537,10 +537,7 @@ def _find_existing_hvac_component(db, customer_id, hvac_system, collection_name)
         return None
 
     return db[collection_name].find_one(
-        {
-            "customer_id": customer_id,
-            "hvac_system_id": system_id,
-        },
+        {"$and": [build_reference_filter("customer_id", customer_id), {"hvac_system_id": system_id}]},
         sort=[("_id", -1)],
     )
 
@@ -776,7 +773,7 @@ def _build_hvac_component_view_payload(db, customer_id, reference_type, referenc
     if reference_type != "system":
         return None
 
-    hvac_system = db.hvacSystems.find_one({"_id": object_id_or_404(reference_id), "customer_id": customer_id})
+    hvac_system = db.hvacSystems.find_one({"$and": [{"_id": object_id_or_404(reference_id)}, build_reference_filter("customer_id", customer_id)]})
     if not hvac_system:
         return None
 
@@ -831,12 +828,20 @@ def _load_hvac_components_for_system(db, customer_id, hvac_system):
     system_type = str(hvac_system.get("system_type", "")).strip()
     expected_components = HVAC_COLLECTION_CONFIG.get(system_type, ())
     components = []
+    component_snapshots = hvac_system.get("components", {}) if isinstance(hvac_system.get("components"), dict) else {}
 
     for collection_name, label in expected_components:
+        snapshot = component_snapshots.get(collection_name)
+        if isinstance(snapshot, dict) and snapshot:
+            components.append(_build_hvac_card_component(snapshot, label, collection_name))
+            continue
+
         matching_component = db[collection_name].find_one(
             {
-                "customer_id": customer_id,
-                "hvac_system_id": str(hvac_system.get("_id", "")).strip(),
+                "$and": [
+                    build_reference_filter("customer_id", customer_id),
+                    {"hvac_system_id": str(hvac_system.get("_id", "")).strip()},
+                ]
             },
             sort=[("_id", -1)],
         )
@@ -852,7 +857,7 @@ def _build_hvac_detail_payload(db, customer_id, reference_type, reference_id):
     if reference_type != "system":
         return None
 
-    hvac_system = db.hvacSystems.find_one({"_id": object_id_or_404(reference_id), "customer_id": customer_id})
+    hvac_system = db.hvacSystems.find_one({"$and": [{"_id": object_id_or_404(reference_id)}, build_reference_filter("customer_id", customer_id)]})
     if not hvac_system:
         return None
 
@@ -891,7 +896,7 @@ def _build_hvac_detail_payload(db, customer_id, reference_type, reference_id):
 def _build_hvac_system_cards(db, customer_id):
     base_systems = [
         serialize_doc(hvac_system)
-        for hvac_system in db.hvacSystems.find({"customer_id": customer_id}).sort([("_id", -1)])
+        for hvac_system in db.hvacSystems.find(build_reference_filter("customer_id", customer_id)).sort([("_id", -1)])
     ]
     hvac_cards = []
 
@@ -977,9 +982,11 @@ def add_customer():
             "referral_source": referral_source,
             "customer_status": customer_status,
             "date_added": datetime.now().strftime("%m/%d/%Y"),
+            "created_at": datetime.utcnow(),
             "account_number": f"ACC-{customer_count:05d}",
             "account_type": "Residential",
             "balance_due": "$0.00",
+            "balance_due_amount": 0.0,
             "account_status": "Current",
         }
         inserted = db.customers.insert_one(customer)
@@ -1051,12 +1058,13 @@ def delete_customer(customerId):
     if not customer:
         return redirect(url_for("customers.customers"))
 
-    related_jobs = list(db.jobs.find({"customer_id": customerId}, {"_id": 1}))
+    related_jobs = list(db.jobs.find(build_reference_filter("customer_id", customerId), {"_id": 1}))
     related_job_ids = [str(job.get("_id")) for job in related_jobs]
 
     db.customers.delete_one({"_id": customer_oid})
-    db.jobs.delete_many({"customer_id": customerId})
-    db.equipment.delete_many({"customer_id": customerId})
+    db.jobs.delete_many(build_reference_filter("customer_id", customerId))
+    db.equipment.delete_many(build_reference_filter("customer_id", customerId))
+    db.estimates.delete_many(build_reference_filter("customer_id", customerId))
     if related_job_ids:
         db.estimates.delete_many({"job_id": {"$in": related_job_ids}})
     current_app.logger.info("Customer deleted: id=%s by employee_id=%s", customerId, session.get("employee_id"))
@@ -1072,6 +1080,7 @@ def view_customer(customerId):
 
     jobs_page_raw = request.args.get("jobs_page", "1")
     payments_page_raw = request.args.get("payments_page", "1")
+    estimates_page_raw = request.args.get("estimates_page", "1")
 
     try:
         jobs_page = max(1, int(jobs_page_raw))
@@ -1083,39 +1092,63 @@ def view_customer(customerId):
     except ValueError:
         payments_page = 1
 
+    try:
+        estimates_page = max(1, int(estimates_page_raw))
+    except ValueError:
+        estimates_page = 1
+
     jobs_per_page = 5
     payments_per_page = 5
+    estimates_per_page = 5
 
-    customer_jobs_total = db.jobs.count_documents({"customer_id": customerId})
+    customer_jobs_total = db.jobs.count_documents(build_reference_filter("customer_id", customerId))
     customer_jobs_total_pages = (customer_jobs_total + jobs_per_page - 1) // jobs_per_page
     if customer_jobs_total_pages == 0:
         jobs_page = 1
     elif jobs_page > customer_jobs_total_pages:
         jobs_page = customer_jobs_total_pages
 
-    customer_payments_total = db.payments.count_documents({"customer_id": customerId})
+    customer_payments_total = db.payments.count_documents(build_reference_filter("customer_id", customerId))
     customer_payments_total_pages = (customer_payments_total + payments_per_page - 1) // payments_per_page
     if customer_payments_total_pages == 0:
         payments_page = 1
     elif payments_page > customer_payments_total_pages:
         payments_page = customer_payments_total_pages
 
+    customer_estimates_total = db.estimates.count_documents(build_reference_filter("customer_id", customerId))
+    customer_estimates_total_pages = (customer_estimates_total + estimates_per_page - 1) // estimates_per_page
+    if customer_estimates_total_pages == 0:
+        estimates_page = 1
+    elif estimates_page > customer_estimates_total_pages:
+        estimates_page = customer_estimates_total_pages
+
     customer_pages = {
         "jobs": jobs_page,
         "payments": payments_page,
+        "estimates": estimates_page,
     }
 
     jobs_skip = (jobs_page - 1) * jobs_per_page
     customer_jobs = [
         serialize_doc(job)
-        for job in db.jobs.find({"customer_id": customerId}).sort([("scheduled_date", -1), ("scheduled_time", -1)]).skip(jobs_skip).limit(jobs_per_page)
+        for job in db.jobs.find(build_reference_filter("customer_id", customerId)).sort([("scheduled_date", -1), ("scheduled_time", -1)]).skip(jobs_skip).limit(jobs_per_page)
     ]
 
     payments_skip = (payments_page - 1) * payments_per_page
     customer_payments = [
         serialize_doc(payment)
-        for payment in db.payments.find({"customer_id": customerId}).sort([("date", -1), ("_id", -1)]).skip(payments_skip).limit(payments_per_page)
+        for payment in db.payments.find(build_reference_filter("customer_id", customerId)).sort([("date", -1), ("_id", -1)]).skip(payments_skip).limit(payments_per_page)
     ]
+
+    estimates_skip = (estimates_page - 1) * estimates_per_page
+    customer_estimates = [
+        serialize_doc(estimate)
+        for estimate in db.estimates.find(build_reference_filter("customer_id", customerId)).sort([("_id", -1)]).skip(estimates_skip).limit(estimates_per_page)
+    ]
+
+    for estimate in customer_estimates:
+        estimate["status"] = str(estimate.get("status") or "Created")
+
     hvac_systems = _build_hvac_system_cards(db, customerId)
 
     return render_template(
@@ -1127,6 +1160,8 @@ def view_customer(customerId):
         customer_jobs_total_pages=customer_jobs_total_pages,
         customer_payments=customer_payments,
         customer_payments_total_pages=customer_payments_total_pages,
+        customer_estimates=customer_estimates,
+        customer_estimates_total_pages=customer_estimates_total_pages,
         hvac_systems=hvac_systems,
     )
 
@@ -1159,7 +1194,7 @@ def view_hvac_diagnostic(customerId, reference_type, reference_id, diagnostic_in
     if reference_type != "system":
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
-    hvac_system = db.hvacSystems.find_one({"_id": object_id_or_404(reference_id), "customer_id": customerId})
+    hvac_system = db.hvacSystems.find_one({"$and": [{"_id": object_id_or_404(reference_id)}, build_reference_filter("customer_id", customerId)]})
     if not hvac_system:
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -1195,7 +1230,7 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
     if reference_type != "system":
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
-    hvac_system = db.hvacSystems.find_one({"_id": object_id_or_404(reference_id), "customer_id": customerId})
+    hvac_system = db.hvacSystems.find_one({"$and": [{"_id": object_id_or_404(reference_id)}, build_reference_filter("customer_id", customerId)]})
     if not hvac_system:
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -1253,7 +1288,7 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
     if reference_type != "system":
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
-    hvac_system = db.hvacSystems.find_one({"_id": object_id_or_404(reference_id), "customer_id": customerId})
+    hvac_system = db.hvacSystems.find_one({"$and": [{"_id": object_id_or_404(reference_id)}, build_reference_filter("customer_id", customerId)]})
     if not hvac_system:
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -1293,7 +1328,7 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
     }
 
     db.hvacSystems.update_one(
-        {"_id": hvac_system["_id"], "customer_id": customerId},
+        {"$and": [{"_id": hvac_system["_id"]}, build_reference_filter("customer_id", customerId)]},
         {"$set": {"reports": [report_item, *reports_history]}},
     )
 
@@ -1342,7 +1377,7 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
     if reference_type != "system":
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
-    hvac_system = db.hvacSystems.find_one({"_id": object_id_or_404(reference_id), "customer_id": customerId})
+    hvac_system = db.hvacSystems.find_one({"$and": [{"_id": object_id_or_404(reference_id)}, build_reference_filter("customer_id", customerId)]})
     if not hvac_system:
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -1405,12 +1440,12 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
 
             if any(form_data.values()):
                 db.hvacSystems.update_one(
-                    {"_id": hvac_system["_id"], "customer_id": customerId},
+                    {"$and": [{"_id": hvac_system["_id"]}, build_reference_filter("customer_id", customerId)]},
                     {"$set": {"ductwork": form_data}},
                 )
             else:
                 db.hvacSystems.update_one(
-                    {"_id": hvac_system["_id"], "customer_id": customerId},
+                    {"$and": [{"_id": hvac_system["_id"]}, build_reference_filter("customer_id", customerId)]},
                     {"$unset": {"ductwork": ""}},
                 )
 
@@ -1461,7 +1496,7 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
             "install_year": request.form.get("install_year", "").strip(),
         }
         component_document = {
-            "customer_id": customerId,
+            "customer_id": reference_value(customerId),
             "system_type": system_type,
             "location_type": location_type,
             "hvac_system_id": str(hvac_system.get("_id", "")).strip(),
@@ -1470,7 +1505,7 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
 
         if existing_component:
             db[component_key].update_one(
-                {"_id": existing_component["_id"], "customer_id": customerId},
+                {"$and": [{"_id": existing_component["_id"]}, build_reference_filter("customer_id", customerId)]},
                 {"$set": component_document},
             )
         else:
@@ -1510,7 +1545,7 @@ def delete_hvac_system(customerId, reference_type, reference_id):
     if reference_type != "system":
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
-    hvac_system = db.hvacSystems.find_one({"_id": object_id_or_404(reference_id), "customer_id": customerId})
+    hvac_system = db.hvacSystems.find_one({"$and": [{"_id": object_id_or_404(reference_id)}, build_reference_filter("customer_id", customerId)]})
     if not hvac_system:
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -1518,9 +1553,9 @@ def delete_hvac_system(customerId, reference_type, reference_id):
     for collection_name in HVAC_COMPONENT_LABELS:
         existing_component = _find_existing_hvac_component(db, customerId, serialized_system, collection_name)
         if existing_component:
-            db[collection_name].delete_one({"_id": existing_component["_id"], "customer_id": customerId})
+            db[collection_name].delete_one({"$and": [{"_id": existing_component["_id"]}, build_reference_filter("customer_id", customerId)]})
 
-    db.hvacSystems.delete_one({"_id": hvac_system["_id"], "customer_id": customerId})
+    db.hvacSystems.delete_one({"$and": [{"_id": hvac_system["_id"]}, build_reference_filter("customer_id", customerId)]})
 
     return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -1569,21 +1604,44 @@ def add_equipment(customerId):
             }
 
             if system_type in {"Split", "Heat Pump"}:
+                air_handler_doc = _build_hvac_component_document(form_data, component_base_document, "airHandlers")
+                condenser_doc = _build_hvac_component_document(form_data, component_base_document, "condensers")
                 db.airHandlers.insert_one(
-                    _build_hvac_component_document(form_data, component_base_document, "airHandlers")
+                    air_handler_doc
                 )
                 db.condensers.insert_one(
-                    _build_hvac_component_document(form_data, component_base_document, "condensers")
+                    condenser_doc
+                )
+                db.hvacSystems.update_one(
+                    {"_id": inserted_hvac_system.inserted_id},
+                    {
+                        "$set": {
+                            "components": {
+                                "airHandlers": air_handler_doc,
+                                "condensers": condenser_doc,
+                            }
+                        }
+                    },
                 )
 
             if system_type == "Package":
+                package_doc = _build_hvac_component_document(form_data, component_base_document, "packageUnits")
                 db.packageUnits.insert_one(
-                    _build_hvac_component_document(form_data, component_base_document, "packageUnits")
+                    package_doc
+                )
+                db.hvacSystems.update_one(
+                    {"_id": inserted_hvac_system.inserted_id},
+                    {"$set": {"components": {"packageUnits": package_doc}}},
                 )
 
             if system_type == "Mini Split":
+                mini_split_doc = _build_hvac_component_document(form_data, component_base_document, "miniSplits")
                 db.miniSplits.insert_one(
-                    _build_hvac_component_document(form_data, component_base_document, "miniSplits")
+                    mini_split_doc
+                )
+                db.hvacSystems.update_one(
+                    {"_id": inserted_hvac_system.inserted_id},
+                    {"$set": {"components": {"miniSplits": mini_split_doc}}},
                 )
 
             return redirect(url_for("customers.view_customer", customerId=customerId))
@@ -1615,7 +1673,7 @@ def view_equipment(customerId, equipmentId):
     if not customer:
         return redirect(url_for("customers.customers"))
 
-    equipment = db.equipment.find_one({"_id": object_id_or_404(equipmentId), "customer_id": customerId})
+    equipment = db.equipment.find_one({"$and": [{"_id": object_id_or_404(equipmentId)}, build_reference_filter("customer_id", customerId)]})
     if not equipment:
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -1668,7 +1726,7 @@ def update_equipment(customerId, equipmentId):
     if not customer:
         return redirect(url_for("customers.customers"))
 
-    equipment = db.equipment.find_one({"_id": object_id_or_404(equipmentId), "customer_id": customerId})
+    equipment = db.equipment.find_one({"$and": [{"_id": object_id_or_404(equipmentId)}, build_reference_filter("customer_id", customerId)]})
     if not equipment:
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -1703,7 +1761,7 @@ def update_equipment(customerId, equipmentId):
                 "parts": equipment_parts,
             }
 
-            db.equipment.update_one({"_id": ObjectId(equipmentId), "customer_id": customerId}, {"$set": update_data})
+            db.equipment.update_one({"$and": [{"_id": ObjectId(equipmentId)}, build_reference_filter("customer_id", customerId)]}, {"$set": update_data})
             return redirect(url_for("customers.view_equipment", customerId=customerId, equipmentId=equipmentId))
 
     return render_template(
@@ -1725,5 +1783,5 @@ def delete_equipment(customerId, equipmentId):
     if not customer:
         return redirect(url_for("customers.customers"))
 
-    db.equipment.delete_one({"_id": object_id_or_404(equipmentId), "customer_id": customerId})
+    db.equipment.delete_one({"$and": [{"_id": object_id_or_404(equipmentId)}, build_reference_filter("customer_id", customerId)]})
     return redirect(url_for("customers.view_customer", customerId=customerId))

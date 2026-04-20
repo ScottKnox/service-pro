@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Home | Steady Work{% endblock %}
+{% block title %}Home | Klovent{% endblock %}
 
 {% block content %}
 	{% if not is_logged_in %}
 	<div id="main-container">
 		<div class="view-customer-detail-container" style="max-width: 720px; margin: 2rem auto; text-align: center;">
-			<h1>Welcome to Steady Work</h1>
+			<h1>Welcome to Klovent</h1>
 			<p>Log in to access your jobs, customers, schedules, and invoices.</p>
 			<div id="view-customer-actions-row" style="justify-content: center; margin-top: 1rem;">
 				<a href="{{ url_for('auth.login') }}">Login</a>
@@ -35,7 +35,7 @@
 					{% set date_parts = job.scheduled_date.split('/') %}
 					{% set job_iso_date = date_parts[2] + '-' + date_parts[0] + '-' + date_parts[1] if date_parts|length == 3 else '' %}
 					{% set job_status_key = (job.job_status|default(job.status, true)|default('', true)|string|trim|lower) %}
-					<a class="home-job{% if job_status_key in ['completed', 'complete', 'done'] %} is-completed{% endif %}" href="{{ url_for('jobs.view_job', jobId=job._id) }}" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
+					<a class="home-job{% if job_status_key in ['completed', 'complete', 'done', 'paid'] %} is-completed{% endif %}" href="{{ url_for('jobs.view_job', jobId=job._id) }}" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
 						<div class="home-job-card-content">
 							<div class="home-job-card-column home-job-card-column--left">
 								<strong>Customer:</strong> {{ job.customer_name|default('Unknown Customer', true) }}
@@ -135,9 +135,9 @@
 							</a>
 						{% endfor %}
 					{% else %}
-						<p id="home-estimates-empty-server">No jobs being estimated for the selected employee(s).</p>
+						<p id="home-estimates-empty-server">No active estimates for the selected employee(s).</p>
 					{% endif %}
-					<p id="home-estimates-empty">No jobs being estimated for the selected employee(s).</p>
+					<p id="home-estimates-empty">No active estimates for the selected employee(s).</p>
 				</div>
 				{% if estimates_total_pages|default(0, true) > 0 %}
 				<div id="home-estimates-pages">
@@ -150,7 +150,7 @@
 				</div>
 				{% endif %}
 				<div class="home-latest-action">
-					<a class="home-latest-action-link" href="{{ url_for('jobs.jobs', status='Estimating') }}">Manage Jobs</a>
+					<a class="home-latest-action-link" href="{{ url_for('jobs.estimates') }}">Manage Estimates</a>
 				</div>
 			</div>
 			<div class="home-latest-column">

@@ -1,1 +1,1 @@
-"""Utility modules for Service Pro."""
+"""Utility modules for Klovent."""

@@ -5,6 +5,39 @@ from mongo import ensure_connection_or_500, object_id_or_404, serialize_doc
 
 bp = Blueprint("catalog", __name__)
 
+SERVICE_TYPE_OPTIONS = [
+    "Installation",
+    "Repairs",
+    "Maintenance / Tune-Up",
+    "Diagnostics",
+    "Service Agreement / Contracts",
+]
+
+EQUIPMENT_TYPE_OPTIONS = [
+    "Central Air Conditioner (Split)",
+    "Mini-Split",
+    "Heat Pump",
+    "Portable / Window Unit",
+    "Chiller",
+    "Air Handler",
+    "Gas Furnace",
+    "Electric Furnace",
+    "Boiler",
+    "Radiant Heating",
+    "Space Heater / Unit Heater",
+    "Thermostat (Smart)",
+    "Thermostat (Programmable)",
+    "Zoning System / Controllers",
+    "Building Automation System",
+    "Heat Recovery Ventillator",
+    "Energy Recovery Ventillator",
+    "Rooftop Unit",
+    "Whole Home Humidifier",
+    "Whole Home Dehumidifier",
+    "Air Cleaner",
+    "Other",
+]
+
 
 def _format_currency_display(value):
     try:
@@ -59,6 +92,10 @@ def _parse_optional_nonnegative_float(raw_value, field_label, default=0.0):
     return numeric, ""
 
 
+def _parse_boolean(raw_value):
+    return str(raw_value or "").strip().lower() in {"true", "1", "yes", "on"}
+
+
 def _resolve_current_business_id(db):
     employee_id = session.get("employee_id")
     if not employee_id or not ObjectId.is_valid(employee_id):
@@ -75,11 +112,135 @@ def _resolve_current_business_id(db):
 
 def _serialize_service(service):
     serialized = serialize_doc(service)
+    serialized["service_type"] = str(serialized.get("service_type") or "").strip()
     serialized["category"] = str(serialized.get("category") or "").strip()
+    serialized["emergency"] = _parse_boolean(serialized.get("emergency"))
+    serialized["emergency_display"] = "Yes" if serialized["emergency"] else "No"
+    serialized["emergency_price_display"] = _format_currency_display(serialized.get("emergency_price"))
     serialized["materials_cost_display"] = _format_currency_display(serialized.get("materials_cost"))
     serialized["standard_price_display"] = _format_currency_display(serialized.get("standard_price"))
     serialized["estimated_hours_display"] = _format_hours_display(serialized.get("estimated_hours"))
     return serialized
+
+
+def _build_service_part_rows(selected_part_ids=None, entered_costs=None, service_part_entries=None):
+    rows = []
+    selected_part_ids = selected_part_ids or []
+    entered_costs = entered_costs or []
+    service_part_entries = service_part_entries or []
+
+    if service_part_entries:
+        for entry in service_part_entries:
+            rows.append(
+                {
+                    "part_id": str(entry.get("part_id") or "").strip(),
+                    "unit_cost": _format_currency_display(entry.get("unit_cost")),
+                }
+            )
+        return rows
+
+    for index, part_id in enumerate(selected_part_ids):
+        rows.append(
+            {
+                "part_id": str(part_id or "").strip(),
+                "unit_cost": str(entered_costs[index] or "").strip() if index < len(entered_costs) else "",
+            }
+        )
+
+    return rows or [{"part_id": "", "unit_cost": ""}]
+
+
+def _build_service_material_rows(selected_material_ids=None, entered_quantities=None, entered_units=None, entered_prices=None, service_material_entries=None):
+    rows = []
+    selected_material_ids = selected_material_ids or []
+    entered_quantities = entered_quantities or []
+    entered_units = entered_units or []
+    entered_prices = entered_prices or []
+    service_material_entries = service_material_entries or []
+
+    if service_material_entries:
+        for entry in service_material_entries:
+            rows.append(
+                {
+                    "material_id": str(entry.get("material_id") or "").strip(),
+                    "default_quantity_used": _format_hours_display(entry.get("default_quantity_used")) if entry.get("default_quantity_used") is not None else "",
+                    "unit_of_measure": str(entry.get("unit_of_measure") or "").strip(),
+                    "price": _format_currency_display(entry.get("price")),
+                }
+            )
+        return rows
+
+    for index, material_id in enumerate(selected_material_ids):
+        rows.append(
+            {
+                "material_id": str(material_id or "").strip(),
+                "default_quantity_used": str(entered_quantities[index] or "").strip() if index < len(entered_quantities) else "",
+                "unit_of_measure": str(entered_units[index] or "").strip() if index < len(entered_units) else "",
+                "price": str(entered_prices[index] or "").strip() if index < len(entered_prices) else "",
+            }
+        )
+
+    return rows or [{"material_id": "", "default_quantity_used": "", "unit_of_measure": "", "price": ""}]
+
+
+def _parse_service_part_entries(part_ids, part_costs):
+    entries = []
+    seen_part_ids = []
+
+    for index, part_id in enumerate(part_ids or []):
+        normalized_part_id = str(part_id or "").strip()
+        if not normalized_part_id:
+            continue
+        if not ObjectId.is_valid(normalized_part_id):
+            return None, None, "Please select a valid part."
+
+        raw_cost = part_costs[index] if index < len(part_costs) else ""
+        unit_cost, error = _parse_optional_nonnegative_float(raw_cost, "Part Unit Cost")
+        if error:
+            return None, None, error
+
+        part_oid = ObjectId(normalized_part_id)
+        seen_part_ids.append(part_oid)
+        entries.append({"part_id": part_oid, "unit_cost": unit_cost})
+
+    return entries, seen_part_ids, ""
+
+
+def _parse_service_material_entries(material_ids, quantities, units, prices):
+    entries = []
+    seen_material_ids = []
+
+    for index, material_id in enumerate(material_ids or []):
+        normalized_material_id = str(material_id or "").strip()
+        if not normalized_material_id:
+            continue
+        if not ObjectId.is_valid(normalized_material_id):
+            return None, None, "Please select a valid material."
+
+        raw_quantity = quantities[index] if index < len(quantities) else ""
+        raw_unit = units[index] if index < len(units) else ""
+        raw_price = prices[index] if index < len(prices) else ""
+
+        default_quantity_used, error = _parse_optional_nonnegative_float(raw_quantity, "Material Default Quantity Used", default=None)
+        if error:
+            return None, None, error
+
+        price, error = _parse_optional_nonnegative_float(raw_price, "Material Price")
+        if error:
+            return None, None, error
+
+        material_oid = ObjectId(normalized_material_id)
+        seen_material_ids.append(material_oid)
+        entries.append(
+            {
+                "material_id": material_oid,
+                "default_quantity_used": default_quantity_used,
+                "unit_of_measure": str(raw_unit or "").strip(),
+                "price": price,
+            }
+        )
+
+    return entries, seen_material_ids, ""
 
 
 def _serialize_part(part):
@@ -116,6 +277,7 @@ def _serialize_material(material):
 def _serialize_equipment(equipment):
     serialized = serialize_doc(equipment)
     serialized["equipment_name"] = str(serialized.get("equipment_name") or "").strip()
+    serialized["equipment_type"] = str(serialized.get("equipment_type") or "").strip()
     serialized["manufacturer"] = str(serialized.get("manufacturer") or "").strip()
     serialized["category"] = str(serialized.get("category") or "").strip()
     serialized["sku"] = str(serialized.get("sku") or "").strip()
@@ -153,14 +315,24 @@ def _build_category_options(db, collection_name, field_name, business_id):
 
 def _service_form_data(service=None):
     service = service or {}
+
+    raw_emergency = service.get("emergency")
+    if isinstance(raw_emergency, bool):
+        emergency_value = "true" if raw_emergency else "false"
+    else:
+        emergency_value = "true" if _parse_boolean(raw_emergency) else "false"
+
     return {
         "service_name": str(service.get("service_name") or "").strip(),
+        "service_type": str(service.get("service_type") or "").strip(),
         "service_code": str(service.get("service_code") or "").strip(),
         "category": str(service.get("category") or "").strip(),
         "description": str(service.get("description") or "").strip(),
         "materials_cost": str(service.get("materials_cost") or "").strip(),
         "estimated_hours": str(service.get("estimated_hours") or "").strip(),
         "standard_price": str(service.get("standard_price") or "").strip(),
+        "emergency": emergency_value,
+        "emergency_price": str(service.get("emergency_price") or "").strip(),
     }
 
 
@@ -205,6 +377,7 @@ def _equipment_form_data(equipment=None):
     equipment = equipment or {}
     return {
         "equipment_name": str(equipment.get("equipment_name") or "").strip(),
+        "equipment_type": str(equipment.get("equipment_type") or "").strip(),
         "manufacturer": str(equipment.get("manufacturer") or "").strip(),
         "category": str(equipment.get("category") or "").strip(),
         "sku": str(equipment.get("sku") or "").strip(),
@@ -228,6 +401,36 @@ def _discount_form_data(discount=None):
 
 def _material_uom_options():
     return ["ea", "ft", "in", "lb", "oz", "gal", "qt", "pt", "L", "mL", "sq ft", "cu ft", "box", "roll", "set"]
+
+
+def _build_service_equipment_rows(selected_equipment_ids=None, service_equipment_entries=None):
+    rows = []
+    if service_equipment_entries:
+        for entry in service_equipment_entries:
+            rows.append({"equipment_id": str(entry.get("equipment_id") or "")})
+        return rows or [{"equipment_id": ""}]
+    if selected_equipment_ids is not None:
+        if not selected_equipment_ids:
+            return [{"equipment_id": ""}]
+        for eid in selected_equipment_ids:
+            rows.append({"equipment_id": str(eid or "").strip()})
+        return rows or [{"equipment_id": ""}]
+    return [{"equipment_id": ""}]
+
+
+def _parse_service_equipment_entries(equipment_ids):
+    entries = []
+    seen_equipment_ids = []
+    for eid in (equipment_ids or []):
+        normalized_eid = str(eid or "").strip()
+        if not normalized_eid:
+            continue
+        if not ObjectId.is_valid(normalized_eid):
+            return None, None, "Please select a valid equipment item."
+        equipment_oid = ObjectId(normalized_eid)
+        seen_equipment_ids.append(equipment_oid)
+        entries.append({"equipment_id": equipment_oid})
+    return entries, seen_equipment_ids, ""
 
 
 @bp.route("/price-book")
@@ -336,20 +539,55 @@ def create_service():
     error = ""
     form_data = _service_form_data()
     selected_part_ids = []
+    selected_material_ids = []
+    selected_equipment_ids = []
+    service_part_rows = _build_service_part_rows()
+    service_material_rows = _build_service_material_rows()
+    service_equipment_rows = _build_service_equipment_rows()
     category_options = _build_category_options(db, "services", "category", business_id)
 
     if request.method == "POST":
         form_data = _service_form_data(request.form)
         selected_part_ids = request.form.getlist("part_id[]")
-        valid_part_ids = [pid for pid in selected_part_ids if pid and ObjectId.is_valid(pid)]
-        materials_cost, error = _parse_nonnegative_float(form_data["materials_cost"], "Materials Cost")
+        selected_material_ids = request.form.getlist("material_id[]")
+        selected_equipment_ids = request.form.getlist("equipment_id[]")
+        entered_part_costs = request.form.getlist("part_cost_display[]")
+        entered_material_quantities = request.form.getlist("material_default_quantity_display[]")
+        entered_material_units = request.form.getlist("material_unit_of_measure_display[]")
+        entered_material_prices = request.form.getlist("material_price_display[]")
+        service_part_rows = _build_service_part_rows(selected_part_ids, entered_part_costs)
+        service_material_rows = _build_service_material_rows(
+            selected_material_ids,
+            entered_material_quantities,
+            entered_material_units,
+            entered_material_prices,
+        )
+        service_equipment_rows = _build_service_equipment_rows(selected_equipment_ids)
+        materials_cost, error = _parse_optional_nonnegative_float(form_data["materials_cost"], "Materials Cost", default=0.0)
         if not error:
             estimated_hours, error = _parse_nonnegative_float(form_data["estimated_hours"], "Estimated Hours")
         if not error:
             standard_price, error = _parse_nonnegative_float(form_data["standard_price"], "Standard Price")
+        if not error:
+            emergency_price, error = _parse_nonnegative_float(form_data["emergency_price"], "Emergency Price")
+        if not error:
+            service_part_entries, valid_part_ids, error = _parse_service_part_entries(selected_part_ids, entered_part_costs)
+        if not error:
+            service_material_entries, valid_material_ids, error = _parse_service_material_entries(
+                selected_material_ids,
+                entered_material_quantities,
+                entered_material_units,
+                entered_material_prices,
+            )
+        if not error:
+            service_equipment_entries, valid_equipment_ids, error = _parse_service_equipment_entries(selected_equipment_ids)
 
         if not error and not form_data["service_name"]:
             error = "Service Name is required."
+        elif not error and not form_data["service_type"]:
+            error = "Service Type is required."
+        elif not error and form_data["service_type"] not in SERVICE_TYPE_OPTIONS:
+            error = "Please select a valid Service Type."
         elif not error and not form_data["service_code"]:
             error = "Service Code is required."
         elif not error and not form_data["category"]:
@@ -358,28 +596,67 @@ def create_service():
             error = "A service with that code already exists."
 
         if not error:
+            emergency_enabled = _parse_boolean(form_data["emergency"])
             db.services.insert_one(
                 {
                     "business_id": business_id,
                     "service_name": form_data["service_name"],
+                    "service_type": form_data["service_type"],
                     "service_code": form_data["service_code"],
                     "category": form_data["category"],
                     "description": form_data["description"],
                     "materials_cost": materials_cost,
                     "estimated_hours": estimated_hours,
                     "standard_price": standard_price,
+                    "emergency": emergency_enabled,
+                    "emergency_price": emergency_price,
                     "part_ids": valid_part_ids,
+                    "service_parts": service_part_entries,
+                    "material_ids": valid_material_ids,
+                    "service_materials": service_material_entries,
+                    "equipment_ids": valid_equipment_ids,
+                    "service_equipment": service_equipment_entries,
                 }
             )
             return redirect(url_for("catalog.manage_services"))
 
     part_query = {"business_id": business_id}
+    material_query = {"business_id": business_id}
+    equipment_query = {"business_id": business_id}
     parts = [_serialize_part(part) for part in db.parts.find(part_query).sort("part_name", 1)]
+    materials = [_serialize_material(material) for material in db.materials.find(material_query).sort("material_name", 1)]
+    equipment_items = [_serialize_equipment(eq) for eq in db.equipment.find(equipment_query).sort("equipment_name", 1)]
     parts_catalog_by_id = {
         part["_id"]: {"unit_cost": part["unit_cost_display"], "part_name": part["part_name"], "part_code": part["part_code"]}
         for part in parts
     }
-    return render_template("services/create_service.html", error=error, form_data=form_data, parts=parts, parts_catalog_by_id=parts_catalog_by_id, selected_part_ids=selected_part_ids, category_options=category_options)
+    materials_catalog_by_id = {
+        material["_id"]: {
+            "material_name": material["material_name"],
+            "default_quantity_used": material["default_quantity_used_display"],
+            "unit_of_measure": material["unit_of_measure"],
+            "price": material["price_display"],
+        }
+        for material in materials
+    }
+    return render_template(
+        "services/create_service.html",
+        error=error,
+        form_data=form_data,
+        parts=parts,
+        materials=materials,
+        equipment_items=equipment_items,
+        parts_catalog_by_id=parts_catalog_by_id,
+        materials_catalog_by_id=materials_catalog_by_id,
+        selected_part_ids=selected_part_ids,
+        selected_material_ids=selected_material_ids,
+        selected_equipment_ids=selected_equipment_ids,
+        service_part_rows=service_part_rows,
+        service_material_rows=service_material_rows,
+        service_equipment_rows=service_equipment_rows,
+        category_options=category_options,
+        service_type_options=SERVICE_TYPE_OPTIONS,
+    )
 
 
 @bp.route("/services/<serviceId>")
@@ -394,15 +671,54 @@ def view_service(serviceId):
     if not service:
         return redirect(url_for("catalog.manage_services"))
 
-    part_ids = service.get("part_ids", [])
+    service_part_entries = service.get("service_parts") or []
+    part_ids = [entry.get("part_id") for entry in service_part_entries if entry.get("part_id")] or service.get("part_ids", [])
     associated_parts = []
+    part_entry_by_id = {str(entry.get("part_id")): entry for entry in service_part_entries if entry.get("part_id")}
     for pid in part_ids:
         if pid and ObjectId.is_valid(str(pid)):
             part_doc = db.parts.find_one({"_id": ObjectId(str(pid))})
             if part_doc:
-                associated_parts.append(_serialize_part(part_doc))
+                serialized_part = _serialize_part(part_doc)
+                part_entry = part_entry_by_id.get(str(pid))
+                if part_entry:
+                    serialized_part["unit_cost_display"] = _format_currency_display(part_entry.get("unit_cost"))
+                associated_parts.append(serialized_part)
 
-    return render_template("services/view_service.html", serviceId=serviceId, service=_serialize_service(service), associated_parts=associated_parts)
+    service_material_entries = service.get("service_materials") or []
+    material_ids = [entry.get("material_id") for entry in service_material_entries if entry.get("material_id")] or service.get("material_ids", [])
+    associated_materials = []
+    material_entry_by_id = {str(entry.get("material_id")): entry for entry in service_material_entries if entry.get("material_id")}
+    for mid in material_ids:
+        if mid and ObjectId.is_valid(str(mid)):
+            material_doc = db.materials.find_one({"_id": ObjectId(str(mid))})
+            if material_doc:
+                serialized_material = _serialize_material(material_doc)
+                material_entry = material_entry_by_id.get(str(mid))
+                if material_entry:
+                    if material_entry.get("default_quantity_used") is not None:
+                        serialized_material["default_quantity_used_display"] = _format_hours_display(material_entry.get("default_quantity_used"))
+                    serialized_material["unit_of_measure"] = str(material_entry.get("unit_of_measure") or serialized_material.get("unit_of_measure") or "").strip()
+                    serialized_material["price_display"] = _format_currency_display(material_entry.get("price"))
+                associated_materials.append(serialized_material)
+
+    service_equipment_entries = service.get("service_equipment") or []
+    equipment_ids_from_entries = [entry.get("equipment_id") for entry in service_equipment_entries if entry.get("equipment_id")] or service.get("equipment_ids", [])
+    associated_equipment = []
+    for eid in equipment_ids_from_entries:
+        if eid and ObjectId.is_valid(str(eid)):
+            equipment_doc = db.equipment.find_one({"_id": ObjectId(str(eid))})
+            if equipment_doc:
+                associated_equipment.append(_serialize_equipment(equipment_doc))
+
+    return render_template(
+        "services/view_service.html",
+        serviceId=serviceId,
+        service=_serialize_service(service),
+        associated_parts=associated_parts,
+        associated_materials=associated_materials,
+        associated_equipment=associated_equipment,
+    )
 
 
 @bp.route("/services/<serviceId>/update", methods=["GET", "POST"])
@@ -420,20 +736,59 @@ def update_service(serviceId):
     error = ""
     form_data = _service_form_data(service)
     selected_part_ids = [str(pid) for pid in service.get("part_ids", [])]
+    selected_material_ids = [str(mid) for mid in service.get("material_ids", [])]
+    selected_equipment_ids = [str(eid) for eid in service.get("equipment_ids", [])]
+    service_part_rows = _build_service_part_rows(service_part_entries=service.get("service_parts") or [])
+    service_material_rows = _build_service_material_rows(service_material_entries=service.get("service_materials") or [])
+    service_equipment_rows = _build_service_equipment_rows(service_equipment_entries=service.get("service_equipment") or [])
     category_options = _build_category_options(db, "services", "category", business_id)
 
     if request.method == "POST":
         form_data = _service_form_data(request.form)
         selected_part_ids = request.form.getlist("part_id[]")
-        valid_part_ids = [pid for pid in selected_part_ids if pid and ObjectId.is_valid(pid)]
-        materials_cost, error = _parse_nonnegative_float(form_data["materials_cost"], "Materials Cost")
+        selected_material_ids = request.form.getlist("material_id[]")
+        selected_equipment_ids = request.form.getlist("equipment_id[]")
+        entered_part_costs = request.form.getlist("part_cost_display[]")
+        entered_material_quantities = request.form.getlist("material_default_quantity_display[]")
+        entered_material_units = request.form.getlist("material_unit_of_measure_display[]")
+        entered_material_prices = request.form.getlist("material_price_display[]")
+        service_part_rows = _build_service_part_rows(selected_part_ids, entered_part_costs)
+        service_material_rows = _build_service_material_rows(
+            selected_material_ids,
+            entered_material_quantities,
+            entered_material_units,
+            entered_material_prices,
+        )
+        service_equipment_rows = _build_service_equipment_rows(selected_equipment_ids)
+        materials_cost, error = _parse_optional_nonnegative_float(
+            form_data["materials_cost"],
+            "Materials Cost",
+            default=service.get("materials_cost", 0.0),
+        )
         if not error:
             estimated_hours, error = _parse_nonnegative_float(form_data["estimated_hours"], "Estimated Hours")
         if not error:
             standard_price, error = _parse_nonnegative_float(form_data["standard_price"], "Standard Price")
+        if not error:
+            emergency_price, error = _parse_nonnegative_float(form_data["emergency_price"], "Emergency Price")
+        if not error:
+            service_part_entries, valid_part_ids, error = _parse_service_part_entries(selected_part_ids, entered_part_costs)
+        if not error:
+            service_material_entries, valid_material_ids, error = _parse_service_material_entries(
+                selected_material_ids,
+                entered_material_quantities,
+                entered_material_units,
+                entered_material_prices,
+            )
+        if not error:
+            service_equipment_entries, valid_equipment_ids, error = _parse_service_equipment_entries(selected_equipment_ids)
 
         if not error and not form_data["service_name"]:
             error = "Service Name is required."
+        elif not error and not form_data["service_type"]:
+            error = "Service Type is required."
+        elif not error and form_data["service_type"] not in SERVICE_TYPE_OPTIONS:
+            error = "Please select a valid Service Type."
         elif not error and not form_data["service_code"]:
             error = "Service Code is required."
         elif not error and not form_data["category"]:
@@ -446,26 +801,48 @@ def update_service(serviceId):
             error = "A service with that code already exists."
 
         if not error:
+            emergency_enabled = _parse_boolean(form_data["emergency"])
             db.services.update_one(
                 query,
                 {"$set": {
                     "service_name": form_data["service_name"],
+                    "service_type": form_data["service_type"],
                     "service_code": form_data["service_code"],
                     "category": form_data["category"],
                     "description": form_data["description"],
                     "materials_cost": materials_cost,
                     "estimated_hours": estimated_hours,
                     "standard_price": standard_price,
+                    "emergency": emergency_enabled,
+                    "emergency_price": emergency_price,
                     "part_ids": valid_part_ids,
+                    "service_parts": service_part_entries,
+                    "material_ids": valid_material_ids,
+                    "service_materials": service_material_entries,
+                    "equipment_ids": valid_equipment_ids,
+                    "service_equipment": service_equipment_entries,
                 }},
             )
             return redirect(url_for("catalog.view_service", serviceId=serviceId))
 
     part_query = {"business_id": business_id}
+    material_query = {"business_id": business_id}
+    equipment_query = {"business_id": business_id}
     parts = [_serialize_part(part) for part in db.parts.find(part_query).sort("part_name", 1)]
+    materials = [_serialize_material(material) for material in db.materials.find(material_query).sort("material_name", 1)]
+    equipment_items = [_serialize_equipment(eq) for eq in db.equipment.find(equipment_query).sort("equipment_name", 1)]
     parts_catalog_by_id = {
         part["_id"]: {"unit_cost": part["unit_cost_display"], "part_name": part["part_name"], "part_code": part["part_code"]}
         for part in parts
+    }
+    materials_catalog_by_id = {
+        material["_id"]: {
+            "material_name": material["material_name"],
+            "default_quantity_used": material["default_quantity_used_display"],
+            "unit_of_measure": material["unit_of_measure"],
+            "price": material["price_display"],
+        }
+        for material in materials
     }
     return render_template(
         "services/update_service.html",
@@ -473,9 +850,18 @@ def update_service(serviceId):
         error=error,
         form_data=form_data,
         parts=parts,
+        materials=materials,
+        equipment_items=equipment_items,
         parts_catalog_by_id=parts_catalog_by_id,
+        materials_catalog_by_id=materials_catalog_by_id,
         selected_part_ids=selected_part_ids,
+        selected_material_ids=selected_material_ids,
+        selected_equipment_ids=selected_equipment_ids,
+        service_part_rows=service_part_rows,
+        service_material_rows=service_material_rows,
+        service_equipment_rows=service_equipment_rows,
         category_options=category_options,
+        service_type_options=SERVICE_TYPE_OPTIONS,
     )
 
 
@@ -852,6 +1238,7 @@ def create_equipment():
                 {
                     "business_id": business_id,
                     "equipment_name": form_data["equipment_name"],
+                    "equipment_type": form_data["equipment_type"],
                     "manufacturer": form_data["manufacturer"],
                     "category": form_data["category"],
                     "sku": form_data["sku"],
@@ -864,7 +1251,7 @@ def create_equipment():
             )
             return redirect(url_for("catalog.manage_equipment"))
 
-    return render_template("services/create_equipment.html", error=error, form_data=form_data, category_options=category_options)
+    return render_template("services/create_equipment.html", error=error, form_data=form_data, category_options=category_options, equipment_type_options=EQUIPMENT_TYPE_OPTIONS)
 
 
 @bp.route("/equipment/<equipmentId>")
@@ -911,6 +1298,7 @@ def update_equipment(equipmentId):
                 {
                     "$set": {
                         "equipment_name": form_data["equipment_name"],
+                        "equipment_type": form_data["equipment_type"],
                         "manufacturer": form_data["manufacturer"],
                         "category": form_data["category"],
                         "sku": form_data["sku"],
@@ -924,7 +1312,7 @@ def update_equipment(equipmentId):
             )
             return redirect(url_for("catalog.view_equipment", equipmentId=equipmentId))
 
-    return render_template("services/update_equipment.html", equipmentId=equipmentId, error=error, form_data=form_data, category_options=category_options)
+    return render_template("services/update_equipment.html", equipmentId=equipmentId, error=error, form_data=form_data, category_options=category_options, equipment_type_options=EQUIPMENT_TYPE_OPTIONS)
 
 
 @bp.route("/equipment/<equipmentId>/delete", methods=["POST"])

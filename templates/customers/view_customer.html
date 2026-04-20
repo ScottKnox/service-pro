@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}View Customer | Steady Work{% endblock %}
+{% block title %}View Customer | Klovent{% endblock %}
 
 {% block content %}
   <div id="main-container">
@@ -19,8 +19,10 @@
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
           {% if is_lead_customer %}
+            <span class="view-customer-action-link is-disabled" aria-disabled="true">Create Estimate</span>
             <span class="view-customer-action-link is-disabled" aria-disabled="true">Create Job</span>
           {% else %}
+            <a href="{{ url_for('jobs.create_estimate', customerId=customerId) }}">Create Estimate</a>
             <a href="{{ url_for('jobs.create_job', customerId=customerId) }}">Create Job</a>
           {% endif %}
           <a href="{{ url_for('customers.update_customer', customerId=customerId) }}">Update Customer</a>
@@ -30,7 +32,7 @@
           </form>
         </div>
         {% if is_lead_customer %}
-          <p id="view-customer-actions-note">* Jobs can only be created for customers with a Phone, Email, and Address populated.</p>
+          <p id="view-customer-actions-note">* Estimates and jobs can only be created for customers with a Phone, Email, and Address populated.</p>
         {% endif %}
       </section>
 
@@ -136,7 +138,7 @@
               <div class="list-pages">
                 <span>Page:</span>
                 {% for page_num in range(1, customer_jobs_total_pages + 1) %}
-                  <a class="{% if page_num == customer_pages.jobs %}is-active{% endif %}" href="{{ url_for('customers.view_customer', customerId=customerId, jobs_page=page_num, payments_page=customer_pages.payments) }}">{{ page_num }}</a>
+                  <a class="{% if page_num == customer_pages.jobs %}is-active{% endif %}" href="{{ url_for('customers.view_customer', customerId=customerId, jobs_page=page_num, payments_page=customer_pages.payments, estimates_page=customer_pages.estimates) }}">{{ page_num }}</a>
                 {% endfor %}
               </div>
             {% endif %}
@@ -159,7 +161,34 @@
               <div class="list-pages">
                 <span>Page:</span>
                 {% for page_num in range(1, customer_payments_total_pages + 1) %}
-                  <a class="{% if page_num == customer_pages.payments %}is-active{% endif %}" href="{{ url_for('customers.view_customer', customerId=customerId, jobs_page=customer_pages.jobs, payments_page=page_num) }}">{{ page_num }}</a>
+                  <a class="{% if page_num == customer_pages.payments %}is-active{% endif %}" href="{{ url_for('customers.view_customer', customerId=customerId, jobs_page=customer_pages.jobs, payments_page=page_num, estimates_page=customer_pages.estimates) }}">{{ page_num }}</a>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>Estimates</h3>
+            <div class="view-customer-estimates-list">
+              {% if customer_estimates %}
+                {% for estimate in customer_estimates %}
+                  {% set estimate_status_normalized = estimate.status|default('', true)|lower %}
+                  <a class="view-customer-card-link" href="{{ url_for('jobs.view_estimate', estimateId=estimate._id) }}">
+                    <h4>{{ estimate.date_created|default('N/A', true) }} - {{ estimate.total|default('$0.00', true) }}</h4>
+                    <p>
+                      <span class="jobs-status-chip{% if estimate_status_normalized == 'created' %} is-pending{% elif estimate_status_normalized == 'sent' %} is-scheduled{% elif estimate_status_normalized == 'accepted' %} is-started{% elif estimate_status_normalized == 'declined' %} is-declined{% endif %}">{{ estimate.status|default('Created', true) }}</span>
+                      {% if estimate.estimated_by_employee %} | Estimated By {{ estimate.estimated_by_employee }}{% endif %}
+                    </p>
+                  </a>
+                {% endfor %}
+              {% else %}
+                <p>No estimates found for this customer.</p>
+              {% endif %}
+            </div>
+            {% if customer_estimates_total_pages|default(0, true) > 0 %}
+              <div class="list-pages">
+                <span>Page:</span>
+                {% for page_num in range(1, customer_estimates_total_pages + 1) %}
+                  <a class="{% if page_num == customer_pages.estimates %}is-active{% endif %}" href="{{ url_for('customers.view_customer', customerId=customerId, jobs_page=customer_pages.jobs, payments_page=customer_pages.payments, estimates_page=page_num) }}">{{ page_num }}</a>
                 {% endfor %}
               </div>
             {% endif %}

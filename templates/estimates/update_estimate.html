@@ -1,21 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}Update Job | Klovent{% endblock %}
+{% block title %}Update Estimate | Klovent{% endblock %}
 
 {% block content %}
   <div id="main-container">
     <div id="create-job-panel">
-      <h1>Update Job</h1>
+      <h1>Update Estimate</h1>
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
-          <li><a href="{{ url_for('jobs.jobs') }}">Jobs</a></li>
-          <li><a href="{{ url_for('jobs.view_job', jobId=jobId) }}">View Job</a></li>
-          <li aria-current="page">Update Job</li>
+          <li><a href="{{ url_for('customers.view_customer', customerId=estimate.customer_id) }}">View Customer</a></li>
+          <li><a href="{{ url_for('jobs.view_estimate', estimateId=estimateId) }}">View Estimate</a></li>
+          <li aria-current="page">Update Estimate</li>
         </ol>
       </nav>
 
-      <form id="create-job-form" action="{{ url_for('jobs.update_job', jobId=jobId) }}" method="post" data-services-catalog='{{ services_catalog|tojson }}' data-parts-catalog='{{ parts_catalog|tojson }}' data-labors-catalog='{{ labors_catalog|tojson }}' data-materials-catalog='{{ materials_catalog|tojson }}' data-equipments-catalog='{{ equipments_catalog|tojson }}' data-discounts-catalog='{{ discounts_catalog|tojson }}' data-parts-by-id='{{ parts_by_id|tojson }}' data-materials-by-id='{{ materials_by_id|tojson }}' data-schedule-required="false">
+      <form id="create-job-form" action="{{ url_for('jobs.update_estimate', estimateId=estimateId) }}" method="post" data-services-catalog='{{ services_catalog|tojson }}' data-parts-catalog='{{ parts_catalog|tojson }}' data-labors-catalog='{{ labors_catalog|tojson }}' data-materials-catalog='{{ materials_catalog|tojson }}' data-equipments-catalog='{{ equipments_catalog|tojson }}' data-discounts-catalog='{{ discounts_catalog|tojson }}' data-parts-by-id='{{ parts_by_id|tojson }}' data-materials-by-id='{{ materials_by_id|tojson }}' data-schedule-required="false">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Client Details</h2>
 
@@ -110,61 +110,29 @@
           </div>
         </div>
 
-        <p class="form-field-note">* Change if job address different than customer's</p>
+        <p class="form-field-note">* Change if estimating for address different than customer's</p>
 
-        <h2 class="create-job-form-section-header">Job Details</h2>
-        <p class="form-field-note form-field-note--compact">* Leave Scheduled Date / Time blank if you'll schedule this job later.</p>
+        <h2 class="create-job-form-section-header">Estimate Details</h2>
         <span id="error-job-details" class="form-field-error" style="display:none;"></span>
 
         <div class="add-customer-form-row job-details-layout">
           <div class="job-details-stack">
             <div class="add-customer-form-field">
-              <label for="job-date">Scheduled Date</label>
-              {% set date_parts = job.scheduled_date.split('/') %}
-              {% set job_date_value = date_parts[2] + '-' + date_parts[0] + '-' + date_parts[1] if date_parts|length == 3 else '' %}
-              <input id="job-date" name="job_date" type="date" value="{{ job_date_value }}" />
-            </div>
-
-            <div class="add-customer-form-field">
-              <label for="job-time">Scheduled Time</label>
-              <input id="job-time" name="job_time" type="time" value="{{ job.scheduled_time|default('', true) }}" />
-              <button id="clear-date-time" type="button">Clear Date and Time</button>
-            </div>
-          </div>
-
-          <div class="job-details-stack">
-            <div class="add-customer-form-field">
-              <label for="job-assigned-employee">Assigned Employee</label>
+              <label for="job-assigned-employee">Estimated By:</label>
               <select id="job-assigned-employee" name="job_assigned_employee" required>
                 <option value="">-- Select an employee --</option>
                 {% for employee in employee_options %}
-                  <option value="{{ employee.name }}" {% if job.assigned_employee == employee.name %}selected{% endif %}>{{ employee.name }}</option>
+                  <option value="{{ employee.name }}" {% if estimate.estimated_by_employee == employee.name %}selected{% endif %}>{{ employee.name }}</option>
                 {% endfor %}
               </select>
             </div>
 
             <div class="add-customer-form-field">
-              <label for="job-notes">Add Note</label>
-              <textarea id="job-notes" name="job_notes" rows="4" placeholder="Access notes, parts needed, and special instructions"></textarea>
+              <label for="job-notes">Estimate Notes</label>
+              <textarea id="job-notes" name="estimate_notes" rows="4" placeholder="Add details for the customer to see on this estimate">{{ estimate.estimate_notes|default('', true) }}</textarea>
             </div>
           </div>
         </div>
-
-        {% if job.notes and job.notes|length > 0 %}
-        <div class="add-customer-form-row add-customer-form-row--single">
-          <div class="add-customer-form-field">
-            <label>Previous Notes</label>
-            <div style="border: 1px solid #ddd; padding: 1rem; border-radius: 4px; background-color: #f9f9f9;">
-              {% for note in job.notes %}
-                <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd;">
-                  <small style="color: #666;">{{ note.date }}</small>
-                  <p style="margin: 0.5rem 0 0 0;">{{ note.text }}</p>
-                </div>
-              {% endfor %}
-            </div>
-          </div>
-        </div>
-        {% endif %}
 
         <h2 class="create-job-form-section-header">Services Provided</h2>
         <span id="error-services" class="form-field-error" style="display:none;">At least one service must be selected</span>
@@ -605,7 +573,7 @@
         </template>
 
         <div id="create-job-form-actions">
-          <button id="submit-button" type="submit">Update Job</button>
+          <button id="submit-button" type="submit">Update Estimate</button>
         </div>
       </form>
     </div>

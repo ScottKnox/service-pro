@@ -142,6 +142,50 @@
   color: #1F6B35;
 }
 
+/* Estimate: Created */
+.progress-step.step-created.is-active .progress-step-circle,
+.progress-step.step-created.is-done .progress-step-circle {
+  background-color: #1F6B35;
+}
+.progress-step.step-created.is-active .progress-step-label,
+.progress-step.step-created.is-done .progress-step-label {
+  color: #1F6B35;
+}
+
+/* Estimate: Sent */
+.progress-step.step-sent.is-active .progress-step-circle {
+  background-color: #F59E0B;
+}
+.progress-step.step-sent.is-done .progress-step-circle {
+  background-color: #1F6B35;
+}
+.progress-step.step-sent.is-active .progress-step-label {
+  color: #F59E0B;
+}
+.progress-step.step-sent.is-done .progress-step-label {
+  color: #1F6B35;
+}
+
+/* Estimate: Accepted/Declined final step */
+.progress-step.step-final.is-active .progress-step-circle,
+.progress-step.step-final.is-done .progress-step-circle {
+  background-color: #1F6B35;
+}
+.progress-step.step-final.is-active .progress-step-label,
+.progress-step.step-final.is-done .progress-step-label {
+  color: #1F6B35;
+}
+
+.progress-step.step-final.is-declined-state.is-active .progress-step-circle,
+.progress-step.step-final.is-declined-state.is-done .progress-step-circle {
+  background-color: #B91C1C;
+}
+
+.progress-step.step-final.is-declined-state.is-active .progress-step-label,
+.progress-step.step-final.is-declined-state.is-done .progress-step-label {
+  color: #B91C1C;
+}
+
 /* Mobile */
 @media (max-width: 520px) {
   .progress-step-circle {
@@ -221,6 +265,16 @@
   color: #1F6B35;
 }
 
+.job-status-chip.is-completed {
+  background-color: #D1FAE5;
+  color: #065F46;
+}
+
+.job-status-chip.is-paid {
+  background-color: #1B263B;
+  color: #FFFFFF;
+}
+
 .estimate-card-wrapper .view-customer-card-link {
   flex: 1;
 }
@@ -233,10 +287,10 @@
   gap: 0.35rem;
   min-width: 44px;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #1F6B35;
+  border: 1px solid var(--kl-accent);
   border-radius: 4px;
-  background-color: #EAF6EE;
-  color: #1F6B35;
+  background-color: var(--kl-accent-soft);
+  color: var(--kl-accent);
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 600;
@@ -245,7 +299,7 @@
 }
 
 .estimate-email-btn:hover {
-  background-color: #DDF5E3;
+  background-color: var(--kl-accent-soft-strong);
 }
 
 .estimate-email-btn::before {
@@ -255,7 +309,7 @@
 }
 
 .estimate-email-btn:focus {
-  outline: 2px solid #5FA3D3;
+  outline: 2px solid var(--kl-focus);
   outline-offset: 1px;
 }
 
@@ -429,34 +483,34 @@ button[disabled] {
 }
 
 .modal-send-btn {
-  border-color: #16324D;
-  background: linear-gradient(180deg, #1F3B5A 0%, #18324C 100%);
+  border-color: var(--kl-accent-strong);
+  background: linear-gradient(180deg, var(--kl-accent) 0%, var(--kl-accent-strong) 100%);
   color: #fff;
 }
 
 .modal-send-btn:hover {
-  border-color: #21476E;
-  background: linear-gradient(180deg, #254A70 0%, #1E3E60 100%);
+  border-color: #276b45;
+  background: linear-gradient(180deg, #258a53 0%, #17643c 100%);
   transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(15, 45, 77, 0.14);
+  box-shadow: 0 8px 16px rgba(10, 43, 28, 0.14);
 }
 
 .modal-cancel-btn {
-  border-color: #C7D2DF;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F3F7FC 100%);
-  color: #1E3551;
+  border-color: var(--kl-border);
+  background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-surface-soft) 100%);
+  color: var(--kl-text);
 }
 
 .modal-cancel-btn:hover {
-  border-color: #AFC0D4;
-  background: linear-gradient(180deg, #FFFFFF 0%, #ECF3FB 100%);
-  color: #16324D;
+  border-color: var(--kl-border-strong);
+  background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-surface-softer) 100%);
+  color: var(--kl-accent-strong);
   transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(15, 45, 77, 0.14);
+  box-shadow: 0 8px 16px rgba(10, 43, 28, 0.14);
 }
 
 .modal-send-btn:focus-visible,
 .modal-cancel-btn:focus-visible {
-  outline: 2px solid #63A9D8;
+  outline: 2px solid var(--kl-focus);
   outline-offset: 2px;
 }

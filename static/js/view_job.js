@@ -95,6 +95,7 @@
   const quoteTemplate = emailForm.dataset.quoteTemplate || '';
   const invoiceTemplate = emailForm.dataset.invoiceTemplate || '';
   let currentEstimateFile = '';
+  let currentEmailType = 'estimate';
 
   function openModal() {
     modal.classList.add('is-open');
@@ -112,6 +113,7 @@
       const customerEmail = this.getAttribute('data-customer-email');
       const customerName = this.getAttribute('data-customer-name').trim();
       const emailType = this.getAttribute('data-email-type') || 'estimate';
+      currentEmailType = emailType;
 
       recipientInput.value = customerEmail;
       if (emailType === 'invoice') {
@@ -181,6 +183,9 @@
           alert('Email sent successfully!');
           closeModal();
           emailForm.reset();
+          if (currentEmailType === 'estimate') {
+            window.location.reload();
+          }
         } else {
           alert('Error sending email: ' + (data.error || 'Unknown error'));
         }

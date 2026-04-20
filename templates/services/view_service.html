@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}View Service | Steady Work{% endblock %}
+{% block title %}View Service | Klovent{% endblock %}
 
 {% block content %}
   <div id="main-container">
@@ -39,6 +39,10 @@
             <p>{{ service.service_code }}</p>
           </div>
           <div class="view-service-detail-item">
+            <h4>Service Type</h4>
+            <p>{{ service.service_type or '-' }}</p>
+          </div>
+          <div class="view-service-detail-item">
             <h4>Category</h4>
             <p>{{ service.category }}</p>
           </div>
@@ -47,16 +51,20 @@
             <p>{{ service.description or '-' }}</p>
           </div>
           <div class="view-service-detail-item">
-            <h4>Materials Cost</h4>
-            <p>{{ service.materials_cost_display }}</p>
-          </div>
-          <div class="view-service-detail-item">
             <h4>Estimated Hours</h4>
             <p>{{ service.estimated_hours_display }}</p>
           </div>
           <div class="view-service-detail-item">
             <h4>Standard Price</h4>
             <p>{{ service.standard_price_display }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Emergency Service</h4>
+            <p>{{ service.emergency_display }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Emergency Price</h4>
+            <p>{{ service.emergency_price_display }}</p>
           </div>
         </div>
       </section>
@@ -88,6 +96,66 @@
           </div>
         {% else %}
           <p>No parts associated with this service.</p>
+        {% endif %}
+      </section>
+
+      <section id="view-service-materials" aria-label="Associated materials">
+        <h2>Associated Materials</h2>
+        {% if associated_materials %}
+          <div id="view-service-parts-grid">
+            {% for material in associated_materials %}
+              <a class="jobs-card" href="{{ url_for('catalog.view_material', materialId=material._id) }}" aria-label="View material {{ material.material_name }}">
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Material</span>
+                  <span class="jobs-card-value">{{ material.material_name }}</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Category</span>
+                  <span class="jobs-card-value">{{ material.category }}</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Unit</span>
+                  <span class="jobs-card-value">{{ material.unit_of_measure or '-' }}</span>
+                </div>
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Price</span>
+                  <span class="jobs-card-value">{{ material.price_display }}</span>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p>No materials associated with this service.</p>
+        {% endif %}
+      </section>
+
+      <section id="view-service-equipment" aria-label="Associated equipment">
+        <h2>Associated Equipment</h2>
+        {% if associated_equipment %}
+          <div id="view-service-parts-grid">
+            {% for eq in associated_equipment %}
+              <a class="jobs-card" href="{{ url_for('catalog.view_equipment', equipmentId=eq._id) }}" aria-label="View equipment {{ eq.equipment_name }}">
+                <div class="jobs-card-row">
+                  <span class="jobs-card-label">Equipment</span>
+                  <span class="jobs-card-value">{{ eq.equipment_name }}</span>
+                </div>
+                {% if eq.equipment_type %}
+                  <div class="jobs-card-row">
+                    <span class="jobs-card-label">Type</span>
+                    <span class="jobs-card-value">{{ eq.equipment_type }}</span>
+                  </div>
+                {% endif %}
+                {% if eq.manufacturer %}
+                  <div class="jobs-card-row">
+                    <span class="jobs-card-label">Manufacturer</span>
+                    <span class="jobs-card-value">{{ eq.manufacturer }}</span>
+                  </div>
+                {% endif %}
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p>No equipment associated with this service.</p>
         {% endif %}
       </section>
     </div>
