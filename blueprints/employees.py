@@ -6,6 +6,7 @@ from flask import Blueprint, current_app, redirect, render_template, request, se
 from werkzeug.security import generate_password_hash
 
 from mongo import ensure_connection_or_500, object_id_or_404, reference_value, serialize_doc
+from utils.csv_export import build_csv_export_response
 
 bp = Blueprint("employees", __name__)
 
@@ -26,6 +27,20 @@ def _email_is_valid(email):
     return bool(EMAIL_PATTERN.match(email))
 
 
+def _resolve_current_business_id(db):
+    employee_id = session.get("employee_id")
+    if not employee_id or not ObjectId.is_valid(employee_id):
+        return None
+
+    employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"business": 1})
+    business_ref = (employee or {}).get("business")
+    if isinstance(business_ref, ObjectId):
+        return business_ref
+    if isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
+        return ObjectId(business_ref)
+    return None
+
+
 @bp.route("/employees")
 def employees():
     db = ensure_connection_or_500()
@@ -34,6 +49,19 @@ def employees():
         for employee in db.employees.find().sort([("last_name", 1), ("first_name", 1)])
     ]
     return render_template("employees/employees.html", employees=employees_list)
+
+
+@bp.route("/employees/export/csv")
+def export_employees_csv():
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    query = {"business": {"$in": [business_id, str(business_id)]}} if business_id else {"_id": None}
+    employees_rows = list(db.employees.find(query).sort([("last_name", 1), ("first_name", 1)]))
+    return build_csv_export_response(
+        employees_rows,
+        "employees_export.csv",
+        excluded_fields={"username", "password"},
+    )
 
 
 def _is_authorized():

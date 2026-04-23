@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Update Property | Klovent{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="add-customer-panel">
+      <h1>Update Property</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li><a href="{{ url_for('customers.view_property', customerId=customerId, propertyId=propertyId) }}">View Property</a></li>
+          <li aria-current="page">Update Property</li>
+        </ol>
+      </nav>
+
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
+      <form id="add-customer-form" action="{{ url_for('customers.update_property', customerId=customerId, propertyId=propertyId) }}" method="post" data-property-form>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="add-customer-form-row add-customer-form-row--top-aligned">
+          <div class="add-customer-form-field">
+            <label for="property-name">Property Name</label>
+            <input id="property-name" name="property_name" type="text" placeholder="Primary Residence" value="{{ form_data.get('property_name', '') }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="property-type">Property Type</label>
+            <select id="property-type" name="property_type" data-property-type-select required>
+              {% for option in property_type_options %}
+                <option value="{{ option }}" {% if form_data.get('property_type', '') == option %}selected{% endif %}>{{ property_type_labels.get(option, option) }}</option>
+              {% endfor %}
+            </select>
+            <div data-property-type-other-wrap {% if form_data.get('property_type', '') != 'other' %}hidden{% endif %}>
+              <label for="property-type-other">Custom Property Type</label>
+              <input id="property-type-other" name="property_type_other" data-property-type-other-input type="text" placeholder="Enter a custom property type" value="{{ form_data.get('property_type_other', '') }}" />
+            </div>
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="property-address-line-1">Address Line 1</label>
+            <input id="property-address-line-1" name="address_line_1" type="text" placeholder="123 Main Street" value="{{ form_data.get('address_line_1', '') }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="property-address-line-2">Address Line 2</label>
+            <input id="property-address-line-2" name="address_line_2" type="text" placeholder="Suite, unit, or apartment" value="{{ form_data.get('address_line_2', '') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="property-city">City</label>
+            <input id="property-city" name="city" type="text" placeholder="City" value="{{ form_data.get('city', '') }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="property-state">State</label>
+            <input id="property-state" name="state" type="text" placeholder="MO" maxlength="2" value="{{ form_data.get('state', '') }}" required />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row add-customer-form-row--single">
+          <div class="add-customer-form-field">
+            <label for="property-zip-code">Zip Code</label>
+            <input id="property-zip-code" name="zip_code" type="text" placeholder="65754" value="{{ form_data.get('zip_code', '') }}" required />
+          </div>
+        </div>
+
+        <div id="add-customer-form-actions">
+          <button type="submit">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/property_form.js') }}" defer></script>
+{% endblock %}

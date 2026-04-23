@@ -11,8 +11,11 @@
         <ol>
           <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
           <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          {% if property_id %}
+            <li><a href="{{ url_for('customers.view_property', customerId=customerId, propertyId=property_id) }}">View Property</a></li>
+          {% endif %}
           <li>
-            <a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=component.reference_type, reference_id=component.reference_id) }}">View HVAC System</a>
+            <a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=component.reference_type, reference_id=component.reference_id, property_id=property_id) }}">View HVAC System</a>
           </li>
           <li aria-current="page">View {{ component.component_label }}</li>
         </ol>
@@ -21,7 +24,7 @@
       <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
-          <a href="{{ url_for('customers.update_hvac_component', customerId=customerId, reference_type=component.reference_type, reference_id=component.reference_id, component_key=component.component_key) }}">Update {{ component.component_label }}</a>
+          <a href="{{ url_for('customers.update_hvac_component', customerId=customerId, reference_type=component.reference_type, reference_id=component.reference_id, component_key=component.component_key, property_id=property_id) }}">Update {{ component.component_label }}</a>
         </div>
       </section>
 

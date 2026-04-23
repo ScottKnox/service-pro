@@ -2,6 +2,7 @@ from bson import ObjectId
 from flask import Blueprint, redirect, render_template, request, session, url_for
 
 from mongo import ensure_connection_or_500, object_id_or_404, serialize_doc
+from utils.csv_export import build_csv_export_response
 
 bp = Blueprint("catalog", __name__)
 
@@ -453,6 +454,15 @@ def manage_services():
     )
 
 
+@bp.route("/services/export/csv")
+def export_services_csv():
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    query = {"business_id": business_id} if business_id else {"_id": None}
+    rows = list(db.services.find(query).sort("service_name", 1))
+    return build_csv_export_response(rows, "services_export.csv")
+
+
 @bp.route("/parts")
 def manage_parts():
     db = ensure_connection_or_500()
@@ -471,6 +481,15 @@ def manage_parts():
     )
 
 
+@bp.route("/parts/export/csv")
+def export_parts_csv():
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    query = {"business_id": business_id} if business_id else {"_id": None}
+    rows = list(db.parts.find(query).sort("part_name", 1))
+    return build_csv_export_response(rows, "parts_export.csv")
+
+
 @bp.route("/labor")
 def manage_labor():
     db = ensure_connection_or_500()
@@ -483,6 +502,15 @@ def manage_labor():
         labors=labors,
         labor_categories=_build_filter_values(labors, "labor_category"),
     )
+
+
+@bp.route("/labor/export/csv")
+def export_labor_csv():
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    query = {"business_id": business_id} if business_id else {"_id": None}
+    rows = list(db.labors.find(query).sort("labor_description", 1))
+    return build_csv_export_response(rows, "labor_export.csv")
 
 
 @bp.route("/materials")
@@ -500,6 +528,15 @@ def manage_materials():
     )
 
 
+@bp.route("/materials/export/csv")
+def export_materials_csv():
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    query = {"business_id": business_id} if business_id else {"_id": None}
+    rows = list(db.materials.find(query).sort("material_name", 1))
+    return build_csv_export_response(rows, "materials_export.csv")
+
+
 @bp.route("/equipment")
 def manage_equipment():
     db = ensure_connection_or_500()
@@ -513,6 +550,15 @@ def manage_equipment():
         equipment_categories=_build_filter_values(equipment_items, "category"),
         equipment_manufacturers=_build_filter_values(equipment_items, "manufacturer"),
     )
+
+
+@bp.route("/equipment/export/csv")
+def export_equipment_csv():
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    query = {"business_id": business_id} if business_id else {"_id": None}
+    rows = list(db.equipment.find(query).sort("equipment_name", 1))
+    return build_csv_export_response(rows, "equipment_export.csv")
 
 
 @bp.route("/discounts")

@@ -32,25 +32,34 @@
           </div>
         </div>
 
-        <div class="add-customer-form-row">
+        <div class="add-customer-form-row add-customer-form-row--top-aligned">
           <div class="add-customer-form-field">
             <label for="customer-company">Company</label>
             <input id="customer-company" name="company" type="text" placeholder="Company name" value="{{ form_data.get('company', '') }}" />
           </div>
 
           <div class="add-customer-form-field">
-            <label for="customer-phone">Phone</label>
-            <input id="customer-phone" name="phone" type="tel" placeholder="(555) 555-5555" value="{{ form_data.get('phone', '') }}" />
+            <label for="customer-type">Customer Type</label>
+            <select id="customer-type" name="customer_type" data-customer-type-select>
+              <option value="Residential" {% if form_data.get('customer_type', 'Residential') == 'Residential' %}selected{% endif %}>Residential</option>
+              <option value="Commercial" {% if form_data.get('customer_type', '') == 'Commercial' %}selected{% endif %}>Commercial</option>
+              <option value="Industrial" {% if form_data.get('customer_type', '') == 'Industrial' %}selected{% endif %}>Industrial</option>
+              <option value="Institutional" {% if form_data.get('customer_type', '') == 'Institutional' %}selected{% endif %}>Institutional</option>
+              <option value="Specialty" {% if form_data.get('customer_type', '') == 'Specialty' %}selected{% endif %}>Specialty</option>
+            </select>
+            <p class="form-field-note form-field-note--compact" id="customer-type-note" data-customer-type-note></p>
           </div>
         </div>
 
-        <div class="add-customer-form-row">
+        <div class="add-customer-form-row add-customer-form-row--top-aligned">
           <div class="add-customer-form-field">
-            <label for="customer-email">Email</label>
-            <input id="customer-email" name="email" type="email" placeholder="name@example.com" value="{{ form_data.get('email', '') }}" />
+            <label for="customer-phone">Phone</label>
+            <input id="customer-phone" name="phone" type="tel" placeholder="(555) 555-5555" value="{{ form_data.get('phone', '') }}" />
           </div>
 
           <div class="add-customer-form-field">
+            <label for="customer-email">Email</label>
+            <input id="customer-email" name="email" type="email" placeholder="name@example.com" value="{{ form_data.get('email', '') }}" />
           </div>
         </div>
 
@@ -127,6 +136,13 @@
               <option value="WI" {% if form_data.get('state', '') == 'WI' %}selected{% endif %}>WI</option>
               <option value="WY" {% if form_data.get('state', '') == 'WY' %}selected{% endif %}>WY</option>
             </select>
+          </div>
+        </div>
+
+        <div class="add-customer-form-row add-customer-form-row--single">
+          <div class="add-customer-form-field">
+            <label for="customer-zip-code">Zip Code</label>
+            <input id="customer-zip-code" name="zip_code" type="text" placeholder="65754" value="{{ form_data.get('zip_code', '') }}" />
           </div>
         </div>
 

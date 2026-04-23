@@ -11,6 +11,60 @@
   const discountsCatalog = form && form.dataset.discountsCatalog ? JSON.parse(form.dataset.discountsCatalog) : {};
   const partsById = form && form.dataset.partsById ? JSON.parse(form.dataset.partsById) : {};
   const materialsById = form && form.dataset.materialsById ? JSON.parse(form.dataset.materialsById) : {};
+  const customerProperties = form && form.dataset.customerProperties ? JSON.parse(form.dataset.customerProperties) : [];
+
+  const propertySelect = document.querySelector('[data-job-property-select]');
+  const addressLine1Field = document.getElementById('job-address-line-1');
+  const addressLine2Field = document.getElementById('job-address-line-2');
+  const cityField = document.getElementById('job-city');
+  const stateField = document.getElementById('job-state');
+  const zipCodeField = document.getElementById('job-zip-code');
+
+  const initialAddressValues = {
+    address_line_1: addressLine1Field ? addressLine1Field.value : '',
+    address_line_2: addressLine2Field ? addressLine2Field.value : '',
+    city: cityField ? cityField.value : '',
+    state: stateField ? stateField.value : '',
+    zip_code: zipCodeField ? zipCodeField.value : '',
+  };
+
+  function applyPropertyAddress(propertyId) {
+    if (!propertyId) {
+      if (addressLine1Field) addressLine1Field.value = initialAddressValues.address_line_1;
+      if (addressLine2Field) addressLine2Field.value = initialAddressValues.address_line_2;
+      if (cityField) cityField.value = initialAddressValues.city;
+      if (stateField) stateField.value = initialAddressValues.state;
+      if (zipCodeField) zipCodeField.value = initialAddressValues.zip_code;
+      return;
+    }
+
+    const selectedProperty = Array.isArray(customerProperties)
+      ? customerProperties.find(function (property) {
+          return String((property || {}).property_id || '').trim() === String(propertyId).trim();
+        })
+      : null;
+
+    if (!selectedProperty) {
+      return;
+    }
+
+    if (addressLine1Field) addressLine1Field.value = selectedProperty.address_line_1 || '';
+    if (addressLine2Field) addressLine2Field.value = selectedProperty.address_line_2 || '';
+    if (cityField) cityField.value = selectedProperty.city || '';
+    if (stateField) stateField.value = selectedProperty.state || '';
+    if (zipCodeField) zipCodeField.value = selectedProperty.zip_code || '';
+  }
+
+  if (propertySelect) {
+    propertySelect.addEventListener('change', function () {
+      applyPropertyAddress(this.value);
+      validateForm();
+    });
+
+    if (propertySelect.value) {
+      applyPropertyAddress(propertySelect.value);
+    }
+  }
 
   // Track user interaction for specific fields
   let servicesTouched = false;

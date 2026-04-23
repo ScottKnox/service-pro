@@ -998,6 +998,7 @@ p {
 .customers-controls-right {
   display: flex;
   align-items: end;
+  gap: 0.5rem;
 }
 
 .customers-add-button,
@@ -1577,6 +1578,12 @@ p {
   font-size: 1.12rem;
 }
 
+.reporting-kpi small {
+  color: #7A8FA6;
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
 .reporting-kpi-trend {
   font-size: 0.78rem;
   font-weight: 600;
@@ -1795,6 +1802,10 @@ p {
   letter-spacing: 0.05em;
   color: #5A7A99;
   margin: 0 0 0.6rem;
+}
+
+#rev-equipment-type-card .rev-section-label + .rev-service-bars + .rev-section-label {
+  margin-top: 1.1rem;
 }
 
 /* Service type & customer split */
@@ -2022,6 +2033,33 @@ p {
   margin: 0.55rem 0 0;
   color: #5E6B82;
   font-size: 0.86rem;
+}
+
+.reporting-receivables-flags {
+  margin: -0.1rem 0 0.55rem;
+}
+
+.reporting-receivables-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #6B2230;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.reporting-flag-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-left: 0.25rem;
+  vertical-align: middle;
+}
+
+.reporting-flag-dot-late {
+  background-color: #D14343;
+  box-shadow: 0 0 0 1px #B83232 inset;
 }
 
 .reporting-aging-note {
@@ -3484,6 +3522,94 @@ p {
   flex-direction: column;
   gap: 0.75rem;
   padding: 0.25rem 0;
+}
+
+.view-customer-properties-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.view-customer-properties-header,
+.view-customer-properties-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 88px;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.view-customer-properties-header {
+  color: #344054;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0 0.25rem;
+}
+
+.view-customer-properties-header span:last-child {
+  text-align: center;
+}
+
+.view-customer-property-default-form {
+  display: flex;
+  justify-content: center;
+}
+
+.view-customer-property-default-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.view-customer-property-default-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.view-customer-property-default-toggle span {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid #98A2B3;
+  background: #FFFFFF;
+  box-shadow: inset 0 1px 1px rgba(16, 24, 40, 0.04);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.view-customer-property-default-toggle input:checked + span {
+  border-color: #14532D;
+  background: #15803D;
+}
+
+.view-customer-property-default-toggle input:checked + span::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 10px;
+  border-right: 2px solid #FFFFFF;
+  border-bottom: 2px solid #FFFFFF;
+  transform: translate(-50%, -55%) rotate(45deg);
+}
+
+.view-customer-property-default-toggle input:focus-visible + span {
+  outline: 2px solid #1D4ED8;
+  outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+  .view-customer-properties-header,
+  .view-customer-properties-row {
+    grid-template-columns: minmax(0, 1fr) 72px;
+  }
 }
 
 .view-customer-hvac-card {

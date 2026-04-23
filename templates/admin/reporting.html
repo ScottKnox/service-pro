@@ -153,12 +153,12 @@
             <article class="reporting-card reporting-secondary-card" data-aging-filter-root>
               <header class="reporting-card-header">
                 <div>
-                  <h3>Accounts Receivable</h3>
+                  <h3>{% if active_report_slug == 'accounts-receivable' %}Customer Performance{% else %}Accounts Receivable{% endif %}</h3>
                   <p>Outstanding customer balances currently owed.</p>
                 </div>
               </header>
 
-              <div class="reporting-kpi-row reporting-kpi-row--two-column">
+              <div class="reporting-kpi-row {% if active_report_slug == 'accounts-receivable' %}reporting-kpi-row--three-column{% else %}reporting-kpi-row--two-column{% endif %}">
                 <div class="reporting-kpi">
                   <span>Total A/R</span>
                   <strong>${{ "%.2f"|format(accounts_receivable.total_balance_due) }}</strong>
@@ -167,20 +167,46 @@
                   <span>Customers Owing</span>
                   <strong>{{ accounts_receivable.customers_with_balance }}</strong>
                 </div>
+                {% if active_report_slug == 'accounts-receivable' %}
+                  <div class="reporting-kpi">
+                    <span>Percentage Overdue</span>
+                    <strong>{{ "%.1f"|format(accounts_receivable.percentage_overdue) }}%</strong>
+                  </div>
+                {% endif %}
               </div>
 
               {% if accounts_receivable.top_receivables %}
                 <div class="reporting-list-block">
-                  <h4>Top 5 Receivables</h4>
-                  <div class="reporting-mini-list">
+                  <h4>Top Receivables</h4>
+                  <div class="reporting-receivables-flags" aria-label="Receivable flags">
+                    <span class="reporting-receivables-flag">
+                      <i class="reporting-flag-dot reporting-flag-dot-late" aria-hidden="true"></i>Repeat Late Payments
+                    </span>
+                  </div>
+
+                  <div class="reporting-mini-list" data-aging-receivable-list>
                     {% for receivable in accounts_receivable.top_receivables %}
-                      <a class="reporting-mini-list-item" data-aging-receivable="{{ receivable.severity }}" href="{{ url_for('customers.view_customer', customerId=receivable.customer_id) }}">
-                        <span>{{ receivable.display_name }}</span>
+                      <a class="reporting-mini-list-item" data-aging-receivable="{{ receivable.severity }}" data-bucket-key="{{ receivable.bucket_key }}" data-balance-due="{{ "%.2f"|format(receivable.balance_due) }}" href="{{ url_for('customers.view_customer', customerId=receivable.customer_id) }}">
+                        <span>
+                          {{ receivable.display_name }}
+                          {% if receivable.repeat_late_payment %}
+                            <i class="reporting-flag-dot reporting-flag-dot-late" title="Repeat Late Payments" aria-label="Repeat Late Payments"></i>
+                          {% endif %}
+                        </span>
                         <strong>${{ "%.2f"|format(receivable.balance_due) }}</strong>
                       </a>
                     {% endfor %}
                   </div>
                   <p class="reporting-mini-list-empty" data-aging-receivable-empty hidden>No top receivables in this aging bucket.</p>
+
+                  <div class="reporting-jobs-pagination" data-aging-pagination-controls hidden>
+                    <span class="reporting-jobs-pagination-summary" data-aging-pagination-summary></span>
+                    <div class="reporting-jobs-pagination-links">
+                      <button type="button" class="reporting-jobs-page-link" data-aging-page-prev>Previous</button>
+                      <div class="reporting-jobs-pagination-links" data-aging-page-numbers aria-label="Top receivables pages"></div>
+                      <button type="button" class="reporting-jobs-page-link" data-aging-page-next>Next</button>
+                    </div>
+                  </div>
                 </div>
               {% endif %}
 
@@ -218,6 +244,35 @@
                 </div>
               {% endif %}
             </article>
+
+            {% if active_report_slug == 'accounts-receivable' and accounts_receivable.collection_performance %}
+              <article class="reporting-card reporting-secondary-card">
+                <header class="reporting-card-header">
+                  <div>
+                    <h3>Collection Performance</h3>
+                    <p>Collection efficiency and overdue trends.</p>
+                  </div>
+                </header>
+
+                <div class="reporting-kpi-row reporting-kpi-row--three-column">
+                  <div class="reporting-kpi">
+                    <span>Days Sales Outstanding</span>
+                    <strong>{{ accounts_receivable.collection_performance.days_sales_outstanding | round(0) | int }}</strong>
+                    <small>Average days to collect payment</small>
+                  </div>
+                  <div class="reporting-kpi">
+                    <span>Collection Rate</span>
+                    <strong>{{ "%.1f"|format(accounts_receivable.collection_performance.collection_rate) }}%</strong>
+                    <small>% of invoices collected, vs written-off</small>
+                  </div>
+                  <div class="reporting-kpi">
+                    <span>Average Days Overdue</span>
+                    <strong>{{ accounts_receivable.collection_performance.average_days_overdue | int }}</strong>
+                    <small>Average number of days that invoices are overdue.</small>
+                  </div>
+                </div>
+              </article>
+            {% endif %}
           {% endif %}
 
           {% if todays_jobs_overview %}
@@ -484,6 +539,10 @@
                 <div class="rev-breakdown-card" id="rev-equipment-type-card">
                   <h3 class="rev-section-label">Revenue by Equipment Type</h3>
                   <div class="rev-service-bars" id="rev-equipment-bars">
+                    <div class="rev-placeholder">Loading…</div>
+                  </div>
+                  <h3 class="rev-section-label">Revenue New Vs Returning Customers</h3>
+                  <div class="rev-service-bars" id="rev-new-vs-returning-bars">
                     <div class="rev-placeholder">Loading…</div>
                   </div>
                 </div>

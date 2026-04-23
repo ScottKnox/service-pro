@@ -35,6 +35,9 @@
         <ol>
           <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
           <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          {% if property_id %}
+            <li><a href="{{ url_for('customers.view_property', customerId=customerId, propertyId=property_id) }}">View Property</a></li>
+          {% endif %}
           <li aria-current="page">{{ breadcrumb_current|default('Add HVAC System') }}</li>
         </ol>
       </nav>
@@ -45,6 +48,7 @@
 
       <form id="add-customer-form" action="{{ form_action|default(url_for('customers.add_equipment', customerId=customerId)) }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="property_id" value="{{ property_id|default('', true) }}">
         {% set ductwork_error_fields = ductwork_error_fields|default([]) %}
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">

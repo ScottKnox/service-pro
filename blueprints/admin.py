@@ -84,6 +84,37 @@ def _job_completed_datetime(job):
     return _parse_completed_datetime((job or {}).get("dateCompleted"))
 
 
+def _job_paid_datetime(job):
+    paid_at = _parse_datetime((job or {}).get("paid_at"))
+    if paid_at:
+        return paid_at
+
+    paid_at = _parse_datetime((job or {}).get("datePaid"))
+    if paid_at:
+        return paid_at
+
+    return None
+
+
+def _customer_added_datetime(customer):
+    created_at = _parse_datetime((customer or {}).get("created_at"))
+    if created_at:
+        return created_at
+
+    added_value = (customer or {}).get("dateAdded") or (customer or {}).get("date_added")
+    parsed_added = _parse_datetime(added_value)
+    if parsed_added:
+        return parsed_added
+
+    text_value = str(added_value or "").strip()
+    if not text_value:
+        return None
+    try:
+        return datetime.strptime(text_value, "%m/%d/%Y")
+    except ValueError:
+        return None
+
+
 def _nice_axis_max(value):
     if value <= 0:
         return 100.0
@@ -245,27 +276,24 @@ def _build_revenue_performance_report(db, business_id=None):
 
 def _build_accounts_receivable_summary(db, business_id=None):
     customer_docs = db.customers.find({}, {"balance_due": 1, "first_name": 1, "last_name": 1, "company": 1})
-    _ar_filter = {"status": {"$regex": "^Completed$", "$options": "i"}}
+    _ar_filter = {"status": {"$regex": "^(Completed|Paid)$", "$options": "i"}}
     if business_id:
         _ar_filter["business_id"] = business_id
-    completed_jobs = db.jobs.find(
+    completed_jobs = list(db.jobs.find(
         _ar_filter,
-        {"customer_id": 1, "dateCompleted": 1, "completed_at": 1},
-    )
+        {
+            "customer_id": 1,
+            "dateCompleted": 1,
+            "completed_at": 1,
+            "datePaid": 1,
+            "paid_at": 1,
+            "status": 1,
+            "total": 1,
+            "total_amount": 1,
+        },
+    ))
 
     oldest_completed_by_customer = {}
-    for job in completed_jobs:
-        customer_id = str(job.get("customer_id") or "").strip()
-        if not customer_id:
-            continue
-
-        completed_at = _job_completed_datetime(job)
-        if not completed_at:
-            continue
-
-        current_oldest = oldest_completed_by_customer.get(customer_id)
-        if current_oldest is None or completed_at < current_oldest:
-            oldest_completed_by_customer[customer_id] = completed_at
 
     total_balance_due = 0.0
     customers_with_balance = 0
@@ -279,6 +307,26 @@ def _build_accounts_receivable_summary(db, business_id=None):
         "90_plus": {"label": "90+ Days", "amount": 0.0, "customers": 0, "severity": "critical"},
     }
     today = datetime.now()
+    overdue_jobs_by_customer = {}
+    completed_jobs_for_collection = []
+
+    for job in completed_jobs:
+        customer_id = str(job.get("customer_id") or "").strip()
+        if not customer_id:
+            continue
+
+        completed_at = _job_completed_datetime(job)
+        if not completed_at:
+            continue
+
+        current_oldest = oldest_completed_by_customer.get(customer_id)
+        if current_oldest is None or completed_at < current_oldest:
+            oldest_completed_by_customer[customer_id] = completed_at
+
+        if (today - completed_at).days > 30:
+            overdue_jobs_by_customer[customer_id] = overdue_jobs_by_customer.get(customer_id, 0) + 1
+
+        completed_jobs_for_collection.append(job)
 
     for customer in customer_docs:
         balance_value = currency_to_float(customer.get("balance_due", "$0.00"))
@@ -315,7 +363,9 @@ def _build_accounts_receivable_summary(db, business_id=None):
                 "customer_id": str(customer.get("_id") or ""),
                 "display_name": display_name,
                 "balance_due": round(balance_value, 2),
+                "bucket_key": bucket_key,
                 "severity": aging_buckets[bucket_key]["severity"],
+                "repeat_late_payment": overdue_jobs_by_customer.get(str(customer.get("_id") or ""), 0) > 1,
             }
         )
 
@@ -325,13 +375,42 @@ def _build_accounts_receivable_summary(db, business_id=None):
     average_balance_due = total_balance_due / customers_with_balance if customers_with_balance else 0.0
     top_receivables.sort(key=lambda item: item["balance_due"], reverse=True)
 
+    overdue_amount = aging_buckets["31_60"]["amount"] + aging_buckets["61_90"]["amount"] + aging_buckets["90_plus"]["amount"]
+    percentage_overdue = (overdue_amount / total_balance_due * 100.0) if total_balance_due > 0 else 0.0
+
+    days_to_collect = []
+    overdue_days = []
+    paid_jobs_count = 0
+    for job in completed_jobs_for_collection:
+        completed_at = _job_completed_datetime(job)
+        if not completed_at:
+            continue
+        age_days = (today - completed_at).days
+        if age_days > 30:
+            overdue_days.append(age_days - 30)
+
+        status = str(job.get("status") or "").strip().lower()
+        if status == "paid":
+            paid_jobs_count += 1
+            paid_at = _job_paid_datetime(job)
+            if paid_at:
+                delta_days = (paid_at - completed_at).days
+                if delta_days >= 0:
+                    days_to_collect.append(delta_days)
+
+    collection_denominator = len(completed_jobs_for_collection)
+    collection_rate = (paid_jobs_count / collection_denominator * 100.0) if collection_denominator else 0.0
+    days_sales_outstanding = (sum(days_to_collect) / len(days_to_collect)) if days_to_collect else 0.0
+    avg_days_overdue = (sum(overdue_days) / len(overdue_days)) if overdue_days else 0.0
+
     return {
         "total_balance_due": round(total_balance_due, 2),
         "customers_with_balance": customers_with_balance,
+        "percentage_overdue": round(percentage_overdue, 1),
         "average_balance_due": round(average_balance_due, 2),
         "highest_balance_customer": highest_balance_customer,
         "highest_balance_value": round(highest_balance_value, 2),
-        "top_receivables": top_receivables[:5],
+        "top_receivables": top_receivables,
         "aging_buckets": [
             {
                 "key": bucket_key,
@@ -342,6 +421,11 @@ def _build_accounts_receivable_summary(db, business_id=None):
             }
             for bucket_key, bucket in aging_buckets.items()
         ],
+        "collection_performance": {
+            "days_sales_outstanding": round(days_sales_outstanding, 1),
+            "collection_rate": round(collection_rate, 1),
+            "average_days_overdue": round(avg_days_overdue, 1),
+        },
     }
 
 
@@ -747,6 +831,46 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
         for employee, amount in sorted_employees
     ]
 
+    customer_ids = {
+        str(job.get("customer_id") or "").strip()
+        for job in all_jobs
+        if str(job.get("customer_id") or "").strip()
+    }
+    customer_map = {}
+    if customer_ids:
+        for customer in db.customers.find({"_id": {"$in": [ObjectId(cid) for cid in customer_ids if ObjectId.is_valid(cid)]}}, {"created_at": 1, "date_added": 1, "dateAdded": 1}):
+            customer_map[str(customer.get("_id"))] = _customer_added_datetime(customer)
+
+    returning_total = 0.0
+    new_total = 0.0
+    for job in all_jobs:
+        completed_at = _job_completed_datetime(job)
+        if not completed_at or not (start_dt <= completed_at <= end_dt):
+            continue
+
+        amount = _coerce_float(job.get("total_amount")) if job.get("total_amount") is not None else currency_to_float(job.get("total"))
+        customer_id = str(job.get("customer_id") or "").strip()
+        added_at = customer_map.get(customer_id)
+        age_days = (completed_at - added_at).days if added_at else None
+        if age_days is not None and age_days > 30:
+            returning_total += amount
+        else:
+            new_total += amount
+
+    max_new_vs_returning = max(returning_total, new_total, 1.0)
+    revenue_new_vs_returning = [
+        {
+            "label": "Returning",
+            "amount": round(returning_total, 2),
+            "pct_of_max": round((returning_total / max_new_vs_returning) * 100),
+        },
+        {
+            "label": "New",
+            "amount": round(new_total, 2),
+            "pct_of_max": round((new_total / max_new_vs_returning) * 100),
+        },
+    ]
+
     return {
         "total_revenue": round(range_total, 2),
         "total_revenue_yoy_pct": total_revenue_yoy_pct,
@@ -761,6 +885,7 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
         "revenue_by_service_type": revenue_by_service_type,
         "revenue_by_equipment_type": revenue_by_equipment_type,
         "revenue_by_employee": revenue_by_employee,
+        "revenue_new_vs_returning": revenue_new_vs_returning,
     }
 
 
@@ -842,14 +967,19 @@ def reporting_revenue():
 
 @bp.route("/reporting/accounts-receivable")
 def reporting_accounts_receivable():
+    db = ensure_connection_or_500()
+    current_employee = _get_current_employee(db)
+    _raw_biz = (current_employee or {}).get("business")
+    business_oid = ObjectId(_raw_biz) if _raw_biz and ObjectId.is_valid(str(_raw_biz)) else None
+    accounts_receivable = _build_accounts_receivable_summary(db, business_id=business_oid)
     return render_template(
         "admin/reporting.html",
         report_links=REPORT_LINKS,
         active_report_slug="accounts-receivable",
         reporting_view_title="Accounts Receivable",
-        reporting_view_subtitle="Section setup in progress.",
+        reporting_view_subtitle="Customer performance and collection insights.",
         dashboard_context_message="",
-        accounts_receivable=None,
+        accounts_receivable=accounts_receivable,
         revenue_performance=None,
         customer_health=None,
         todays_jobs_overview=None,

@@ -130,6 +130,13 @@
           </div>
         </div>
 
+        <div class="add-customer-form-row add-customer-form-row--single">
+          <div class="add-customer-form-field">
+            <label for="customer-zip-code">Zip Code</label>
+            <input id="customer-zip-code" name="zip_code" type="text" placeholder="65754" value="{{ customer.zip_code|default('', true) }}" />
+          </div>
+        </div>
+
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="customer-referral-source">Referral Source</label>

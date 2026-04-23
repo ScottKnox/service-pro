@@ -23,6 +23,7 @@ from utils.catalog import (
     build_service_catalog,
 )
 from utils.currency import currency_to_float, normalize_currency
+from utils.csv_export import build_csv_export_response
 from utils.formatters import format_date
 
 bp = Blueprint("jobs", __name__)
@@ -200,14 +201,67 @@ def resolve_current_business_id(db):
     return None
 
 
+def _get_customer_properties(customer):
+    raw_properties = (customer or {}).get("properties", [])
+    if not isinstance(raw_properties, list):
+        return []
+
+    properties = []
+    for prop in raw_properties:
+        if not isinstance(prop, dict):
+            continue
+        properties.append(
+            {
+                "property_id": str(prop.get("property_id") or "").strip(),
+                "property_name": str(prop.get("property_name") or "").strip(),
+                "property_type": str(prop.get("property_type") or "").strip(),
+                "address_line_1": str(prop.get("address_line_1") or "").strip(),
+                "address_line_2": str(prop.get("address_line_2") or "").strip(),
+                "city": str(prop.get("city") or "").strip(),
+                "state": str(prop.get("state") or "").strip().upper(),
+                "zip_code": str(prop.get("zip_code") or "").strip(),
+                "is_default": bool(prop.get("is_default")),
+            }
+        )
+    return properties
+
+
+def _resolve_default_property(customer):
+    properties = _get_customer_properties(customer)
+    for prop in properties:
+        if prop.get("is_default"):
+            return prop
+    return None
+
+
+def _resolve_selected_property(customer, property_id):
+    normalized_property_id = str(property_id or "").strip()
+    if not normalized_property_id:
+        return None
+
+    for prop in _get_customer_properties(customer):
+        if prop.get("property_id") == normalized_property_id:
+            return prop
+    return None
+
+
 @bp.route("/jobs")
 def jobs():
     db = ensure_connection_or_500()
     jobs_list = [
         serialize_doc(job)
-        for job in db.jobs.find().sort([("scheduled_at", 1), ("created_at", -1), ("_id", -1)])
+        for job in db.jobs.find().sort([("scheduled_date", 1), ("date_created", -1), ("_id", -1)])
     ]
     return render_template("jobs/jobs.html", jobs=jobs_list)
+
+
+@bp.route("/jobs/export/csv")
+def export_jobs_csv():
+    db = ensure_connection_or_500()
+    business_id = resolve_current_business_id(db)
+    query = {"business_id": business_id} if business_id else {"_id": None}
+    jobs_rows = list(db.jobs.find(query).sort([("scheduled_date", 1), ("date_created", -1), ("_id", -1)]))
+    return build_csv_export_response(jobs_rows, "jobs_export.csv")
 
 
 @bp.route("/estimates")
@@ -227,6 +281,15 @@ def estimates():
     return render_template("estimates/estimates.html", estimates=normalized_estimates)
 
 
+@bp.route("/estimates/export/csv")
+def export_estimates_csv():
+    db = ensure_connection_or_500()
+    business_id = resolve_current_business_id(db)
+    query = {"business_id": business_id} if business_id else {"_id": None}
+    estimates_rows = list(db.estimates.find(query).sort([("created_at", -1), ("_id", -1)]))
+    return build_csv_export_response(estimates_rows, "estimates_export.csv")
+
+
 @bp.route("/customers/<customerId>/jobs/create", methods=["GET", "POST"])
 def create_job(customerId):
     db = ensure_connection_or_500()
@@ -236,6 +299,11 @@ def create_job(customerId):
 
     if request.method == "POST":
         business_id = resolve_current_business_id(db)
+        selected_property_id = request.form.get("job_property_id", "").strip()
+        if not selected_property_id:
+            default_property = _resolve_default_property(customer)
+            selected_property_id = str((default_property or {}).get("property_id") or "").strip()
+        selected_property = _resolve_selected_property(customer, selected_property_id)
         selected_service_types = request.form.getlist("service_code[]") or request.form.getlist("service_type[]")
         entered_service_prices = request.form.getlist("service_price[]") or request.form.getlist("service_standard_price[]")
         entered_service_durations = request.form.getlist("service_hours[]") or request.form.getlist("service_estimated_hours[]") or request.form.getlist("service_duration[]")
@@ -333,6 +401,8 @@ def create_job(customerId):
             "customer_id": reference_value(customerId),
             "customer_name": f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
             "company": customer.get("company", ""),
+            "property_id": selected_property_id if selected_property else "",
+            "property_name": (selected_property or {}).get("property_name") or "",
             "job_type": primary_service,
             "services": services,
             "parts": parts,
@@ -348,14 +418,12 @@ def create_job(customerId):
             "address_line_2": request.form.get("job_address_line_2", "").strip(),
             "city": request.form.get("job_city", "").strip(),
             "state": request.form.get("job_state", "").strip().upper(),
+            "zip_code": request.form.get("job_zip_code", "").strip(),
             "assigned_employee": assigned_employee,
             "total": f"${total:.2f}" if total else "$0.00",
             "total_amount": float(total or 0.0),
             "notes": notes_collection,
             "date_created": datetime.now().strftime("%m/%d/%Y"),
-            "created_at": datetime.utcnow(),
-            "scheduled_at": _combine_scheduled_datetime(scheduled_date, scheduled_time),
-            "completed_at": None,
             "invoices": [],
             "business_id": business_id,
         }
@@ -385,11 +453,25 @@ def create_job(customerId):
     discounts_catalog = build_discount_catalog(discounts)
     parts_by_id = {p["_id"]: p["part_code"] for p in parts}
     materials_by_id = {m["_id"]: m["material_name"] for m in materials}
+    default_property = _resolve_default_property(customer)
+    selected_property_id = str((default_property or {}).get("property_id") or "").strip()
+    initial_address_line_1 = (default_property or {}).get("address_line_1") or customer.get("address_line_1", "")
+    initial_address_line_2 = (default_property or {}).get("address_line_2") or customer.get("address_line_2", "")
+    initial_city = (default_property or {}).get("city") or customer.get("city", "")
+    initial_state = (default_property or {}).get("state") or customer.get("state", "")
+    initial_zip_code = (default_property or {}).get("zip_code") or customer.get("zip_code", "")
 
     return render_template(
         "jobs/create_job.html",
         customerId=customerId,
         customer=serialize_doc(customer),
+        customer_properties=_get_customer_properties(customer),
+        selected_property_id=selected_property_id,
+        initial_address_line_1=initial_address_line_1,
+        initial_address_line_2=initial_address_line_2,
+        initial_city=initial_city,
+        initial_state=initial_state,
+        initial_zip_code=initial_zip_code,
         services=services,
         parts=parts,
         labors=labors,
@@ -417,6 +499,11 @@ def create_estimate(customerId):
 
     if request.method == "POST":
         business_id = resolve_current_business_id(db)
+        selected_property_id = request.form.get("job_property_id", "").strip()
+        if not selected_property_id:
+            default_property = _resolve_default_property(customer)
+            selected_property_id = str((default_property or {}).get("property_id") or "").strip()
+        selected_property = _resolve_selected_property(customer, selected_property_id)
         selected_service_types = request.form.getlist("service_code[]") or request.form.getlist("service_type[]")
         entered_service_prices = request.form.getlist("service_price[]") or request.form.getlist("service_standard_price[]")
         entered_service_durations = request.form.getlist("service_hours[]") or request.form.getlist("service_estimated_hours[]") or request.form.getlist("service_duration[]")
@@ -502,6 +589,8 @@ def create_estimate(customerId):
             "customer_id": reference_value(customerId),
             "customer_name": f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
             "company": customer.get("company", ""),
+            "property_id": selected_property_id if selected_property else "",
+            "property_name": (selected_property or {}).get("property_name") or "",
             "services": services,
             "parts": parts,
             "equipments": equipments,
@@ -521,6 +610,7 @@ def create_estimate(customerId):
             "address_line_2": request.form.get("job_address_line_2", "").strip(),
             "city": request.form.get("job_city", "").strip(),
             "state": request.form.get("job_state", "").strip().upper(),
+            "zip_code": request.form.get("job_zip_code", "").strip(),
             "created_by_employee": (session.get("employee_name") or "").strip(),
             "estimated_by_employee": estimated_by_employee,
             "total": f"${total:.2f}" if total else "$0.00",
@@ -587,11 +677,22 @@ def create_estimate(customerId):
     discounts_catalog = build_discount_catalog(discounts)
     parts_by_id = {p["_id"]: p["part_code"] for p in parts}
     materials_by_id = {m["_id"]: m["material_name"] for m in materials}
+    default_property = _resolve_default_property(customer)
+    selected_property_id = str((default_property or {}).get("property_id") or "").strip()
+    customer_for_view = serialize_doc(customer)
+    if default_property:
+        customer_for_view["address_line_1"] = (default_property or {}).get("address_line_1", "")
+        customer_for_view["address_line_2"] = (default_property or {}).get("address_line_2", "")
+        customer_for_view["city"] = (default_property or {}).get("city", "")
+        customer_for_view["state"] = (default_property or {}).get("state", "")
+        customer_for_view["zip_code"] = (default_property or {}).get("zip_code", "")
 
     return render_template(
         "estimates/create_estimate.html",
         customerId=customerId,
-        customer=serialize_doc(customer),
+        customer=customer_for_view,
+        customer_properties=_get_customer_properties(customer),
+        selected_property_id=selected_property_id,
         services=services,
         parts=parts,
         labors=labors,
@@ -661,6 +762,15 @@ def update_estimate(estimateId):
 
     if request.method == "POST":
         business_id = resolve_current_business_id(db)
+        selected_property_id = request.form.get("job_property_id", "").strip()
+        customer_for_property = {}
+        estimate_customer_id = estimate.get("customer_id")
+        if estimate_customer_id:
+            customer_for_property = db.customers.find_one(build_reference_filter("_id", estimate_customer_id)) or {}
+        if not selected_property_id:
+            default_property = _resolve_default_property(customer_for_property)
+            selected_property_id = str((default_property or {}).get("property_id") or "").strip()
+        selected_property = _resolve_selected_property(customer_for_property, selected_property_id)
         selected_service_types = request.form.getlist("service_code[]") or request.form.getlist("service_type[]")
         entered_service_prices = request.form.getlist("service_price[]") or request.form.getlist("service_standard_price[]")
         entered_service_durations = request.form.getlist("service_hours[]") or request.form.getlist("service_estimated_hours[]") or request.form.getlist("service_duration[]")
@@ -749,10 +859,13 @@ def update_estimate(estimateId):
             "materials": materials,
             "equipments": equipments,
             "discounts": discounts,
+            "property_id": selected_property_id if selected_property else "",
+            "property_name": (selected_property or {}).get("property_name") or "",
             "address_line_1": request.form.get("job_address_line_1", "").strip(),
             "address_line_2": request.form.get("job_address_line_2", "").strip(),
             "city": request.form.get("job_city", "").strip(),
             "state": request.form.get("job_state", "").strip().upper(),
+            "zip_code": request.form.get("job_zip_code", "").strip(),
             "estimated_by_employee": estimated_by_employee,
             "estimate_notes": estimate_notes,
             "total": f"${total:.2f}" if total else "$0.00",
@@ -826,6 +939,10 @@ def update_estimate(estimateId):
 
     estimate_doc = serialize_doc(estimate)
     estimate_doc["file_path"] = normalize_estimate_file_history(estimate_doc.get("file_path"))
+    selected_property_id = str(estimate_doc.get("property_id") or "").strip()
+    if not selected_property_id:
+        default_property = _resolve_default_property(customer)
+        selected_property_id = str((default_property or {}).get("property_id") or "").strip()
 
     return render_template(
         "estimates/update_estimate.html",
@@ -834,6 +951,8 @@ def update_estimate(estimateId):
         jobId=estimateId,
         job=estimate_doc,
         customer=customer,
+        customer_properties=_get_customer_properties(customer),
+        selected_property_id=selected_property_id,
         services=services,
         parts=parts,
         labors=labors,
@@ -1034,11 +1153,10 @@ def start_job(jobId):
         return redirect(url_for("jobs.view_job", jobId=jobId))
 
     current_timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
-    started_at = datetime.utcnow()
 
     db.jobs.update_one(
         {"_id": ObjectId(jobId)},
-        {"$set": {"status": "Started", "dateStarted": current_timestamp, "started_at": started_at}},
+        {"$set": {"status": "Started", "dateStarted": current_timestamp}},
     )
 
     return redirect(url_for("jobs.view_job", jobId=jobId))
@@ -1126,7 +1244,7 @@ def complete_job(jobId):
     db.jobs.update_one(
         {"_id": ObjectId(jobId)},
         {
-                    "$set": {"status": "Completed", "dateCompleted": current_timestamp, "timeSpent": time_spent_str, "completed_at": datetime.utcnow()},
+            "$set": {"status": "Completed", "dateCompleted": current_timestamp, "timeSpent": time_spent_str},
             "$push": {
                 "invoices": {
                     "invoice_number": f"INV-{jobId[:8].upper()}",
@@ -1169,6 +1287,7 @@ def send_estimate_email(jobId):
         subject = data.get("subject", "")
         body = data.get("body", "")
         estimate_file = data.get("estimate_file", "")
+        email_type = str(data.get("email_type", "estimate") or "estimate").strip().lower()
 
         if not recipient_email or not subject or not body:
             return jsonify({"success": False, "error": "Missing required fields"}), 400
@@ -1191,6 +1310,13 @@ def send_estimate_email(jobId):
             msg.attach(filename, "application/pdf", f.read())
 
         current_app.extensions["mail"].send(msg)
+
+        if email_type == "invoice":
+            db.jobs.update_one(
+                {"_id": ObjectId(jobId)},
+                {"$set": {"date_invoice_sent": datetime.now().strftime("%m/%d/%Y %H:%M:%S")}},
+            )
+
         current_app.logger.info("Estimate email sent: job_id=%s to=%r by employee_id=%s", jobId, recipient_email, session.get("employee_id"))
         return jsonify({"success": True}), 200
 
@@ -1208,6 +1334,15 @@ def update_job(jobId):
 
     if request.method == "POST":
         business_id = resolve_current_business_id(db)
+        selected_property_id = request.form.get("job_property_id", "").strip()
+        customer_for_property = {}
+        job_customer_id = job.get("customer_id")
+        if job_customer_id:
+            customer_for_property = db.customers.find_one(build_reference_filter("_id", job_customer_id)) or {}
+        if not selected_property_id:
+            default_property = _resolve_default_property(customer_for_property)
+            selected_property_id = str((default_property or {}).get("property_id") or "").strip()
+        selected_property = _resolve_selected_property(customer_for_property, selected_property_id)
         selected_service_types = request.form.getlist("service_code[]") or request.form.getlist("service_type[]")
         entered_service_prices = request.form.getlist("service_price[]") or request.form.getlist("service_standard_price[]")
         entered_service_durations = request.form.getlist("service_hours[]") or request.form.getlist("service_estimated_hours[]") or request.form.getlist("service_duration[]")
@@ -1324,6 +1459,8 @@ def update_job(jobId):
             "materials": materials,
             "equipments": equipments,
             "discounts": discounts,
+            "property_id": selected_property_id if selected_property else "",
+            "property_name": (selected_property or {}).get("property_name") or "",
             "status": job_status,
             "scheduled_date": scheduled_date,
             "scheduled_time": scheduled_time,
@@ -1332,11 +1469,10 @@ def update_job(jobId):
             "address_line_2": request.form.get("job_address_line_2", "").strip(),
             "city": request.form.get("job_city", "").strip(),
             "state": request.form.get("job_state", "").strip().upper(),
+            "zip_code": request.form.get("job_zip_code", "").strip(),
             "assigned_employee": assigned_employee,
             "total": f"${total:.2f}" if total else "$0.00",
             "total_amount": float(total or 0.0),
-            "updated_at": datetime.utcnow(),
-            "scheduled_at": _combine_scheduled_datetime(scheduled_date, scheduled_time),
         }
 
         new_note_text = request.form.get("job_notes", "").strip()
@@ -1389,12 +1525,18 @@ def update_job(jobId):
     discounts_catalog = build_discount_catalog(discounts)
     parts_by_id = {p["_id"]: p["part_code"] for p in parts}
     materials_by_id = {m["_id"]: m["material_name"] for m in materials}
+    selected_property_id = str(job.get("property_id") or "").strip()
+    if not selected_property_id:
+        default_property = _resolve_default_property(customer)
+        selected_property_id = str((default_property or {}).get("property_id") or "").strip()
 
     return render_template(
         "jobs/update_job.html",
         jobId=jobId,
         job=serialize_doc(job),
         customer=customer,
+        customer_properties=_get_customer_properties(customer),
+        selected_property_id=selected_property_id,
         services=services,
         parts=parts,
         labors=labors,

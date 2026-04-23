@@ -63,6 +63,10 @@
                 <p>{{ customer.company|default('N/A', true) }}</p>
               </div>
               <div class="view-customer-detail-item">
+                <h4>Customer Type</h4>
+                <p>{{ customer.customer_type|default('Residential', true) }}</p>
+              </div>
+              <div class="view-customer-detail-item">
                 <h4>Phone</h4>
                 <p>{{ customer.phone|default('N/A', true) }}</p>
               </div>
@@ -197,45 +201,39 @@
 
         <div class="view-customer-section-row" id="view-customer-equipment-columns">
           <div class="view-customer-section-column view-customer-details-column">
-            <h3>HVAC Systems</h3>
-            <div class="view-customer-jobs-list">
-              {% if hvac_systems %}
-                {% for hvac_system in hvac_systems %}
-                  {% set system_type_slug = hvac_system.system_type|default('', true)|lower|replace(' ', '-')|replace('/', '-') %}
-                  <a class="view-customer-card-link view-customer-hvac-card view-customer-hvac-card--{{ system_type_slug }}" href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id) }}">
-                    <div class="view-customer-hvac-card-header">
-                      <p class="view-customer-hvac-card-kicker">HVAC System</p>
-                      <h4>{{ hvac_system.system_type }}</h4>
-                    </div>
-                    <div class="view-customer-hvac-card-row">
-                      <span class="view-customer-hvac-card-label">Location</span>
-                      <span class="view-customer-hvac-card-value">{{ hvac_system.location_type|default('-', true) }}</span>
-                    </div>
-                    {% if hvac_system.components %}
-                      {% for component in hvac_system.components %}
-                        <div class="view-customer-hvac-card-row">
-                          <span class="view-customer-hvac-card-label">{{ component.label }}</span>
-                          <span class="view-customer-hvac-card-value">{{ component.summary|default('-', true) }}</span>
-                        </div>
-                      {% endfor %}
-                    {% else %}
-                      <div class="view-customer-hvac-card-row">
-                        <span class="view-customer-hvac-card-label">Components</span>
-                        <span class="view-customer-hvac-card-value">System details have not been saved yet.</span>
-                      </div>
-                    {% endif %}
-                    {% if hvac_system.ductwork_summary %}
-                      <div class="view-customer-hvac-card-row">
-                        <span class="view-customer-hvac-card-label">Ductwork</span>
-                        <span class="view-customer-hvac-card-value">{{ hvac_system.ductwork_summary }}</span>
-                      </div>
-                    {% endif %}
-                  </a>
+            <h3>Properties</h3>
+            <div class="view-customer-properties-list">
+              {% if properties %}
+                <div class="view-customer-properties-header" role="presentation">
+                  <span>Property</span>
+                  <span>Default</span>
+                </div>
+                {% for property in properties %}
+                  <div class="view-customer-properties-row">
+                    <a class="view-customer-card-link" href="{{ url_for('customers.view_property', customerId=customerId, propertyId=property.property_id) }}">
+                      <h4>{{ property.property_name|default('Property', true) }}</h4>
+                      <p>
+                        {{ property.address_line_1|default('-', true) }}{% if property.address_line_2 %}, {{ property.address_line_2 }}{% endif %},
+                        {{ property.city|default('-', true) }}, {{ property.state|default('-', true) }} {{ property.zip_code|default('', true) }}
+                      </p>
+                      <p>Type: {{ property.property_type_label|default('-', true) }}</p>
+                    </a>
+                    <form class="view-customer-property-default-form" method="POST" action="{{ url_for('customers.set_default_property', customerId=customerId, propertyId=property.property_id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <label class="view-customer-property-default-toggle" aria-label="Set {{ property.property_name|default('property', true) }} as default">
+                        <input type="checkbox" {% if property.is_default %}checked{% endif %} onclick="if (!this.checked) { return false; } this.form.submit();" />
+                        <span></span>
+                      </label>
+                    </form>
+                  </div>
                 {% endfor %}
               {% else %}
-                <a class="customers-add-button" href="{{ url_for('customers.add_equipment', customerId=customerId) }}">+ Add HVAC System</a>
+                <a class="customers-add-button" href="{{ url_for('customers.add_property', customerId=customerId) }}">+ Add Property</a>
               {% endif %}
             </div>
+            {% if properties %}
+              <a class="customers-add-button" href="{{ url_for('customers.add_property', customerId=customerId) }}">+ Add Property</a>
+            {% endif %}
           </div>
         </div>
       </section>

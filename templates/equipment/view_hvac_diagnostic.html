@@ -11,8 +11,11 @@
         <ol>
           <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
           <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          {% if property_id %}
+            <li><a href="{{ url_for('customers.view_property', customerId=customerId, propertyId=property_id) }}">View Property</a></li>
+          {% endif %}
           <li>
-            <a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=reference_type, reference_id=reference_id) }}">View HVAC System</a>
+            <a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id) }}">View HVAC System</a>
           </li>
           <li aria-current="page">View Diagnostic</li>
         </ol>
@@ -21,7 +24,7 @@
       <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
-          <form method="POST" action="{{ url_for('customers.generate_hvac_system_report', customerId=customerId, reference_type=reference_type, reference_id=reference_id) }}">
+          <form method="POST" action="{{ url_for('customers.generate_hvac_system_report', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="hvac-generate-report-button">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">

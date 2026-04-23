@@ -11,6 +11,9 @@
         <ol>
           <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
           <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          {% if property_id %}
+            <li><a href="{{ url_for('customers.view_property', customerId=customerId, propertyId=property_id) }}">View Property</a></li>
+          {% endif %}
           <li aria-current="page">View HVAC System</li>
         </ol>
       </nav>
@@ -18,8 +21,8 @@
       <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
-          <a href="{{ url_for('customers.add_hvac_diagnostics', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id) }}">Add Diagnostics</a>
-          <form method="POST" action="{{ url_for('customers.delete_hvac_system', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id) }}" onsubmit="return confirm('Delete this HVAC system? This cannot be undone.');">
+          <a href="{{ url_for('customers.add_hvac_diagnostics', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id) }}">Add Diagnostics</a>
+          <form method="POST" action="{{ url_for('customers.delete_hvac_system', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id) }}" onsubmit="return confirm('Delete this HVAC system? This cannot be undone.');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Delete HVAC System</button>
           </form>
@@ -145,7 +148,7 @@
                   {% elif component.component_key == 'ductwork' %}
                     {% set component_theme = 'ductwork' %}
                   {% endif %}
-                  <a class="hvac-component-card hvac-component-card--{{ component_theme }}" href="{{ url_for('customers.view_hvac_component', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, component_key=component.component_key) }}">
+                  <a class="hvac-component-card hvac-component-card--{{ component_theme }}" href="{{ url_for('customers.view_hvac_component', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, component_key=component.component_key, property_id=property_id) }}">
                     <div class="hvac-component-card-header">
                       <div class="hvac-component-card-icon hvac-component-card-icon--{{ component_theme }}" aria-hidden="true">
                         {% if component.component_key == 'airHandlers' %}
@@ -234,7 +237,7 @@
                 {% set diagnostics_values = hvac_system.diagnostics.get('values', {}) %}
                 <a
                   class="hvac-diagnostics-row hvac-system-diagnostics-link"
-                  href="{{ url_for('customers.view_hvac_diagnostic', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, diagnostic_index=hvac_system.diagnostics.get('diagnostic_index', 0)) }}"
+                  href="{{ url_for('customers.view_hvac_diagnostic', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, diagnostic_index=hvac_system.diagnostics.get('diagnostic_index', 0), property_id=property_id) }}"
                 >
                   <div class="hvac-component-card hvac-component-card--diagnostics hvac-system-diagnostics-card">
                     <div class="hvac-component-card-header">

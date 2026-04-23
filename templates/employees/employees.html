@@ -26,6 +26,7 @@
           {% set current_position = (session.get('employee_position', '')|lower) %}
           {% if current_position in ['owner', 'co-owner', 'manager'] %}
             <a href="{{ url_for('employees.add_employee') }}">Add Employee</a>
+            <a href="{{ url_for('employees.export_employees_csv') }}">Export CSV</a>
           {% endif %}
         </div>
       </div>

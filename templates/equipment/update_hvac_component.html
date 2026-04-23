@@ -11,8 +11,11 @@
         <ol>
           <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
           <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          {% if property_id %}
+            <li><a href="{{ url_for('customers.view_property', customerId=customerId, propertyId=property_id) }}">View Property</a></li>
+          {% endif %}
           <li>
-            <a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=reference_type, reference_id=reference_id) }}">View HVAC System</a>
+            <a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id) }}">View HVAC System</a>
           </li>
           <li aria-current="page">Update {{ component_label }}</li>
         </ol>
@@ -22,7 +25,7 @@
         <p class="form-field-error">{{ error }}</p>
       {% endif %}
 
-      <form id="add-customer-form" action="{{ url_for('customers.update_hvac_component', customerId=customerId, reference_type=reference_type, reference_id=reference_id, component_key=component_key) }}" method="post">
+      <form id="add-customer-form" action="{{ url_for('customers.update_hvac_component', customerId=customerId, reference_type=reference_type, reference_id=reference_id, component_key=component_key, property_id=property_id) }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         {% set ductwork_error_fields = ductwork_error_fields|default([]) %}
 

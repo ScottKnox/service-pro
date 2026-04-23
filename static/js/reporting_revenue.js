@@ -9,6 +9,7 @@
   const timeframeBtns = document.querySelectorAll(".rev-timeframe-btn");
   const serviceBarsEl = document.getElementById("rev-service-bars");
   const equipmentBarsEl = document.getElementById("rev-equipment-bars");
+  const newVsReturningBarsEl = document.getElementById("rev-new-vs-returning-bars");
   const employeeDonutEl = document.getElementById("rev-employee-donut");
   const employeeLegendEl = document.getElementById("rev-employee-legend");
 
@@ -262,6 +263,29 @@
     equipmentBarsEl.innerHTML = rows.join("");
   }
 
+  function renderNewVsReturningBars(items) {
+    if (!newVsReturningBarsEl) return;
+
+    if (!items || items.length === 0) {
+      newVsReturningBarsEl.innerHTML = '<div class="rev-placeholder">No customer split data for this range.</div>';
+      return;
+    }
+
+    const rows = items.map(function (item) {
+      return (
+        '<div class="rev-service-bar-row">' +
+          '<span class="rev-service-bar-label" title="' + item.label + '">' + item.label + '</span>' +
+          '<div class="rev-service-bar-track">' +
+            '<div class="rev-service-bar-fill" style="width:' + item.pct_of_max + '%"></div>' +
+          '</div>' +
+          '<span class="rev-service-bar-amount">' + formatCurrency(item.amount) + '</span>' +
+        '</div>'
+      );
+    });
+
+    newVsReturningBarsEl.innerHTML = rows.join("");
+  }
+
   function renderEmployeeDonut(splits) {
     if (!employeeDonutEl || !employeeLegendEl) return;
 
@@ -329,6 +353,7 @@
         renderLineChart(data.bars, data.bars_max, rangeLabel);
         renderServiceBars(data.revenue_by_service_type);
         renderEquipmentBars(data.revenue_by_equipment_type);
+        renderNewVsReturningBars(data.revenue_new_vs_returning);
         renderEmployeeDonut(data.revenue_by_employee);
       })
       .catch(function (err) {

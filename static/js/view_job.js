@@ -169,6 +169,7 @@
         subject: subject,
         body: body,
         estimate_file: currentEstimateFile,
+        email_type: currentEmailType,
       }),
     })
       .then(function (response) {

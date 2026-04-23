@@ -7,6 +7,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const firstNameInput = form.querySelector('input[name="first_name"]');
   const lastNameInput = form.querySelector('input[name="last_name"]');
   const emailInput = form.querySelector('input[name="email"]');
+  const customerTypeSelect = form.querySelector('[data-customer-type-select]');
+  const customerTypeNote = form.querySelector('[data-customer-type-note]');
   const submitButton = form.querySelector('button[type="submit"]');
 
   if (!firstNameInput || !lastNameInput || !emailInput || !submitButton) {
@@ -18,6 +20,13 @@ document.addEventListener("DOMContentLoaded", () => {
   let emailWasPopulated = emailInput.value.trim().length > 0;
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const emailValidationMessage = "Enter a valid email address.";
+  const customerTypeNotes = {
+    Residential: "Single-family homes, condos & townhouses, apartments, mobile homes, new constructions.",
+    Commercial: "Office buildings, Retail stores, Restaurants, Hotels, Medical offices, Gyms, Car dealerships, Banks.",
+    Industrial: "Warehouses, Manufacturing, Refrigeration facilities, Data centers, Auto shops.",
+    Institutional: "Schools, Hospitals, Government, Churches, Community centers.",
+    Specialty: "Multi-tenant commercial buildings (landlord contracts), HOA-managed communities, Property management portfolios (one contract covering many units), New construction (builder contracts - ongoing relationship across multiple builds).",
+  };
 
   const createFieldError = (input) => {
     const error = document.createElement("p");
@@ -96,10 +105,22 @@ document.addEventListener("DOMContentLoaded", () => {
     submitButton.disabled = !(hasFirstName && hasLastName && hasValidEmail);
   };
 
+  const syncCustomerTypeNote = () => {
+    if (!customerTypeSelect || !customerTypeNote) {
+      return;
+    }
+
+    const selectedType = customerTypeSelect.value || "Residential";
+    customerTypeNote.textContent = customerTypeNotes[selectedType] || "";
+  };
+
   firstNameInput.addEventListener("input", syncSubmitState);
   lastNameInput.addEventListener("input", syncSubmitState);
   emailInput.addEventListener("input", syncSubmitState);
   emailInput.addEventListener("blur", syncSubmitState);
+  if (customerTypeSelect) {
+    customerTypeSelect.addEventListener("change", syncCustomerTypeNote);
+  }
 
   form.addEventListener("submit", (event) => {
     syncSubmitState();
@@ -111,4 +132,5 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   syncSubmitState();
+  syncCustomerTypeNote();
 });

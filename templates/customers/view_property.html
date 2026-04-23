@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}View Property | Klovent{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="view-customer-panel">
+      <h1>{{ property.property_name|default('Property', true) }}</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li aria-current="page">View Property</li>
+        </ol>
+      </nav>
+
+      <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
+        <h2 id="view-customer-actions-header">Actions</h2>
+        <div id="view-customer-actions-row">
+          <a href="{{ url_for('customers.update_property', customerId=customerId, propertyId=propertyId) }}">Update Property</a>
+          {% if not property.is_seed_primary_address %}
+            <form method="POST" action="{{ url_for('customers.delete_property', customerId=customerId, propertyId=propertyId) }}" onsubmit="return confirm('Delete this property? This cannot be undone.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit">Delete Property</button>
+            </form>
+          {% endif %}
+        </div>
+      </section>
+
+      <section id="view-customer-details" aria-label="Property details">
+        <h2>Property Details</h2>
+        <div class="view-customer-section-row" id="view-customer-details-columns">
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>Details</h3>
+            <div id="view-customer-details-list">
+              <div class="view-customer-detail-item">
+                <h4>Property Name</h4>
+                <p>{{ property.property_name|default('-', true) }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Property Type</h4>
+                <p>{{ property.property_type_label|default('-', true) }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Address Line 1</h4>
+                <p>{{ property.address_line_1|default('-', true) }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Address Line 2</h4>
+                <p>{{ property.address_line_2|default('-', true) }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>City</h4>
+                <p>{{ property.city|default('-', true) }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>State</h4>
+                <p>{{ property.state|default('-', true) }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Zip Code</h4>
+                <p>{{ property.zip_code|default('-', true) }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>Customer</h3>
+            <div id="view-customer-account-list">
+              <div class="view-customer-detail-item">
+                <h4>Name</h4>
+                <p>{{ customer.first_name|default('', true) }} {{ customer.last_name|default('', true) }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Company</h4>
+                <p>{{ customer.company|default('-', true) }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Phone</h4>
+                <p>{{ customer.phone|default('-', true) }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Email</h4>
+                <p>{{ customer.email|default('-', true) }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="view-customer-section-row" id="view-customer-equipment-columns">
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>HVAC Systems</h3>
+            <div class="view-customer-jobs-list">
+              {% if hvac_systems %}
+                {% for hvac_system in hvac_systems %}
+                  {% set system_type_slug = hvac_system.system_type|default('', true)|lower|replace(' ', '-')|replace('/', '-') %}
+                  <a class="view-customer-card-link view-customer-hvac-card view-customer-hvac-card--{{ system_type_slug }}" href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=propertyId) }}">
+                    <div class="view-customer-hvac-card-header">
+                      <p class="view-customer-hvac-card-kicker">HVAC System</p>
+                      <h4>{{ hvac_system.system_type }}</h4>
+                    </div>
+                    <div class="view-customer-hvac-card-row">
+                      <span class="view-customer-hvac-card-label">Location</span>
+                      <span class="view-customer-hvac-card-value">{{ hvac_system.location_type|default('-', true) }}</span>
+                    </div>
+                    {% if hvac_system.components %}
+                      {% for component in hvac_system.components %}
+                        <div class="view-customer-hvac-card-row">
+                          <span class="view-customer-hvac-card-label">{{ component.label }}</span>
+                          <span class="view-customer-hvac-card-value">{{ component.summary|default('-', true) }}</span>
+                        </div>
+                      {% endfor %}
+                    {% endif %}
+                  </a>
+                {% endfor %}
+              {% else %}
+                <a class="customers-add-button" href="{{ url_for('customers.add_equipment', customerId=customerId, property_id=propertyId) }}">+ Add HVAC System</a>
+              {% endif %}
+            </div>
+            {% if hvac_systems %}
+              <a class="customers-add-button" href="{{ url_for('customers.add_equipment', customerId=customerId, property_id=propertyId) }}">+ Add HVAC System</a>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+{% endblock %}

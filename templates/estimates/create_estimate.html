@@ -14,7 +14,7 @@
         </ol>
       </nav>
 
-      <form id="create-job-form" action="{{ url_for('jobs.create_estimate', customerId=customerId) }}" method="post" data-services-catalog='{{ services_catalog|tojson }}' data-parts-catalog='{{ parts_catalog|tojson }}' data-labors-catalog='{{ labors_catalog|tojson }}' data-materials-catalog='{{ materials_catalog|tojson }}' data-equipments-catalog='{{ equipments_catalog|tojson }}' data-discounts-catalog='{{ discounts_catalog|tojson }}' data-parts-by-id='{{ parts_by_id|tojson }}' data-materials-by-id='{{ materials_by_id|tojson }}' data-schedule-required="false">
+      <form id="create-job-form" action="{{ url_for('jobs.create_estimate', customerId=customerId) }}" method="post" data-services-catalog='{{ services_catalog|tojson }}' data-parts-catalog='{{ parts_catalog|tojson }}' data-labors-catalog='{{ labors_catalog|tojson }}' data-materials-catalog='{{ materials_catalog|tojson }}' data-equipments-catalog='{{ equipments_catalog|tojson }}' data-discounts-catalog='{{ discounts_catalog|tojson }}' data-parts-by-id='{{ parts_by_id|tojson }}' data-materials-by-id='{{ materials_by_id|tojson }}' data-customer-properties='{{ customer_properties|tojson }}' data-schedule-required="false">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="customer_id" value="{{ customerId }}" />
 
@@ -27,8 +27,12 @@
           </div>
 
           <div class="add-customer-form-field">
-            <label for="job-customer-phone">Phone</label>
-            <input id="job-customer-phone" name="customer_phone" type="text" value="{{ customer.phone }}" disabled />
+            <label for="job-property-id">Property</label>
+            <select id="job-property-id" name="job_property_id" data-job-property-select>
+              {% for property in customer_properties %}
+                <option value="{{ property.property_id }}" {% if selected_property_id == property.property_id %}selected{% endif %}>{{ property.property_name|default('Property', true) }} - {{ property.address_line_1 }}</option>
+              {% endfor %}
+            </select>
           </div>
         </div>
 
@@ -108,6 +112,13 @@
               <option value="WY" {% if customer.state == 'WY' %}selected{% endif %}>WY</option>
             </select>
             <span id="error-state" class="form-field-error" style="display:none;">State is required</span>
+          </div>
+        </div>
+
+        <div class="add-customer-form-row add-customer-form-row--single">
+          <div class="add-customer-form-field">
+            <label for="job-zip-code">Zip Code</label>
+            <input id="job-zip-code" name="job_zip_code" type="text" value="{{ customer.zip_code|default('', true) }}" />
           </div>
         </div>
 
