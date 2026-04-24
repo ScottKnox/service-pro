@@ -33,6 +33,7 @@
         <h2 id="view-job-actions-header">Actions</h2>
         <div id="view-job-actions-row">
           {% set job_status_normalized = job.status|default('', true)|lower %}
+          {% set is_recurring_occurrence = job.job_kind == 'recurring_occurrence' and job.series_id %}
           {% if job_status_normalized == "pending" %}
           <form method="POST" action="{{ url_for('jobs.start_job', jobId=jobId) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -53,12 +54,49 @@
           {% if job_status_normalized != "completed" and job_status_normalized != "paid" %}
           <a href="{{ url_for('jobs.update_job', jobId=jobId) }}">Update Job</a>
           {% endif %}
-          <form method="POST" action="{{ url_for('jobs.delete_job', jobId=jobId) }}" onsubmit="return confirm('Are you sure you want to delete this job?');">
+
+          {% if is_recurring_occurrence and job_series %}
+            {% set series_status = job_series.status|default('', true)|lower %}
+            {% if series_status == 'active' %}
+            <form method="POST" action="{{ url_for('jobs.pause_recurring_series', jobId=jobId) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit">Pause Recurring Series</button>
+            </form>
+            {% elif series_status == 'paused' %}
+            <form method="POST" action="{{ url_for('jobs.resume_recurring_series', jobId=jobId) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit">Resume Recurring Series</button>
+            </form>
+            {% endif %}
+            {% if series_status != 'cancelled' %}
+            <form method="POST" action="{{ url_for('jobs.cancel_recurring_series', jobId=jobId) }}" onsubmit="return confirm('Cancel this recurring series and delete future pending visits?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit">Cancel Recurring Series</button>
+            </form>
+            {% endif %}
+          {% endif %}
+
+          <form method="POST" action="{{ url_for('jobs.delete_job', jobId=jobId) }}" onsubmit="return confirm('Are you sure you want to delete this job occurrence?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit">Delete Job</button>
+            <input type="hidden" name="delete_scope" value="occurrence_only">
+            <button type="submit">Delete This Job</button>
           </form>
+
+          {% if is_recurring_occurrence %}
+          <form method="POST" action="{{ url_for('jobs.delete_job', jobId=jobId) }}" onsubmit="return confirm('Delete this job and cancel the recurring series with future pending visits?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="delete_scope" value="series_future">
+            <button type="submit">Delete + Cancel Series Future</button>
+          </form>
+          {% endif %}
         </div>
       </section>
+
+      {% if job.job_kind == 'recurring_occurrence' and job_series %}
+      <div id="view-job-recurring-status-note" style="border: 1px solid #B7D8C9; background-color: #EEF9F1; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
+        <p style="margin: 0; color: #185A37; font-weight: 600;">Recurring Series Status: {{ job_series.status|default('Unknown', true) }}</p>
+      </div>
+      {% endif %}
 
       {% if job_status_normalized == "pending" and (not job.scheduled_date or not job.scheduled_time) %}
       <div id="view-job-missing-scheduling-note" style="border: 1px solid #FFA500; background-color: #FFF8DC; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
@@ -137,6 +175,26 @@
                 <h4>Assigned Employee</h4>
                 <p>{{ job.assigned_employee }}</p>
               </div>
+              <div class="view-job-detail-item">
+                <h4>Job Type</h4>
+                <p>{% if job.job_kind == 'recurring_occurrence' %}Recurring{% else %}One-Time{% endif %}</p>
+              </div>
+              {% if job.job_kind == 'recurring_occurrence' %}
+              <div class="view-job-detail-item">
+                <h4>Frequency</h4>
+                <p>{{ job.recurrence_summary|default('Recurring', true) }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Occurrence</h4>
+                <p>#{{ job.occurrence_index|default(1, true) }}</p>
+              </div>
+              {% if job_series and job_series.next_occurrence_date %}
+              <div class="view-job-detail-item">
+                <h4>Next Scheduled Visit</h4>
+                <p>{{ job_series.next_occurrence_date }} {{ job_series.anchor_time|default('', true) }}</p>
+              </div>
+              {% endif %}
+              {% endif %}
               <div class="view-job-detail-item">
                 <h4>Total</h4>
                 <p>{{ job.total }}</p>
@@ -334,7 +392,21 @@
 
         <div class="view-job-section-row" id="view-job-notes-row-secondary">
           <div class="view-job-section-column view-job-details-column">
-            <h3>Notes</h3>
+            <h3>Invoice Note</h3>
+            <div id="view-job-notes-list">
+              {% if job.invoice_notes %}
+                <div class="note-card">
+                  <div class="note-card-text">{{ job.invoice_notes }}</div>
+                </div>
+              {% else %}
+                <div class="view-job-detail-item">
+                  <p>No invoice note added.</p>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="view-job-section-column view-job-details-column">
+            <h3>Communication Notes</h3>
             <div id="view-job-notes-list">
               {% if job.notes %}
                 {% for note in job.notes|reverse %}
@@ -345,12 +417,11 @@
                 {% endfor %}
               {% else %}
                 <div class="view-job-detail-item">
-                  <p>No notes added.</p>
+                  <p>No communication notes added.</p>
                 </div>
               {% endif %}
             </div>
           </div>
-          <div class="view-job-section-column view-job-details-column"></div>
         </div>
 
         <div class="view-job-section-row" id="view-job-discounts-row">

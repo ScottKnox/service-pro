@@ -635,13 +635,11 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
         )
     )
 
-    notes = [note for note in (job.get("notes") or []) if isinstance(note, dict) and str(note.get("text") or "").strip()]
+    invoice_note_text = str(job.get("invoice_notes") or "").strip()
     notes_panel = None
-    if notes:
-        notes_rows = [[Paragraph("Notes", section_panel_heading_style)]]
-        for note in notes[-4:]:
-            note_text = str(note.get("text") or "").strip()
-            notes_rows.append([Paragraph(note_text, info_value_style)])
+    if invoice_note_text:
+        notes_rows = [[Paragraph("Invoice Note", section_panel_heading_style)]]
+        notes_rows.append([Paragraph(invoice_note_text, info_value_style)])
 
         notes_panel = Table(notes_rows, colWidths=[2.8 * inch])
         notes_panel.setStyle(
@@ -683,13 +681,8 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
             )
         )
 
-    right_column_rows = [[totals_table]]
-    if warranty_panel:
-        right_column_rows.append([Spacer(1, 0.08 * inch)])
-        right_column_rows.append([warranty_panel])
-
-    right_column = Table(right_column_rows, colWidths=[3.8 * inch])
-    right_column.setStyle(
+    totals_panel = Table([[Spacer(1, 0.01 * inch), totals_table]], colWidths=[2.8 * inch, 3.8 * inch])
+    totals_panel.setStyle(
         TableStyle(
             [
                 ("LEFTPADDING", (0, 0), (-1, -1), 0),
@@ -701,66 +694,20 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
         )
     )
 
-    left_column_content = notes_panel if notes_panel else Spacer(1, 0.1 * inch)
-    totals_wrap = Table([[left_column_content, right_column]], colWidths=[2.8 * inch, 3.8 * inch])
-    totals_wrap.setStyle(
-        TableStyle(
-            [
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                ("TOPPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ]
-        )
-    )
     footer_paragraph = Paragraph(
         "Thank you for your business!<br/>Please retain this invoice for your records.",
         footer_style,
     )
 
-    def _estimate_story_height(flowables, avail_width, avail_height):
-        total_height = 0.0
-        for flowable in flowables:
-            try:
-                _, flowable_height = flowable.wrap(avail_width, avail_height)
-            except Exception:
-                continue
-            total_height += flowable_height
-        return total_height
-
-    current_story_height = _estimate_story_height(story, doc.width, doc.height)
-    _, totals_wrap_height = totals_wrap.wrap(doc.width, doc.height)
-    _, footer_height = footer_paragraph.wrap(doc.width, doc.height)
-    remaining_first_page_height = doc.height - current_story_height
-    overflow_risk = (totals_wrap_height + totals_spacer_height + footer_height) > remaining_first_page_height
-
     story.append(Spacer(1, line_items_to_totals_spacer_height))
 
-    if compact_layout and overflow_risk:
-        # In overflow risk mode, prioritize totals on page one; notes/warranty can flow after.
-        totals_only_wrap = Table([[Spacer(1, 0.01 * inch), totals_table]], colWidths=[2.8 * inch, 3.8 * inch])
-        totals_only_wrap.setStyle(
-            TableStyle(
-                [
-                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                    ("TOPPADDING", (0, 0), (-1, -1), 0),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ]
-            )
-        )
-        story.append(totals_only_wrap)
-
-        if notes_panel:
-            story.append(Spacer(1, 0.08 * inch))
-            story.append(notes_panel)
-        if warranty_panel:
-            story.append(Spacer(1, 0.08 * inch))
-            story.append(warranty_panel)
-    else:
-        story.append(totals_wrap)
+    story.append(totals_panel)
+    if notes_panel:
+        story.append(Spacer(1, 0.08 * inch))
+        story.append(notes_panel)
+    if warranty_panel:
+        story.append(Spacer(1, 0.08 * inch))
+        story.append(warranty_panel)
 
     story.append(Spacer(1, totals_spacer_height))
     story.append(footer_paragraph)

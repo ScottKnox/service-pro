@@ -2756,6 +2756,11 @@ p {
   gap: 1rem;
 }
 
+.add-customer-form-row[hidden],
+.add-customer-form-field[hidden] {
+  display: none !important;
+}
+
 .add-customer-form-row--top-aligned {
   align-items: start;
 }
@@ -3369,6 +3374,14 @@ p {
   border-top: 1px solid #808080;
 }
 
+.view-customer-section-row--full {
+  grid-template-columns: 1fr;
+}
+
+.view-customer-section-row--full .view-customer-section-column:first-child {
+  border-right: 0;
+}
+
 #view-profile-details-columns {
   grid-template-columns: 1fr;
 }
@@ -3940,6 +3953,41 @@ p {
   text-align: right;
 }
 
+.hvac-component-row--notes {
+  align-items: flex-start;
+}
+
+.hvac-component-row--notes span {
+  color: #0B5E55;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hvac-component-row--notes span::before {
+  content: "i";
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #0B5E55;
+  background: #EAF8F4;
+  border: 1px solid #BEE9DD;
+  flex-shrink: 0;
+}
+
+.hvac-component-row--notes strong {
+  max-width: 62%;
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
+}
+
 .hvac-component-card--diagnostics .hvac-component-row strong {
   max-width: 58%;
   word-break: break-word;
@@ -4244,6 +4292,12 @@ p {
   color: #8E4A06;
   background-color: #FFF3E4;
   border-color: #F4C996;
+}
+
+.hvac-system-kpi-chip.is-low {
+  color: #0D4E8C;
+  background-color: #E6F1FB;
+  border-color: #B9D7F2;
 }
 
 .hvac-system-kpi-chip.is-alert {

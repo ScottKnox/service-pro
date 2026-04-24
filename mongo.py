@@ -173,6 +173,11 @@ def ensure_collection_validators(db):
                 "customer_id": {"bsonType": ["objectId"]},
                 "business_id": {"bsonType": ["objectId", "null"]},
                 "status": {"enum": ["Pending", "Scheduled", "Started", "Completed", "Paid"]},
+                "job_kind": {"enum": ["one_time", "recurring_occurrence", "series_template"]},
+                "series_id": {"bsonType": ["objectId", "null"]},
+                "occurrence_index": {"bsonType": ["int", "long", "null"]},
+                "recurrence_summary": {"bsonType": ["string", "null"]},
+                "invoice_notes": {"bsonType": ["string", "null"]},
                 "services": {"bsonType": "array"},
                 "parts": {"bsonType": "array"},
                 "materials": {"bsonType": "array"},
@@ -184,6 +189,44 @@ def ensure_collection_validators(db):
                 "created_at": {"bsonType": ["date"]},
                 "scheduled_at": {"bsonType": ["date", "null"]},
                 "completed_at": {"bsonType": ["date", "null"]},
+            },
+        }
+    }
+
+    recurring_job_series_validator = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["customer_id", "business_id", "status", "frequency", "anchor_date", "services", "total", "total_amount"],
+            "properties": {
+                "customer_id": {"bsonType": ["objectId"]},
+                "business_id": {"bsonType": ["objectId", "null"]},
+                "status": {"enum": ["Active", "Paused", "Cancelled"]},
+                "frequency": {"enum": ["weekly", "biweekly", "monthly", "quarterly", "semiannual", "annual"]},
+                "anchor_date": {"bsonType": "string"},
+                "anchor_time": {"bsonType": ["string", "null"]},
+                "end_type": {"enum": ["never", "on_date", "after_occurrences", None]},
+                "end_date": {"bsonType": ["string", "null"]},
+                "max_occurrences": {"bsonType": ["int", "long", "null"]},
+                "next_occurrence_date": {"bsonType": ["string", "null"]},
+                "last_generated_occurrence_index": {"bsonType": ["int", "long", "null"]},
+                "services": {"bsonType": "array"},
+                "parts": {"bsonType": "array"},
+                "materials": {"bsonType": "array"},
+                "labors": {"bsonType": "array"},
+                "equipments": {"bsonType": "array"},
+                "discounts": {"bsonType": "array"},
+                "total": {"bsonType": ["string", "null"]},
+                "total_amount": {"bsonType": ["double", "int", "long", "decimal"]},
+                "assigned_employee": {"bsonType": ["string", "null"]},
+                "invoice_notes": {"bsonType": ["string", "null"]},
+                "property_id": {"bsonType": ["objectId", "string", "null"]},
+                "property_name": {"bsonType": ["string", "null"]},
+                "address_line_1": {"bsonType": ["string", "null"]},
+                "address_line_2": {"bsonType": ["string", "null"]},
+                "city": {"bsonType": ["string", "null"]},
+                "state": {"bsonType": ["string", "null"]},
+                "zip_code": {"bsonType": ["string", "null"]},
+                "created_at": {"bsonType": ["date", "null"]},
             },
         }
     }
@@ -201,6 +244,7 @@ def ensure_collection_validators(db):
                 "labors": {"bsonType": "array"},
                 "equipments": {"bsonType": "array"},
                 "discounts": {"bsonType": "array"},
+                "estimate_notes": {"bsonType": ["string", "null"]},
                 "total": {"bsonType": ["string", "null"]},
                 "total_amount": {"bsonType": ["double", "int", "long", "decimal"]},
                 "created_at": {"bsonType": ["date"]},
@@ -242,8 +286,21 @@ def ensure_collection_validators(db):
                 "cooling_capacity": {"bsonType": ["string", "null"]},
                 "heating_capacity": {"bsonType": ["string", "null"]},
                 "components": {"bsonType": ["object", "null"]},
-                "diagnostics": {"bsonType": ["array", "object"]},
                 "photos": {"bsonType": ["array", "null"]},
+            },
+        }
+    }
+
+    hvac_diagnostics_validator = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["hvac_system_id", "customer_id", "date_performed", "created_at"],
+            "properties": {
+                "hvac_system_id": {"bsonType": ["objectId", "string"]},
+                "customer_id": {"bsonType": ["objectId", "string"]},
+                "property_id": {"bsonType": ["objectId", "string", "null"]},
+                "date_performed": {"bsonType": "string"},
+                "created_at": {"bsonType": ["date"]},
             },
         }
     }
@@ -268,7 +325,12 @@ def ensure_collection_validators(db):
     }
 
     _ensure_collection_with_validator(db, "jobs", jobs_validator)
+    _ensure_collection_with_validator(db, "recurring_job_series", recurring_job_series_validator)
     _ensure_collection_with_validator(db, "estimates", estimates_validator)
     _ensure_collection_with_validator(db, "services", services_validator)
     _ensure_collection_with_validator(db, "hvacSystems", hvac_systems_validator)
+    _ensure_collection_with_validator(db, "hvacDiagnostics", hvac_diagnostics_validator)
     _ensure_collection_with_validator(db, "subscriptions", subscriptions_validator)
+
+    db.hvacDiagnostics.create_index([("hvac_system_id", 1), ("created_at", -1)])
+    db.hvacDiagnostics.create_index([("customer_id", 1), ("created_at", -1)])

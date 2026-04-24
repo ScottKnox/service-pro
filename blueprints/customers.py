@@ -329,11 +329,21 @@ REFRIGERANT_TYPE_OPTIONS = (
     "Other",
 )
 
-ELECTRICAL_STATUS_OPTIONS = (
-    "Within Spec",
-    "Out of Spec",
-    "Near End of Life",
-    "Failed",
+CONTACTOR_CONDITION_OPTIONS = (
+    "Good",
+    "Questionable",
+    "Bad",
+)
+
+LOW_VOLTAGE_24V_OPTIONS = (
+    "Good",
+    "Below 24V",
+    "Above 24V",
+)
+
+GROUND_WIRE_PRESENT_OPTIONS = (
+    "Yes",
+    "No",
 )
 
 DIAGNOSTIC_YES_NO_OPTIONS = (
@@ -407,14 +417,6 @@ HVAC_DIAGNOSTIC_SECTIONS = (
                 "type": "text",
                 "required": False,
             },
-            {"name": "actualCfm", "label": "Actual CFM", "type": "text", "required": False},
-            {
-                "name": "designCfm",
-                "label": "Design CFM",
-                "type": "text",
-                "required": False,
-                "readonly": True,
-            },
             {"name": "temperatureDelta", "label": "Temperature Delta", "type": "text", "required": False},
             {
                 "name": "staticPressureNotes",
@@ -435,19 +437,7 @@ HVAC_DIAGNOSTIC_SECTIONS = (
                 "options": REFRIGERANT_TYPE_OPTIONS,
             },
             {"name": "suctionPressure", "label": "Suction Pressure", "type": "text", "required": False},
-            {
-                "name": "targetSuctionPressure",
-                "label": "Target Suction Pressure",
-                "type": "text",
-                "required": False,
-            },
-            {"name": "highSidePressure", "label": "High Side Pressure", "type": "text", "required": False},
-            {
-                "name": "targetHighSidePressure",
-                "label": "Target High Side Pressure",
-                "type": "text",
-                "required": False,
-            },
+            {"name": "dischargePressure", "label": "Discharge Pressure", "type": "text", "required": False},
             {"name": "superheat", "label": "Superheat", "type": "text", "required": False},
             {"name": "targetSuperheat", "label": "Target Superheat", "type": "text", "required": False},
             {"name": "subcooling", "label": "Subcooling", "type": "text", "required": False},
@@ -464,53 +454,55 @@ HVAC_DIAGNOSTIC_SECTIONS = (
         "Electrical",
         (
             {
-                "name": "supplyVoltage",
-                "label": "Supply Voltage",
-                "type": "select",
+                "name": "acCapacitorVoltage",
+                "label": "AC Capacitor Voltage",
+                "type": "text",
                 "required": False,
-                "options": ELECTRICAL_STATUS_OPTIONS,
             },
             {
-                "name": "compressorRla",
-                "label": "Compressor RLA",
-                "type": "select",
+                "name": "targetAcCapacitorVoltage",
+                "label": "Target AC Capacitor Voltage",
+                "type": "text",
                 "required": False,
-                "options": ELECTRICAL_STATUS_OPTIONS,
             },
             {
-                "name": "capacitors",
-                "label": "Capacitors",
-                "type": "select",
+                "name": "compressorAmperage",
+                "label": "Compressor Amperage",
+                "type": "text",
                 "required": False,
-                "options": ELECTRICAL_STATUS_OPTIONS,
             },
             {
-                "name": "thermostat",
-                "label": "Thermostat",
-                "type": "select",
+                "name": "targetCompressorAmperage",
+                "label": "Target Compressor Amperage",
+                "type": "text",
                 "required": False,
-                "options": ELECTRICAL_STATUS_OPTIONS,
             },
             {
-                "name": "transformers",
-                "label": "Transformers",
-                "type": "select",
+                "name": "outdoorDisconnectVoltage",
+                "label": "Outdoor Disconnect Voltage",
+                "type": "text",
                 "required": False,
-                "options": ELECTRICAL_STATUS_OPTIONS,
             },
             {
-                "name": "blowerMotorVoltage",
-                "label": "Blower Motor Voltage",
+                "name": "contactorCondition",
+                "label": "Contactor Condition",
                 "type": "select",
                 "required": False,
-                "options": ELECTRICAL_STATUS_OPTIONS,
+                "options": CONTACTOR_CONDITION_OPTIONS,
             },
             {
-                "name": "condenserFanVoltage",
-                "label": "Condenser Fan Voltage",
+                "name": "lowVoltage24V",
+                "label": "Low Voltage - 24V",
                 "type": "select",
                 "required": False,
-                "options": ELECTRICAL_STATUS_OPTIONS,
+                "options": LOW_VOLTAGE_24V_OPTIONS,
+            },
+            {
+                "name": "groundWirePresent",
+                "label": "Ground Wire Present",
+                "type": "select",
+                "required": False,
+                "options": GROUND_WIRE_PRESENT_OPTIONS,
             },
             {
                 "name": "electricalNotes",
@@ -602,12 +594,6 @@ HVAC_DIAGNOSTIC_SECTIONS = (
                 "required": False,
             },
             {
-                "name": "iaqTemperature",
-                "label": "Temperature",
-                "type": "text",
-                "required": False,
-            },
-            {
                 "name": "vocLevels",
                 "label": "VOC Levels",
                 "type": "text",
@@ -628,13 +614,6 @@ HVAC_DIAGNOSTIC_SECTIONS = (
             {
                 "name": "moldOrMildew",
                 "label": "Mold / Mildew",
-                "type": "select",
-                "required": False,
-                "options": DIAGNOSTIC_YES_NO_OPTIONS,
-            },
-            {
-                "name": "odors",
-                "label": "Odors",
                 "type": "select",
                 "required": False,
                 "options": DIAGNOSTIC_YES_NO_OPTIONS,
@@ -924,39 +903,203 @@ def _format_diagnostics_key(key):
     return str(key).replace("_", " ").strip().title()
 
 
-def _get_primary_tonnage_value(hvac_system):
-    system_type = str(hvac_system.get("system_type", "")).strip()
-    if system_type in SINGLE_TONNAGE_SYSTEM_TYPES:
-        return hvac_system.get("system_tonnage", "")
-    return hvac_system.get("cooling_capacity", "")
+_NUMERIC_VALUE_PATTERN = re.compile(r"[-+]?\d*\.?\d+")
 
 
-def _calculate_design_cfm_from_tonnage(tonnage_value):
-    tonnage_text = str(tonnage_value or "").strip()
-    if not tonnage_text:
-        return ""
+def _parse_numeric_value(raw_value):
+    if raw_value is None:
+        return None
 
-    tonnage_match = re.match(r"^(\d+(?:\.\d+)?)", tonnage_text)
-    if not tonnage_match:
-        return ""
+    if isinstance(raw_value, (int, float)):
+        return float(raw_value)
 
-    tonnage_number = float(tonnage_match.group(1))
-    design_cfm = tonnage_number * 400
-    if design_cfm.is_integer():
-        return str(int(design_cfm))
+    text = str(raw_value).strip().replace(",", "")
+    if not text:
+        return None
 
-    return str(design_cfm)
+    match = _NUMERIC_VALUE_PATTERN.search(text)
+    if not match:
+        return None
+
+    try:
+        return float(match.group(0))
+    except ValueError:
+        return None
 
 
-def _build_hvac_diagnostics_entry(form_data, hvac_system=None):
+def _normalize_condition_label(raw_condition):
+    status_text = str(raw_condition or "").strip().lower()
+    if not status_text:
+        return None
+
+    if "no data" in status_text or status_text in {"n/a", "na", "none", "unknown"}:
+        return "No Data"
+    if "within" in status_text or "normal" in status_text or status_text in {"ok", "good"}:
+        return "Within Spec"
+    if "low" in status_text:
+        return "Low"
+    if "high" in status_text or "alert" in status_text or "critical" in status_text or "fault" in status_text:
+        return "High"
+
+    return None
+
+
+def _compare_to_target(actual_value, target_value, tolerance=0.0):
+    if actual_value is None or target_value is None:
+        return "No Data"
+
+    if actual_value < (target_value - tolerance):
+        return "Low"
+    if actual_value > (target_value + tolerance):
+        return "High"
+    return "Within Spec"
+
+
+def _compare_to_range(actual_value, min_value, max_value):
+    if actual_value is None or min_value is None or max_value is None:
+        return "No Data"
+
+    if actual_value < min_value:
+        return "Low"
+    if actual_value > max_value:
+        return "High"
+    return "Within Spec"
+
+
+def _merge_conditions(*conditions):
+    filtered = [condition for condition in conditions if condition and condition != "No Data"]
+    if not filtered:
+        return "No Data"
+    if "High" in filtered:
+        return "High"
+    if "Low" in filtered:
+        return "Low"
+    return "Within Spec"
+
+
+def _derive_hvac_overall_conditions(values):
+    values = values or {}
+
+    delta_t_condition = _normalize_condition_label(
+        values.get("temperatureDeltaStatus")
+        or values.get("deltaTStatus")
+        or values.get("temperatureDeltaRange")
+    )
+    if not delta_t_condition:
+        delta_t_actual = _parse_numeric_value(values.get("temperatureDelta"))
+        delta_t_target = _parse_numeric_value(values.get("targetTemperatureDelta") or values.get("designTemperatureDelta"))
+        if delta_t_target is not None:
+            delta_t_condition = _compare_to_target(delta_t_actual, delta_t_target)
+        else:
+            # Default HVAC delta-T comfort band when no explicit target exists.
+            delta_t_condition = _compare_to_range(delta_t_actual, 16.0, 22.0)
+
+    compressor_condition = _normalize_condition_label(
+        values.get("compressorAmperageStatus")
+        or values.get("compressorStatus")
+        or values.get("compressorRange")
+        or values.get("compressorLoadStatus")
+    )
+    if not compressor_condition:
+        compressor_condition = _compare_to_target(
+            _parse_numeric_value(values.get("compressorAmperage")),
+            _parse_numeric_value(values.get("targetCompressorAmperage")),
+        )
+
+    static_pressure_condition = _normalize_condition_label(
+        values.get("staticPressureStatus")
+        or values.get("staticPressureRange")
+    )
+    if not static_pressure_condition:
+        static_pressure_condition = _compare_to_target(
+            _parse_numeric_value(values.get("totalExternalStaticPressure")),
+            _parse_numeric_value(values.get("designStaticPressure")),
+        )
+
+    capacitor_condition = _normalize_condition_label(
+        values.get("acCapacitorStatus")
+        or values.get("capacitorStatus")
+    )
+    if not capacitor_condition:
+        capacitor_condition = _compare_to_target(
+            _parse_numeric_value(values.get("acCapacitorVoltage")),
+            _parse_numeric_value(values.get("targetAcCapacitorVoltage")),
+        )
+
+    superheat_condition = _compare_to_target(
+        _parse_numeric_value(values.get("superheat")),
+        _parse_numeric_value(values.get("targetSuperheat")),
+    )
+    subcooling_condition = _compare_to_target(
+        _parse_numeric_value(values.get("subcooling")),
+        _parse_numeric_value(values.get("targetSubcooling")),
+    )
+    refrigerant_condition = _normalize_condition_label(
+        values.get("superheatSubcoolingStatus")
+        or values.get("notesOnRefrigerantStatus")
+        or values.get("refrigerantStatus")
+        or values.get("refrigerantRange")
+    )
+    if not refrigerant_condition:
+        refrigerant_condition = _merge_conditions(superheat_condition, subcooling_condition)
+
+    carbon_monoxide_condition = _normalize_condition_label(
+        values.get("carbonMonoxideStatus")
+        or values.get("coStatus")
+        or values.get("carbonMonoxideRange")
+    )
+    if not carbon_monoxide_condition:
+        carbon_monoxide_value = _parse_numeric_value(values.get("carbonMonoxide"))
+        carbon_monoxide_limit = _parse_numeric_value(
+            values.get("carbonMonoxideUpperLimit")
+            or values.get("carbonMonoxideMax")
+        )
+        if carbon_monoxide_limit is None:
+            carbon_monoxide_limit = 9.0
+
+        if carbon_monoxide_value is None:
+            carbon_monoxide_condition = "No Data"
+        elif carbon_monoxide_value < 0:
+            carbon_monoxide_condition = "Low"
+        elif carbon_monoxide_value > carbon_monoxide_limit:
+            carbon_monoxide_condition = "High"
+        else:
+            carbon_monoxide_condition = "Within Spec"
+
+    return {
+        "temperatureDeltaOverallCondition": delta_t_condition,
+        "compressorAmperageOverallCondition": compressor_condition,
+        "staticPressureOverallCondition": static_pressure_condition,
+        "acCapacitorOverallCondition": capacitor_condition,
+        "superheatSubcoolingOverallCondition": refrigerant_condition,
+        "carbonMonoxideOverallCondition": carbon_monoxide_condition,
+    }
+
+
+def _build_hvac_diagnostics_entry(form_data):
     entry = {}
     for field_name, _label in HVAC_DIAGNOSTIC_FIELDS:
         entry[field_name] = str(form_data.get(field_name, "")).strip()
 
-    if hvac_system is not None:
-        entry["designCfm"] = _calculate_design_cfm_from_tonnage(_get_primary_tonnage_value(hvac_system))
     entry["date_performed"] = datetime.now().strftime("%m/%d/%Y")
     return entry
+
+
+def _fetch_latest_hvac_diagnostic(db, hvac_system_id):
+    latest = db.hvacDiagnostics.find_one(
+        build_reference_filter("hvac_system_id", hvac_system_id),
+        sort=[("created_at", -1), ("_id", -1)],
+    )
+    return serialize_doc(latest) if latest else None
+
+
+def _fetch_hvac_diagnostics_history(db, hvac_system_id):
+    return [
+        serialize_doc(entry)
+        for entry in db.hvacDiagnostics.find(
+            build_reference_filter("hvac_system_id", hvac_system_id)
+        ).sort([("created_at", -1), ("_id", -1)])
+    ]
 
 
 def _parse_date_performed(value):
@@ -1020,6 +1163,8 @@ def _build_latest_diagnostics_card(diagnostics):
             value = str(raw_value).strip()
         values[field_name] = value
 
+    values.update(_derive_hvac_overall_conditions(values))
+
     if not date_performed and not results:
         return None
 
@@ -1031,8 +1176,8 @@ def _build_latest_diagnostics_card(diagnostics):
     }
 
 
-def _build_hvac_diagnostic_detail(hvac_system, diagnostic_index):
-    sorted_diagnostics = _sort_diagnostics_by_date_desc(hvac_system.get("diagnostics", []))
+def _build_hvac_diagnostic_detail(diagnostics_entries, diagnostic_index):
+    sorted_diagnostics = _sort_diagnostics_by_date_desc(diagnostics_entries)
     if diagnostic_index < 0 or diagnostic_index >= len(sorted_diagnostics):
         return None
 
@@ -1124,7 +1269,8 @@ def _build_hvac_component_view_payload(db, customer_id, reference_type, referenc
     if component_key not in allowed_component_keys:
         return None
 
-    diagnostics = _build_latest_diagnostics_card(serialized_system.get("diagnostics", {}))
+    latest_diagnostic = _fetch_latest_hvac_diagnostic(db, reference_id)
+    diagnostics = _build_latest_diagnostics_card(latest_diagnostic)
 
     if component_key == "ductwork":
         ductwork = _extract_hvac_ductwork(serialized_system) or {}
@@ -1208,7 +1354,8 @@ def _build_hvac_detail_payload(db, customer_id, reference_type, reference_id):
 
     serialized_system = serialize_doc(hvac_system)
     components = _load_hvac_components_for_system(db, customer_id, serialized_system)
-    diagnostics = _build_latest_diagnostics_card(serialized_system.get("diagnostics", {}))
+    latest_diagnostic = _fetch_latest_hvac_diagnostic(db, reference_id)
+    diagnostics = _build_latest_diagnostics_card(latest_diagnostic)
     reports = []
     for report in serialized_system.get("reports", []):
         if not isinstance(report, dict):
@@ -1823,6 +1970,62 @@ def view_hvac_system(customerId, reference_type, reference_id):
     )
 
 
+@bp.route("/customers/<customerId>/hvac/<reference_type>/<reference_id>/diagnostics")
+def view_hvac_diagnostics(customerId, reference_type, reference_id):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers.customers"))
+    property_id = str(request.args.get("property_id") or "").strip()
+    if reference_type != "system":
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    hvac_system = db.hvacSystems.find_one({"$and": [{"_id": object_id_or_404(reference_id)}, build_reference_filter("customer_id", customerId)]})
+    if not hvac_system:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    if property_id:
+        if str(hvac_system.get("property_id") or "").strip() != property_id:
+            return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    serialized_system = serialize_doc(hvac_system)
+    diagnostics_entries = _sort_diagnostics_by_date_desc(_fetch_hvac_diagnostics_history(db, reference_id))
+    if not diagnostics_entries:
+        return redirect(
+            url_for(
+                "customers.view_hvac_system",
+                customerId=customerId,
+                reference_type=reference_type,
+                reference_id=reference_id,
+                property_id=property_id,
+            )
+        )
+
+    return render_template(
+        "equipment/view_hvac_diagnostic.html",
+        customerId=customerId,
+        customer=serialize_doc(customer),
+        reference_type=reference_type,
+        reference_id=reference_id,
+        hvac_system=serialized_system,
+        diagnostics=[
+            {
+                "diagnostic_index": diagnostic_index,
+                "date_performed": str(entry.get("date_performed", "")).strip() or "-",
+                "system_type": serialized_system.get("system_type", "HVAC System"),
+                "result_count": sum(
+                    1
+                    for field_name, _field_label in HVAC_DIAGNOSTIC_FIELDS
+                    if str(entry.get(field_name, "")).strip()
+                ),
+            }
+            for diagnostic_index, entry in enumerate(diagnostics_entries)
+        ],
+        latest_date_performed=str(diagnostics_entries[0].get("date_performed", "")).strip() or "-",
+        property_id=property_id,
+    )
+
+
 @bp.route("/customers/<customerId>/hvac/<reference_type>/<reference_id>/diagnostics/<int:diagnostic_index>")
 def view_hvac_diagnostic(customerId, reference_type, reference_id, diagnostic_index):
     db = ensure_connection_or_500()
@@ -1842,11 +2045,12 @@ def view_hvac_diagnostic(customerId, reference_type, reference_id, diagnostic_in
             return redirect(url_for("customers.view_customer", customerId=customerId))
 
     serialized_system = serialize_doc(hvac_system)
-    diagnostic_detail = _build_hvac_diagnostic_detail(serialized_system, diagnostic_index)
+    diagnostics_entries = _sort_diagnostics_by_date_desc(_fetch_hvac_diagnostics_history(db, reference_id))
+    diagnostic_detail = _build_hvac_diagnostic_detail(diagnostics_entries, diagnostic_index)
     if not diagnostic_detail:
         return redirect(
             url_for(
-                "customers.view_hvac_system",
+                "customers.view_hvac_diagnostics",
                 customerId=customerId,
                 reference_type=reference_type,
                 reference_id=reference_id,
@@ -1855,7 +2059,7 @@ def view_hvac_diagnostic(customerId, reference_type, reference_id, diagnostic_in
         )
 
     return render_template(
-        "equipment/view_hvac_diagnostic.html",
+        "equipment/view_hvac_diagnostic_detail.html",
         customerId=customerId,
         customer=serialize_doc(customer),
         reference_type=reference_type,
@@ -1889,23 +2093,24 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
         field_name: ""
         for field_name, _label in HVAC_DIAGNOSTIC_FIELDS
     }
-    form_data["designCfm"] = _calculate_design_cfm_from_tonnage(_get_primary_tonnage_value(hvac_system))
 
     if request.method == "POST":
         form_data = {
             field_name: request.form.get(field_name, "").strip()
             for field_name, _label in HVAC_DIAGNOSTIC_FIELDS
         }
-        form_data["designCfm"] = _calculate_design_cfm_from_tonnage(_get_primary_tonnage_value(hvac_system))
 
-        diagnostics_entry = _build_hvac_diagnostics_entry(form_data, hvac_system)
-        existing_diagnostics = _sort_diagnostics_by_date_desc(hvac_system.get("diagnostics", []))
-        diagnostics_history = _sort_diagnostics_by_date_desc([diagnostics_entry, *existing_diagnostics])
-
-        db.hvacSystems.update_one(
-            {"_id": hvac_system["_id"]},
-            {"$set": {"diagnostics": diagnostics_history}},
+        diagnostics_entry = _build_hvac_diagnostics_entry(form_data)
+        diagnostics_entry.update(
+            {
+                "hvac_system_id": reference_value(reference_id),
+                "customer_id": reference_value(customerId),
+                "property_id": reference_value(property_id) if property_id else None,
+                "created_at": datetime.utcnow(),
+            }
         )
+
+        db.hvacDiagnostics.insert_one(diagnostics_entry)
 
         return redirect(
             url_for(
@@ -1950,14 +2155,21 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
             return redirect(url_for("customers.view_customer", customerId=customerId))
 
     serialized_system = serialize_doc(hvac_system)
-    diagnostics_list = serialized_system.get("diagnostics", [])
-    sorted_diagnostics = _sort_diagnostics_by_date_desc(diagnostics_list)
-    raw_diagnostics = sorted_diagnostics[0] if sorted_diagnostics else None
-    diagnostics_card = _build_latest_diagnostics_card(sorted_diagnostics)
+    diagnostics_entries = _sort_diagnostics_by_date_desc(_fetch_hvac_diagnostics_history(db, reference_id))
+    diagnostic_index_raw = request.form.get("diagnostic_index", "").strip()
+    selected_index = 0
+    if diagnostic_index_raw:
+        try:
+            selected_index = max(0, int(diagnostic_index_raw))
+        except ValueError:
+            selected_index = 0
+
+    raw_diagnostics = diagnostics_entries[selected_index] if selected_index < len(diagnostics_entries) else None
+    diagnostics_card = _build_latest_diagnostics_card(raw_diagnostics)
     if not diagnostics_card:
         return redirect(
             url_for(
-                "customers.view_hvac_system",
+                "customers.view_hvac_diagnostics",
                 customerId=customerId,
                 reference_type=reference_type,
                 reference_id=reference_id,
@@ -1976,6 +2188,7 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
         diagnostics_card=diagnostics_card,
         report_number=report_number,
         raw_diagnostics=raw_diagnostics,
+        business=serialize_doc(db.businesses.find_one({"_id": _resolve_current_business_id(db)}) or {}),
     )
     filename = os.path.basename(report_path)
     report_item = {
@@ -2239,6 +2452,15 @@ def delete_hvac_system(customerId, reference_type, reference_id):
         existing_component = _find_existing_hvac_component(db, customerId, serialized_system, collection_name)
         if existing_component:
             db[collection_name].delete_one({"$and": [{"_id": existing_component["_id"]}, build_reference_filter("customer_id", customerId)]})
+
+    db.hvacDiagnostics.delete_many(
+        {
+            "$and": [
+                build_reference_filter("hvac_system_id", reference_id),
+                build_reference_filter("customer_id", customerId),
+            ]
+        }
+    )
 
     db.hvacSystems.delete_one({"$and": [{"_id": hvac_system["_id"]}, build_reference_filter("customer_id", customerId)]})
 

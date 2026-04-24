@@ -101,6 +101,16 @@
                       <span class="jobs-card-value">{% if job.services %}{{ job.job_type }}{% else %}No services added.{% endif %}</span>
                     </div>
                     <div class="jobs-card-row">
+                      <span class="jobs-card-label">Job Type</span>
+                      <span class="jobs-card-value">{% if job.job_kind == 'recurring_occurrence' %}{{ job.recurrence_summary|default('Recurring', true) }}{% else %}One-Time{% endif %}</span>
+                    </div>
+                    {% if job.job_kind == 'recurring_occurrence' %}
+                    <div class="jobs-card-row">
+                      <span class="jobs-card-label">Series Status</span>
+                      <span class="jobs-card-value">{{ job.recurring_series_status|default('Unknown', true) }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="jobs-card-row">
                       <span class="jobs-card-label">City</span>
                       <span class="jobs-card-value">{{ job.city }}</span>
                     </div>

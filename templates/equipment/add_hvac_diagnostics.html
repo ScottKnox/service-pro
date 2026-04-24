@@ -59,7 +59,7 @@
                       {% if field.readonly %}
                         <input
                           id="{{ field.name }}"
-                          class="hvac-diagnostics-readonly-input{% if field.name == 'designCfm' %} hvac-diagnostics-calculated-input{% endif %}"
+                          class="hvac-diagnostics-readonly-input"
                           type="text"
                           autocomplete="off"
                           value="{{ form_data[field.name]|default('') }}"
@@ -106,9 +106,6 @@
       const returnField = document.getElementById('returnStaticPressure');
       const totalField = document.getElementById('totalExternalStaticPressure');
       const totalFieldHidden = document.getElementById('totalExternalStaticPressure_hidden');
-      const designCfmField = document.getElementById('designCfm');
-      const designCfmFieldHidden = document.getElementById('designCfm_hidden');
-      const hvacSystemTonnage = {% if hvac_system.get('system_type') in ('Split System Heat Pump with Air Handler', 'Mini Split System') %}{{ hvac_system.get('system_tonnage', '')|tojson }}{% else %}{{ hvac_system.get('cooling_capacity', '')|tojson }}{% endif %};
 
       if (!supplyField || !returnField || !totalField || !totalFieldHidden) {
         return;
@@ -135,33 +132,9 @@
         totalFieldHidden.value = normalizedValue;
       };
 
-      const parseTonnage = (value) => {
-        const match = String(value || '').trim().match(/^(\d+(?:\.\d+)?)/);
-        return match ? Number.parseFloat(match[1]) : null;
-      };
-
-      const updateDesignCfm = () => {
-        if (!designCfmField || !designCfmFieldHidden) {
-          return;
-        }
-
-        const tonnage = parseTonnage(hvacSystemTonnage);
-        if (tonnage === null) {
-          designCfmField.value = '';
-          designCfmFieldHidden.value = '';
-          return;
-        }
-
-        const designCfm = tonnage * 400;
-        const normalizedValue = Number.isInteger(designCfm) ? String(designCfm) : String(designCfm);
-        designCfmField.value = normalizedValue;
-        designCfmFieldHidden.value = normalizedValue;
-      };
-
       supplyField.addEventListener('input', updateTotalPressure);
       returnField.addEventListener('input', updateTotalPressure);
       updateTotalPressure();
-      updateDesignCfm();
     })();
   </script>
 {% endblock %}

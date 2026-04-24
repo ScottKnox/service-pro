@@ -125,7 +125,6 @@
 
         <h2 class="create-job-form-section-header">Job Details</h2>
         <p class="form-field-note form-field-note--compact">* Leave Scheduled Date / Time blank if you'll schedule this job later.</p>
-        <span id="error-job-details" class="form-field-error" style="display:none;"></span>
 
         <div class="add-customer-form-row job-details-layout">
           <div class="job-details-stack">
@@ -134,16 +133,33 @@
               {% set date_parts = job.scheduled_date.split('/') %}
               {% set job_date_value = date_parts[2] + '-' + date_parts[0] + '-' + date_parts[1] if date_parts|length == 3 else '' %}
               <input id="job-date" name="job_date" type="date" value="{{ job_date_value }}" />
+              <span id="error-date" class="form-field-error" style="display:none;">Scheduled Date is required</span>
             </div>
 
             <div class="add-customer-form-field">
               <label for="job-time">Scheduled Time</label>
               <input id="job-time" name="job_time" type="time" value="{{ job.scheduled_time|default('', true) }}" />
+              <span id="error-time" class="form-field-error" style="display:none;">Scheduled Time is required</span>
               <button id="clear-date-time" type="button">Clear Date and Time</button>
             </div>
           </div>
 
           <div class="job-details-stack">
+            <div class="add-customer-form-field">
+              <label for="job-schedule-type">Job Type</label>
+              {% if recurrence_locked %}
+                <input type="hidden" name="job_schedule_type" value="recurring" />
+                <select id="job-schedule-type" name="job_schedule_type_locked" data-job-schedule-type disabled>
+                  <option value="recurring" selected>Recurring</option>
+                </select>
+              {% else %}
+                <select id="job-schedule-type" name="job_schedule_type" data-job-schedule-type>
+                  <option value="one_time" {% if recurrence_state.schedule_type != 'recurring' %}selected{% endif %}>One-Time</option>
+                  <option value="recurring" {% if recurrence_state.schedule_type == 'recurring' %}selected{% endif %}>Recurring</option>
+                </select>
+              {% endif %}
+            </div>
+
             <div class="add-customer-form-field">
               <label for="job-assigned-employee">Assigned Employee</label>
               <select id="job-assigned-employee" name="job_assigned_employee" required>
@@ -152,19 +168,59 @@
                   <option value="{{ employee.name }}" {% if job.assigned_employee == employee.name %}selected{% endif %}>{{ employee.name }}</option>
                 {% endfor %}
               </select>
+              <span id="error-assigned-employee" class="form-field-error" style="display:{% if job.assigned_employee %}none{% else %}block{% endif %};">Assigned Employee is required</span>
             </div>
 
             <div class="add-customer-form-field">
-              <label for="job-notes">Add Note</label>
-              <textarea id="job-notes" name="job_notes" rows="4" placeholder="Access notes, parts needed, and special instructions"></textarea>
+              <label for="invoice-notes">Invoice Note</label>
+              <textarea id="invoice-notes" name="invoice_notes" rows="4" placeholder="Add a note that will appear on the invoice">{{ job.invoice_notes|default('', true) }}</textarea>
             </div>
           </div>
         </div>
 
+        <div class="add-customer-form-row add-customer-form-row--top-aligned" id="job-recurring-settings" {% if recurrence_state.schedule_type != 'recurring' %}hidden{% endif %}>
+          <div class="add-customer-form-field">
+            <label for="recurring-frequency">Frequency</label>
+            <select id="recurring-frequency" name="recurring_frequency">
+              <option value="">-- Select frequency --</option>
+              {% for frequency_value, frequency_label in recurring_frequency_options %}
+                <option value="{{ frequency_value }}" {% if recurrence_state.frequency == frequency_value %}selected{% endif %}>{{ frequency_label }}</option>
+              {% endfor %}
+            </select>
+            <span id="error-recurring-frequency" class="form-field-error" style="display:none;">Frequency is required</span>
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="recurring-end-type">Ends</label>
+            <select id="recurring-end-type" name="recurring_end_type">
+              {% for end_value, end_label in recurring_end_type_options %}
+                <option value="{{ end_value }}" {% if recurrence_state.end_type == end_value %}selected{% endif %}>{{ end_label }}</option>
+              {% endfor %}
+            </select>
+            <span id="error-recurring-end-type" class="form-field-error" style="display:none;">Ends is required</span>
+          </div>
+
+          <div class="add-customer-form-field" id="recurring-end-date-wrap" {% if recurrence_state.schedule_type != 'recurring' or recurrence_state.end_type != 'on_date' %}hidden{% endif %}>
+            <label for="recurring-end-date">End Date</label>
+            <input id="recurring-end-date" name="recurring_end_date" type="date" value="{% if recurrence_state.end_date %}{% set recurring_end_parts = recurrence_state.end_date.split('/') %}{% if recurring_end_parts|length == 3 %}{{ recurring_end_parts[2] }}-{{ recurring_end_parts[0] }}-{{ recurring_end_parts[1] }}{% endif %}{% endif %}" />
+            <span id="error-recurring-end-date" class="form-field-error" style="display:none;">End Date is required</span>
+          </div>
+
+          <div class="add-customer-form-field" id="recurring-end-after-wrap" {% if recurrence_state.schedule_type != 'recurring' or recurrence_state.end_type != 'after_occurrences' %}hidden{% endif %}>
+            <label for="recurring-end-after">Number of Visits</label>
+            <input id="recurring-end-after" name="recurring_end_after" type="number" min="1" step="1" value="{{ recurrence_state.max_occurrences }}" />
+            <span id="error-recurring-end-after" class="form-field-error" style="display:none;">Number of Visits is required</span>
+          </div>
+        </div>
+
+        {% if recurrence_locked %}
+        <p class="form-field-note form-field-note--compact">Updating this recurring job changes this occurrence and the recurring schedule defaults used for future visits.</p>
+        {% endif %}
+
         {% if job.notes and job.notes|length > 0 %}
         <div class="add-customer-form-row add-customer-form-row--single">
           <div class="add-customer-form-field">
-            <label>Previous Notes</label>
+            <label>Communication Notes</label>
             <div style="border: 1px solid #ddd; padding: 1rem; border-radius: 4px; background-color: #f9f9f9;">
               {% for note in job.notes %}
                 <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #ddd;">
@@ -178,7 +234,6 @@
         {% endif %}
 
         <h2 class="create-job-form-section-header">Services Provided</h2>
-        <span id="error-services" class="form-field-error" style="display:none;">At least one service must be selected</span>
 
         <div id="job-services-list">
           {% if job.services %}
@@ -192,6 +247,7 @@
                     <option value="{{ available_service.service_code }}" {% if available_service.service_code == service.code or available_service.service_name == service.type %}selected{% endif %}>{{ available_service.service_name }} ({{ available_service.service_code }})</option>
                   {% endfor %}
                 </select>
+                {% if loop.first %}<span id="error-service-code" class="form-field-error" style="display:none;">At least one service must be selected</span>{% endif %}
               </div>
 
               <div class="add-customer-form-field">
@@ -221,6 +277,7 @@
                     <option value="{{ service.service_code }}">{{ service.service_name }} ({{ service.service_code }})</option>
                   {% endfor %}
                 </select>
+                <span id="error-service-code" class="form-field-error" style="display:none;">At least one service must be selected</span>
               </div>
 
               <div class="add-customer-form-field">

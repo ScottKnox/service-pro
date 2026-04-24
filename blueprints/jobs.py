@@ -1,4 +1,5 @@
-from datetime import datetime
+import calendar
+from datetime import datetime, timedelta
 import json
 import os
 
@@ -7,7 +8,7 @@ from flask import Blueprint, current_app, jsonify, redirect, render_template, re
 from flask_mail import Message
 
 from invoice_generator import generate_estimate, generate_invoice
-from mongo import build_reference_filter, ensure_connection_or_500, object_id_or_404, reference_value, serialize_doc
+from mongo import build_reference_filter, coerce_object_id, ensure_connection_or_500, object_id_or_404, reference_value, serialize_doc
 from utils.catalog import (
     build_discount_catalog,
     build_job_discounts_from_form,
@@ -27,6 +28,295 @@ from utils.csv_export import build_csv_export_response
 from utils.formatters import format_date
 
 bp = Blueprint("jobs", __name__)
+
+RECURRING_FREQUENCY_OPTIONS = (
+    ("weekly", "Weekly"),
+    ("biweekly", "Every 2 Weeks"),
+    ("monthly", "Monthly"),
+    ("quarterly", "Quarterly"),
+    ("semiannual", "Semiannual"),
+    ("annual", "Annual"),
+)
+
+RECURRING_FREQUENCY_LABELS = dict(RECURRING_FREQUENCY_OPTIONS)
+
+RECURRING_END_TYPE_OPTIONS = (
+    ("never", "Never"),
+    ("on_date", "On Date"),
+    ("after_occurrences", "After Number of Visits"),
+)
+
+
+def _parse_mmddyyyy_date(date_text):
+    raw_date = str(date_text or "").strip()
+    if not raw_date:
+        return None
+    try:
+        return datetime.strptime(raw_date, "%m/%d/%Y")
+    except ValueError:
+        return None
+
+
+def _format_mmddyyyy_date(value):
+    if not value:
+        return ""
+    return value.strftime("%m/%d/%Y")
+
+
+def _add_months(value, months):
+    if not value:
+        return None
+
+    month_index = (value.month - 1) + months
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(value.day, calendar.monthrange(year, month)[1])
+    return value.replace(year=year, month=month, day=day)
+
+
+def _advance_recurring_date(value, frequency):
+    if not value:
+        return None
+
+    if frequency == "weekly":
+        return value + timedelta(days=7)
+    if frequency == "biweekly":
+        return value + timedelta(days=14)
+    if frequency == "monthly":
+        return _add_months(value, 1)
+    if frequency == "quarterly":
+        return _add_months(value, 3)
+    if frequency == "semiannual":
+        return _add_months(value, 6)
+    if frequency == "annual":
+        return _add_months(value, 12)
+    return None
+
+
+def _build_recurrence_summary(frequency):
+    label = RECURRING_FREQUENCY_LABELS.get(str(frequency or "").strip(), "")
+    return f"Recurring {label}".strip() if label else ""
+
+
+def _build_recurrence_form_state(job=None, series=None):
+    if job and str(job.get("job_kind") or "").strip() == "recurring_occurrence":
+        source = series or {}
+        return {
+            "schedule_type": "recurring",
+            "frequency": str(source.get("frequency") or "").strip(),
+            "end_type": str(source.get("end_type") or "never").strip() or "never",
+            "end_date": str(source.get("end_date") or "").strip(),
+            "max_occurrences": str(source.get("max_occurrences") or "").strip(),
+        }
+
+    return {
+        "schedule_type": "one_time",
+        "frequency": "",
+        "end_type": "never",
+        "end_date": "",
+        "max_occurrences": "",
+    }
+
+
+def _parse_recurrence_request(request_obj, scheduled_date, scheduled_time, existing_series=None, lock_to_recurring=False):
+    requested_type = str(request_obj.form.get("job_schedule_type") or "one_time").strip() or "one_time"
+    schedule_type = "recurring" if lock_to_recurring else requested_type
+    frequency = str(request_obj.form.get("recurring_frequency") or "").strip()
+    end_type = str(request_obj.form.get("recurring_end_type") or "never").strip() or "never"
+    end_date = format_date(request_obj.form.get("recurring_end_date", "")) if end_type == "on_date" else ""
+
+    max_occurrences = None
+    raw_max_occurrences = str(request_obj.form.get("recurring_end_after", "")).strip()
+    if end_type == "after_occurrences" and raw_max_occurrences.isdigit():
+        max_occurrences = max(int(raw_max_occurrences), 1)
+
+    if schedule_type != "recurring":
+        return {
+            "schedule_type": "one_time",
+            "is_recurring": False,
+            "frequency": "",
+            "end_type": "never",
+            "end_date": "",
+            "max_occurrences": None,
+            "summary": "",
+        }
+
+    if not (scheduled_date and scheduled_time and frequency in RECURRING_FREQUENCY_LABELS):
+        if existing_series:
+            return {
+                "schedule_type": "recurring",
+                "is_recurring": True,
+                "frequency": str(existing_series.get("frequency") or "").strip(),
+                "end_type": str(existing_series.get("end_type") or "never").strip() or "never",
+                "end_date": str(existing_series.get("end_date") or "").strip(),
+                "max_occurrences": existing_series.get("max_occurrences"),
+                "summary": _build_recurrence_summary(existing_series.get("frequency")),
+            }
+        return {
+            "schedule_type": "one_time",
+            "is_recurring": False,
+            "frequency": "",
+            "end_type": "never",
+            "end_date": "",
+            "max_occurrences": None,
+            "summary": "",
+        }
+
+    return {
+        "schedule_type": "recurring",
+        "is_recurring": True,
+        "frequency": frequency,
+        "end_type": end_type,
+        "end_date": end_date,
+        "max_occurrences": max_occurrences,
+        "summary": _build_recurrence_summary(frequency),
+    }
+
+
+def _series_allows_occurrence(series_doc, occurrence_index, scheduled_date):
+    if not series_doc or str(series_doc.get("status") or "").strip() != "Active":
+        return False
+
+    end_type = str(series_doc.get("end_type") or "never").strip() or "never"
+    if end_type == "after_occurrences":
+        max_occurrences = series_doc.get("max_occurrences")
+        if isinstance(max_occurrences, int) and max_occurrences > 0 and occurrence_index > max_occurrences:
+            return False
+
+    if end_type == "on_date":
+        end_date = _parse_mmddyyyy_date(series_doc.get("end_date"))
+        scheduled_dt = _parse_mmddyyyy_date(scheduled_date)
+        if end_date and scheduled_dt and scheduled_dt > end_date:
+            return False
+
+    return True
+
+
+def _build_recurring_series_document(customer, business_id, selected_property, selected_property_id, primary_service, services, parts, labors, materials, equipments, discounts, total, assigned_employee, recurring_data, scheduled_date, scheduled_time, request_obj):
+    series_anchor_date = scheduled_date
+    anchor_date_dt = _parse_mmddyyyy_date(series_anchor_date)
+    next_occurrence_date = _advance_recurring_date(anchor_date_dt, recurring_data.get("frequency"))
+    next_occurrence_text = _format_mmddyyyy_date(next_occurrence_date)
+
+    series_doc = {
+        "customer_id": reference_value(customer.get("_id")),
+        "customer_name": f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
+        "company": customer.get("company", ""),
+        "property_id": selected_property_id if selected_property else "",
+        "property_name": (selected_property or {}).get("property_name") or "",
+        "job_type": primary_service,
+        "services": services,
+        "parts": parts,
+        "labors": labors,
+        "materials": materials,
+        "equipments": equipments,
+        "discounts": discounts,
+        "status": "Active",
+        "frequency": recurring_data.get("frequency"),
+        "anchor_date": series_anchor_date,
+        "anchor_time": scheduled_time,
+        "end_type": recurring_data.get("end_type") or "never",
+        "end_date": recurring_data.get("end_date") or "",
+        "max_occurrences": recurring_data.get("max_occurrences"),
+        "next_occurrence_date": next_occurrence_text,
+        "last_generated_occurrence_index": 0,
+        "address_line_1": request_obj.form.get("job_address_line_1", "").strip(),
+        "address_line_2": request_obj.form.get("job_address_line_2", "").strip(),
+        "city": request_obj.form.get("job_city", "").strip(),
+        "state": request_obj.form.get("job_state", "").strip().upper(),
+        "zip_code": request_obj.form.get("job_zip_code", "").strip(),
+        "assigned_employee": assigned_employee,
+        "total": f"${total:.2f}" if total else "$0.00",
+        "total_amount": float(total or 0.0),
+        "invoice_notes": request_obj.form.get("invoice_notes", "").strip(),
+        "business_id": business_id,
+        "created_at": datetime.utcnow(),
+    }
+
+    if next_occurrence_text and not _series_allows_occurrence(series_doc, 2, next_occurrence_text):
+        series_doc["next_occurrence_date"] = ""
+
+    return series_doc
+
+
+def _create_occurrence_from_series(db, series_doc, scheduled_date, occurrence_index):
+    if not series_doc:
+        return None
+
+    series_id = series_doc.get("_id")
+    if series_id and db.jobs.find_one({"series_id": series_id, "occurrence_index": occurrence_index}):
+        return None
+
+    if not _series_allows_occurrence(series_doc, occurrence_index, scheduled_date):
+        if series_id:
+            db.recurring_job_series.update_one(
+                {"_id": series_id},
+                {"$set": {"next_occurrence_date": "", "last_generated_occurrence_index": occurrence_index - 1}},
+            )
+        return None
+
+    services = list(series_doc.get("services") or [])
+    parts = list(series_doc.get("parts") or [])
+    labors = list(series_doc.get("labors") or [])
+    materials = list(series_doc.get("materials") or [])
+    equipments = list(series_doc.get("equipments") or [])
+    discounts = list(series_doc.get("discounts") or [])
+    scheduled_time = str(series_doc.get("anchor_time") or "").strip()
+    occurrence_doc = {
+        "customer_id": series_doc.get("customer_id"),
+        "customer_name": str(series_doc.get("customer_name") or "").strip(),
+        "company": str(series_doc.get("company") or "").strip(),
+        "property_id": series_doc.get("property_id") or "",
+        "property_name": str(series_doc.get("property_name") or "").strip(),
+        "job_type": str(series_doc.get("job_type") or "No services added.").strip(),
+        "services": services,
+        "parts": parts,
+        "labors": labors,
+        "materials": materials,
+        "equipments": equipments,
+        "discounts": discounts,
+        "status": resolve_job_status(scheduled_date, scheduled_time, services, parts, labors, materials, equipments, discounts),
+        "scheduled_date": scheduled_date,
+        "scheduled_time": scheduled_time,
+        "dateScheduled": datetime.now().strftime("%m/%d/%Y") if (scheduled_date and scheduled_time) else "",
+        "address_line_1": str(series_doc.get("address_line_1") or "").strip(),
+        "address_line_2": str(series_doc.get("address_line_2") or "").strip(),
+        "city": str(series_doc.get("city") or "").strip(),
+        "state": str(series_doc.get("state") or "").strip().upper(),
+        "zip_code": str(series_doc.get("zip_code") or "").strip(),
+        "assigned_employee": str(series_doc.get("assigned_employee") or "").strip(),
+        "total": str(series_doc.get("total") or "$0.00").strip() or "$0.00",
+        "total_amount": float(series_doc.get("total_amount") or 0.0),
+        "invoice_notes": str(series_doc.get("invoice_notes") or "").strip(),
+        "date_created": datetime.now().strftime("%m/%d/%Y"),
+        "created_at": datetime.utcnow(),
+        "invoices": [],
+        "business_id": series_doc.get("business_id"),
+        "job_kind": "recurring_occurrence",
+        "series_id": series_id,
+        "occurrence_index": occurrence_index,
+        "recurrence_summary": _build_recurrence_summary(series_doc.get("frequency")),
+    }
+    inserted = db.jobs.insert_one(occurrence_doc)
+
+    current_occurrence_date = _parse_mmddyyyy_date(scheduled_date)
+    next_occurrence_date = _advance_recurring_date(current_occurrence_date, series_doc.get("frequency"))
+    next_occurrence_text = _format_mmddyyyy_date(next_occurrence_date)
+    if next_occurrence_text and not _series_allows_occurrence(series_doc, occurrence_index + 1, next_occurrence_text):
+        next_occurrence_text = ""
+
+    if series_id:
+        db.recurring_job_series.update_one(
+            {"_id": series_id},
+            {
+                "$set": {
+                    "last_generated_occurrence_index": occurrence_index,
+                    "next_occurrence_date": next_occurrence_text,
+                }
+            },
+        )
+
+    return str(inserted.inserted_id)
 
 
 def _combine_scheduled_datetime(date_text, time_text):
@@ -248,10 +538,35 @@ def _resolve_selected_property(customer, property_id):
 @bp.route("/jobs")
 def jobs():
     db = ensure_connection_or_500()
-    jobs_list = [
-        serialize_doc(job)
-        for job in db.jobs.find().sort([("scheduled_date", 1), ("date_created", -1), ("_id", -1)])
-    ]
+    jobs_docs = list(db.jobs.find().sort([("scheduled_date", 1), ("date_created", -1), ("_id", -1)]))
+    recurring_series_ids = {
+        coerce_object_id(job.get("series_id"))
+        for job in jobs_docs
+        if str(job.get("job_kind") or "").strip() == "recurring_occurrence" and coerce_object_id(job.get("series_id")) is not None
+    }
+    recurring_series_ids.discard(None)
+
+    recurring_status_by_series_id = {}
+    if recurring_series_ids:
+        recurring_series_docs = db.recurring_job_series.find(
+            {"_id": {"$in": list(recurring_series_ids)}},
+            {"status": 1},
+        )
+        recurring_status_by_series_id = {
+            str(series.get("_id")): str(series.get("status") or "").strip()
+            for series in recurring_series_docs
+        }
+
+    jobs_list = []
+    for job_doc in jobs_docs:
+        serialized = serialize_doc(job_doc)
+        if str(serialized.get("job_kind") or "").strip() == "recurring_occurrence":
+            series_key = str(serialized.get("series_id") or "").strip()
+            serialized["recurring_series_status"] = recurring_status_by_series_id.get(series_key) or "Unknown"
+        else:
+            serialized["recurring_series_status"] = ""
+        jobs_list.append(serialized)
+
     return render_template("jobs/jobs.html", jobs=jobs_list)
 
 
@@ -387,16 +702,36 @@ def create_job(customerId):
         job_status = resolve_job_status(scheduled_date, scheduled_time, services, parts, labors, materials, equipments, discounts)
 
         assigned_employee = request.form.get("job_assigned_employee", "").strip()
-        
-        # Initialize notes collection with the first note if provided
-        notes_collection = []
-        initial_note = request.form.get("job_notes", "").strip()
-        if initial_note:
-            notes_collection.append({
-                "text": initial_note,
-                "date": datetime.now().strftime("%m/%d/%Y %H:%M:%S")
-            })
-        
+        recurring_data = _parse_recurrence_request(request, scheduled_date, scheduled_time)
+        invoice_notes = request.form.get("invoice_notes", "").strip()
+
+        if recurring_data.get("is_recurring"):
+            series_doc = _build_recurring_series_document(
+                customer,
+                business_id,
+                selected_property,
+                selected_property_id,
+                primary_service,
+                services,
+                parts,
+                labors,
+                materials,
+                equipments,
+                discounts,
+                total,
+                assigned_employee,
+                recurring_data,
+                scheduled_date,
+                scheduled_time,
+                request,
+            )
+            series_inserted = db.recurring_job_series.insert_one(series_doc)
+            series_doc["_id"] = series_inserted.inserted_id
+            created_occurrence_id = _create_occurrence_from_series(db, series_doc, scheduled_date, 1)
+            if created_occurrence_id:
+                current_app.logger.info("Recurring job series created: series_id=%s occurrence_id=%s customer_id=%s by employee_id=%s", str(series_inserted.inserted_id), created_occurrence_id, customerId, session.get("employee_id"))
+                return redirect(url_for("jobs.view_job", jobId=created_occurrence_id))
+
         new_job = {
             "customer_id": reference_value(customerId),
             "customer_name": f"{customer.get('first_name', '')} {customer.get('last_name', '')}".strip(),
@@ -422,10 +757,15 @@ def create_job(customerId):
             "assigned_employee": assigned_employee,
             "total": f"${total:.2f}" if total else "$0.00",
             "total_amount": float(total or 0.0),
-            "notes": notes_collection,
+            "invoice_notes": invoice_notes,
             "date_created": datetime.now().strftime("%m/%d/%Y"),
+            "created_at": datetime.utcnow(),
             "invoices": [],
             "business_id": business_id,
+            "job_kind": "one_time",
+            "series_id": None,
+            "occurrence_index": None,
+            "recurrence_summary": "",
         }
         inserted = db.jobs.insert_one(new_job)
         current_app.logger.info("Job created: id=%s customer_id=%s by employee_id=%s", str(inserted.inserted_id), customerId, session.get("employee_id"))
@@ -487,6 +827,10 @@ def create_job(customerId):
         discounts_catalog=discounts_catalog,
         parts_by_id=parts_by_id,
         materials_by_id=materials_by_id,
+        recurring_frequency_options=RECURRING_FREQUENCY_OPTIONS,
+        recurring_end_type_options=RECURRING_END_TYPE_OPTIONS,
+        recurrence_state=_build_recurrence_form_state(),
+        recurrence_locked=False,
     )
 
 
@@ -583,7 +927,7 @@ def create_estimate(customerId):
         total = services_total + parts_total + labor_total + materials_total + equipment_total - discounts_total
 
         estimated_by_employee = request.form.get("job_assigned_employee", "").strip()
-        estimate_notes = request.form.get("estimate_notes", "").strip() or request.form.get("job_notes", "").strip()
+        estimate_notes = request.form.get("estimate_notes", "").strip()
 
         new_estimate = {
             "customer_id": reference_value(customerId),
@@ -847,7 +1191,7 @@ def update_estimate(estimateId):
         total = services_total + parts_total + labor_total + materials_total + equipment_total - discounts_total
 
         estimated_by_employee = request.form.get("job_assigned_employee", "").strip()
-        estimate_notes = request.form.get("estimate_notes", "").strip() or request.form.get("job_notes", "").strip()
+        estimate_notes = request.form.get("estimate_notes", "").strip()
 
         updated_data = {
             "services": services,
@@ -1096,6 +1440,11 @@ def view_job(jobId):
     if not job:
         return redirect(url_for("jobs.jobs"))
 
+    job_series = None
+    job_series_id = job.get("series_id")
+    if job_series_id:
+        job_series = db.recurring_job_series.find_one({"_id": coerce_object_id(job_series_id)})
+
     quote_email_template = ""
     invoice_email_template = ""
 
@@ -1127,10 +1476,109 @@ def view_job(jobId):
         "jobs/view_job.html",
         jobId=jobId,
         job=serialize_doc(job),
+        job_series=serialize_doc(job_series) if job_series else None,
         customer=customer,
         quote_email_template=quote_email_template,
         invoice_email_template=invoice_email_template,
     )
+
+
+@bp.route("/jobs/<jobId>/series/pause", methods=["POST"])
+def pause_recurring_series(jobId):
+    db = ensure_connection_or_500()
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    series_id = coerce_object_id(job.get("series_id"))
+    if not series_id:
+        return redirect(url_for("jobs.view_job", jobId=jobId))
+
+    db.recurring_job_series.update_one(
+        {"_id": series_id},
+        {"$set": {"status": "Paused"}},
+    )
+    current_app.logger.info("Recurring series paused: series_id=%s by employee_id=%s", str(series_id), session.get("employee_id"))
+    return redirect(url_for("jobs.view_job", jobId=jobId))
+
+
+@bp.route("/jobs/<jobId>/series/resume", methods=["POST"])
+def resume_recurring_series(jobId):
+    db = ensure_connection_or_500()
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    series_id = coerce_object_id(job.get("series_id"))
+    if not series_id:
+        return redirect(url_for("jobs.view_job", jobId=jobId))
+
+    series_doc = db.recurring_job_series.find_one({"_id": series_id})
+    if not series_doc:
+        return redirect(url_for("jobs.view_job", jobId=jobId))
+
+    db.recurring_job_series.update_one(
+        {"_id": series_id},
+        {"$set": {"status": "Active"}},
+    )
+
+    pending_occurrence = db.jobs.find_one(
+        {
+            "series_id": series_id,
+            "status": {"$in": ["Pending", "Scheduled"]},
+        },
+        sort=[("occurrence_index", 1), ("_id", 1)],
+    )
+    if pending_occurrence:
+        db.recurring_job_series.update_one(
+            {"_id": series_id},
+            {"$set": {"next_occurrence_date": str(pending_occurrence.get("scheduled_date") or "").strip()}},
+        )
+    else:
+        latest_occurrence = db.jobs.find_one(
+            {"series_id": series_id},
+            sort=[("occurrence_index", -1), ("_id", -1)],
+        )
+        if latest_occurrence:
+            latest_index = int(latest_occurrence.get("occurrence_index") or 0)
+            next_date = _advance_recurring_date(
+                _parse_mmddyyyy_date(latest_occurrence.get("scheduled_date")),
+                series_doc.get("frequency"),
+            )
+            next_text = _format_mmddyyyy_date(next_date)
+            if next_text:
+                _create_occurrence_from_series(db, series_doc, next_text, latest_index + 1)
+
+    current_app.logger.info("Recurring series resumed: series_id=%s by employee_id=%s", str(series_id), session.get("employee_id"))
+    return redirect(url_for("jobs.view_job", jobId=jobId))
+
+
+@bp.route("/jobs/<jobId>/series/cancel", methods=["POST"])
+def cancel_recurring_series(jobId):
+    db = ensure_connection_or_500()
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    series_id = coerce_object_id(job.get("series_id"))
+    if not series_id:
+        return redirect(url_for("jobs.view_job", jobId=jobId))
+
+    db.recurring_job_series.update_one(
+        {"_id": series_id},
+        {"$set": {"status": "Cancelled", "next_occurrence_date": ""}},
+    )
+
+    db.jobs.delete_many(
+        {
+            "series_id": series_id,
+            "_id": {"$ne": job["_id"]},
+            "status": {"$in": ["Pending", "Scheduled"]},
+        }
+    )
+
+    current_app.logger.info("Recurring series cancelled: series_id=%s by employee_id=%s", str(series_id), session.get("employee_id"))
+    return redirect(url_for("jobs.view_job", jobId=jobId))
 
 
 @bp.route("/jobs/<jobId>/start", methods=["POST"])
@@ -1247,6 +1695,15 @@ def complete_job(jobId):
             },
         },
     )
+
+    if str(job.get("job_kind") or "").strip() == "recurring_occurrence" and job.get("series_id"):
+        series_doc = db.recurring_job_series.find_one({"_id": coerce_object_id(job.get("series_id"))})
+        occurrence_index = int(job.get("occurrence_index") or 0)
+        next_occurrence_date = _advance_recurring_date(_parse_mmddyyyy_date(job.get("scheduled_date")), (series_doc or {}).get("frequency"))
+        next_occurrence_text = _format_mmddyyyy_date(next_occurrence_date)
+        if series_doc and next_occurrence_text:
+            _create_occurrence_from_series(db, series_doc, next_occurrence_text, occurrence_index + 1)
+
     current_app.logger.info("Job completed: id=%s invoice=%s by employee_id=%s", jobId, filename, session.get("employee_id"))
 
     if customer_oid and customer_doc:
@@ -1325,6 +1782,11 @@ def update_job(jobId):
     job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
     if not job:
         return redirect(url_for("jobs.jobs"))
+
+    existing_series = None
+    if job.get("series_id"):
+        existing_series = db.recurring_job_series.find_one({"_id": coerce_object_id(job.get("series_id"))})
+    recurrence_locked = str(job.get("job_kind") or "").strip() == "recurring_occurrence"
 
     if request.method == "POST":
         business_id = resolve_current_business_id(db)
@@ -1443,8 +1905,14 @@ def update_job(jobId):
         )
 
         assigned_employee = request.form.get("job_assigned_employee", "").strip()
+        recurring_data = _parse_recurrence_request(
+            request,
+            scheduled_date,
+            scheduled_time,
+            existing_series=existing_series,
+            lock_to_recurring=recurrence_locked,
+        )
 
-        # Prepare notes update - add new note to collection if provided
         update_data = {
             "job_type": primary_service,
             "services": services,
@@ -1465,28 +1933,103 @@ def update_job(jobId):
             "state": request.form.get("job_state", "").strip().upper(),
             "zip_code": request.form.get("job_zip_code", "").strip(),
             "assigned_employee": assigned_employee,
+            "invoice_notes": request.form.get("invoice_notes", "").strip(),
             "total": f"${total:.2f}" if total else "$0.00",
             "total_amount": float(total or 0.0),
         }
 
-        new_note_text = request.form.get("job_notes", "").strip()
-        if new_note_text:
-            new_note = {
-                "text": new_note_text,
-                "date": datetime.now().strftime("%m/%d/%Y %H:%M:%S")
-            }
-            db.jobs.update_one(
-                {"_id": ObjectId(jobId)},
-                {
-                    "$set": update_data,
-                    "$push": {"notes": new_note}
-                },
-            )
+        if recurring_data.get("is_recurring"):
+            if existing_series:
+                next_occurrence_date = _advance_recurring_date(_parse_mmddyyyy_date(scheduled_date), recurring_data.get("frequency"))
+                next_occurrence_text = _format_mmddyyyy_date(next_occurrence_date)
+                if next_occurrence_text and not _series_allows_occurrence(existing_series, int(job.get("occurrence_index") or 0) + 1, next_occurrence_text):
+                    next_occurrence_text = ""
+
+                series_update = {
+                    "customer_name": str(job.get("customer_name") or "").strip(),
+                    "company": str(job.get("company") or "").strip(),
+                    "property_id": selected_property_id if selected_property else "",
+                    "property_name": (selected_property or {}).get("property_name") or "",
+                    "job_type": primary_service,
+                    "services": services,
+                    "parts": parts,
+                    "labors": labors,
+                    "materials": materials,
+                    "equipments": equipments,
+                    "discounts": discounts,
+                    "frequency": recurring_data.get("frequency"),
+                    "anchor_time": scheduled_time,
+                    "end_type": recurring_data.get("end_type") or "never",
+                    "end_date": recurring_data.get("end_date") or "",
+                    "max_occurrences": recurring_data.get("max_occurrences"),
+                    "next_occurrence_date": next_occurrence_text,
+                    "address_line_1": request.form.get("job_address_line_1", "").strip(),
+                    "address_line_2": request.form.get("job_address_line_2", "").strip(),
+                    "city": request.form.get("job_city", "").strip(),
+                    "state": request.form.get("job_state", "").strip().upper(),
+                    "zip_code": request.form.get("job_zip_code", "").strip(),
+                    "assigned_employee": assigned_employee,
+                    "invoice_notes": request.form.get("invoice_notes", "").strip(),
+                    "total": f"${total:.2f}" if total else "$0.00",
+                    "total_amount": float(total or 0.0),
+                }
+                if int(job.get("occurrence_index") or 0) == 1:
+                    series_update["anchor_date"] = scheduled_date
+                db.recurring_job_series.update_one({"_id": existing_series["_id"]}, {"$set": series_update})
+                update_data.update(
+                    {
+                        "job_kind": "recurring_occurrence",
+                        "series_id": existing_series["_id"],
+                        "occurrence_index": int(job.get("occurrence_index") or 1),
+                        "recurrence_summary": recurring_data.get("summary") or _build_recurrence_summary(existing_series.get("frequency")),
+                    }
+                )
+            else:
+                customer_for_series = customer_for_property or {}
+                series_doc = _build_recurring_series_document(
+                    customer_for_series,
+                    business_id,
+                    selected_property,
+                    selected_property_id,
+                    primary_service,
+                    services,
+                    parts,
+                    labors,
+                    materials,
+                    equipments,
+                    discounts,
+                    total,
+                    assigned_employee,
+                    recurring_data,
+                    scheduled_date,
+                    scheduled_time,
+                    request,
+                )
+                inserted_series = db.recurring_job_series.insert_one(series_doc)
+                update_data.update(
+                    {
+                        "job_kind": "recurring_occurrence",
+                        "series_id": inserted_series.inserted_id,
+                        "occurrence_index": 1,
+                        "recurrence_summary": recurring_data.get("summary"),
+                    }
+                )
+                existing_series = dict(series_doc)
+                existing_series["_id"] = inserted_series.inserted_id
         else:
-            db.jobs.update_one(
-                {"_id": ObjectId(jobId)},
-                {"$set": update_data},
+            update_data.update(
+                {
+                    "job_kind": "one_time",
+                    "series_id": None,
+                    "occurrence_index": None,
+                    "recurrence_summary": "",
+                }
             )
+
+        db.jobs.update_one(
+            {"_id": ObjectId(jobId)},
+            {"$set": update_data},
+        )
 
         return redirect(url_for("jobs.view_job", jobId=jobId))
 
@@ -1528,6 +2071,8 @@ def update_job(jobId):
         "jobs/update_job.html",
         jobId=jobId,
         job=serialize_doc(job),
+        recurrence_state=_build_recurrence_form_state(job=job, series=existing_series),
+        recurrence_locked=recurrence_locked,
         customer=customer,
         customer_properties=_get_customer_properties(customer),
         selected_property_id=selected_property_id,
@@ -1546,13 +2091,35 @@ def update_job(jobId):
         discounts_catalog=discounts_catalog,
         parts_by_id=parts_by_id,
         materials_by_id=materials_by_id,
+        recurring_frequency_options=RECURRING_FREQUENCY_OPTIONS,
+        recurring_end_type_options=RECURRING_END_TYPE_OPTIONS,
     )
 
 
 @bp.route("/jobs/<jobId>/delete", methods=["POST"])
 def delete_job(jobId):
     db = ensure_connection_or_500()
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    delete_scope = str(request.form.get("delete_scope") or "occurrence_only").strip().lower()
+    series_id = coerce_object_id(job.get("series_id"))
+
+    if series_id and delete_scope == "series_future":
+        db.recurring_job_series.update_one(
+            {"_id": series_id},
+            {"$set": {"status": "Cancelled", "next_occurrence_date": ""}},
+        )
+        db.jobs.delete_many(
+            {
+                "series_id": series_id,
+                "_id": {"$ne": job["_id"]},
+                "status": {"$in": ["Pending", "Scheduled"]},
+            }
+        )
+
     db.estimates.delete_many({"job_id": jobId})
-    db.jobs.delete_one({"_id": object_id_or_404(jobId)})
+    db.jobs.delete_one({"_id": job["_id"]})
     current_app.logger.info("Job deleted: id=%s by employee_id=%s", jobId, session.get("employee_id"))
     return redirect(url_for("jobs.jobs"))

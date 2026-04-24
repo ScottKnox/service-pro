@@ -71,6 +71,7 @@
   let dateTouched = false;
   let timeTouched = false;
   let employeeTouched = false;
+  let submitAttempted = false;
 
   const estimateField = document.getElementById('job-is-estimate');
   const dateField = document.getElementById('job-date');
@@ -78,13 +79,73 @@
   const clearDateTimeButton = document.getElementById('clear-date-time');
   const dateFieldContainer = dateField ? dateField.closest('.add-customer-form-field') : null;
   const timeFieldContainer = timeField ? timeField.closest('.add-customer-form-field') : null;
+  const scheduleTypeField = document.getElementById('job-schedule-type');
+  const recurringSettings = document.getElementById('job-recurring-settings');
+  const recurringFrequencyField = document.getElementById('recurring-frequency');
+  const recurringEndTypeField = document.getElementById('recurring-end-type');
+  const recurringEndDateField = document.getElementById('recurring-end-date');
+  const recurringEndAfterField = document.getElementById('recurring-end-after');
+  const recurringEndDateWrap = document.getElementById('recurring-end-date-wrap');
+  const recurringEndAfterWrap = document.getElementById('recurring-end-after-wrap');
   const scheduleRequiredByForm = !(form && form.dataset.scheduleRequired === 'false');
 
+  function isRecurringJob() {
+    return !!(scheduleTypeField && scheduleTypeField.value === 'recurring');
+  }
+
   function isScheduledDateRequired() {
+    if (isRecurringJob()) {
+      return true;
+    }
     if (!scheduleRequiredByForm) {
       return false;
     }
     return !estimateField || estimateField.value === 'no';
+  }
+
+  function syncRecurringEndFields() {
+    const recurringSelected = isRecurringJob();
+    const endType = recurringEndTypeField ? recurringEndTypeField.value : 'never';
+    const showEndDate = recurringSelected && endType === 'on_date';
+    const showEndAfter = recurringSelected && endType === 'after_occurrences';
+
+    if (recurringEndDateWrap) {
+      recurringEndDateWrap.hidden = !showEndDate;
+      recurringEndDateWrap.style.display = showEndDate ? '' : 'none';
+    }
+    if (recurringEndDateField) {
+      recurringEndDateField.required = showEndDate;
+      if (!showEndDate) {
+        recurringEndDateField.value = '';
+      }
+    }
+
+    if (recurringEndAfterWrap) {
+      recurringEndAfterWrap.hidden = !showEndAfter;
+      recurringEndAfterWrap.style.display = showEndAfter ? '' : 'none';
+    }
+    if (recurringEndAfterField) {
+      recurringEndAfterField.required = showEndAfter;
+      if (!showEndAfter) {
+        recurringEndAfterField.value = '';
+      }
+    }
+
+    if (recurringEndTypeField) {
+      recurringEndTypeField.required = recurringSelected;
+    }
+  }
+
+  function syncRecurringSettingsVisibility() {
+    if (recurringSettings) {
+      recurringSettings.hidden = !isRecurringJob();
+      recurringSettings.style.display = isRecurringJob() ? '' : 'none';
+    }
+    if (recurringFrequencyField) {
+      recurringFrequencyField.required = isRecurringJob();
+    }
+    syncRecurringEndFields();
+    syncScheduledDateVisibility();
   }
 
   function syncScheduledDateVisibility() {
@@ -92,7 +153,7 @@
       return;
     }
 
-    if (!scheduleRequiredByForm) {
+    if (!scheduleRequiredByForm && !isRecurringJob()) {
       dateFieldContainer.style.display = '';
       dateField.required = false;
       timeFieldContainer.style.display = '';
@@ -118,6 +179,17 @@
     timeTouched = false;
   }
 
+  function setFieldError(errorId, isVisible, message) {
+    const errorElement = document.getElementById(errorId);
+    if (!errorElement) {
+      return;
+    }
+    if (message) {
+      errorElement.textContent = message;
+    }
+    errorElement.style.display = isVisible ? 'block' : 'none';
+  }
+
   // Validation function
   function validateForm() {
     let isValid = true;
@@ -134,20 +206,21 @@
 
     requiredFields.forEach(function (fieldId) {
       const field = document.getElementById(fieldId);
-      const errorElement = document.getElementById('error-' + fieldId.replace('job-', ''));
+      const errorId = 'error-' + fieldId.replace('job-', '');
 
       if (!field) return;
       if ((fieldId === 'job-date' || fieldId === 'job-time') && !isScheduledDateRequired()) {
-        if (errorElement) errorElement.style.display = 'none';
+        setFieldError(errorId, false);
         return;
       }
 
       const isFieldValid = field.value.trim() !== '';
       if (!isFieldValid) {
         isValid = false;
-        if (errorElement) errorElement.style.display = 'block';
+        const shouldShow = fieldId === 'job-assigned-employee' || submitAttempted || (fieldId === 'job-date' && dateTouched) || (fieldId === 'job-time' && timeTouched);
+        setFieldError(errorId, shouldShow);
       } else {
-        if (errorElement) errorElement.style.display = 'none';
+        setFieldError(errorId, false);
       }
     });
 
@@ -160,43 +233,48 @@
       }
     });
 
-    const servicesError = document.getElementById('error-services');
+    const servicesErrorId = 'error-service-code';
     const servicesRequired = isScheduledDateRequired();
     if (servicesRequired && !hasSelectedService) {
       isValid = false;
-      if (servicesError) servicesError.style.display = servicesTouched ? 'block' : 'none';
+      setFieldError(servicesErrorId, servicesTouched || submitAttempted);
     } else {
-      if (servicesError) servicesError.style.display = 'none';
+      setFieldError(servicesErrorId, false);
     }
 
-    // Handle date field error visibility based on touch status
-    const employeeField = document.getElementById('job-assigned-employee');
-    const jobDetailsError = document.getElementById('error-job-details');
-    
-    let jobDetailsErrors = [];
-    
-    if (dateField && isScheduledDateRequired() && dateField.value.trim() === '' && dateTouched) {
-      isValid = false;
-      jobDetailsErrors.push('Scheduled Date is required');
-    }
-
-    if (timeField && isScheduledDateRequired() && timeField.value.trim() === '' && timeTouched) {
-      isValid = false;
-      jobDetailsErrors.push('Scheduled Time is required');
-    }
-    
-    if (employeeField && employeeField.value.trim() === '' && employeeTouched) {
-      isValid = false;
-      jobDetailsErrors.push('Assigned Employee is required');
-    }
-    
-    if (jobDetailsError) {
-      if (jobDetailsErrors.length > 0) {
-        jobDetailsError.textContent = jobDetailsErrors.join(' • ');
-        jobDetailsError.style.display = 'block';
+    if (isRecurringJob()) {
+      if (recurringFrequencyField && recurringFrequencyField.value.trim() === '') {
+        isValid = false;
+        setFieldError('error-recurring-frequency', true);
       } else {
-        jobDetailsError.style.display = 'none';
+        setFieldError('error-recurring-frequency', false);
       }
+
+      if (recurringEndTypeField && recurringEndTypeField.value.trim() === '') {
+        isValid = false;
+        setFieldError('error-recurring-end-type', true);
+      } else {
+        setFieldError('error-recurring-end-type', false);
+      }
+
+      if (recurringEndTypeField && recurringEndTypeField.value === 'on_date' && recurringEndDateField && recurringEndDateField.value.trim() === '') {
+        isValid = false;
+        setFieldError('error-recurring-end-date', true);
+      } else {
+        setFieldError('error-recurring-end-date', false);
+      }
+
+      if (recurringEndTypeField && recurringEndTypeField.value === 'after_occurrences' && recurringEndAfterField && recurringEndAfterField.value.trim() === '') {
+        isValid = false;
+        setFieldError('error-recurring-end-after', true);
+      } else {
+        setFieldError('error-recurring-end-after', false);
+      }
+    } else {
+      setFieldError('error-recurring-frequency', false);
+      setFieldError('error-recurring-end-type', false);
+      setFieldError('error-recurring-end-date', false);
+      setFieldError('error-recurring-end-after', false);
     }
 
     // Update submit button state
@@ -1379,6 +1457,26 @@
     }
   });
 
+  [scheduleTypeField, recurringFrequencyField, recurringEndTypeField, recurringEndDateField, recurringEndAfterField].forEach(function (field) {
+    if (!field) {
+      return;
+    }
+
+    field.addEventListener('change', function () {
+      if (field === scheduleTypeField) {
+        syncRecurringSettingsVisibility();
+      }
+      if (field === recurringEndTypeField) {
+        syncRecurringEndFields();
+      }
+      validateForm();
+    });
+
+    field.addEventListener('input', function () {
+      validateForm();
+    });
+  });
+
   if (clearDateTimeButton) {
     clearDateTimeButton.addEventListener('click', function () {
       if (dateField) {
@@ -1395,6 +1493,7 @@
 
   // Validate on form submission
   form.addEventListener('submit', function (event) {
+    submitAttempted = true;
     if (!validateForm()) {
       event.preventDefault();
     }
@@ -1409,6 +1508,6 @@
    }
    
    // Initial validation
-   syncScheduledDateVisibility();
+  syncRecurringSettingsVisibility();
    validateForm();
 })();

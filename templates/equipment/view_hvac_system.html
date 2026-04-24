@@ -22,6 +22,16 @@
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
           <a href="{{ url_for('customers.add_hvac_diagnostics', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id) }}">Add Diagnostics</a>
+          {% if hvac_system.diagnostics %}
+            <a href="{{ url_for('customers.view_hvac_diagnostics', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id) }}">View System Diagnostics</a>
+          {% else %}
+            <span class="view-customer-action-link is-disabled" aria-disabled="true">View System Diagnostics</span>
+          {% endif %}
+          {% if hvac_system.reports and hvac_system.reports[0].file_path %}
+            <a href="{{ hvac_system.reports[0].file_path }}">View Reports</a>
+          {% else %}
+            <span class="view-customer-action-link is-disabled" aria-disabled="true">View Reports</span>
+          {% endif %}
           <form method="POST" action="{{ url_for('customers.delete_hvac_system', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id) }}" onsubmit="return confirm('Delete this HVAC system? This cannot be undone.');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Delete HVAC System</button>
@@ -59,17 +69,14 @@
               {% set diagnostics_values = hvac_system.diagnostics.get('values', {}) if hvac_system.diagnostics else {} %}
               <article class="hvac-system-kpi-card">
                 <h4>ΔT - Supply / Return</h4>
-                {% set delta_t_status = diagnostics_values.get('temperatureDeltaStatus') or diagnostics_values.get('deltaTStatus') or diagnostics_values.get('temperatureDeltaRange') %}
+                {% set delta_t_status = diagnostics_values.get('temperatureDeltaOverallCondition') or 'No Data' %}
                 {% set delta_t_status_class = 'is-no-data' %}
-                {% if delta_t_status %}
+                {% if delta_t_status == 'Within Spec' %}
                   {% set delta_t_status_class = 'is-normal' %}
-                  {% if 'high' in delta_t_status|lower %}
-                    {% set delta_t_status_class = 'is-high' %}
-                  {% elif 'alert' in delta_t_status|lower or 'critical' in delta_t_status|lower or 'fault' in delta_t_status|lower %}
-                    {% set delta_t_status_class = 'is-alert' %}
-                  {% elif 'info' in delta_t_status|lower or 'check' in delta_t_status|lower %}
-                    {% set delta_t_status_class = 'is-info' %}
-                  {% endif %}
+                {% elif delta_t_status == 'Low' %}
+                  {% set delta_t_status_class = 'is-low' %}
+                {% elif delta_t_status == 'High' %}
+                  {% set delta_t_status_class = 'is-high' %}
                 {% endif %}
                 <p class="hvac-system-kpi-value">
                   {{ diagnostics_values.get('temperatureDelta') or diagnostics_values.get('tempDelta') or '-' }}
@@ -79,82 +86,73 @@
                   Supply {{ diagnostics_values.get('supplyTemperature') or '-' }} &bull;
                   Return {{ diagnostics_values.get('returnTemperature') or '-' }}
                 </p>
-                <p><span class="hvac-system-kpi-chip {{ delta_t_status_class }}">{{ delta_t_status or 'No Data' }}</span></p>
+                <p><span class="hvac-system-kpi-chip {{ delta_t_status_class }}">{{ delta_t_status }}</span></p>
               </article>
 
               <article class="hvac-system-kpi-card">
                 <h4>Compressor Amperage</h4>
-                {% set compressor_load = diagnostics_values.get('compressorLoadPercent') or diagnostics_values.get('loadPercent') or '-' %}
-                {% set compressor_status = diagnostics_values.get('compressorStatus') or diagnostics_values.get('compressorRange') or diagnostics_values.get('compressorLoadStatus') %}
+                {% set compressor_status = diagnostics_values.get('compressorAmperageOverallCondition') or 'No Data' %}
                 {% set compressor_status_class = 'is-no-data' %}
-                {% if compressor_status %}
+                {% if compressor_status == 'Within Spec' %}
                   {% set compressor_status_class = 'is-normal' %}
-                  {% if 'high' in compressor_status|lower %}
-                    {% set compressor_status_class = 'is-high' %}
-                  {% elif 'alert' in compressor_status|lower or 'critical' in compressor_status|lower or 'fault' in compressor_status|lower %}
-                    {% set compressor_status_class = 'is-alert' %}
-                  {% elif 'info' in compressor_status|lower or 'check' in compressor_status|lower %}
-                    {% set compressor_status_class = 'is-info' %}
-                  {% endif %}
+                {% elif compressor_status == 'Low' %}
+                  {% set compressor_status_class = 'is-low' %}
+                {% elif compressor_status == 'High' %}
+                  {% set compressor_status_class = 'is-high' %}
                 {% endif %}
                 <p class="hvac-system-kpi-value">
-                  {{ diagnostics_values.get('compressorVoltage') or diagnostics_values.get('compressorAmperage') or diagnostics_values.get('compressorAmps') or '-' }}
+                  {{ diagnostics_values.get('compressorAmperage') or diagnostics_values.get('compressorAmps') or '-' }}
                   <span>A</span>
                 </p>
                 <p class="hvac-system-kpi-meta">
-                  RLA {{ diagnostics_values.get('compressorRla') or diagnostics_values.get('rla') or '-' }} &bull;
-                  {{ compressor_load }}{% if compressor_load != '-' %}%{% endif %} load
+                  Target {{ diagnostics_values.get('targetCompressorAmperage') or '-' }}
                 </p>
-                <p><span class="hvac-system-kpi-chip {{ compressor_status_class }}">{{ compressor_status or 'No Data' }}</span></p>
+                <p><span class="hvac-system-kpi-chip {{ compressor_status_class }}">{{ compressor_status }}</span></p>
               </article>
 
               <article class="hvac-system-kpi-card">
                 <h4>Static Pressure</h4>
                 {% set static_variance = diagnostics_values.get('staticPressureVariancePercent') or diagnostics_values.get('staticPressureVariance') or '-' %}
-                {% set static_pressure_status = diagnostics_values.get('staticPressureStatus') or diagnostics_values.get('staticPressureRange') %}
+                {% set static_pressure_status = diagnostics_values.get('staticPressureOverallCondition') or 'No Data' %}
                 {% set static_pressure_status_class = 'is-no-data' %}
-                {% if static_pressure_status %}
+                {% if static_pressure_status == 'Within Spec' %}
                   {% set static_pressure_status_class = 'is-normal' %}
-                  {% if 'high' in static_pressure_status|lower %}
-                    {% set static_pressure_status_class = 'is-high' %}
-                  {% elif 'alert' in static_pressure_status|lower or 'critical' in static_pressure_status|lower or 'fault' in static_pressure_status|lower %}
-                    {% set static_pressure_status_class = 'is-alert' %}
-                  {% elif 'info' in static_pressure_status|lower or 'check' in static_pressure_status|lower %}
-                    {% set static_pressure_status_class = 'is-info' %}
-                  {% endif %}
+                {% elif static_pressure_status == 'Low' %}
+                  {% set static_pressure_status_class = 'is-low' %}
+                {% elif static_pressure_status == 'High' %}
+                  {% set static_pressure_status_class = 'is-high' %}
                 {% endif %}
                 <p class="hvac-system-kpi-value">
                   {{ diagnostics_values.get('totalExternalStaticPressure') or '-' }}
                   <span>WC</span>
                 </p>
                 <p class="hvac-system-kpi-meta">
-                  Design {{ diagnostics_values.get('staticPressureDesign') or '-' }} wc &bull;
+                  Design {{ diagnostics_values.get('designStaticPressure') or '-' }} wc &bull;
                   {% if static_variance != '-' %}+{% endif %}{{ static_variance }}{% if static_variance != '-' %}%{% endif %}
                 </p>
-                <p><span class="hvac-system-kpi-chip {{ static_pressure_status_class }}">{{ static_pressure_status or 'No Data' }}</span></p>
+                <p><span class="hvac-system-kpi-chip {{ static_pressure_status_class }}">{{ static_pressure_status }}</span></p>
               </article>
 
               <article class="hvac-system-kpi-card">
-                <h4>Capacitor Reading</h4>
-                {% set capacitor_status = diagnostics_values.get('capacitors') or diagnostics_values.get('capacitorStatus') %}
+                <h4>AC Capacitor Reading</h4>
+                {% set capacitor_reading = diagnostics_values.get('acCapacitorVoltage') or '-' %}
+                {% set capacitor_target = diagnostics_values.get('targetAcCapacitorVoltage') or '-' %}
+                {% set capacitor_status = diagnostics_values.get('acCapacitorOverallCondition') or 'No Data' %}
                 {% set capacitor_status_class = 'is-no-data' %}
-                {% if capacitor_status %}
+                {% if capacitor_status == 'Within Spec' %}
                   {% set capacitor_status_class = 'is-normal' %}
-                  {% if 'high' in capacitor_status|lower %}
-                    {% set capacitor_status_class = 'is-high' %}
-                  {% elif 'alert' in capacitor_status|lower or 'critical' in capacitor_status|lower or 'fault' in capacitor_status|lower or 'failed' in capacitor_status|lower %}
-                    {% set capacitor_status_class = 'is-alert' %}
-                  {% elif 'info' in capacitor_status|lower or 'check' in capacitor_status|lower or 'near end' in capacitor_status|lower %}
-                    {% set capacitor_status_class = 'is-info' %}
-                  {% endif %}
+                {% elif capacitor_status == 'Low' %}
+                  {% set capacitor_status_class = 'is-low' %}
+                {% elif capacitor_status == 'High' %}
+                  {% set capacitor_status_class = 'is-high' %}
                 {% endif %}
                 <p class="hvac-system-kpi-value">
-                  {{ capacitor_status or '-' }}
+                  {{ capacitor_reading }}
                 </p>
                 <p class="hvac-system-kpi-meta">
-                  Electrical health snapshot for the capacitor circuit
+                  Target {{ capacitor_target }}
                 </p>
-                <p><span class="hvac-system-kpi-chip {{ capacitor_status_class }}">{{ capacitor_status or 'No Data' }}</span></p>
+                <p><span class="hvac-system-kpi-chip {{ capacitor_status_class }}">{{ capacitor_status }}</span></p>
               </article>
 
               <article class="hvac-system-kpi-card">
@@ -163,17 +161,14 @@
                 {% set target_superheat_value = diagnostics_values.get('targetSuperheat') or '-' %}
                 {% set subcooling_value = diagnostics_values.get('subcooling') or '-' %}
                 {% set target_subcooling_value = diagnostics_values.get('targetSubcooling') or '-' %}
-                {% set refrigerant_status = diagnostics_values.get('notesOnRefrigerantStatus') or diagnostics_values.get('refrigerantStatus') or diagnostics_values.get('refrigerantRange') %}
+                {% set refrigerant_status = diagnostics_values.get('superheatSubcoolingOverallCondition') or 'No Data' %}
                 {% set refrigerant_status_class = 'is-no-data' %}
-                {% if refrigerant_status %}
+                {% if refrigerant_status == 'Within Spec' %}
                   {% set refrigerant_status_class = 'is-normal' %}
-                  {% if 'high' in refrigerant_status|lower %}
-                    {% set refrigerant_status_class = 'is-high' %}
-                  {% elif 'alert' in refrigerant_status|lower or 'critical' in refrigerant_status|lower or 'fault' in refrigerant_status|lower %}
-                    {% set refrigerant_status_class = 'is-alert' %}
-                  {% elif 'info' in refrigerant_status|lower or 'check' in refrigerant_status|lower %}
-                    {% set refrigerant_status_class = 'is-info' %}
-                  {% endif %}
+                {% elif refrigerant_status == 'Low' %}
+                  {% set refrigerant_status_class = 'is-low' %}
+                {% elif refrigerant_status == 'High' %}
+                  {% set refrigerant_status_class = 'is-high' %}
                 {% endif %}
                 <p class="hvac-system-kpi-value">
                   {{ superheat_value }}
@@ -184,23 +179,20 @@
                   Target {{ target_superheat_value }} SH &bull;
                   {{ target_subcooling_value }} SC
                 </p>
-                <p><span class="hvac-system-kpi-chip {{ refrigerant_status_class }}">{{ refrigerant_status or 'No Data' }}</span></p>
+                <p><span class="hvac-system-kpi-chip {{ refrigerant_status_class }}">{{ refrigerant_status }}</span></p>
               </article>
 
               <article class="hvac-system-kpi-card">
                 <h4>Carbon Monoxide</h4>
                 {% set carbon_monoxide_value = diagnostics_values.get('carbonMonoxide') or '-' %}
-                {% set carbon_monoxide_status = diagnostics_values.get('carbonMonoxideStatus') or diagnostics_values.get('coStatus') or diagnostics_values.get('carbonMonoxideRange') %}
+                {% set carbon_monoxide_status = diagnostics_values.get('carbonMonoxideOverallCondition') or 'No Data' %}
                 {% set carbon_monoxide_status_class = 'is-no-data' %}
-                {% if carbon_monoxide_status %}
+                {% if carbon_monoxide_status == 'Within Spec' %}
                   {% set carbon_monoxide_status_class = 'is-normal' %}
-                  {% if 'high' in carbon_monoxide_status|lower %}
-                    {% set carbon_monoxide_status_class = 'is-high' %}
-                  {% elif 'alert' in carbon_monoxide_status|lower or 'critical' in carbon_monoxide_status|lower or 'fault' in carbon_monoxide_status|lower %}
-                    {% set carbon_monoxide_status_class = 'is-alert' %}
-                  {% elif 'info' in carbon_monoxide_status|lower or 'check' in carbon_monoxide_status|lower %}
-                    {% set carbon_monoxide_status_class = 'is-info' %}
-                  {% endif %}
+                {% elif carbon_monoxide_status == 'Low' %}
+                  {% set carbon_monoxide_status_class = 'is-low' %}
+                {% elif carbon_monoxide_status == 'High' %}
+                  {% set carbon_monoxide_status_class = 'is-high' %}
                 {% endif %}
                 <p class="hvac-system-kpi-value">
                   {{ carbon_monoxide_value }}
@@ -209,7 +201,7 @@
                 <p class="hvac-system-kpi-meta">
                   Indoor air quality combustion safety reading
                 </p>
-                <p><span class="hvac-system-kpi-chip {{ carbon_monoxide_status_class }}">{{ carbon_monoxide_status or 'No Data' }}</span></p>
+                <p><span class="hvac-system-kpi-chip {{ carbon_monoxide_status_class }}">{{ carbon_monoxide_status }}</span></p>
               </article>
             </div>
             <p class="hvac-system-status-note">
@@ -334,6 +326,12 @@
                             <strong>{{ component.details.install_year }}</strong>
                           </div>
                         {% endif %}
+                        {% if component.details.notes and component.details.notes != '-' %}
+                        <div class="hvac-component-row hvac-component-row--notes">
+                          <span>Notes</span>
+                          <strong>{{ component.details.notes }}</strong>
+                        </div>
+                        {% endif %}
                       {% endif %}
                     </div>
                   </a>
@@ -345,156 +343,53 @@
           </div>
         </div>
 
-        <div class="view-customer-section-row" id="view-hvac-diagnostics-reports-columns">
-          <div class="view-customer-section-column view-customer-details-column">
-            <h3>System Diagnostics</h3>
-            <div class="view-customer-jobs-list">
-              {% if hvac_system.diagnostics %}
-                {% set diagnostics_values = hvac_system.diagnostics.get('values', {}) %}
-                <a
-                  class="hvac-diagnostics-row hvac-system-diagnostics-link"
-                  href="{{ url_for('customers.view_hvac_diagnostic', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, diagnostic_index=hvac_system.diagnostics.get('diagnostic_index', 0), property_id=property_id) }}"
-                >
-                  <div class="hvac-component-card hvac-component-card--diagnostics hvac-system-diagnostics-card">
-                    <div class="hvac-component-card-header">
-                      <div class="hvac-component-card-icon hvac-component-card-icon--diagnostics" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="20" height="20" focusable="false"><path d="M4 6h16v12H4z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h10M7 14h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                      </div>
-                      <div class="hvac-component-card-heading-text">
-                        <p class="hvac-component-card-system-type">Latest Snapshot</p>
-                        <h4>System Diagnostics</h4>
-                      </div>
-                    </div>
-                    <div class="hvac-component-card-body">
-                      <div class="hvac-component-row">
-                        <span>Date Performed</span>
-                        <strong>{{ hvac_system.diagnostics.date_performed or '-' }}</strong>
-                      </div>
-                      <div class="hvac-component-row">
-                        <span>Total External Static Pressure</span>
-                        <strong>{{ diagnostics_values.get('totalExternalStaticPressure') or '-' }}</strong>
-                      </div>
-                      <div class="hvac-component-row">
-                        <span>Actual CFM</span>
-                        <strong>{{ diagnostics_values.get('actualCfm') or '-' }}</strong>
-                      </div>
-                      <div class="hvac-component-row">
-                        <span>Refrigerant Type</span>
-                        <strong>{{ diagnostics_values.get('refrigerantType') or '-' }}</strong>
-                      </div>
-                      <div class="hvac-component-row">
-                        <span>Temperature Delta</span>
-                        <strong>{{ diagnostics_values.get('temperatureDelta') or '-' }}</strong>
-                      </div>
-                      <div class="hvac-component-row">
-                        <span>Suction Pressure</span>
-                        <strong>{{ diagnostics_values.get('suctionPressure') or '-' }}</strong>
-                      </div>
-                      <div class="hvac-component-row">
-                        <span>High Side Pressure</span>
-                        <strong>{{ diagnostics_values.get('highSidePressure') or '-' }}</strong>
-                      </div>
-                      <div class="hvac-component-row">
-                        <span>Compressor Voltage</span>
-                        <strong>{{ diagnostics_values.get('compressorVoltage') or '-' }}</strong>
-                      </div>
-                    </div>
-                  </div>
-                </a>
-              {% else %}
-                <p>No diagnostics have been saved yet.</p>
-              {% endif %}
-            </div>
-          </div>
-          <div class="view-customer-section-column view-customer-details-column">
-            <h3>Reports</h3>
-            <div class="view-customer-jobs-list">
-              {% if hvac_system.reports %}
-                {% for report in hvac_system.reports %}
-                  <article class="hvac-component-card hvac-component-card--report">
-                    <div class="hvac-component-card-header">
-                      <div class="hvac-component-card-icon hvac-component-card-icon--report" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="20" height="20" focusable="false"><path d="M7 3h7l5 5v13H7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5M10 12h6M10 16h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                      </div>
-                      <div class="hvac-component-card-heading-text">
-                        <p class="hvac-component-card-system-type">System Health Report</p>
-                        <h4>{{ report.report_number }}</h4>
-                      </div>
-                    </div>
-                    <div class="hvac-component-card-body">
-                      <div class="hvac-component-row">
-                        <span>Date Generated</span>
-                        <strong>{{ report.date_generated }}</strong>
-                      </div>
-                      <div class="hvac-component-row">
-                        <span>Diagnostics Date</span>
-                        <strong>{{ report.diagnostics_date_performed }}</strong>
-                      </div>
-                      <div class="hvac-component-row hvac-report-open-row">
-                        <span>File</span>
-                        <strong class="hvac-report-actions">
-                          <a class="hvac-report-action-link" href="{{ report.file_path }}" target="_blank" rel="noopener noreferrer">
-                            Open PDF
-                            <svg viewBox="0 0 24 24" width="14" height="14" focusable="false" aria-hidden="true"><path d="M7 17L17 7M10 7h7v7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                          </a>
-                          <a class="hvac-report-action-link" href="{{ report.file_path }}" download>
-                            Download
-                            <svg viewBox="0 0 24 24" width="14" height="14" focusable="false" aria-hidden="true"><path d="M12 4v10M8 10l4 4 4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                          </a>
-                        </strong>
-                      </div>
-                    </div>
-                  </article>
-                {% endfor %}
-              {% else %}
-                <p>No reports have been generated yet.</p>
-              {% endif %}
-            </div>
-          </div>
-        </div>
       </section>
 
       <section id="view-hvac-photos" aria-label="System photos">
-        <h2>System Photos</h2>
-        {% set photo_error = request.args.get('photo_error') %}
-        {% if photo_error %}
-          <p class="form-field-error">
-            {% if photo_error == 'invalid_type' %}Unsupported file type. Please upload JPG, JPEG, PNG, WEBP, or HEIC.
-            {% elif photo_error == 'too_large' %}Photo is too large. Maximum allowed size is 10 MB.
-            {% elif photo_error == 'missing' %}Please select a photo to upload.
-            {% else %}Upload failed. Please try again.{% endif %}
-          </p>
-        {% endif %}
-        <p class="hvac-photos-note">
-          <strong>Accepted formats:</strong> JPG, JPEG, PNG, WEBP, HEIC &nbsp;&bull;&nbsp;
-          <strong>Max size:</strong> 10 MB per photo &nbsp;&bull;&nbsp;
-          Photos are stored per system for technician reference.
-        </p>
-        <div class="hvac-photos-grid">
-          {% if hvac_system.photos %}
-            {% for photo in hvac_system.photos %}
-              <div class="hvac-photo-tile">
-                <button type="button" class="hvac-photo-thumb-link" data-lightbox-src="{{ photo.url }}" data-lightbox-caption="Uploaded {{ photo.uploaded_at }}" aria-label="View photo uploaded {{ photo.uploaded_at }}">
-                  <img src="{{ photo.url }}" alt="System photo uploaded {{ photo.uploaded_at }}" class="hvac-photo-thumb" loading="lazy">
-                </button>
-                <form method="POST" action="{{ url_for('customers.delete_hvac_photo', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id) }}" class="hvac-photo-delete-form" onsubmit="return confirm('Delete this photo? This cannot be undone.');">
+        <div class="view-customer-section-row view-customer-section-row--full" id="view-hvac-photos-columns">
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>System Photos</h3>
+            {% set photo_error = request.args.get('photo_error') %}
+            {% if photo_error %}
+              <p class="form-field-error">
+                {% if photo_error == 'invalid_type' %}Unsupported file type. Please upload JPG, JPEG, PNG, WEBP, or HEIC.
+                {% elif photo_error == 'too_large' %}Photo is too large. Maximum allowed size is 10 MB.
+                {% elif photo_error == 'missing' %}Please select a photo to upload.
+                {% else %}Upload failed. Please try again.{% endif %}
+              </p>
+            {% endif %}
+            <p class="hvac-photos-note">
+              <strong>Accepted formats:</strong> JPG, JPEG, PNG, WEBP, HEIC &nbsp;&bull;&nbsp;
+              <strong>Max size:</strong> 10 MB per photo &nbsp;&bull;&nbsp;
+              Photos are stored per system for technician reference.
+            </p>
+            <div class="hvac-photos-grid">
+              {% if hvac_system.photos %}
+                {% for photo in hvac_system.photos %}
+                  <div class="hvac-photo-tile">
+                    <button type="button" class="hvac-photo-thumb-link" data-lightbox-src="{{ photo.url }}" data-lightbox-caption="Uploaded {{ photo.uploaded_at }}" aria-label="View photo uploaded {{ photo.uploaded_at }}">
+                      <img src="{{ photo.url }}" alt="System photo uploaded {{ photo.uploaded_at }}" class="hvac-photo-thumb" loading="lazy">
+                    </button>
+                    <form method="POST" action="{{ url_for('customers.delete_hvac_photo', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id) }}" class="hvac-photo-delete-form" onsubmit="return confirm('Delete this photo? This cannot be undone.');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="filename" value="{{ photo.filename }}">
+                      <button type="submit" class="hvac-photo-delete-btn" aria-label="Delete photo">
+                        <svg viewBox="0 0 24 24" width="14" height="14" focusable="false" aria-hidden="true"><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                      </button>
+                    </form>
+                  </div>
+                {% endfor %}
+              {% endif %}
+              <label class="hvac-photo-tile hvac-photo-tile--add" title="Upload a photo">
+                <form method="POST" action="{{ url_for('customers.upload_hvac_photo', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id) }}" enctype="multipart/form-data" id="hvac-photo-upload-form">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="filename" value="{{ photo.filename }}">
-                  <button type="submit" class="hvac-photo-delete-btn" aria-label="Delete photo">
-                    <svg viewBox="0 0 24 24" width="14" height="14" focusable="false" aria-hidden="true"><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                  </button>
+                  <input type="file" name="photo" id="hvac-photo-input" accept=".jpg,.jpeg,.png,.webp,.heic" class="hvac-photo-file-input">
                 </form>
-              </div>
-            {% endfor %}
-          {% endif %}
-          <label class="hvac-photo-tile hvac-photo-tile--add" title="Upload a photo">
-            <form method="POST" action="{{ url_for('customers.upload_hvac_photo', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id) }}" enctype="multipart/form-data" id="hvac-photo-upload-form">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="file" name="photo" id="hvac-photo-input" accept=".jpg,.jpeg,.png,.webp,.heic" class="hvac-photo-file-input">
-            </form>
-            <svg viewBox="0 0 24 24" width="28" height="28" focusable="false" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-            <span>Add Photo</span>
-          </label>
+                <svg viewBox="0 0 24 24" width="28" height="28" focusable="false" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+                <span>Add Photo</span>
+              </label>
+            </div>
+          </div>
         </div>
       </section>
     </div>
