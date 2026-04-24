@@ -619,9 +619,6 @@ def create_estimate(customerId):
             "file_path": [],
             "latest_file_path": "",
             "created_at": datetime.utcnow(),
-            "sent_at": None,
-            "accepted_at": None,
-            "declined_at": None,
         }
 
         inserted = db.estimates.insert_one(new_estimate)
@@ -1012,7 +1009,6 @@ def send_estimate_email_by_id(estimateId):
         update_data = {
             "date_sent": now.strftime("%m/%d/%Y"),
             "time_sent": now.strftime("%H:%M:%S"),
-            "sent_at": now,
         }
         if status not in {"accepted", "declined"}:
             update_data["status"] = "Sent"
@@ -1044,7 +1040,6 @@ def accept_estimate(estimateId):
                 "status": "Accepted",
                 "date_accepted": now.strftime("%m/%d/%Y"),
                 "time_accepted": now.strftime("%H:%M:%S"),
-                "accepted_at": now,
             }
         },
     )
@@ -1070,7 +1065,6 @@ def decline_estimate(estimateId):
                 "status": "Declined",
                 "date_declined": now.strftime("%m/%d/%Y"),
                 "time_declined": now.strftime("%H:%M:%S"),
-                "declined_at": now,
             }
         },
     )

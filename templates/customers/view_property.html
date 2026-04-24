@@ -99,10 +99,21 @@
                       <p class="view-customer-hvac-card-kicker">HVAC System</p>
                       <h4>{{ hvac_system.system_type }}</h4>
                     </div>
+                    {% if hvac_system.system_type in ('Split System Heat Pump with Air Handler', 'Mini Split System') %}
                     <div class="view-customer-hvac-card-row">
-                      <span class="view-customer-hvac-card-label">Location</span>
-                      <span class="view-customer-hvac-card-value">{{ hvac_system.location_type|default('-', true) }}</span>
+                      <span class="view-customer-hvac-card-label">System Tonnage</span>
+                      <span class="view-customer-hvac-card-value">{{ hvac_system.system_tonnage|default('-', true) }}</span>
                     </div>
+                    {% else %}
+                    <div class="view-customer-hvac-card-row">
+                      <span class="view-customer-hvac-card-label">Cooling Capacity</span>
+                      <span class="view-customer-hvac-card-value">{{ hvac_system.cooling_capacity|default('-', true) }}</span>
+                    </div>
+                    <div class="view-customer-hvac-card-row">
+                      <span class="view-customer-hvac-card-label">Heating Capacity</span>
+                      <span class="view-customer-hvac-card-value">{{ hvac_system.heating_capacity|default('-', true) }}</span>
+                    </div>
+                    {% endif %}
                     {% if hvac_system.components %}
                       {% for component in hvac_system.components %}
                         <div class="view-customer-hvac-card-row">

@@ -204,9 +204,6 @@ def ensure_collection_validators(db):
                 "total": {"bsonType": ["string", "null"]},
                 "total_amount": {"bsonType": ["double", "int", "long", "decimal"]},
                 "created_at": {"bsonType": ["date"]},
-                "sent_at": {"bsonType": ["date", "null"]},
-                "accepted_at": {"bsonType": ["date", "null"]},
-                "declined_at": {"bsonType": ["date", "null"]},
             },
         }
     }
@@ -236,13 +233,17 @@ def ensure_collection_validators(db):
     hvac_systems_validator = {
         "$jsonSchema": {
             "bsonType": "object",
-            "required": ["customer_id", "system_type", "location_type"],
+            "required": ["customer_id", "system_type", "property_id"],
             "properties": {
                 "customer_id": {"bsonType": ["objectId"]},
                 "system_type": {"bsonType": "string"},
-                "location_type": {"bsonType": "string"},
+                "property_id": {"bsonType": ["objectId", "string"]},
+                "system_tonnage": {"bsonType": ["string", "null"]},
+                "cooling_capacity": {"bsonType": ["string", "null"]},
+                "heating_capacity": {"bsonType": ["string", "null"]},
                 "components": {"bsonType": ["object", "null"]},
                 "diagnostics": {"bsonType": ["array", "object"]},
+                "photos": {"bsonType": ["array", "null"]},
             },
         }
     }

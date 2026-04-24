@@ -5,6 +5,12 @@
 {% block content %}
   <div id="main-container">
     <div id="add-customer-panel">
+      <style>
+        .hvac-other-field[hidden] {
+          display: none !important;
+        }
+      </style>
+
       <h1>Update {{ component_label }}</h1>
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
@@ -66,49 +72,123 @@
           </div>
           <div class="add-customer-form-row">
             <div class="add-customer-form-field">
-              <label for="ductwork-install-year">Install Year</label>
-              <input id="ductwork-install-year" name="install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.install_year|default('') }}" class="{% if 'install_year' in ductwork_error_fields %}form-field-input-error{% endif %}">
-              <span class="field-validation-error {% if 'install_year' in ductwork_error_fields %}is-visible{% endif %}" data-ductwork-error-for="install_year">Install Year is required when a ductwork type is selected.</span>
-            </div>
-          </div>
-          <div class="add-customer-form-row">
-            <div class="add-customer-form-field">
-              <label for="ductwork-notes-on-sizing">Notes on Sizing</label>
-              <textarea id="ductwork-notes-on-sizing" name="notes_on_sizing" rows="4">{{ form_data.notes_on_sizing|default('') }}</textarea>
+              <label for="ductwork-notes">Ductwork Notes</label>
+              <textarea id="ductwork-notes" name="ductwork_notes" rows="4">{{ form_data.ductwork_notes|default('') }}</textarea>
             </div>
           </div>
         {% else %}
-          <div class="add-customer-form-row">
-            <div class="add-customer-form-field">
-              <label for="model-name">Model Name</label>
-              <input id="model-name" name="model_name" type="text" autocomplete="off" value="{{ form_data.model_name|default('') }}">
+          {% if component_key == 'thermostats' %}
+            <div class="add-customer-form-row">
+              <div class="add-customer-form-field">
+                <label for="thermostat-type">Type</label>
+                <select id="thermostat-type" name="thermostat_type">
+                  <option value="">-- Select thermostat type --</option>
+                  {% for option in thermostat_type_options|default([]) %}
+                    <option value="{{ option }}" {% if form_data.thermostat_type|default('') == option %}selected{% endif %}>{{ option }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="add-customer-form-field">
+                <label for="manufacturer">Manufacturer</label>
+                <select id="manufacturer" name="manufacturer" data-other-target="manufacturer-other-wrap">
+                  <option value="">-- Select a manufacturer --</option>
+                  {% for option in thermostat_manufacturer_options|default([]) %}
+                    <option value="{{ option }}" {% if form_data.manufacturer|default('') == option %}selected{% endif %}>{{ option }}</option>
+                  {% endfor %}
+                </select>
+              </div>
             </div>
-            <div class="add-customer-form-field">
-              <label for="model-number">Model Number</label>
-              <input id="model-number" name="model_number" type="text" autocomplete="off" value="{{ form_data.model_number|default('') }}">
+            <div class="add-customer-form-row">
+              <div class="add-customer-form-field hvac-other-field" id="manufacturer-other-wrap" {% if form_data.manufacturer|default('') != 'Other' %}hidden{% endif %}>
+                <label for="manufacturer-other">Other Manufacturer</label>
+                <input id="manufacturer-other" name="manufacturer_other" type="text" value="{{ form_data.manufacturer_other|default('') }}" {% if form_data.manufacturer|default('') != 'Other' %}disabled{% endif %}>
+              </div>
+              <div class="add-customer-form-field">
+                <label for="nickname">Nickname</label>
+                <input id="nickname" name="nickname" type="text" value="{{ form_data.nickname|default('') }}">
+              </div>
             </div>
-          </div>
-          <div class="add-customer-form-row">
-            <div class="add-customer-form-field">
-              <label for="serial-number">Serial Number</label>
-              <input id="serial-number" name="serial_number" type="text" autocomplete="off" value="{{ form_data.serial_number|default('') }}">
+            <div class="add-customer-form-row">
+              <div class="add-customer-form-field">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="4" placeholder="Add notes for other techs or for future reference...">{{ form_data.notes|default('') }}</textarea>
+              </div>
             </div>
-            <div class="add-customer-form-field">
-              <label for="manufacturer">Manufacturer</label>
-              <select id="manufacturer" name="manufacturer">
-                <option value="">-- Select a manufacturer --</option>
-                {% for option in manufacturer_options|default([]) %}
-                  <option value="{{ option }}" {% if form_data.manufacturer|default('') == option %}selected{% endif %}>{{ option }}</option>
-                {% endfor %}
-              </select>
+          {% elif component_key == 'refrigerants' %}
+            <div class="add-customer-form-row">
+              <div class="add-customer-form-field">
+                <label for="refrigerant-type">Type</label>
+                <select id="refrigerant-type" name="refrigerant_type">
+                  <option value="">-- Select refrigerant type --</option>
+                  {% for option in refrigerant_type_options|default([]) %}
+                    <option value="{{ option }}" {% if form_data.refrigerant_type|default('') == option %}selected{% endif %}>{{ option }}</option>
+                  {% endfor %}
+                </select>
+              </div>
             </div>
-          </div>
-          <div class="add-customer-form-row">
-            <div class="add-customer-form-field">
-              <label for="install-year">Install Year</label>
-              <input id="install-year" name="install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.install_year|default('') }}">
+            <div class="add-customer-form-row">
+              <div class="add-customer-form-field">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="4" placeholder="Add notes for other techs or for future reference...">{{ form_data.notes|default('') }}</textarea>
+              </div>
             </div>
-          </div>
+          {% else %}
+            {% if component_key in ['packageUnits', 'miniSplits'] %}
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="unit-type">Unit Type</label>
+                  <select id="unit-type" name="unit_type">
+                    <option value="">-- Select unit type --</option>
+                    {% for option in package_unit_type_options|default([]) %}
+                      <option value="{{ option }}" {% if form_data.unit_type|default('') == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+            {% endif %}
+            <div class="add-customer-form-row">
+              <div class="add-customer-form-field">
+                <label for="serial-number">Serial Number</label>
+                <input id="serial-number" name="serial_number" type="text" autocomplete="off" value="{{ form_data.serial_number|default('') }}">
+              </div>
+              <div class="add-customer-form-field">
+                <label for="model-number">Model Number</label>
+                <input id="model-number" name="model_number" type="text" autocomplete="off" value="{{ form_data.model_number|default('') }}">
+              </div>
+            </div>
+            <div class="add-customer-form-row">
+              <div class="add-customer-form-field">
+                <label for="manufacturer">Manufacturer</label>
+                <select id="manufacturer" name="manufacturer" data-other-target="manufacturer-other-wrap">
+                  <option value="">-- Select a manufacturer --</option>
+                  {% for option in manufacturer_options|default([]) %}
+                    <option value="{{ option }}" {% if form_data.manufacturer|default('') == option %}selected{% endif %}>{{ option }}</option>
+                  {% endfor %}
+                  <option value="Other" {% if form_data.manufacturer|default('') == 'Other' %}selected{% endif %}>Other</option>
+                </select>
+              </div>
+              <div class="add-customer-form-field hvac-other-field" id="manufacturer-other-wrap" {% if form_data.manufacturer|default('') != 'Other' %}hidden{% endif %}>
+                <label for="manufacturer-other">Other Manufacturer</label>
+                <input id="manufacturer-other" name="manufacturer_other" type="text" value="{{ form_data.manufacturer_other|default('') }}" {% if form_data.manufacturer|default('') != 'Other' %}disabled{% endif %}>
+              </div>
+            </div>
+            <div class="add-customer-form-row">
+              <div class="add-customer-form-field">
+                <label for="install-year">Install Year</label>
+                <input id="install-year" name="install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.install_year|default('') }}">
+              </div>
+              <div class="add-customer-form-field">
+                <label for="nickname">Nickname</label>
+                <input id="nickname" name="nickname" type="text" value="{{ form_data.nickname|default('') }}">
+              </div>
+            </div>
+            <div class="add-customer-form-row">
+              <div class="add-customer-form-field">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="4" placeholder="Add notes for other techs or for future reference...">{{ form_data.notes|default('') }}</textarea>
+              </div>
+            </div>
+          {% endif %}
         {% endif %}
 
         <div id="add-customer-form-actions">
@@ -132,7 +212,6 @@
           { key: 'insulated', field: ductworkInsulatedSelect },
           { key: 'supply_branches', field: document.getElementById('ductwork-supply-branches') },
           { key: 'returns', field: document.getElementById('ductwork-returns') },
-          { key: 'install_year', field: document.getElementById('ductwork-install-year') },
         ].filter(function (config) {
           return Boolean(config.field);
         }).map(function (config) {
@@ -211,6 +290,59 @@
         syncDuctworkInsulated();
         syncDuctworkFieldErrors();
         syncSubmitState();
+      })();
+    </script>
+  {% else %}
+    <script defer>
+      (function () {
+        const form = document.getElementById('add-customer-form');
+        if (!form) {
+          return;
+        }
+
+        function syncOtherManufacturerFields() {
+          const selects = form.querySelectorAll('select[data-other-target]');
+          selects.forEach(function (select) {
+            const targetId = select.getAttribute('data-other-target');
+            const wrap = targetId ? document.getElementById(targetId) : null;
+            if (!wrap) {
+              return;
+            }
+
+            const isOther = (select.value || '').trim().toLowerCase() === 'other';
+            wrap.hidden = !isOther;
+            wrap.style.display = isOther ? 'grid' : 'none';
+
+            const input = wrap.querySelector('input');
+            if (!input) {
+              return;
+            }
+
+            if (!input.dataset.fieldName && input.getAttribute('name')) {
+              input.dataset.fieldName = input.getAttribute('name');
+            }
+
+            if (isOther) {
+              if (input.dataset.fieldName) {
+                input.setAttribute('name', input.dataset.fieldName);
+              }
+              input.disabled = false;
+              return;
+            }
+
+            input.value = '';
+            input.disabled = true;
+            input.removeAttribute('name');
+          });
+        }
+
+        form.addEventListener('change', function (event) {
+          if (event.target && event.target.matches('select[data-other-target]')) {
+            syncOtherManufacturerFields();
+          }
+        });
+
+        syncOtherManufacturerFields();
       })();
     </script>
   {% endif %}

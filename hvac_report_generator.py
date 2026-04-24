@@ -136,7 +136,7 @@ def generate_hvac_system_health_report(hvac_system_id, customer, hvac_system, di
         ["Date Generated:", datetime.now().strftime("%m/%d/%Y")],
         ["Customer:", customer_name],
         ["System Type:", str(hvac_system.get("system_type", "HVAC System"))],
-        ["Location Type:", str(hvac_system.get("location_type", "Location not set"))],
+        ["Property ID:", str(hvac_system.get("property_id", "-"))],
         ["Date Performed:", str(diagnostics_card.get("date_performed", "-"))],
     ]
     report_info_table = Table(report_info, colWidths=[1.8 * inch, 4.3 * inch])

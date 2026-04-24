@@ -108,7 +108,7 @@
       const totalFieldHidden = document.getElementById('totalExternalStaticPressure_hidden');
       const designCfmField = document.getElementById('designCfm');
       const designCfmFieldHidden = document.getElementById('designCfm_hidden');
-      const hvacSystemTonnage = {{ hvac_system.get('tonnage', '')|tojson }};
+      const hvacSystemTonnage = {% if hvac_system.get('system_type') in ('Split System Heat Pump with Air Handler', 'Mini Split System') %}{{ hvac_system.get('system_tonnage', '')|tojson }}{% else %}{{ hvac_system.get('cooling_capacity', '')|tojson }}{% endif %};
 
       if (!supplyField || !returnField || !totalField || !totalFieldHidden) {
         return;

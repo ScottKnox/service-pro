@@ -59,7 +59,11 @@
                 <span class="hvac-component-card-icon {{ component_icon_class }}" aria-hidden="true">{{ component_icon }}</span>
                 <div class="hvac-component-card-heading-text">
                   <p class="hvac-component-card-system-type">{{ component.system_type }}</p>
-                  <h4>{{ component.details.model_name if component.component_key != 'ductwork' else component.component_label }}</h4>
+                  {% if component.component_key == 'ductwork' %}
+                    <h4>{{ component.component_label }}</h4>
+                  {% else %}
+                    <h4>{{ component.details.nickname if component.details.nickname != '-' else component.component_label }}</h4>
+                  {% endif %}
                 </div>
               </div>
               <div class="hvac-component-card-body">
@@ -81,34 +85,74 @@
                     <strong>{{ component.details.returns }}</strong>
                   </div>
                   <div class="hvac-component-row">
-                    <span>Notes on Sizing</span>
-                    <strong>{{ component.details.notes_on_sizing }}</strong>
-                  </div>
-                  <div class="hvac-component-row">
-                    <span>Install Year</span>
-                    <strong>{{ component.details.install_year }}</strong>
+                    <span>Ductwork Notes</span>
+                    <strong>{{ component.details.ductwork_notes }}</strong>
                   </div>
                 {% else %}
-                  <div class="hvac-component-row">
-                    <span>Manufacturer</span>
-                    <strong>{{ component.details.manufacturer }}</strong>
-                  </div>
-                  <div class="hvac-component-row">
-                    <span>Model Name</span>
-                    <strong>{{ component.details.model_name }}</strong>
-                  </div>
-                  <div class="hvac-component-row">
-                    <span>Model Number</span>
-                    <strong>{{ component.details.model_number }}</strong>
-                  </div>
-                  <div class="hvac-component-row">
-                    <span>Serial Number</span>
-                    <strong>{{ component.details.serial_number }}</strong>
-                  </div>
-                  <div class="hvac-component-row">
-                    <span>Install Year</span>
-                    <strong>{{ component.details.install_year }}</strong>
-                  </div>
+                  {% if component.component_key == 'thermostats' %}
+                    <div class="hvac-component-row">
+                      <span>Type</span>
+                      <strong>{{ component.details.thermostat_type }}</strong>
+                    </div>
+                    <div class="hvac-component-row">
+                      <span>Manufacturer</span>
+                      <strong>{{ component.details.manufacturer }}</strong>
+                    </div>
+                    <div class="hvac-component-row">
+                      <span>Nickname</span>
+                      <strong>{{ component.details.nickname }}</strong>
+                    </div>
+                    {% if component.details.notes and component.details.notes != '-' %}
+                    <div class="hvac-component-row hvac-component-row--notes">
+                      <span>Notes</span>
+                      <strong>{{ component.details.notes }}</strong>
+                    </div>
+                    {% endif %}
+                  {% elif component.component_key == 'refrigerants' %}
+                    <div class="hvac-component-row">
+                      <span>Type</span>
+                      <strong>{{ component.details.refrigerant_type }}</strong>
+                    </div>
+                    {% if component.details.notes and component.details.notes != '-' %}
+                    <div class="hvac-component-row hvac-component-row--notes">
+                      <span>Notes</span>
+                      <strong>{{ component.details.notes }}</strong>
+                    </div>
+                    {% endif %}
+                  {% else %}
+                    {% if component.component_key in ['packageUnits', 'miniSplits'] and component.details.unit_type and component.details.unit_type != '-' %}
+                      <div class="hvac-component-row">
+                        <span>Unit Type</span>
+                        <strong>{{ component.details.unit_type }}</strong>
+                      </div>
+                    {% endif %}
+                    <div class="hvac-component-row">
+                      <span>Nickname</span>
+                      <strong>{{ component.details.nickname }}</strong>
+                    </div>
+                    <div class="hvac-component-row">
+                      <span>Manufacturer</span>
+                      <strong>{{ component.details.manufacturer }}</strong>
+                    </div>
+                    <div class="hvac-component-row">
+                      <span>Model Number</span>
+                      <strong>{{ component.details.model_number }}</strong>
+                    </div>
+                    <div class="hvac-component-row">
+                      <span>Serial Number</span>
+                      <strong>{{ component.details.serial_number }}</strong>
+                    </div>
+                    <div class="hvac-component-row">
+                      <span>Install Year</span>
+                      <strong>{{ component.details.install_year }}</strong>
+                    </div>
+                    {% if component.details.notes and component.details.notes != '-' %}
+                    <div class="hvac-component-row hvac-component-row--notes">
+                      <span>Notes</span>
+                      <strong>{{ component.details.notes }}</strong>
+                    </div>
+                    {% endif %}
+                  {% endif %}
                 {% endif %}
               </div>
             </div>

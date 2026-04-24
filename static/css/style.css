@@ -4009,6 +4009,185 @@ p {
   gap: 0.75rem;
 }
 
+.hvac-system-status-note {
+  margin: 0.45rem 0 0;
+  font-size: 0.78rem;
+  color: #5A677A;
+  text-align: left;
+}
+
+/* System Photos */
+.hvac-photos-note {
+  font-size: 0.8rem;
+  color: #5A677A;
+  background: #F4F6FA;
+  border: 1px solid #D6DCE5;
+  border-radius: 6px;
+  padding: 0.55rem 0.85rem;
+  margin-bottom: 0.95rem;
+  line-height: 1.5;
+}
+
+.hvac-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.hvac-photo-tile {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #D6DCE5;
+  background: #F4F6FA;
+}
+
+.hvac-photo-thumb-link {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: zoom-in;
+}
+
+.hvac-photo-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hvac-photo-delete-form {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+
+.hvac-photo-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s;
+}
+
+.hvac-photo-delete-btn:hover {
+  background: rgba(200, 40, 40, 0.85);
+}
+
+.hvac-photo-tile--add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1.5px dashed #A4B0C0;
+  cursor: pointer;
+  color: #5A677A;
+  font-size: 0.78rem;
+  font-weight: 500;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.hvac-photo-tile--add:hover {
+  border-color: #4A90D9;
+  background: #EBF3FC;
+  color: #2B6CB0;
+}
+
+.hvac-photo-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Photo lightbox modal */
+.hvac-photo-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hvac-photo-modal[hidden] {
+  display: none;
+}
+
+.hvac-photo-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  cursor: pointer;
+}
+
+.hvac-photo-modal-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: min(92vw, 1000px);
+  max-height: 92dvh;
+  padding: 0.5rem;
+}
+
+.hvac-photo-modal-close {
+  position: absolute;
+  top: -2.25rem;
+  right: 0;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.hvac-photo-modal-close:hover,
+.hvac-photo-modal-close:focus-visible {
+  background: rgba(255, 255, 255, 0.3);
+  outline: none;
+}
+
+.hvac-photo-modal-img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(92dvh - 3rem);
+  border-radius: 6px;
+  object-fit: contain;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.hvac-photo-modal-caption {
+  margin: 0.6rem 0 0;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+}
+
 .hvac-system-kpi-card {
   border: 1px solid #D6DCE5;
   border-radius: 8px;

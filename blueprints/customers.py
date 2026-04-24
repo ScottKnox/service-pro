@@ -6,6 +6,10 @@ import re
 from bson import ObjectId
 from flask import Blueprint, current_app, redirect, render_template, request, session, url_for
 
+ALLOWED_PHOTO_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "heic"}
+MAX_PHOTO_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+HVAC_PHOTO_UPLOAD_SUBDIR = os.path.join("uploads", "hvac_photos")
+
 from mongo import build_reference_filter, ensure_connection_or_500, object_id_or_404, reference_value, serialize_doc
 from hvac_report_generator import generate_hvac_system_health_report
 from utils.catalog import build_job_parts_from_form, build_part_catalog
@@ -222,15 +226,41 @@ def _property_payload_is_valid(property_payload):
     return all(str(value or "").strip() for value in required_values)
 
 HVAC_COLLECTION_CONFIG = {
-    "Split": (("airHandlers", "Air Handler"), ("condensers", "Condenser")),
-    "Heat Pump": (("airHandlers", "Air Handler"), ("condensers", "Condenser")),
-    "Package": (("packageUnits", "Unit"),),
-    "Mini Split": (("miniSplits", "Unit"),),
+    "Split System AC with Gas Furnace": (
+        ("condensers", "Condenser"),
+        ("furnaces", "Furnace"),
+        ("thermostats", "Thermostat"),
+        ("refrigerants", "Refrigerant"),
+    ),
+    "Split System Heat Pump with Air Handler": (
+        ("condensers", "Condenser"),
+        ("airHandlers", "Air Handler"),
+        ("thermostats", "Thermostat"),
+        ("refrigerants", "Refrigerant"),
+    ),
+    "Split System Heat Pump with Gas Furnace": (
+        ("condensers", "Condenser"),
+        ("furnaces", "Furnace"),
+        ("thermostats", "Thermostat"),
+        ("refrigerants", "Refrigerant"),
+    ),
+    "Mini Split System": (
+        ("miniSplits", "Unit"),
+        ("refrigerants", "Refrigerant"),
+    ),
+    "Package Unit": (
+        ("packageUnits", "Unit"),
+        ("thermostats", "Thermostat"),
+        ("refrigerants", "Refrigerant"),
+    ),
 }
 
 HVAC_COMPONENT_LABELS = {
     "airHandlers": "Air Handler",
     "condensers": "Condenser",
+    "furnaces": "Furnace",
+    "thermostats": "Thermostat",
+    "refrigerants": "Refrigerant",
     "packageUnits": "Unit",
     "miniSplits": "Unit",
 }
@@ -238,11 +268,20 @@ HVAC_COMPONENT_LABELS = {
 HVAC_COMPONENT_FIELD_BY_COLLECTION = {
     "airHandlers": "air_handler",
     "condensers": "condenser",
+    "furnaces": "furnace",
+    "thermostats": "thermostat",
+    "refrigerants": "refrigerant",
     "packageUnits": "unit",
     "miniSplits": "unit",
 }
 
-SYSTEM_TYPE_OPTIONS = ("Heat Pump", "Split", "Package", "Mini Split")
+SYSTEM_TYPE_OPTIONS = (
+    "Split System AC with Gas Furnace",
+    "Split System Heat Pump with Air Handler",
+    "Split System Heat Pump with Gas Furnace",
+    "Mini Split System",
+    "Package Unit",
+)
 
 TONNAGE_OPTIONS = (
     ".50 Ton (6000 BTU)",
@@ -258,16 +297,17 @@ TONNAGE_OPTIONS = (
     "5 Ton (60000 BTU)",
 )
 
-LOCATION_TYPE_OPTIONS = (
-    "Primary Residence",
-    "Shop Building",
-    "Secondary Home",
-    "External Building",
-    "Apartment",
-    "Townhouse",
-)
+DUCTWORK_SYSTEM_TYPES = {
+    "Split System AC with Gas Furnace",
+    "Split System Heat Pump with Air Handler",
+    "Split System Heat Pump with Gas Furnace",
+    "Package Unit",
+}
 
-DUCTWORK_SYSTEM_TYPES = {"Split", "Heat Pump", "Package"}
+SINGLE_TONNAGE_SYSTEM_TYPES = {
+    "Split System Heat Pump with Air Handler",
+    "Mini Split System",
+}
 
 DUCTWORK_TYPE_OPTIONS = (
     "Sheet Metal and Flex",
@@ -310,6 +350,42 @@ MANUFACTURER_OPTIONS = (
     "Rheem",
     "Daikin",
     "American Standard",
+    "York",
+    "Mitsubishi",
+    "Bryant",
+    "Payne",
+)
+
+MINI_SPLIT_MANUFACTURER_OPTIONS = (
+    "Mitsubishi",
+    "Daikin",
+    "LG",
+    "Fujitsu",
+    "Gree",
+    "Pioneer",
+    "Other",
+)
+
+THERMOSTAT_TYPE_OPTIONS = (
+    "Programmable",
+    "Smart",
+    "Manual",
+    "Communicating",
+)
+
+THERMOSTAT_MANUFACTURER_OPTIONS = (
+    "Ecobee",
+    "Honeywell",
+    "Nest",
+    "Emerson",
+    "Other",
+)
+
+PACKAGE_UNIT_TYPE_OPTIONS = (
+    "Gas Electric",
+    "Heat Pump",
+    "Dual Fuel",
+    "Electric Only",
 )
 
 HVAC_DIAGNOSTIC_SECTIONS = (
@@ -582,6 +658,9 @@ HVAC_DIAGNOSTIC_FIELD_TYPES = {
 HVAC_FORM_PREFIX_BY_COLLECTION = {
     "airHandlers": "air_handler",
     "condensers": "condenser",
+    "furnaces": "furnace",
+    "thermostats": "thermostat",
+    "refrigerants": "refrigerant",
     "packageUnits": "unit",
     "miniSplits": "unit",
 }
@@ -592,13 +671,25 @@ def _email_is_valid(email):
 
 
 def _build_hvac_component(form_data, prefix):
-    return {
-        "model_name": form_data.get(f"{prefix}_model_name", "").strip(),
-        "model_number": form_data.get(f"{prefix}_model_number", "").strip(),
+    component = {
         "serial_number": form_data.get(f"{prefix}_serial_number", "").strip(),
+        "model_number": form_data.get(f"{prefix}_model_number", "").strip(),
         "manufacturer": form_data.get(f"{prefix}_manufacturer", "").strip(),
+        "manufacturer_other": form_data.get(f"{prefix}_manufacturer_other", "").strip(),
         "install_year": form_data.get(f"{prefix}_install_year", "").strip(),
+        "nickname": form_data.get(f"{prefix}_nickname", "").strip(),
     }
+
+    if prefix == "unit":
+        component["unit_type"] = form_data.get("unit_type", "").strip()
+
+    if prefix == "thermostat":
+        component["thermostat_type"] = form_data.get("thermostat_type", "").strip()
+
+    if prefix == "refrigerant":
+        component["refrigerant_type"] = form_data.get("refrigerant_type", "").strip()
+
+    return component
 
 
 def _build_hvac_ductwork(form_data):
@@ -607,8 +698,7 @@ def _build_hvac_ductwork(form_data):
         "insulated": form_data.get("ductwork_insulated", "").strip(),
         "supply_branches": form_data.get("ductwork_supply_branches", "").strip(),
         "returns": form_data.get("ductwork_returns", "").strip(),
-        "notes_on_sizing": form_data.get("ductwork_notes_on_sizing", "").strip(),
-        "install_year": form_data.get("ductwork_install_year", "").strip(),
+        "ductwork_notes": form_data.get("ductwork_notes", "").strip(),
     }
     return ductwork if any(ductwork.values()) else None
 
@@ -626,26 +716,32 @@ def _extract_hvac_ductwork(source):
         "insulated": str(ductwork.get("insulated", "")).strip(),
         "supply_branches": str(ductwork.get("supply_branches", "")).strip(),
         "returns": str(ductwork.get("returns", "")).strip(),
-        "notes_on_sizing": str(ductwork.get("notes_on_sizing", "")).strip(),
-        "install_year": str(ductwork.get("install_year", "")).strip(),
+        "ductwork_notes": str(ductwork.get("ductwork_notes", "")).strip(),
     }
     return normalized_ductwork if any(normalized_ductwork.values()) else None
 
 
-def _build_hvac_system_document(customer_id, system_type, location_type, form_data):
+def _build_hvac_system_document(customer_id, system_type, form_data):
     document = {
         "customer_id": reference_value(customer_id),
         "system_type": system_type,
-        "location_type": location_type,
     }
 
     property_id = str(form_data.get("property_id") or "").strip()
     if property_id:
         document["property_id"] = reference_value(property_id)
 
-    tonnage = str(form_data.get("tonnage", "")).strip()
-    if tonnage:
-        document["tonnage"] = tonnage
+    if system_type in SINGLE_TONNAGE_SYSTEM_TYPES:
+        system_tonnage = str(form_data.get("system_tonnage", "")).strip()
+        if system_tonnage:
+            document["system_tonnage"] = system_tonnage
+    else:
+        cooling_capacity = str(form_data.get("cooling_capacity", "")).strip()
+        heating_capacity = str(form_data.get("heating_capacity", "")).strip()
+        if cooling_capacity:
+            document["cooling_capacity"] = cooling_capacity
+        if heating_capacity:
+            document["heating_capacity"] = heating_capacity
 
     if system_type in DUCTWORK_SYSTEM_TYPES:
         ductwork = _build_hvac_ductwork(form_data)
@@ -660,7 +756,7 @@ def _get_missing_ductwork_fields(ductwork_data):
     if not ductwork_type:
         return []
 
-    required_fields = ("insulated", "supply_branches", "returns", "install_year")
+    required_fields = ("insulated", "supply_branches", "returns")
     return [
         field_name
         for field_name in required_fields
@@ -673,7 +769,6 @@ def _validate_ductwork_data(ductwork_data):
         "insulated": "Insulated",
         "supply_branches": "Supply Branches",
         "returns": "Returns",
-        "install_year": "Install Year",
     }
     missing_fields = [
         required_fields[field_name]
@@ -696,34 +791,45 @@ def _validate_ductwork_data(ductwork_data):
 def _build_empty_hvac_form_data():
     return {
         "system_type": "",
-        "tonnage": "",
-        "location_type": "",
-        "air_handler_model_name": "",
+        "system_tonnage": "",
+        "cooling_capacity": "",
+        "heating_capacity": "",
         "air_handler_model_number": "",
         "air_handler_serial_number": "",
         "air_handler_manufacturer": "",
+        "air_handler_manufacturer_other": "",
         "air_handler_install_year": "",
-        "condenser_model_name": "",
+        "air_handler_nickname": "",
         "condenser_model_number": "",
         "condenser_serial_number": "",
         "condenser_manufacturer": "",
+        "condenser_manufacturer_other": "",
         "condenser_install_year": "",
-        "furnace_model_name": "",
+        "condenser_nickname": "",
         "furnace_model_number": "",
         "furnace_serial_number": "",
         "furnace_manufacturer": "",
+        "furnace_manufacturer_other": "",
         "furnace_install_year": "",
-        "unit_model_name": "",
+        "furnace_nickname": "",
         "unit_model_number": "",
         "unit_serial_number": "",
         "unit_manufacturer": "",
+        "unit_manufacturer_other": "",
         "unit_install_year": "",
+        "unit_nickname": "",
+        "unit_type": "",
+        "thermostat_type": "",
+        "thermostat_manufacturer": "",
+        "thermostat_manufacturer_other": "",
+        "thermostat_nickname": "",
+        "refrigerant_type": "",
         "ductwork_type": "",
         "ductwork_insulated": "",
         "ductwork_supply_branches": "",
         "ductwork_returns": "",
-        "ductwork_notes_on_sizing": "",
-        "ductwork_install_year": "",
+        "ductwork_notes": "",
+        "property_id": "",
     }
 
 
@@ -748,13 +854,30 @@ def _build_hvac_component_document(form_data, component_base_document, collectio
 
 def _summarize_hvac_component(component):
     summary_parts = []
+    nickname = str(component.get("nickname", "")).strip()
     manufacturer = str(component.get("manufacturer", "")).strip()
-    model_name = str(component.get("model_name", "")).strip()
+    manufacturer_other = str(component.get("manufacturer_other", "")).strip()
+    model_number = str(component.get("model_number", "")).strip()
+    thermostat_type = str(component.get("thermostat_type", "")).strip()
+    refrigerant_type = str(component.get("refrigerant_type", "")).strip()
+    unit_type = str(component.get("unit_type", "")).strip()
+
+    if manufacturer.lower() == "other" and manufacturer_other:
+        manufacturer = manufacturer_other
+
+    if nickname:
+        summary_parts.append(nickname)
 
     if manufacturer:
         summary_parts.append(manufacturer)
-    if model_name:
-        summary_parts.append(model_name)
+    if model_number:
+        summary_parts.append(model_number)
+    if thermostat_type:
+        summary_parts.append(thermostat_type)
+    if refrigerant_type:
+        summary_parts.append(refrigerant_type)
+    if unit_type:
+        summary_parts.append(unit_type)
 
     if not summary_parts:
         return "No component details saved yet."
@@ -777,17 +900,35 @@ def _summarize_ductwork(component):
 
 
 def _format_hvac_component_detail(component):
+    manufacturer = str(component.get("manufacturer", "")).strip()
+    manufacturer_other = str(component.get("manufacturer_other", "")).strip()
+    if manufacturer.lower() == "other" and manufacturer_other:
+        display_manufacturer = manufacturer_other
+    else:
+        display_manufacturer = manufacturer
+
     return {
-        "model_name": str(component.get("model_name", "")).strip() or "-",
         "model_number": str(component.get("model_number", "")).strip() or "-",
         "serial_number": str(component.get("serial_number", "")).strip() or "-",
-        "manufacturer": str(component.get("manufacturer", "")).strip() or "-",
+        "manufacturer": display_manufacturer or "-",
         "install_year": str(component.get("install_year", "")).strip() or "-",
+        "nickname": str(component.get("nickname", "")).strip() or "-",
+        "thermostat_type": str(component.get("thermostat_type", "")).strip() or "-",
+        "refrigerant_type": str(component.get("refrigerant_type", "")).strip() or "-",
+        "unit_type": str(component.get("unit_type", "")).strip() or "-",
+        "notes": str(component.get("notes", "")).strip() or "-",
     }
 
 
 def _format_diagnostics_key(key):
     return str(key).replace("_", " ").strip().title()
+
+
+def _get_primary_tonnage_value(hvac_system):
+    system_type = str(hvac_system.get("system_type", "")).strip()
+    if system_type in SINGLE_TONNAGE_SYSTEM_TYPES:
+        return hvac_system.get("system_tonnage", "")
+    return hvac_system.get("cooling_capacity", "")
 
 
 def _calculate_design_cfm_from_tonnage(tonnage_value):
@@ -813,7 +954,7 @@ def _build_hvac_diagnostics_entry(form_data, hvac_system=None):
         entry[field_name] = str(form_data.get(field_name, "")).strip()
 
     if hvac_system is not None:
-        entry["designCfm"] = _calculate_design_cfm_from_tonnage(hvac_system.get("tonnage", ""))
+        entry["designCfm"] = _calculate_design_cfm_from_tonnage(_get_primary_tonnage_value(hvac_system))
     entry["date_performed"] = datetime.now().strftime("%m/%d/%Y")
     return entry
 
@@ -939,8 +1080,7 @@ def _build_hvac_ductwork_component(hvac_system):
         "insulated": "-",
         "supply_branches": "-",
         "returns": "-",
-        "notes_on_sizing": "-",
-        "install_year": "-",
+        "ductwork_notes": "-",
     }
     summary = "No ductwork details saved yet."
 
@@ -950,8 +1090,7 @@ def _build_hvac_ductwork_component(hvac_system):
             "insulated": ductwork.get("insulated", "").strip() or "-",
             "supply_branches": ductwork.get("supply_branches", "").strip() or "-",
             "returns": ductwork.get("returns", "").strip() or "-",
-            "notes_on_sizing": ductwork.get("notes_on_sizing", "").strip() or "-",
-            "install_year": ductwork.get("install_year", "").strip() or "-",
+            "ductwork_notes": ductwork.get("ductwork_notes", "").strip() or "-",
         }
         summary = _summarize_ductwork(hvac_system) or summary
 
@@ -994,8 +1133,7 @@ def _build_hvac_component_view_payload(db, customer_id, reference_type, referenc
             "insulated": str(ductwork.get("insulated", "")).strip() or "-",
             "supply_branches": str(ductwork.get("supply_branches", "")).strip() or "-",
             "returns": str(ductwork.get("returns", "")).strip() or "-",
-            "notes_on_sizing": str(ductwork.get("notes_on_sizing", "")).strip() or "-",
-            "install_year": str(ductwork.get("install_year", "")).strip() or "-",
+            "ductwork_notes": str(ductwork.get("ductwork_notes", "")).strip() or "-",
         }
         component_label = "Ductwork"
     else:
@@ -1008,7 +1146,6 @@ def _build_hvac_component_view_payload(db, customer_id, reference_type, referenc
         "reference_type": "system",
         "reference_id": reference_id,
         "system_type": serialized_system.get("system_type", "HVAC System"),
-        "location_type": serialized_system.get("location_type", "Location not set"),
         "component_key": component_key,
         "component_label": component_label,
         "details": details,
@@ -1033,11 +1170,6 @@ def _load_hvac_components_for_system(db, customer_id, hvac_system):
     component_snapshots = hvac_system.get("components", {}) if isinstance(hvac_system.get("components"), dict) else {}
 
     for collection_name, label in expected_components:
-        snapshot = component_snapshots.get(collection_name)
-        if isinstance(snapshot, dict) and snapshot:
-            components.append(_build_hvac_card_component(snapshot, label, collection_name))
-            continue
-
         matching_component = db[collection_name].find_one(
             {
                 "$and": [
@@ -1051,6 +1183,11 @@ def _load_hvac_components_for_system(db, customer_id, hvac_system):
         if matching_component:
             serialized_component = serialize_doc(matching_component)
             components.append(_build_hvac_card_component(serialized_component, label, collection_name))
+            continue
+
+        snapshot = component_snapshots.get(collection_name)
+        if isinstance(snapshot, dict) and snapshot:
+            components.append(_build_hvac_card_component(snapshot, label, collection_name))
 
     return components
 
@@ -1091,13 +1228,24 @@ def _build_hvac_detail_payload(db, customer_id, reference_type, reference_id):
     return {
         "reference_type": "system",
         "reference_id": reference_id,
-        "title": f"{serialized_system.get('system_type', 'HVAC System')} - {serialized_system.get('location_type', 'Location not set')}",
+        "title": f"{serialized_system.get('system_type', 'HVAC System')}",
         "system_type": serialized_system.get("system_type", "HVAC System"),
-        "tonnage": str(serialized_system.get("tonnage", "")).strip() or "-",
-        "location_type": serialized_system.get("location_type", "Location not set"),
+        "system_tonnage": str(serialized_system.get("system_tonnage", "")).strip() or "-",
+        "cooling_capacity": str(serialized_system.get("cooling_capacity", "")).strip() or "-",
+        "heating_capacity": str(serialized_system.get("heating_capacity", "")).strip() or "-",
+        "property_id": str(serialized_system.get("property_id", "")).strip() or "-",
         "components": components,
         "diagnostics": diagnostics,
         "reports": reports,
+        "photos": [
+            {
+                "url": url_for("static", filename=f"{HVAC_PHOTO_UPLOAD_SUBDIR.replace(os.sep, '/')}/{photo.get('filename', '')}"),
+                "filename": str(photo.get("filename", "")).strip(),
+                "uploaded_at": str(photo.get("uploaded_at", "")).strip() or "-",
+            }
+            for photo in serialized_system.get("photos", [])
+            if isinstance(photo, dict) and photo.get("filename")
+        ],
     }
 
 
@@ -1120,7 +1268,6 @@ def _build_hvac_system_cards(db, customer_id, property_id=None):
 
     for base_system in base_systems:
         system_type = str(base_system.get("system_type", "")).strip()
-        location_type = str(base_system.get("location_type", "")).strip()
         loaded_components = _load_hvac_components_for_system(db, customer_id, base_system)
         card_ductwork_summary = _summarize_ductwork(base_system)
 
@@ -1129,7 +1276,9 @@ def _build_hvac_system_cards(db, customer_id, property_id=None):
                 "reference_type": "system",
                 "reference_id": str(base_system.get("_id", "")).strip(),
                 "system_type": system_type or "HVAC System",
-                "location_type": location_type or "Location not set",
+                "system_tonnage": str(base_system.get("system_tonnage", "")).strip() or "-",
+                "cooling_capacity": str(base_system.get("cooling_capacity", "")).strip() or "-",
+                "heating_capacity": str(base_system.get("heating_capacity", "")).strip() or "-",
                 "ductwork_summary": card_ductwork_summary,
                 "components": [
                     {
@@ -1740,14 +1889,14 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
         field_name: ""
         for field_name, _label in HVAC_DIAGNOSTIC_FIELDS
     }
-    form_data["designCfm"] = _calculate_design_cfm_from_tonnage(hvac_system.get("tonnage", ""))
+    form_data["designCfm"] = _calculate_design_cfm_from_tonnage(_get_primary_tonnage_value(hvac_system))
 
     if request.method == "POST":
         form_data = {
             field_name: request.form.get(field_name, "").strip()
             for field_name, _label in HVAC_DIAGNOSTIC_FIELDS
         }
-        form_data["designCfm"] = _calculate_design_cfm_from_tonnage(hvac_system.get("tonnage", ""))
+        form_data["designCfm"] = _calculate_design_cfm_from_tonnage(_get_primary_tonnage_value(hvac_system))
 
         diagnostics_entry = _build_hvac_diagnostics_entry(form_data, hvac_system)
         existing_diagnostics = _sort_diagnostics_by_date_desc(hvac_system.get("diagnostics", []))
@@ -1899,7 +2048,6 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
 
     serialized_system = serialize_doc(hvac_system)
     system_type = str(serialized_system.get("system_type", "")).strip()
-    location_type = str(serialized_system.get("location_type", "")).strip()
     allowed_component_keys = _get_allowed_component_keys(system_type)
     if component_key not in allowed_component_keys:
         return redirect(
@@ -1921,8 +2069,7 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
             "insulated": ductwork.get("insulated", ""),
             "supply_branches": ductwork.get("supply_branches", ""),
             "returns": ductwork.get("returns", ""),
-            "notes_on_sizing": ductwork.get("notes_on_sizing", ""),
-            "install_year": ductwork.get("install_year", ""),
+            "ductwork_notes": ductwork.get("ductwork_notes", ""),
         }
 
         if request.method == "POST":
@@ -1931,8 +2078,7 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
                 "insulated": request.form.get("insulated", "").strip(),
                 "supply_branches": request.form.get("supply_branches", "").strip(),
                 "returns": request.form.get("returns", "").strip(),
-                "notes_on_sizing": request.form.get("notes_on_sizing", "").strip(),
-                "install_year": request.form.get("install_year", "").strip(),
+                "ductwork_notes": request.form.get("ductwork_notes", "").strip(),
             }
             error = _validate_ductwork_data(form_data)
             ductwork_error_fields = _get_missing_ductwork_fields(form_data)
@@ -2000,25 +2146,35 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
     serialized_component = serialize_doc(existing_component) if existing_component else {}
     field_prefix = HVAC_COMPONENT_FIELD_BY_COLLECTION.get(component_key, "")
     form_data = {
-        "model_name": str(serialized_component.get("model_name", "")).strip(),
         "model_number": str(serialized_component.get("model_number", "")).strip(),
         "serial_number": str(serialized_component.get("serial_number", "")).strip(),
-            "manufacturer": str(serialized_component.get("manufacturer", "")).strip(),
+        "manufacturer": str(serialized_component.get("manufacturer", "")).strip(),
+        "manufacturer_other": str(serialized_component.get("manufacturer_other", "")).strip(),
         "install_year": str(serialized_component.get("install_year", "")).strip(),
+        "nickname": str(serialized_component.get("nickname", "")).strip(),
+        "thermostat_type": str(serialized_component.get("thermostat_type", "")).strip(),
+        "refrigerant_type": str(serialized_component.get("refrigerant_type", "")).strip(),
+        "unit_type": str(serialized_component.get("unit_type", "")).strip(),
+        "notes": str(serialized_component.get("notes", "")).strip(),
     }
 
     if request.method == "POST":
         form_data = {
-            "model_name": request.form.get("model_name", "").strip(),
             "model_number": request.form.get("model_number", "").strip(),
             "serial_number": request.form.get("serial_number", "").strip(),
             "manufacturer": request.form.get("manufacturer", "").strip(),
+            "manufacturer_other": request.form.get("manufacturer_other", "").strip(),
             "install_year": request.form.get("install_year", "").strip(),
+            "nickname": request.form.get("nickname", "").strip(),
+            "thermostat_type": request.form.get("thermostat_type", "").strip(),
+            "refrigerant_type": request.form.get("refrigerant_type", "").strip(),
+            "unit_type": request.form.get("unit_type", "").strip(),
+            "notes": request.form.get("notes", "").strip(),
         }
         component_document = {
             "customer_id": reference_value(customerId),
             "system_type": system_type,
-            "location_type": location_type,
+            "property_id": serialized_system.get("property_id", ""),
             "hvac_system_id": str(hvac_system.get("_id", "")).strip(),
             **form_data,
         }
@@ -2054,6 +2210,10 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
         is_ductwork=False,
         form_data=form_data,
         manufacturer_options=MANUFACTURER_OPTIONS,
+        thermostat_type_options=THERMOSTAT_TYPE_OPTIONS,
+        thermostat_manufacturer_options=THERMOSTAT_MANUFACTURER_OPTIONS,
+        package_unit_type_options=PACKAGE_UNIT_TYPE_OPTIONS,
+        refrigerant_type_options=REFRIGERANT_TYPE_OPTIONS,
         property_id=property_id,
     )
 
@@ -2087,6 +2247,92 @@ def delete_hvac_system(customerId, reference_type, reference_id):
     return redirect(url_for("customers.view_customer", customerId=customerId))
 
 
+@bp.route("/customers/<customerId>/hvac/<reference_type>/<reference_id>/photos/upload", methods=["POST"])
+def upload_hvac_photo(customerId, reference_type, reference_id):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    property_id = str(request.args.get("property_id") or "").strip()
+    if not customer:
+        return redirect(url_for("customers.customers"))
+    if reference_type != "system":
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    hvac_system = db.hvacSystems.find_one({"$and": [{"_id": object_id_or_404(reference_id)}, build_reference_filter("customer_id", customerId)]})
+    if not hvac_system:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+    if property_id and str(hvac_system.get("property_id") or "").strip() != property_id:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    photo_file = request.files.get("photo")
+    if not photo_file or not str(photo_file.filename or "").strip():
+        return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id, photo_error="missing"))
+
+    filename = str(photo_file.filename or "").strip()
+    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if extension not in ALLOWED_PHOTO_EXTENSIONS:
+        return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id, photo_error="invalid_type"))
+
+    photo_file.seek(0, 2)
+    file_size = photo_file.tell()
+    photo_file.seek(0)
+    if file_size > MAX_PHOTO_FILE_SIZE:
+        return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id, photo_error="too_large"))
+
+    upload_dir = os.path.join(current_app.root_path, "static", HVAC_PHOTO_UPLOAD_SUBDIR)
+    os.makedirs(upload_dir, exist_ok=True)
+
+    from werkzeug.utils import secure_filename
+    safe_name = f"{reference_id}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{secure_filename(filename)}"
+    save_path = os.path.join(upload_dir, safe_name)
+    try:
+        photo_file.save(save_path)
+    except Exception:
+        return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id, photo_error="upload_failed"))
+
+    photo_entry = {
+        "filename": safe_name,
+        "uploaded_at": datetime.now().strftime("%m/%d/%Y"),
+    }
+    db.hvacSystems.update_one(
+        {"$and": [{"_id": hvac_system["_id"]}, build_reference_filter("customer_id", customerId)]},
+        {"$push": {"photos": photo_entry}},
+    )
+
+    return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+
+
+@bp.route("/customers/<customerId>/hvac/<reference_type>/<reference_id>/photos/delete", methods=["POST"])
+def delete_hvac_photo(customerId, reference_type, reference_id):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    property_id = str(request.args.get("property_id") or "").strip()
+    if not customer:
+        return redirect(url_for("customers.customers"))
+    if reference_type != "system":
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    hvac_system = db.hvacSystems.find_one({"$and": [{"_id": object_id_or_404(reference_id)}, build_reference_filter("customer_id", customerId)]})
+    if not hvac_system:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+    if property_id and str(hvac_system.get("property_id") or "").strip() != property_id:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    filename_to_delete = str(request.form.get("filename", "")).strip()
+    if filename_to_delete:
+        file_path = os.path.join(current_app.root_path, "static", HVAC_PHOTO_UPLOAD_SUBDIR, filename_to_delete)
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+        db.hvacSystems.update_one(
+            {"$and": [{"_id": hvac_system["_id"]}, build_reference_filter("customer_id", customerId)]},
+            {"$pull": {"photos": {"filename": filename_to_delete}}},
+        )
+
+    return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+
+
 @bp.route("/customers/<customerId>/equipment/add", methods=["GET", "POST"])
 def add_equipment(customerId):
     db = ensure_connection_or_500()
@@ -2098,6 +2344,8 @@ def add_equipment(customerId):
     customer_property = _find_customer_property(customer, property_id) if property_id else None
     if property_id and not customer_property:
         return redirect(url_for("customers.view_customer", customerId=customerId))
+    if not property_id:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
 
     error = ""
     ductwork_error_fields = []
@@ -2108,26 +2356,25 @@ def add_equipment(customerId):
             form_data[field_name] = request.form.get(field_name, "").strip()
 
         system_type = form_data["system_type"]
-        location_type = form_data["location_type"]
 
         if not system_type:
             error = "System type is required."
-        elif location_type not in LOCATION_TYPE_OPTIONS:
-            error = "Please select a valid location type."
+        elif system_type not in SYSTEM_TYPE_OPTIONS:
+            error = "Please select a valid system type."
         else:
             ductwork_data = {
                 "type": form_data.get("ductwork_type", ""),
                 "insulated": form_data.get("ductwork_insulated", ""),
                 "supply_branches": form_data.get("ductwork_supply_branches", ""),
                 "returns": form_data.get("ductwork_returns", ""),
-                "notes_on_sizing": form_data.get("ductwork_notes_on_sizing", ""),
-                "install_year": form_data.get("ductwork_install_year", ""),
+                "ductwork_notes": form_data.get("ductwork_notes", ""),
             }
-            error = _validate_ductwork_data(ductwork_data)
-            ductwork_error_fields = _get_missing_ductwork_fields(ductwork_data)
+            if system_type in DUCTWORK_SYSTEM_TYPES:
+                error = _validate_ductwork_data(ductwork_data)
+                ductwork_error_fields = _get_missing_ductwork_fields(ductwork_data)
 
         if not error:
-            base_document = _build_hvac_system_document(customerId, system_type, location_type, form_data)
+            base_document = _build_hvac_system_document(customerId, system_type, form_data)
 
             inserted_hvac_system = db.hvacSystems.insert_one(base_document)
             hvac_system_id = str(inserted_hvac_system.inserted_id)
@@ -2135,47 +2382,23 @@ def add_equipment(customerId):
                 **base_document,
                 "hvac_system_id": hvac_system_id,
             }
+            component_snapshots = {}
 
-            if system_type in {"Split", "Heat Pump"}:
-                air_handler_doc = _build_hvac_component_document(form_data, component_base_document, "airHandlers")
-                condenser_doc = _build_hvac_component_document(form_data, component_base_document, "condensers")
-                db.airHandlers.insert_one(
-                    air_handler_doc
-                )
-                db.condensers.insert_one(
-                    condenser_doc
-                )
-                db.hvacSystems.update_one(
-                    {"_id": inserted_hvac_system.inserted_id},
-                    {
-                        "$set": {
-                            "components": {
-                                "airHandlers": air_handler_doc,
-                                "condensers": condenser_doc,
-                            }
-                        }
-                    },
-                )
+            for collection_name, _label in HVAC_COLLECTION_CONFIG.get(system_type, ()):
+                component_doc = _build_hvac_component_document(form_data, component_base_document, collection_name)
+                db[collection_name].insert_one(component_doc)
+                component_snapshots[collection_name] = component_doc
 
-            if system_type == "Package":
-                package_doc = _build_hvac_component_document(form_data, component_base_document, "packageUnits")
-                db.packageUnits.insert_one(
-                    package_doc
-                )
-                db.hvacSystems.update_one(
-                    {"_id": inserted_hvac_system.inserted_id},
-                    {"$set": {"components": {"packageUnits": package_doc}}},
-                )
+            update_payload = {"components": component_snapshots}
+            if system_type in DUCTWORK_SYSTEM_TYPES:
+                ductwork = _build_hvac_ductwork(form_data)
+                if ductwork:
+                    update_payload["ductwork"] = ductwork
 
-            if system_type == "Mini Split":
-                mini_split_doc = _build_hvac_component_document(form_data, component_base_document, "miniSplits")
-                db.miniSplits.insert_one(
-                    mini_split_doc
-                )
-                db.hvacSystems.update_one(
-                    {"_id": inserted_hvac_system.inserted_id},
-                    {"$set": {"components": {"miniSplits": mini_split_doc}}},
-                )
+            db.hvacSystems.update_one(
+                {"_id": inserted_hvac_system.inserted_id},
+                {"$set": update_payload},
+            )
 
             if property_id:
                 return redirect(url_for("customers.view_property", customerId=customerId, propertyId=property_id))
@@ -2193,10 +2416,14 @@ def add_equipment(customerId):
         form_data=form_data,
         system_type_options=SYSTEM_TYPE_OPTIONS,
         tonnage_options=TONNAGE_OPTIONS,
-        location_type_options=LOCATION_TYPE_OPTIONS,
         ductwork_type_options=DUCTWORK_TYPE_OPTIONS,
         insulated_options=INSULATED_OPTIONS,
         manufacturer_options=MANUFACTURER_OPTIONS,
+        mini_split_manufacturer_options=MINI_SPLIT_MANUFACTURER_OPTIONS,
+        thermostat_type_options=THERMOSTAT_TYPE_OPTIONS,
+        thermostat_manufacturer_options=THERMOSTAT_MANUFACTURER_OPTIONS,
+        package_unit_type_options=PACKAGE_UNIT_TYPE_OPTIONS,
+        refrigerant_type_options=REFRIGERANT_TYPE_OPTIONS,
         ductwork_error_fields=ductwork_error_fields,
         property_id=property_id,
         property=customer_property,
