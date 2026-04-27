@@ -120,6 +120,20 @@
   color: #1F6B35;
 }
 
+/* En Route */
+.progress-step.step-en-route.is-active .progress-step-circle {
+  background-color: #D97706;
+}
+.progress-step.step-en-route.is-done .progress-step-circle {
+  background-color: #1F6B35;
+}
+.progress-step.step-en-route.is-active .progress-step-label {
+  color: #D97706;
+}
+.progress-step.step-en-route.is-done .progress-step-label {
+  color: #1F6B35;
+}
+
 /* Started */
 .progress-step.step-started.is-active .progress-step-circle,
 .progress-step.step-started.is-done .progress-step-circle {
@@ -367,6 +381,92 @@ button[disabled] {
   font-size: 0.95rem;
   line-height: 1.5;
   word-wrap: break-word;
+}
+
+#view-job-internal-notes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.view-job-internal-note-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.view-job-internal-note-form textarea {
+  width: 100%;
+  min-height: 112px;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-sizing: border-box;
+  font: inherit;
+  color: #1f2937;
+  background: #ffffff;
+  resize: vertical;
+}
+
+.view-job-internal-note-form textarea:focus {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 1px;
+}
+
+.view-job-internal-note-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+#view-job-internal-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.view-job-internal-note-card {
+  margin-bottom: 0;
+}
+
+.view-job-internal-note-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.view-job-internal-note-header .note-card-date {
+  margin-bottom: 0;
+}
+
+.view-job-internal-note-header .note-card-date a {
+  color: #1d4ed8;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.view-job-internal-note-header .note-card-date a:hover {
+  text-decoration: underline;
+}
+
+.view-job-internal-note-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff5f5;
+  color: #b91c1c;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.view-job-internal-note-delete:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
 }
 
 .modal {

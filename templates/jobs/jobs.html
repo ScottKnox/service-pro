@@ -86,7 +86,7 @@
                   >
                     <div class="jobs-card-row">
                       <span class="jobs-card-label">Status</span>
-                      <span class="jobs-card-value jobs-status-chip{% if job_status_normalized == 'pending' %} is-pending{% elif job_status_normalized == 'scheduled' %} is-scheduled{% elif job_status_normalized == 'started' %} is-started{% elif job_status_normalized == 'completed' %} is-completed{% elif job_status_normalized == 'paid' %} is-paid{% endif %}">{{ job.status }}</span>
+                      <span class="jobs-card-value jobs-status-chip{% if job_status_normalized == 'pending' %} is-pending{% elif job_status_normalized == 'scheduled' %} is-scheduled{% elif job_status_normalized == 'en route' %} is-en-route{% elif job_status_normalized == 'started' %} is-started{% elif job_status_normalized == 'completed' %} is-completed{% elif job_status_normalized == 'paid' %} is-paid{% endif %}">{{ job.status }}</span>
                     </div>
                     <div class="jobs-card-row">
                       <span class="jobs-card-label">Customer</span>

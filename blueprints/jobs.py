@@ -98,6 +98,55 @@ def _build_recurrence_summary(frequency):
     return f"Recurring {label}".strip() if label else ""
 
 
+def _parse_note_datetime(value):
+    raw_value = str(value or "").strip()
+    if not raw_value:
+        return datetime.min
+    try:
+        return datetime.strptime(raw_value, "%m/%d/%Y %H:%M:%S")
+    except ValueError:
+        return datetime.min
+
+
+def _build_internal_notes_for_view(db, job):
+    raw_notes = list((job or {}).get("internal_notes") or [])
+    normalized_notes = []
+    employee_object_ids = []
+
+    for note in raw_notes:
+        if not isinstance(note, dict):
+            continue
+
+        employee_id = str(note.get("employee_id") or "").strip()
+        if ObjectId.is_valid(employee_id):
+            employee_object_ids.append(ObjectId(employee_id))
+
+        normalized_notes.append(
+            {
+                "note_id": str(note.get("note_id") or "").strip(),
+                "text": str(note.get("text") or "").strip(),
+                "date_written": str(note.get("date_written") or "").strip(),
+                "employee_id": employee_id,
+            }
+        )
+
+    employees_by_id = {}
+    if employee_object_ids:
+        for employee in db.employees.find({"_id": {"$in": employee_object_ids}}, {"first_name": 1, "last_name": 1}):
+            employee_id = str(employee.get("_id") or "").strip()
+            full_name = f"{str(employee.get('first_name') or '').strip()} {str(employee.get('last_name') or '').strip()}".strip()
+            employees_by_id[employee_id] = full_name or "Unknown Employee"
+
+    normalized_notes.sort(key=lambda note: _parse_note_datetime(note.get("date_written")), reverse=True)
+
+    for note in normalized_notes:
+        employee_id = note.get("employee_id") or ""
+        note["employee_name"] = employees_by_id.get(employee_id, "Unknown Employee")
+        note["employee_profile_id"] = employee_id if ObjectId.is_valid(employee_id) else ""
+
+    return normalized_notes
+
+
 def _build_recurrence_form_state(job=None, series=None):
     if job and str(job.get("job_kind") or "").strip() == "recurring_occurrence":
         source = series or {}
@@ -288,6 +337,7 @@ def _create_occurrence_from_series(db, series_doc, scheduled_date, occurrence_in
         "total": str(series_doc.get("total") or "$0.00").strip() or "$0.00",
         "total_amount": float(series_doc.get("total_amount") or 0.0),
         "invoice_notes": str(series_doc.get("invoice_notes") or "").strip(),
+        "internal_notes": [],
         "date_created": datetime.now().strftime("%m/%d/%Y"),
         "created_at": datetime.utcnow(),
         "invoices": [],
@@ -758,6 +808,7 @@ def create_job(customerId):
             "total": f"${total:.2f}" if total else "$0.00",
             "total_amount": float(total or 0.0),
             "invoice_notes": invoice_notes,
+            "internal_notes": [],
             "date_created": datetime.now().strftime("%m/%d/%Y"),
             "created_at": datetime.utcnow(),
             "invoices": [],
@@ -1472,15 +1523,78 @@ def view_job(jobId):
         if customer_doc:
             customer = serialize_doc(customer_doc)
 
+    job_doc = serialize_doc(job)
+    job_doc["internal_notes"] = _build_internal_notes_for_view(db, job)
+
+    # Detect if the viewing employee has a *different* active job (En Route / Started).
+    # Used to disable transition buttons so only one job can be active at a time.
+    employee_has_other_active_job = False
+    current_employee_name = str(session.get("employee_name") or "").strip()
+    normalized_viewer = " ".join(current_employee_name.lower().split())
+    if normalized_viewer:
+        _active_status_re = {"en route", "started"}
+        other_active = db.jobs.find_one(
+            {
+                "_id": {"$ne": object_id_or_404(jobId)},
+                "status": {"$in": ["En Route", "Started"]},
+                "assigned_employee": {"$regex": f"^{current_employee_name}$", "$options": "i"},
+            },
+            {"_id": 1},
+        )
+        employee_has_other_active_job = other_active is not None
+
     return render_template(
         "jobs/view_job.html",
         jobId=jobId,
-        job=serialize_doc(job),
+        job=job_doc,
         job_series=serialize_doc(job_series) if job_series else None,
         customer=customer,
         quote_email_template=quote_email_template,
         invoice_email_template=invoice_email_template,
+        employee_has_other_active_job=employee_has_other_active_job,
     )
+
+
+@bp.route("/jobs/<jobId>/internal-notes", methods=["POST"])
+def add_internal_note(jobId):
+    db = ensure_connection_or_500()
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    note_text = str(request.form.get("internal_note") or "").strip()
+    if not note_text:
+        return redirect(url_for("jobs.view_job", jobId=jobId))
+
+    db.jobs.update_one(
+        {"_id": ObjectId(jobId)},
+        {
+            "$push": {
+                "internal_notes": {
+                    "note_id": str(ObjectId()),
+                    "text": note_text,
+                    "date_written": datetime.now().strftime("%m/%d/%Y %H:%M:%S"),
+                    "employee_id": str(session.get("employee_id") or "").strip(),
+                }
+            }
+        },
+    )
+    next_url = request.form.get("next") or url_for("jobs.view_job", jobId=jobId)
+    return redirect(next_url)
+
+
+@bp.route("/jobs/<jobId>/internal-notes/<noteId>/delete", methods=["POST"])
+def delete_internal_note(jobId, noteId):
+    db = ensure_connection_or_500()
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    db.jobs.update_one(
+        {"_id": ObjectId(jobId)},
+        {"$pull": {"internal_notes": {"note_id": str(noteId or "").strip()}}},
+    )
+    return redirect(url_for("jobs.view_job", jobId=jobId))
 
 
 @bp.route("/jobs/<jobId>/series/pause", methods=["POST"])
@@ -1589,9 +1703,8 @@ def start_job(jobId):
         return redirect(url_for("jobs.jobs"))
 
     current_status = str(job.get("status") or "").strip().lower()
-    has_schedule = bool(str(job.get("scheduled_date") or "").strip()) and bool(str(job.get("scheduled_time") or "").strip())
-    if current_status != "scheduled" or not has_schedule:
-        current_app.logger.warning("Blocked invalid job start: job_id=%s status=%s has_schedule=%s", jobId, current_status, has_schedule)
+    if current_status != "en route":
+        current_app.logger.warning("Blocked invalid job start: job_id=%s status=%s", jobId, current_status)
         return redirect(url_for("jobs.view_job", jobId=jobId))
 
     current_timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
@@ -1601,7 +1714,30 @@ def start_job(jobId):
         {"$set": {"status": "Started", "dateStarted": current_timestamp}},
     )
 
-    return redirect(url_for("jobs.view_job", jobId=jobId))
+    next_url = request.form.get("next") or url_for("jobs.view_job", jobId=jobId)
+    return redirect(next_url)
+
+
+@bp.route("/jobs/<jobId>/en-route", methods=["POST"])
+def en_route_job(jobId):
+    db = ensure_connection_or_500()
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    current_status = str(job.get("status") or "").strip().lower()
+    has_schedule = bool(str(job.get("scheduled_date") or "").strip()) and bool(str(job.get("scheduled_time") or "").strip())
+    if current_status != "scheduled" or not has_schedule:
+        current_app.logger.warning("Blocked invalid en-route transition: job_id=%s status=%s has_schedule=%s", jobId, current_status, has_schedule)
+        return redirect(url_for("jobs.view_job", jobId=jobId))
+
+    db.jobs.update_one(
+        {"_id": ObjectId(jobId)},
+        {"$set": {"status": "En Route"}},
+    )
+
+    next_url = request.form.get("next") or url_for("jobs.view_job", jobId=jobId)
+    return redirect(next_url)
 
 
 @bp.route("/jobs/<jobId>/complete", methods=["POST"])
@@ -1704,6 +1840,8 @@ def complete_job(jobId):
         if series_doc and next_occurrence_text:
             _create_occurrence_from_series(db, series_doc, next_occurrence_text, occurrence_index + 1)
 
+    next_url = request.form.get("next", "").strip()
+
     current_app.logger.info("Job completed: id=%s invoice=%s by employee_id=%s", jobId, filename, session.get("employee_id"))
 
     if customer_oid and customer_doc:
@@ -1722,7 +1860,7 @@ def complete_job(jobId):
             },
         )
 
-    return redirect(url_for("jobs.view_job", jobId=jobId))
+    return redirect(next_url if next_url else url_for("jobs.view_job", jobId=jobId))
 
 
 @bp.route("/jobs/<jobId>/email-estimate", methods=["POST"])

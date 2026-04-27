@@ -172,7 +172,7 @@ def ensure_collection_validators(db):
             "properties": {
                 "customer_id": {"bsonType": ["objectId"]},
                 "business_id": {"bsonType": ["objectId", "null"]},
-                "status": {"enum": ["Pending", "Scheduled", "Started", "Completed", "Paid"]},
+                "status": {"enum": ["Pending", "Scheduled", "En Route", "Started", "Completed", "Paid"]},
                 "job_kind": {"enum": ["one_time", "recurring_occurrence", "series_template"]},
                 "series_id": {"bsonType": ["objectId", "null"]},
                 "occurrence_index": {"bsonType": ["int", "long", "null"]},

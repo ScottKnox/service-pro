@@ -35,17 +35,31 @@
           {% set job_status_normalized = job.status|default('', true)|lower %}
           {% set is_recurring_occurrence = job.job_kind == 'recurring_occurrence' and job.series_id %}
           {% if job_status_normalized == "pending" %}
-          <form method="POST" action="{{ url_for('jobs.start_job', jobId=jobId) }}">
+          <form method="POST" action="{{ url_for('jobs.en_route_job', jobId=jobId) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" disabled>Mark Started</button>
+            <button type="submit" disabled>En Route</button>
           </form>
-          {% elif job_status_normalized != "started" and job_status_normalized != "completed" and job_status_normalized != "paid" and job.scheduled_date and job.scheduled_time %}
+          {% elif job_status_normalized == "scheduled" and job.scheduled_date and job.scheduled_time %}
+            {% if employee_has_other_active_job %}
+            <button type="button" class="view-job-action-blocked" disabled title="Complete your active job before marking another En Route">En Route</button>
+            {% else %}
+          <form method="POST" action="{{ url_for('jobs.en_route_job', jobId=jobId) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit">En Route</button>
+          </form>
+            {% endif %}
+          {% endif %}
+          {% if job_status_normalized == "en route" %}
+            {% if employee_has_other_active_job %}
+            <button type="button" class="view-job-action-blocked" disabled title="Complete your active job before starting another">Mark Started</button>
+            {% else %}
           <form method="POST" action="{{ url_for('jobs.start_job', jobId=jobId) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Mark Started</button>
           </form>
+            {% endif %}
           {% endif %}
-          {% if job_status_normalized != "completed" and job_status_normalized != "paid" and job_status_normalized != "pending" %}
+          {% if job_status_normalized == "en route" or job_status_normalized == "started" %}
           <form method="POST" action="{{ url_for('jobs.complete_job', jobId=jobId) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Mark Completed</button>
@@ -107,16 +121,18 @@
       <section id="view-job-progress" aria-label="Job progress">
         <h2>Progress</h2>
         <div class="progress-steps">
-          {% set steps = [{'key': 'pending', 'label': 'Pending'}, {'key': 'scheduled', 'label': 'Scheduled'}, {'key': 'started', 'label': 'Started'}, {'key': 'completed', 'label': 'Completed'}, {'key': 'paid', 'label': 'Paid'}] %}
+          {% set steps = [{'key': 'pending', 'label': 'Pending'}, {'key': 'scheduled', 'label': 'Scheduled'}, {'key': 'en-route', 'label': 'En Route'}, {'key': 'started', 'label': 'Started'}, {'key': 'completed', 'label': 'Completed'}, {'key': 'paid', 'label': 'Paid'}] %}
           {% set current_idx = 0 %}
           {% if job_status_normalized == 'scheduled' %}
             {% set current_idx = 1 %}
-          {% elif job_status_normalized == 'started' %}
+          {% elif job_status_normalized == 'en route' %}
             {% set current_idx = 2 %}
-          {% elif job_status_normalized == 'completed' %}
+          {% elif job_status_normalized == 'started' %}
             {% set current_idx = 3 %}
-          {% elif job_status_normalized == 'paid' %}
+          {% elif job_status_normalized == 'completed' %}
             {% set current_idx = 4 %}
+          {% elif job_status_normalized == 'paid' %}
+            {% set current_idx = 5 %}
           {% endif %}
           {% for step in steps %}
             {% set step_i = loop.index0 %}
@@ -406,20 +422,47 @@
             </div>
           </div>
           <div class="view-job-section-column view-job-details-column">
-            <h3>Communication Notes</h3>
-            <div id="view-job-notes-list">
-              {% if job.notes %}
-                {% for note in job.notes|reverse %}
-                  <div class="note-card">
-                    <div class="note-card-date">{{ note.date }}</div>
-                    <div class="note-card-text">{{ note.text }}</div>
-                  </div>
-                {% endfor %}
-              {% else %}
-                <div class="view-job-detail-item">
-                  <p>No communication notes added.</p>
+            <h3>Internal Notes</h3>
+            <div id="view-job-internal-notes-section">
+              <form class="view-job-internal-note-form" method="POST" action="{{ url_for('jobs.add_internal_note', jobId=jobId) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <textarea id="internal-note-text" name="internal_note" rows="4" placeholder="Share job notes like gate codes, special instructions, access instructions, or details on dogs and pets."></textarea>
+                <div class="view-job-internal-note-actions">
+                  <button class="home-latest-action-link" type="submit">+ Add internal note</button>
                 </div>
-              {% endif %}
+              </form>
+
+              <div id="view-job-internal-notes-list">
+                {% if job.internal_notes %}
+                  {% for note in job.internal_notes %}
+                    <div class="note-card view-job-internal-note-card">
+                      <div class="view-job-internal-note-header">
+                        <div class="note-card-date">
+                          Written on: {{ note.date_written|default('N/A', true) }} by
+                          {% if note.employee_profile_id %}
+                            <a href="{{ url_for('employees.view_employee', employeeId=note.employee_profile_id) }}">{{ note.employee_name|default('Unknown Employee', true) }}</a>
+                          {% else %}
+                            <span>{{ note.employee_name|default('Unknown Employee', true) }}</span>
+                          {% endif %}
+                        </div>
+                        <form method="POST" action="{{ url_for('jobs.delete_internal_note', jobId=jobId, noteId=note.note_id) }}" onsubmit="return confirm('Delete this internal note?');">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <button class="view-job-internal-note-delete" type="submit" aria-label="Delete internal note">
+                            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                              <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v8h-2V9zm4 0h2v8h-2V9zM7 9h2v8H7V9z" fill="currentColor"/>
+                            </svg>
+                          </button>
+                        </form>
+                      </div>
+                      <div class="note-card-text">{{ note.text }}</div>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="view-job-detail-item">
+                    <p>No internal notes added.</p>
+                  </div>
+                {% endif %}
+              </div>
             </div>
           </div>
         </div>

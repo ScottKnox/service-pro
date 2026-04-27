@@ -35,21 +35,116 @@
 					{% set date_parts = job.scheduled_date.split('/') %}
 					{% set job_iso_date = date_parts[2] + '-' + date_parts[0] + '-' + date_parts[1] if date_parts|length == 3 else '' %}
 					{% set job_status_key = (job.job_status|default(job.status, true)|default('', true)|string|trim|lower) %}
-					<a class="home-job{% if job_status_key in ['completed', 'complete', 'done', 'paid'] %} is-completed{% endif %}" href="{{ url_for('jobs.view_job', jobId=job._id) }}" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
-						<div class="home-job-card-content">
-							<div class="home-job-card-column home-job-card-column--left">
-								<strong>Customer:</strong> {{ job.customer_name|default('Unknown Customer', true) }}
-								<br/><strong>Time:</strong>
-								<span class="home-job-time-display" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}">
-									{{ job.scheduled_time|default('N/A', true) }}
-								</span>
+					{% set can_en_route = (job_status_key == 'scheduled' and job.scheduled_date and job.scheduled_time) %}
+					{% set can_start = (job_status_key == 'en route') %}
+					{% set can_stop = (job_status_key == 'started') %}
+					{% set this_job_id = job._id|string %}
+					{% set other_job_is_active = current_employee_active_job_id and this_job_id != current_employee_active_job_id %}
+					{% set job_address = [job.address_line_1, job.city, job.state, job.zip_code]|select|join(', ') %}
+					<div class="home-job{% if job_status_key in ['completed', 'complete', 'done', 'paid'] %} is-completed{% endif %}{% if job_status_key in ['en route', 'started'] %} is-active-job{% endif %}" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
+						<a class="home-job-card-link" href="{{ url_for('jobs.view_job', jobId=job._id) }}">
+							<div class="home-job-card-content">
+								<div class="home-job-title-line">
+									<strong>{{ job.customer_name|default('Unknown Customer', true) }}</strong>
+									<span class="home-job-type">{{ job.job_type|default('No services added.', true) }}</span>
+								</div>
+								<div class="home-job-time-tech-line">
+									<span class="home-job-time-display" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}">
+										{{ job.scheduled_time|default('N/A', true) }}
+									</span>
+									<span class="home-job-dot" aria-hidden="true">&bull;</span>
+									<span class="home-job-tech-name">{{ job.assigned_employee|default('Unassigned', true) }}</span>
+								</div>
+								<span class="jobs-status-chip{% if job_status_key == 'pending' %} is-pending{% elif job_status_key == 'scheduled' %} is-scheduled{% elif job_status_key == 'en route' %} is-en-route{% elif job_status_key == 'started' %} is-started{% elif job_status_key in ['completed', 'complete', 'done'] %} is-completed{% elif job_status_key == 'paid' %} is-paid{% elif job_status_key == 'estimating' %} is-estimating{% elif job_status_key == 'declined' %} is-declined{% endif %}">{{ job.status|default('Unknown', true) }}</span>
 							</div>
-							<div class="home-job-card-column home-job-card-column--right">
-								<strong>Job:</strong> {{ job.job_type|default('No services added.', true) }}
-								<br/><strong>Assigned:</strong> {{ job.assigned_employee|default('Unassigned', true) }}
-							</div>
+						</a>
+						<div class="home-job-actions" aria-label="Quick actions for {{ job.job_number|default('job', true) }}">
+							{% if can_en_route %}
+								{% if other_job_is_active %}
+								<button type="button" class="home-job-action-button home-job-action-button--start home-job-action-button--blocked" disabled title="Complete your active job before marking another En Route">
+									<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+										<path d="M8 5v14l11-7z" fill="currentColor"/>
+									</svg>
+									<span>En Route</span>
+								</button>
+								{% else %}
+							<form method="POST" action="{{ url_for('jobs.en_route_job', jobId=job._id) }}" class="home-job-action-form">
+								<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+								<input type="hidden" name="next" value="{{ url_for('home') }}">
+								<button type="submit" class="home-job-action-button home-job-action-button--start">
+									<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+										<path d="M8 5v14l11-7z" fill="currentColor"/>
+									</svg>
+									<span>En Route</span>
+								</button>
+							</form>
+								{% endif %}
+							{% elif can_start %}
+								{% if other_job_is_active %}
+								<button type="button" class="home-job-action-button home-job-action-button--start home-job-action-button--blocked" disabled title="Complete your active job before starting another">
+									<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+										<path d="M8 5v14l11-7z" fill="currentColor"/>
+									</svg>
+									<span>Start</span>
+								</button>
+								{% else %}
+							<form method="POST" action="{{ url_for('jobs.start_job', jobId=job._id) }}" class="home-job-action-form">
+								<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+								<input type="hidden" name="next" value="{{ url_for('home') }}">
+								<button type="submit" class="home-job-action-button home-job-action-button--start">
+									<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+										<path d="M8 5v14l11-7z" fill="currentColor"/>
+									</svg>
+									<span>Start</span>
+								</button>
+							</form>
+								{% endif %}
+							{% elif can_stop %}
+							<form method="POST" action="{{ url_for('jobs.complete_job', jobId=job._id) }}" class="home-job-action-form">
+								<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+								<input type="hidden" name="next" value="{{ url_for('home') }}">
+								<button type="submit" class="home-job-action-button home-job-action-button--stop">
+									<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+										<path d="M6 6h12v12H6z" fill="currentColor"/>
+									</svg>
+									<span>Complete</span>
+								</button>
+							</form>
+							{% endif %}
+
+							{% if job_address %}
+							<a class="home-job-action-button home-job-action-button--directions" href="https://www.google.com/maps/dir/?api=1&destination={{ job_address|urlencode }}&travelmode=driving" target="_blank" rel="noopener noreferrer">
+								<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+									<path d="M12 2C8.13 2 5 5.13 5 9c0 4.79 5.39 11.26 6.03 12.01a1.24 1.24 0 0 0 1.94 0C13.61 20.26 19 13.79 19 9c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z" fill="currentColor"/>
+								</svg>
+								<span>Directions</span>
+							</a>
+							{% else %}
+							<button type="button" class="home-job-action-button home-job-action-button--directions" disabled>
+								<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+									<path d="M12 2C8.13 2 5 5.13 5 9c0 4.79 5.39 11.26 6.03 12.01a1.24 1.24 0 0 0 1.94 0C13.61 20.26 19 13.79 19 9c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z" fill="currentColor"/>
+								</svg>
+								<span>Directions</span>
+							</button>
+							{% endif %}
+
+							{% if job.customer_phone and job.customer_phone != 'N/A' %}
+							<a class="home-job-action-button home-job-action-button--call" href="tel:{{ job.customer_phone|replace(' ', '') }}">
+								<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+									<path d="M6.6 10.8a15.7 15.7 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.2c1 .3 2 .4 3 .4a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 5a1 1 0 0 1 1-1h3.6a1 1 0 0 1 1 1c0 1 .1 2 .4 3a1 1 0 0 1-.2 1z" fill="currentColor"/>
+								</svg>
+								<span>Call</span>
+							</a>
+							{% else %}
+							<button type="button" class="home-job-action-button home-job-action-button--call" disabled>
+								<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+									<path d="M6.6 10.8a15.7 15.7 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.2c1 .3 2 .4 3 .4a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 5a1 1 0 0 1 1-1h3.6a1 1 0 0 1 1 1c0 1 .1 2 .4 3a1 1 0 0 1-.2 1z" fill="currentColor"/>
+								</svg>
+								<span>Call</span>
+							</button>
+							{% endif %}
 						</div>
-					</a>
+					</div>
 					{% endfor %}
 					<div id="home-jobs-empty">
 						No jobs for this day.
@@ -87,88 +182,121 @@
 
 		<div id="home-latest-row">
 			<div class="home-latest-column">
-				<h2>Calls Needed</h2>
-				<div id="home-calls-needed-list">
-					{% if pending_jobs %}
-						{% for job in pending_jobs %}
-							<div class="home-call-row" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
-								<a class="home-call-cell" href="{{ url_for('jobs.view_job', jobId=job._id) }}">
-									{{ job.date_created|default('N/A', true) }} - {{ job.customer_name|default('Unknown Customer', true) }}
-									<br/>{{ job.customer_phone|default('N/A', true) }}
+				<h2>Current Property</h2>
+				<div id="home-current-property-list">
+					{% if active_job and current_property and hvac_systems %}
+						{% for hvac_sys in hvac_systems %}
+							<div class="home-hvac-system-row-item">
+								<a class="home-hvac-system-card" href="{{ url_for('customers.view_hvac_system', customerId=hvac_sys.customer_id, reference_type='system', reference_id=hvac_sys.id, property_id=hvac_sys.property_id) }}">
+									<div class="home-hvac-system-card-header">
+										<h4>{{ hvac_sys.type }}</h4>
+									</div>
+									<div class="home-hvac-system-card-body">
+										<div class="home-hvac-system-row">
+											<span class="home-hvac-system-label">Tonnage:</span>
+											<strong>{{ hvac_sys.tonnage }}</strong>
+										</div>
+										<div class="home-hvac-system-row">
+											<span class="home-hvac-system-label">Refrigerant:</span>
+											<strong>{{ hvac_sys.refrigerant_type }}</strong>
+										</div>
+									</div>
 								</a>
-								{% if job.customer_phone and job.customer_phone != 'N/A' %}
-									<a class="home-call-mobile-button" href="tel:{{ job.customer_phone|replace(' ', '') }}" aria-label="Call {{ job.customer_name|default('customer', true) }}">
-										<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-											<path d="M6.6 10.8a15.7 15.7 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.2c1 .3 2 .4 3 .4a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 5a1 1 0 0 1 1-1h3.6a1 1 0 0 1 1 1c0 1 .1 2 .4 3a1 1 0 0 1-.2 1z" fill="currentColor"/>
-										</svg>
-									</a>
-								{% endif %}
+								<a class="home-hvac-diagnostics-button home-job-action-button home-job-action-button--directions" href="{{ url_for('customers.view_hvac_diagnostics', customerId=hvac_sys.customer_id, reference_type='system', reference_id=hvac_sys.id, property_id=hvac_sys.property_id) }}">
+									<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+										<path d="M4 6h16v12H4z" fill="none" stroke="currentColor" stroke-width="1.8"/>
+										<path d="M7 10h10M7 14h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+									</svg>
+									<span>View Diagnostics</span>
+								</a>
 							</div>
 						{% endfor %}
+					{% elif active_job and current_property %}
+						<p class="home-current-property-empty">No HVAC Systems defined for this property.</p>
+						<a class="home-latest-action-link" href="{{ url_for('customers.add_equipment', customerId=active_job.customer_id, property_id=current_property.property_id) }}">+ Add HVAC System</a>
 					{% else %}
-						<p id="home-calls-needed-empty-server">No pending jobs for the selected employee(s).</p>
+						<p class="home-current-property-empty">Mark a job En-route or Started to see current property HVAC systems.</p>
 					{% endif %}
-					<p id="home-calls-needed-empty">No pending jobs for the selected employee(s).</p>
 				</div>
-				{% if pending_total_pages|default(0, true) > 0 %}
-				<div id="home-calls-pages">
+				{% if hvac_total_pages|default(0, true) > 1 %}
+				<div id="home-hvac-systems-pages">
 					<span>Page:</span>
-					{% set call_pages = pending_total_pages %}
-					{% set active_call_page = pending_page|default(1, true) %}
-					{% for page_num in range(1, call_pages + 1) %}
-						<a class="{% if page_num == active_call_page %}is-active{% endif %}" href="{{ url_for('home', pending_page=page_num) }}" data-page="{{ page_num }}">{{ page_num }}</a>
+					{% set hvac_pages = hvac_total_pages %}
+					{% set active_hvac_page = hvac_page|default(1, true) %}
+					{% for page_num in range(1, hvac_pages + 1) %}
+						<a class="{% if page_num == active_hvac_page %}is-active{% endif %}" href="{{ url_for('home', hvac_page=page_num) }}" data-page="{{ page_num }}">{{ page_num }}</a>
 					{% endfor %}
 				</div>
 				{% endif %}
-				<div class="home-latest-action">
-					<a class="home-latest-action-link" href="{{ url_for('jobs.jobs', status='Pending') }}">Manage Jobs</a>
-				</div>
 			</div>
 			<div class="home-latest-column">
-				<h2>Estimates</h2>
-				<div id="home-outstanding-estimates-list">
-					{% if estimates %}
-						{% for estimate in estimates %}
-							<a class="home-estimate-cell" href="{{ estimate.href }}" data-assigned-employee="{{ estimate.assigned_employee_key|default('', true) }}" {% if estimate.open_in_new_tab %}target="_blank" rel="noopener noreferrer"{% endif %}>
-								{{ estimate.date|default('') }} - {{ estimate.customer_name|default('Unknown Customer') }}
-								<br/>{{ estimate.title|default('Estimate') }} - {{ estimate.amount|default('$0.00') }}
+				<h2>Notes</h2>
+				<div id="home-notes-list">
+					{% if started_job_for_notes %}
+						{% if notes %}
+							{% for note in notes %}
+							<article class="home-note-card">
+								<p class="home-note-text">{{ note.text }}</p>
+								{% if note.date_written %}
+								<p class="home-note-date">Written on {{ note.date_written }}</p>
+								{% endif %}
+							</article>
+							{% endfor %}
+						{% else %}
+							<p id="home-notes-empty-server">No internal notes for this job.</p>
+						{% endif %}
+					{% else %}
+						<p id="home-notes-empty-server">Start a job to see internal notes for it</p>
+					{% endif %}
+				</div>
+				{% if notes_total_pages|default(0, true) > 1 %}
+				<div id="home-notes-pages">
+					<span>Page:</span>
+					{% set notes_pages = notes_total_pages %}
+					{% set active_notes_page = notes_page|default(1, true) %}
+					{% for page_num in range(1, notes_pages + 1) %}
+						<a class="{% if page_num == active_notes_page %}is-active{% endif %}" href="{{ url_for('home', notes_page=page_num) }}" data-page="{{ page_num }}">{{ page_num }}</a>
+					{% endfor %}
+				</div>
+				{% endif %}
+			</div>
+			<div class="home-latest-column">
+				<h2>Price Book</h2>
+				<div id="home-price-book-list">
+					{% if started_job_for_price_book %}
+						{% if price_book_items %}
+							{% for item in price_book_items %}
+							{% if item.view_url %}
+							<a class="home-price-book-card home-price-book-card-link" href="{{ item.view_url }}" aria-label="View price book item: {{ item.name }}" title="View {{ item.name }}">
+								<p class="home-price-book-name">{{ item.name }}</p>
+								<p class="home-price-book-amount">{{ item.amount }}</p>
 							</a>
-						{% endfor %}
+							{% else %}
+							<article class="home-price-book-card">
+								<p class="home-price-book-name">{{ item.name }}</p>
+								<p class="home-price-book-amount">{{ item.amount }}</p>
+							</article>
+							{% endif %}
+							{% endfor %}
+						{% else %}
+							<p id="home-price-book-empty-server">No services, parts, equipment, labor, or materials found for this job.</p>
+						{% endif %}
 					{% else %}
-						<p id="home-estimates-empty-server">No active estimates for the selected employee(s).</p>
+						<p id="home-price-book-empty-server">Start a job to see price book items for it</p>
 					{% endif %}
-					<p id="home-estimates-empty">No active estimates for the selected employee(s).</p>
 				</div>
-				{% if estimates_total_pages|default(0, true) > 0 %}
-				<div id="home-estimates-pages">
+				{% if price_book_total_pages|default(0, true) > 1 %}
+				<div id="home-price-book-pages">
 					<span>Page:</span>
-					{% set estimate_pages = estimates_total_pages %}
-					{% set active_estimate_page = estimate_page|default(1, true) %}
-					{% for page_num in range(1, estimate_pages + 1) %}
-						<a class="{% if page_num == active_estimate_page %}is-active{% endif %}" href="{{ url_for('home', estimate_page=page_num) }}" data-page="{{ page_num }}">{{ page_num }}</a>
+					{% set price_book_pages = price_book_total_pages %}
+					{% set active_price_book_page = price_book_page|default(1, true) %}
+					{% for page_num in range(1, price_book_pages + 1) %}
+						<a class="{% if page_num == active_price_book_page %}is-active{% endif %}" href="{{ url_for('home', price_book_page=page_num) }}" data-page="{{ page_num }}">{{ page_num }}</a>
 					{% endfor %}
 				</div>
 				{% endif %}
 				<div class="home-latest-action">
-					<a class="home-latest-action-link" href="{{ url_for('jobs.estimates') }}">Manage Estimates</a>
-				</div>
-			</div>
-			<div class="home-latest-column">
-				<h2>Payments Due</h2>
-				<div id="home-payments-due-list">
-					<p id="home-payments-empty-server">No payments available.</p>
-				</div>
-				{% if payments_total_pages|default(0, true) > 0 %}
-				<div id="home-payments-pages">
-					<span>Page:</span>
-					{% set payment_pages = payments_total_pages %}
-					{% for page_num in range(1, payment_pages + 1) %}
-						<a class="{% if page_num == 1 %}is-active{% endif %}" href="#" data-page="{{ page_num }}">{{ page_num }}</a>
-					{% endfor %}
-				</div>
-				{% endif %}
-				<div class="home-latest-action">
-					<a class="home-latest-action-link" href="#">Manage Payments</a>
+					<a class="home-latest-action-link" href="{{ url_for('catalog.manage_price_book') }}">View Price Book</a>
 				</div>
 			</div>
 		</div>
