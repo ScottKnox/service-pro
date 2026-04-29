@@ -246,7 +246,7 @@
 							<p id="home-notes-empty-server">No internal notes for this job.</p>
 						{% endif %}
 					{% else %}
-						<p id="home-notes-empty-server">Start a job to see internal notes for it</p>
+							<p id="home-notes-empty-server">Set a job to En Route or Start it to see internal notes for it</p>
 					{% endif %}
 				</div>
 				{% if notes_total_pages|default(0, true) > 1 %}
@@ -300,6 +300,25 @@
 				</div>
 			</div>
 		</div>
+
+		<div id="home-activity-row">
+			<div class="home-activity-section">
+				<h2>Activity Center</h2>
+				<div id="home-activity-content">
+					<div id="home-activity-feed-column">
+						<div id="home-activity-feed-list"></div>
+						<p id="home-activity-empty">No activity yet today for selected employees.</p>
+					</div>
+					<div id="home-activity-map-column">
+						<div id="home-activity-map" aria-label="Employee activity map"></div>
+						<p id="home-activity-map-empty">Map is unavailable until a Google Maps API key is configured.</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script id="home-activity-events-data" type="application/json">{{ activity_events|tojson }}</script>
+		<script id="home-activity-config" type="application/json">{{ {"business_center_address": business_center_address}|tojson }}</script>
 	</div>
 	{% endif %}
 {% endblock %}
@@ -307,5 +326,10 @@
 {% block scripts %}
 	{% if is_logged_in %}
 	<script src="{{ url_for('static', filename='js/home.js') }}" defer></script>
+	<script src="{{ url_for('static', filename='js/home_activity_feed.js') }}" defer></script>
+	<script src="{{ url_for('static', filename='js/home_activity_map.js') }}" defer></script>
+	{% if google_maps_api_key %}
+	<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key|urlencode }}&libraries=places&callback=initHomeActivityMap" defer></script>
+	{% endif %}
 	{% endif %}
 {% endblock %}

@@ -4,6 +4,15 @@ window.homePageFilter = {
     selectedDate: null,
     selectedEmployees: new Set(),
   },
+  activityData: {
+    events: [],
+    businessCenterAddress: "",
+    geocodeCache: new Map(),
+    mapInstance: null,
+    geocoder: null,
+    infoWindow: null,
+    markers: [],
+  },
   currentPage: 1,
   JOBS_PER_PAGE: 5,
 
@@ -27,6 +36,7 @@ window.homePageFilter = {
       if (!jobsByDate.has(jobDate)) {
         jobsByDate.set(jobDate, { total: 0, completed: 0 });
       }
+
       const dayStats = jobsByDate.get(jobDate);
       dayStats.total += 1;
       if (isCompleted) {
@@ -47,19 +57,17 @@ window.homePageFilter = {
 
     return { pending: pendingDates, completed: completedDates };
   },
-  
+
   filterAndDisplay: function() {
     const jobElements = document.querySelectorAll(".home-job");
     const visibleJobs = Array.from(jobElements).filter((job) => {
       const jobDate = job.dataset.jobDate;
       const jobEmployee = job.dataset.assignedEmployee;
 
-      // Filter by date if a date is selected
       if (this.filterData.selectedDate && jobDate !== this.filterData.selectedDate) {
         return false;
       }
 
-      // Filter by employee if any employees are selected
       if (this.filterData.selectedEmployees.size > 0 && !this.filterData.selectedEmployees.has(jobEmployee)) {
         return false;
       }
@@ -67,12 +75,12 @@ window.homePageFilter = {
       return true;
     });
 
-    // Reset to page 1 and update pagination
     this.currentPage = 1;
     this.updatePaginationLinks(visibleJobs.length);
     this.displayPageContent();
     this.filterCallsNeeded();
     this.filterEstimatesNeeded();
+    this.updateActivityCenter();
 
     if (typeof this.refreshCalendarHighlights === "function") {
       this.refreshCalendarHighlights();
@@ -210,7 +218,27 @@ window.homePageFilter = {
     if (emptyMessage) {
       emptyMessage.style.display = visibleJobs.length === 0 ? "block" : "none";
     }
-  }
+  },
+
+  updateActivityCenter: async function() {
+    // This method is overridden by home_activity_feed.js.
+  },
+  updateActivityMap: async function(_filteredEvents) {
+    const mapContainer = document.getElementById("home-activity-map");
+    const mapEmptyMessage = document.getElementById("home-activity-map-empty");
+    if (!mapContainer || !mapEmptyMessage) {
+      return;
+    }
+
+    if (!window.google || !window.google.maps || !this.activityData.mapInstance) {
+      mapEmptyMessage.style.display = "block";
+      mapContainer.classList.add("is-map-unavailable");
+      return;
+    }
+
+    mapEmptyMessage.style.display = "none";
+    mapContainer.classList.remove("is-map-unavailable");
+  },
 };
 
 function formatHomeJobTimes() {

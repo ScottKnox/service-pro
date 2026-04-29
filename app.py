@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import os
+import re
 
 from bson import ObjectId
 from flask import Flask, redirect, render_template, request, send_file, session, url_for
@@ -128,6 +129,126 @@ def home():
                 continue
         return datetime.min
 
+    def _normalize_employee_key(name):
+        raw_name = str(name or "").strip().lower()
+        if not raw_name:
+            return ""
+        return re.sub(r"\s+", "-", raw_name)
+
+    def _parse_event_datetime(value):
+        if isinstance(value, datetime):
+            return value
+
+        raw = str(value or "").strip()
+        if not raw:
+            return None
+
+        for date_format in (
+            "%m/%d/%Y %H:%M:%S",
+            "%m/%d/%Y %H:%M",
+            "%m/%d/%Y",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M",
+            "%Y-%m-%d",
+        ):
+            try:
+                return datetime.strptime(raw, date_format)
+            except ValueError:
+                continue
+
+        try:
+            return datetime.fromisoformat(raw.replace("Z", "+00:00")).replace(tzinfo=None)
+        except ValueError:
+            return None
+
+    def _parse_scheduled_datetime(job_doc):
+        scheduled_at = _parse_event_datetime((job_doc or {}).get("scheduled_at"))
+        if scheduled_at:
+            return scheduled_at
+
+        raw_date = str((job_doc or {}).get("scheduled_date") or "").strip()
+        raw_time = str((job_doc or {}).get("scheduled_time") or "").strip()
+        if raw_date and raw_time:
+            for date_format in ("%m/%d/%Y %H:%M:%S", "%m/%d/%Y %H:%M"):
+                try:
+                    return datetime.strptime(f"{raw_date} {raw_time}", date_format)
+                except ValueError:
+                    continue
+
+        if raw_date:
+            parsed_date = _parse_event_datetime(raw_date)
+            if parsed_date:
+                return parsed_date
+
+        return _parse_event_datetime((job_doc or {}).get("dateScheduled"))
+
+    def _compose_address(job_doc):
+        parts = [
+            str((job_doc or {}).get("address_line_1") or "").strip(),
+            str((job_doc or {}).get("city") or "").strip(),
+            str((job_doc or {}).get("state") or "").strip(),
+            str((job_doc or {}).get("zip_code") or "").strip(),
+        ]
+        return ", ".join([part for part in parts if part])
+
+    def _derive_activity_event(job_doc):
+        status_key = str((job_doc or {}).get("status") or "").strip().lower()
+        if not status_key:
+            return None
+
+        assigned_employee = str((job_doc or {}).get("assigned_employee") or "").strip()
+        if not assigned_employee:
+            return None
+
+        action_word = "updated"
+        event_dt = None
+
+        if status_key == "scheduled":
+            action_word = "scheduled"
+            event_dt = _parse_scheduled_datetime(job_doc)
+        elif status_key == "en route":
+            action_word = "went en route to"
+            event_dt = _parse_event_datetime((job_doc or {}).get("en_route_at"))
+        elif status_key == "started":
+            action_word = "started"
+            event_dt = _parse_event_datetime((job_doc or {}).get("started_at")) or _parse_event_datetime((job_doc or {}).get("dateStarted"))
+        elif status_key in {"completed", "complete", "done"}:
+            action_word = "completed"
+            event_dt = _parse_event_datetime((job_doc or {}).get("completed_at")) or _parse_event_datetime((job_doc or {}).get("dateCompleted"))
+        elif status_key == "paid":
+            action_word = "marked paid for"
+            event_dt = _parse_event_datetime((job_doc or {}).get("paid_at")) or _parse_event_datetime((job_doc or {}).get("completed_at")) or _parse_event_datetime((job_doc or {}).get("dateCompleted"))
+        elif status_key == "pending":
+            action_word = "created"
+            event_dt = _parse_event_datetime((job_doc or {}).get("created_at"))
+        else:
+            action_word = f"updated to {status_key}"
+            event_dt = _parse_event_datetime((job_doc or {}).get("updated_at"))
+
+        fallback_dt = _parse_event_datetime((job_doc or {}).get("updated_at")) or _parse_event_datetime((job_doc or {}).get("created_at"))
+        if not event_dt:
+            event_dt = fallback_dt
+        if not event_dt:
+            return None
+
+        customer_name = str((job_doc or {}).get("customer_name") or "").strip() or "Unknown customer"
+        job_title = str((job_doc or {}).get("job_type") or "").strip() or "service"
+        event_address = _compose_address(job_doc)
+
+        return {
+            "event_iso": event_dt.isoformat(),
+            "event_display": event_dt.strftime("%b %d, %Y %I:%M %p"),
+            "event_date_key": event_dt.strftime("%Y-%m-%d"),
+            "employee": assigned_employee,
+            "employee_key": _normalize_employee_key(assigned_employee),
+            "action": action_word,
+            "job_title": job_title,
+            "customer_name": customer_name,
+            "status": str((job_doc or {}).get("status") or "").strip(),
+            "job_id": str((job_doc or {}).get("_id") or "").strip(),
+            "address": event_address,
+        }
+
     jobs_list = []
     for job in db.jobs.find(_biz_filter).sort([("scheduled_date", 1), ("scheduled_time", 1), ("date_created", -1)]):
         serialized_job = serialize_doc(job)
@@ -167,6 +288,34 @@ def home():
             }
         )
 
+    # Activity Center payload (latest status activity feed + employee locations)
+    activity_events = []
+    for job in db.jobs.find(_biz_filter):
+        event = _derive_activity_event(job)
+        if event:
+            activity_events.append(event)
+    activity_events.sort(key=lambda entry: entry.get("event_iso") or "", reverse=True)
+
+    business_center_address = ""
+    if _business_oid:
+        business_doc = db.businesses.find_one(
+            {"_id": _business_oid},
+            {"address_line_1": 1, "city": 1, "state": 1, "zip_code": 1},
+        )
+        if business_doc:
+            business_center_address = ", ".join(
+                [
+                    part
+                    for part in [
+                        str(business_doc.get("address_line_1") or "").strip(),
+                        str(business_doc.get("city") or "").strip(),
+                        str(business_doc.get("state") or "").strip(),
+                        str(business_doc.get("zip_code") or "").strip(),
+                    ]
+                    if part
+                ]
+            )
+
     pending_page_raw = request.args.get("pending_page", "1")
     try:
         pending_page = max(1, int(pending_page_raw))
@@ -198,10 +347,10 @@ def home():
         pending_end = pending_start + pending_jobs_per_page
         pending_jobs = pending_jobs_all[pending_start:pending_end]
 
-    # Notes section (Internal notes for currently started job)
+    # Notes section (Internal notes for currently active job)
     started_job_for_notes = None
     started_job_doc = db.jobs.find_one(
-        {**_biz_filter, "status": {"$regex": "^Started$", "$options": "i"}},
+        {**_biz_filter, "status": {"$regex": "^(En Route|Started)$", "$options": "i"}},
         sort=[("_id", -1)],
     )
     if started_job_doc:
@@ -405,7 +554,13 @@ def home():
 
         return ""
 
-    started_job_for_price_book = started_job_for_notes
+    started_job_for_price_book = None
+    started_job_for_price_book_doc = db.jobs.find_one(
+        {**_biz_filter, "status": {"$regex": "^Started$", "$options": "i"}},
+        sort=[("_id", -1)],
+    )
+    if started_job_for_price_book_doc:
+        started_job_for_price_book = serialize_doc(started_job_for_price_book_doc)
     price_book_items_all = []
     if started_job_for_price_book:
         services = started_job_for_price_book.get("services") or []
@@ -522,6 +677,9 @@ def home():
         price_book_page=price_book_page,
         price_book_total_pages=price_book_total_pages,
         current_employee_active_job_id=current_employee_active_job_id,
+        activity_events=activity_events,
+        business_center_address=business_center_address,
+        google_maps_api_key=(os.getenv("GOOGLE_MAPS_API_KEY") or "").strip(),
     )
 
 

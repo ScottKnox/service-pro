@@ -1708,10 +1708,11 @@ def start_job(jobId):
         return redirect(url_for("jobs.view_job", jobId=jobId))
 
     current_timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+    current_timestamp_utc = datetime.utcnow()
 
     db.jobs.update_one(
         {"_id": ObjectId(jobId)},
-        {"$set": {"status": "Started", "dateStarted": current_timestamp}},
+        {"$set": {"status": "Started", "dateStarted": current_timestamp, "started_at": current_timestamp_utc, "updated_at": current_timestamp_utc}},
     )
 
     next_url = request.form.get("next") or url_for("jobs.view_job", jobId=jobId)
@@ -1731,9 +1732,11 @@ def en_route_job(jobId):
         current_app.logger.warning("Blocked invalid en-route transition: job_id=%s status=%s has_schedule=%s", jobId, current_status, has_schedule)
         return redirect(url_for("jobs.view_job", jobId=jobId))
 
+    current_timestamp_utc = datetime.utcnow()
+
     db.jobs.update_one(
         {"_id": ObjectId(jobId)},
-        {"$set": {"status": "En Route"}},
+        {"$set": {"status": "En Route", "en_route_at": current_timestamp_utc, "updated_at": current_timestamp_utc}},
     )
 
     next_url = request.form.get("next") or url_for("jobs.view_job", jobId=jobId)
@@ -1797,6 +1800,7 @@ def complete_job(jobId):
     filename = os.path.basename(invoice_path)
 
     current_timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+    current_timestamp_utc = datetime.utcnow()
     time_spent_str = ""
 
     date_started = job.get("dateStarted")
@@ -1822,7 +1826,13 @@ def complete_job(jobId):
     db.jobs.update_one(
         {"_id": ObjectId(jobId)},
         {
-            "$set": {"status": "Completed", "dateCompleted": current_timestamp, "timeSpent": time_spent_str},
+            "$set": {
+                "status": "Completed",
+                "dateCompleted": current_timestamp,
+                "completed_at": current_timestamp_utc,
+                "updated_at": current_timestamp_utc,
+                "timeSpent": time_spent_str,
+            },
             "$push": {
                 "invoices": {
                     "invoice_number": f"INV-{jobId[:8].upper()}",
