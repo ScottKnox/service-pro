@@ -6,6 +6,13 @@
   box-sizing: border-box;
 }
 
+@media (min-width: 1400px) {
+  #home-calendar {
+    max-width: 560px;
+    margin: 0 auto;
+  }
+}
+
 #home-calendar-header {
   display: grid;
   grid-template-columns: auto 1fr auto;

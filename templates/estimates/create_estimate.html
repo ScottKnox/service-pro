@@ -20,10 +20,11 @@
 
         <h2 class="create-job-form-section-header">Client Details</h2>
 
-        <div class="add-customer-form-row">
+        <div class="add-customer-form-row add-customer-form-row--top-aligned">
           <div class="add-customer-form-field">
-            <label for="job-customer-name">Customer</label>
-            <input id="job-customer-name" name="customer_name" type="text" value="{{ customer.first_name }} {{ customer.last_name }}" disabled />
+            <p class="job-client-inline"><span class="job-client-label">Customer:</span> <span class="job-client-name">{{ customer.first_name }} {{ customer.last_name }}</span></p>
+            <span class="job-client-label">Job Address:</span>
+            <div class="job-property-address-preview" data-job-property-address>Select a property above to see the job address.</div>
           </div>
 
           <div class="add-customer-form-field">
@@ -33,96 +34,15 @@
                 <option value="{{ property.property_id }}" {% if selected_property_id == property.property_id %}selected{% endif %}>{{ property.property_name|default('Property', true) }} - {{ property.address_line_1 }}</option>
               {% endfor %}
             </select>
+            <a class="customers-add-button job-property-add-button" href="{{ url_for('customers.add_property', customerId=customerId) }}">+ Add New Customer Property</a>
           </div>
         </div>
 
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="job-address-line-1">* Address Line 1</label>
-            <input id="job-address-line-1" name="job_address_line_1" type="text" value="{{ customer.address_line_1 }}" required />
-            <span id="error-address-line-1" class="form-field-error" style="display:none;">Address Line 1 is required</span>
-          </div>
-
-          <div class="add-customer-form-field">
-            <label for="job-address-line-2">* Address Line 2</label>
-            <input id="job-address-line-2" name="job_address_line_2" type="text" value="{{ customer.address_line_2 }}" />
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="job-city">* City</label>
-            <input id="job-city" name="job_city" type="text" value="{{ customer.city }}" required />
-            <span id="error-city" class="form-field-error" style="display:none;">City is required</span>
-          </div>
-
-          <div class="add-customer-form-field">
-            <label for="job-state">* State</label>
-            <select id="job-state" name="job_state" required>
-              <option value="">-- Select a state --</option>
-              <option value="AL" {% if customer.state == 'AL' %}selected{% endif %}>AL</option>
-              <option value="AK" {% if customer.state == 'AK' %}selected{% endif %}>AK</option>
-              <option value="AZ" {% if customer.state == 'AZ' %}selected{% endif %}>AZ</option>
-              <option value="AR" {% if customer.state == 'AR' %}selected{% endif %}>AR</option>
-              <option value="CA" {% if customer.state == 'CA' %}selected{% endif %}>CA</option>
-              <option value="CO" {% if customer.state == 'CO' %}selected{% endif %}>CO</option>
-              <option value="CT" {% if customer.state == 'CT' %}selected{% endif %}>CT</option>
-              <option value="DE" {% if customer.state == 'DE' %}selected{% endif %}>DE</option>
-              <option value="FL" {% if customer.state == 'FL' %}selected{% endif %}>FL</option>
-              <option value="GA" {% if customer.state == 'GA' %}selected{% endif %}>GA</option>
-              <option value="HI" {% if customer.state == 'HI' %}selected{% endif %}>HI</option>
-              <option value="ID" {% if customer.state == 'ID' %}selected{% endif %}>ID</option>
-              <option value="IL" {% if customer.state == 'IL' %}selected{% endif %}>IL</option>
-              <option value="IN" {% if customer.state == 'IN' %}selected{% endif %}>IN</option>
-              <option value="IA" {% if customer.state == 'IA' %}selected{% endif %}>IA</option>
-              <option value="KS" {% if customer.state == 'KS' %}selected{% endif %}>KS</option>
-              <option value="KY" {% if customer.state == 'KY' %}selected{% endif %}>KY</option>
-              <option value="LA" {% if customer.state == 'LA' %}selected{% endif %}>LA</option>
-              <option value="ME" {% if customer.state == 'ME' %}selected{% endif %}>ME</option>
-              <option value="MD" {% if customer.state == 'MD' %}selected{% endif %}>MD</option>
-              <option value="MA" {% if customer.state == 'MA' %}selected{% endif %}>MA</option>
-              <option value="MI" {% if customer.state == 'MI' %}selected{% endif %}>MI</option>
-              <option value="MN" {% if customer.state == 'MN' %}selected{% endif %}>MN</option>
-              <option value="MS" {% if customer.state == 'MS' %}selected{% endif %}>MS</option>
-              <option value="MO" {% if customer.state == 'MO' %}selected{% endif %}>MO</option>
-              <option value="MT" {% if customer.state == 'MT' %}selected{% endif %}>MT</option>
-              <option value="NE" {% if customer.state == 'NE' %}selected{% endif %}>NE</option>
-              <option value="NV" {% if customer.state == 'NV' %}selected{% endif %}>NV</option>
-              <option value="NH" {% if customer.state == 'NH' %}selected{% endif %}>NH</option>
-              <option value="NJ" {% if customer.state == 'NJ' %}selected{% endif %}>NJ</option>
-              <option value="NM" {% if customer.state == 'NM' %}selected{% endif %}>NM</option>
-              <option value="NY" {% if customer.state == 'NY' %}selected{% endif %}>NY</option>
-              <option value="NC" {% if customer.state == 'NC' %}selected{% endif %}>NC</option>
-              <option value="ND" {% if customer.state == 'ND' %}selected{% endif %}>ND</option>
-              <option value="OH" {% if customer.state == 'OH' %}selected{% endif %}>OH</option>
-              <option value="OK" {% if customer.state == 'OK' %}selected{% endif %}>OK</option>
-              <option value="OR" {% if customer.state == 'OR' %}selected{% endif %}>OR</option>
-              <option value="PA" {% if customer.state == 'PA' %}selected{% endif %}>PA</option>
-              <option value="RI" {% if customer.state == 'RI' %}selected{% endif %}>RI</option>
-              <option value="SC" {% if customer.state == 'SC' %}selected{% endif %}>SC</option>
-              <option value="SD" {% if customer.state == 'SD' %}selected{% endif %}>SD</option>
-              <option value="TN" {% if customer.state == 'TN' %}selected{% endif %}>TN</option>
-              <option value="TX" {% if customer.state == 'TX' %}selected{% endif %}>TX</option>
-              <option value="UT" {% if customer.state == 'UT' %}selected{% endif %}>UT</option>
-              <option value="VT" {% if customer.state == 'VT' %}selected{% endif %}>VT</option>
-              <option value="VA" {% if customer.state == 'VA' %}selected{% endif %}>VA</option>
-              <option value="WA" {% if customer.state == 'WA' %}selected{% endif %}>WA</option>
-              <option value="WV" {% if customer.state == 'WV' %}selected{% endif %}>WV</option>
-              <option value="WI" {% if customer.state == 'WI' %}selected{% endif %}>WI</option>
-              <option value="WY" {% if customer.state == 'WY' %}selected{% endif %}>WY</option>
-            </select>
-            <span id="error-state" class="form-field-error" style="display:none;">State is required</span>
-          </div>
-        </div>
-
-        <div class="add-customer-form-row add-customer-form-row--single">
-          <div class="add-customer-form-field">
-            <label for="job-zip-code">Zip Code</label>
-            <input id="job-zip-code" name="job_zip_code" type="text" value="{{ customer.zip_code|default('', true) }}" />
-          </div>
-        </div>
-
-        <p class="form-field-note">* Change if estimating for address different than customer's</p>
+        <input id="job-address-line-1" name="job_address_line_1" type="hidden" value="{{ customer.address_line_1|default('', true) }}" />
+        <input id="job-address-line-2" name="job_address_line_2" type="hidden" value="{{ customer.address_line_2|default('', true) }}" />
+        <input id="job-city" name="job_city" type="hidden" value="{{ customer.city|default('', true) }}" />
+        <input id="job-state" name="job_state" type="hidden" value="{{ customer.state|default('', true) }}" />
+        <input id="job-zip-code" name="job_zip_code" type="hidden" value="{{ customer.zip_code|default('', true) }}" />
 
         <h2 class="create-job-form-section-header">Estimate Details</h2>
         <span id="error-job-details" class="form-field-error" style="display:none;"></span>

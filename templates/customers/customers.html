@@ -3,84 +3,113 @@
 {% block title %}Customers | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container" data-live-card-filter-root>
+  <div id="main-container">
     <div id="manage-customers-header" class="resource-page resource-customers">
       <h1>Manage Customers</h1>
 
       <div id="customers-controls-row">
         <div class="customers-controls-left">
-          <h2>Search Customers:</h2>
-          <form id="customers-search-form" action="#" method="get" data-live-card-filter-form>
-            <input
-              id="customers-search-input"
-              name="q"
-              type="search"
-              placeholder="Search by customer name"
-              aria-label="Search customers"
-              data-live-card-filter-input
-            />
-          </form>
+          <h2>Filter Customers</h2>
+
+          <div class="customers-filter-list">
+            <details class="customers-filter-group">
+              <summary>Status</summary>
+              <div class="customers-filter-content" id="customers-filter-status-options"></div>
+            </details>
+
+            <details class="customers-filter-group">
+              <summary>Customer Type</summary>
+              <div class="customers-filter-content" id="customers-filter-type-options"></div>
+            </details>
+
+            <details class="customers-filter-group">
+              <summary>City</summary>
+              <div class="customers-filter-content" id="customers-filter-city-options"></div>
+            </details>
+
+            <details class="customers-filter-group">
+              <summary>State</summary>
+              <div class="customers-filter-content" id="customers-filter-state-options"></div>
+            </details>
+          </div>
         </div>
 
         <div class="customers-controls-right">
-          <a href="{{ url_for('customers.add_customer') }}">Add Customer</a>
-          <a href="{{ url_for('customers.export_customers_csv') }}">Export CSV</a>
+          <div class="customers-controls-right-top">
+            <h2>All Customers</h2>
+
+            <div class="customers-controls-right-actions">
+              <form id="customers-search-form" action="#" method="get">
+                <input
+                  id="customers-search-input"
+                  name="q"
+                  type="search"
+                  placeholder="Search by customer name"
+                  aria-label="Search customers"
+                />
+              </form>
+              <a href="{{ url_for('customers.add_customer') }}">Add Customer</a>
+              <a href="{{ url_for('customers.export_customers_csv') }}">Export CSV</a>
+            </div>
+          </div>
+
+          <div id="customers-list-grid" class="customers-compact-list">
+            {% if customers %}
+              {% for customer in customers %}
+                {% set customer_status = customer.customer_status|default('N/A', true) %}
+                {% set customer_status_normalized = customer_status|lower %}
+                {% set full_name = ((customer.first_name|default('', true) ~ ' ' ~ customer.last_name|default('', true))|trim) %}
+                {% set address_parts = [
+                  customer.address_line_1|default('', true),
+                  customer.address_line_2|default('', true),
+                  customer.city|default('', true),
+                  customer.state|default('', true),
+                  customer.zip_code|default('', true)
+                ] %}
+                {% set full_address = address_parts|reject('equalto', '')|join(', ') %}
+                <a
+                  class="customer-card"
+                  href="{{ url_for('customers.view_customer', customerId=customer._id) }}"
+                  data-filter-status="{{ customer_status }}"
+                  data-filter-type="{{ customer.customer_type|default('', true) }}"
+                  data-filter-city="{{ customer.city|default('', true) }}"
+                  data-filter-state="{{ customer.state|default('', true) }}"
+                  data-search-name="{{ full_name }}"
+                >
+                  <div class="customer-card-row customer-card-row--status">
+                    <span class="customer-card-label">Status</span>
+                    <span class="customer-card-value">
+                      <span class="customer-status-chip{% if customer_status_normalized == 'lead' %} is-lead{% elif customer_status_normalized == 'active' %} is-active{% endif %}">{{ customer_status }}</span>
+                    </span>
+                  </div>
+                  <div class="customer-card-row">
+                    <span class="customer-card-label">Name</span>
+                    <span class="customer-card-value" data-live-card-name>{{ full_name or '-' }}</span>
+                  </div>
+                  <div class="customer-card-row">
+                    <span class="customer-card-label">Phone</span>
+                    <span class="customer-card-value">{{ customer.phone }}</span>
+                  </div>
+                  <div class="customer-card-row customer-card-row--address">
+                    <span class="customer-card-label">Address</span>
+                    <span class="customer-card-value customer-card-value--address">{{ full_address or '-' }}</span>
+                  </div>
+                </a>
+              {% endfor %}
+            {% else %}
+              <p>No customers found. Add your first customer to get started.</p>
+            {% endif %}
+          </div>
+          {% if customers %}
+            <p id="customers-filter-no-results" hidden>No customers match the selected filters.</p>
+          {% endif %}
         </div>
       </div>
-
-      <div id="all-customers-title-row">
-        <h2>All Customers</h2>
-      </div>
-
-      <div id="customers-list-grid" data-live-card-filter-grid>
-        {% if customers %}
-          {% for customer in customers %}
-            {% set customer_status = customer.customer_status|default('N/A', true) %}
-            {% set customer_status_normalized = customer_status|lower %}
-            <a class="customer-card" href="{{ url_for('customers.view_customer', customerId=customer._id) }}" data-live-card-filter-item>
-              <div class="customer-card-row">
-                <span class="customer-card-label">Status</span>
-                <span class="customer-card-value">
-                  <span class="customer-status-chip{% if customer_status_normalized == 'lead' %} is-lead{% elif customer_status_normalized == 'active' %} is-active{% endif %}">{{ customer_status }}</span>
-                </span>
-              </div>
-              <div class="customer-card-row">
-                <span class="customer-card-label">First Name</span>
-                <span class="customer-card-value" data-live-card-first-name>{{ customer.first_name }}</span>
-              </div>
-              <div class="customer-card-row">
-                <span class="customer-card-label">Last Name</span>
-                <span class="customer-card-value" data-live-card-last-name>{{ customer.last_name }}</span>
-              </div>
-              <div class="customer-card-row">
-                <span class="customer-card-label">Phone</span>
-                <span class="customer-card-value">{{ customer.phone }}</span>
-              </div>
-              <div class="customer-card-row">
-                <span class="customer-card-label">Email</span>
-                <span class="customer-card-value">{{ customer.email }}</span>
-              </div>
-              <div class="customer-card-row">
-                <span class="customer-card-label">City</span>
-                <span class="customer-card-value">{{ customer.city }}</span>
-              </div>
-              <div class="customer-card-row">
-                <span class="customer-card-label">State</span>
-                <span class="customer-card-value">{{ customer.state }}</span>
-              </div>
-            </a>
-          {% endfor %}
-        {% else %}
-          <p>No customers found. Add your first customer to get started.</p>
-        {% endif %}
-      </div>
-      {% if customers %}
-        <p data-live-card-filter-empty hidden>No matching customers found.</p>
-      {% endif %}
     </div>
   </div>
 {% endblock %}
 
 {% block scripts %}
-  <script src="{{ url_for('static', filename='js/live_card_filter.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/customers_filters.js') }}" defer></script>
 {% endblock %}
+

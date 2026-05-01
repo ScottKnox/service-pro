@@ -20,6 +20,9 @@
 
       <form id="add-customer-form" action="{{ url_for('customers.add_customer') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <h2 class="create-job-form-section-header">Customer Details</h2>
+
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="customer-first-name">First Name</label>
@@ -62,6 +65,16 @@
             <input id="customer-email" name="email" type="email" placeholder="name@example.com" value="{{ form_data.get('email', '') }}" />
           </div>
         </div>
+
+        <div class="add-customer-form-row add-customer-form-row--single">
+          <div class="add-customer-form-field">
+            <label for="customer-referral-source">Referral Source</label>
+            <input id="customer-referral-source" name="referral_source" type="text" placeholder="Google, referral, yard sign, etc." value="{{ form_data.get('referral_source', '') }}" />
+          </div>
+        </div>
+
+        <h2 class="create-job-form-section-header">Primary Address</h2>
+        <p class="form-field-note form-field-note--compact">This is the address the customer resides at, you can add additional properties later.</p>
 
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
@@ -144,15 +157,6 @@
             <label for="customer-zip-code">Zip Code</label>
             <input id="customer-zip-code" name="zip_code" type="text" placeholder="65754" value="{{ form_data.get('zip_code', '') }}" />
           </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="customer-referral-source">Referral Source</label>
-            <input id="customer-referral-source" name="referral_source" type="text" placeholder="Google, referral, yard sign, etc." value="{{ form_data.get('referral_source', '') }}" />
-          </div>
-
-          <div class="add-customer-form-field"></div>
         </div>
 
         <div id="add-customer-form-actions">

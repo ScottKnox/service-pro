@@ -816,14 +816,9 @@ def _build_empty_hvac_form_data():
 
 
 def _find_existing_hvac_component(db, customer_id, hvac_system, collection_name):
-    system_id = str(hvac_system.get("_id", "")).strip()
-    if not system_id:
-        return None
-
-    return db[collection_name].find_one(
-        {"$and": [build_reference_filter("customer_id", customer_id), {"hvac_system_id": system_id}]},
-        sort=[("_id", -1)],
-    )
+    components = hvac_system.get("components") if isinstance(hvac_system.get("components"), dict) else {}
+    component = components.get(collection_name)
+    return component if isinstance(component, dict) and component else None
 
 
 def _build_hvac_component_document(form_data, component_base_document, collection_name):
@@ -1414,21 +1409,6 @@ def _load_hvac_components_for_system(db, customer_id, hvac_system):
     component_snapshots = hvac_system.get("components", {}) if isinstance(hvac_system.get("components"), dict) else {}
 
     for collection_name, label in expected_components:
-        matching_component = db[collection_name].find_one(
-            {
-                "$and": [
-                    build_reference_filter("customer_id", customer_id),
-                    {"hvac_system_id": str(hvac_system.get("_id", "")).strip()},
-                ]
-            },
-            sort=[("_id", -1)],
-        )
-
-        if matching_component:
-            serialized_component = serialize_doc(matching_component)
-            components.append(_build_hvac_card_component(serialized_component, label, collection_name))
-            continue
-
         snapshot = component_snapshots.get(collection_name)
         if isinstance(snapshot, dict) and snapshot:
             components.append(_build_hvac_card_component(snapshot, label, collection_name))
@@ -2867,13 +2847,10 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
             **form_data,
         }
 
-        if existing_component:
-            db[component_key].update_one(
-                {"$and": [{"_id": existing_component["_id"]}, build_reference_filter("customer_id", customerId)]},
-                {"$set": component_document},
-            )
-        else:
-            db[component_key].insert_one(component_document)
+        db.hvacSystems.update_one(
+            {"$and": [{"_id": hvac_system["_id"]}, build_reference_filter("customer_id", customerId)]},
+            {"$set": {f"components.{component_key}": component_document}},
+        )
 
         return redirect(
             url_for(
@@ -2921,12 +2898,6 @@ def delete_hvac_system(customerId, reference_type, reference_id):
         return redirect(url_for("customers.view_customer", customerId=customerId))
     if property_id and str(hvac_system.get("property_id") or "").strip() != property_id:
         return redirect(url_for("customers.view_customer", customerId=customerId))
-
-    serialized_system = serialize_doc(hvac_system)
-    for collection_name in HVAC_COMPONENT_LABELS:
-        existing_component = _find_existing_hvac_component(db, customerId, serialized_system, collection_name)
-        if existing_component:
-            db[collection_name].delete_one({"$and": [{"_id": existing_component["_id"]}, build_reference_filter("customer_id", customerId)]})
 
     db.hvacDiagnostics.delete_many(
         {
@@ -3082,7 +3053,6 @@ def add_equipment(customerId):
 
             for collection_name, _label in HVAC_COLLECTION_CONFIG.get(system_type, ()):
                 component_doc = _build_hvac_component_document(form_data, component_base_document, collection_name)
-                db[collection_name].insert_one(component_doc)
                 component_snapshots[collection_name] = component_doc
 
             update_payload = {"components": component_snapshots}

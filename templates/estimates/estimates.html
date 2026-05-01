@@ -66,7 +66,7 @@
 
           <div class="jobs-controls-right-bottom">
             <div id="jobs-list-container">
-              <div id="estimates-list-grid">
+              <div id="estimates-list-grid" class="estimates-compact-list">
                 {% if estimates %}
                   {% for estimate in estimates %}
                     {% set estimate_status_normalized = (estimate.status|default('', true))|lower %}
@@ -80,21 +80,13 @@
                       data-filter-state="{{ estimate.state|default('', true) }}"
                       data-filter-date="{{ estimate.date_created|default('', true) }}"
                     >
-                      <div class="jobs-card-row">
+                      <div class="jobs-card-row jobs-card-row--status">
                         <span class="jobs-card-label">Status</span>
                         <span class="jobs-card-value jobs-status-chip{% if estimate_status_normalized == 'created' %} is-pending{% elif estimate_status_normalized == 'sent' %} is-scheduled{% elif estimate_status_normalized == 'accepted' %} is-started{% elif estimate_status_normalized == 'declined' %} is-declined{% endif %}">{{ estimate.status|default('Created', true) }}</span>
                       </div>
                       <div class="jobs-card-row">
                         <span class="jobs-card-label">Customer</span>
                         <span class="jobs-card-value">{{ estimate.customer_name|default('Unknown Customer', true) }}</span>
-                      </div>
-                      <div class="jobs-card-row">
-                        <span class="jobs-card-label">Company</span>
-                        <span class="jobs-card-value">{{ estimate.company|default('-', true) }}</span>
-                      </div>
-                      <div class="jobs-card-row">
-                        <span class="jobs-card-label">Estimated By</span>
-                        <span class="jobs-card-value">{{ estimated_by|default('Unassigned', true) }}</span>
                       </div>
                       <div class="jobs-card-row">
                         <span class="jobs-card-label">Date Created</span>

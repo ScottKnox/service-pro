@@ -629,7 +629,7 @@ def _create_job_from_accepted_estimate(db, estimate_id):
         "materials": materials,
         "equipments": equipments,
         "discounts": discounts,
-        "status": "Pending",
+        "status": "Scheduled",
         "scheduled_date": proposed_date,
         "scheduled_time": proposed_time,
         "dateScheduled": date_scheduled,

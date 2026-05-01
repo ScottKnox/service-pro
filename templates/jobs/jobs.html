@@ -71,10 +71,18 @@
 
           <div class="jobs-controls-right-bottom">
           <div id="jobs-list-container">
-            <div id="jobs-list-grid">
+            <div id="jobs-list-grid" class="jobs-compact-list">
               {% if jobs %}
                 {% for job in jobs %}
                   {% set job_status_normalized = (job.status|default('', true))|lower %}
+                  {% set address_parts = [
+                    job.address_line_1|default('', true),
+                    job.address_line_2|default('', true),
+                    job.city|default('', true),
+                    job.state|default('', true),
+                    job.zip_code|default('', true)
+                  ] %}
+                  {% set full_address = address_parts|reject('equalto', '')|join(', ') %}
                   <a
                     class="jobs-card"
                     href="{{ url_for('jobs.view_job', jobId=job._id) }}"
@@ -84,7 +92,7 @@
                     data-filter-state="{{ job.state|default('', true) }}"
                     data-filter-date="{{ job.scheduled_date|default('', true) }}"
                   >
-                    <div class="jobs-card-row">
+                    <div class="jobs-card-row jobs-card-row--status">
                       <span class="jobs-card-label">Status</span>
                       <span class="jobs-card-value jobs-status-chip{% if job_status_normalized == 'pending' %} is-pending{% elif job_status_normalized == 'scheduled' %} is-scheduled{% elif job_status_normalized == 'en route' %} is-en-route{% elif job_status_normalized == 'started' %} is-started{% elif job_status_normalized == 'completed' %} is-completed{% elif job_status_normalized == 'paid' %} is-paid{% endif %}">{{ job.status }}</span>
                     </div>
@@ -93,42 +101,16 @@
                       <span class="jobs-card-value">{{ job.customer_name }}</span>
                     </div>
                     <div class="jobs-card-row">
-                      <span class="jobs-card-label">Company</span>
-                      <span class="jobs-card-value">{{ job.company or '-' }}</span>
-                    </div>
-                    <div class="jobs-card-row">
                       <span class="jobs-card-label">Service</span>
                       <span class="jobs-card-value">{% if job.services %}{{ job.job_type }}{% else %}No services added.{% endif %}</span>
                     </div>
-                    <div class="jobs-card-row">
-                      <span class="jobs-card-label">Job Type</span>
-                      <span class="jobs-card-value">{% if job.job_kind == 'recurring_occurrence' %}{{ job.recurrence_summary|default('Recurring', true) }}{% else %}One-Time{% endif %}</span>
-                    </div>
-                    {% if job.job_kind == 'recurring_occurrence' %}
-                    <div class="jobs-card-row">
-                      <span class="jobs-card-label">Series Status</span>
-                      <span class="jobs-card-value">{{ job.recurring_series_status|default('Unknown', true) }}</span>
-                    </div>
-                    {% endif %}
-                    <div class="jobs-card-row">
-                      <span class="jobs-card-label">City</span>
-                      <span class="jobs-card-value">{{ job.city }}</span>
-                    </div>
-                    <div class="jobs-card-row">
-                      <span class="jobs-card-label">State</span>
-                      <span class="jobs-card-value">{{ job.state }}</span>
-                    </div>
-                    <div class="jobs-card-row">
-                      <span class="jobs-card-label">Assigned To</span>
-                      <span class="jobs-card-value">{{ job.assigned_employee }}</span>
+                    <div class="jobs-card-row jobs-card-row--address">
+                      <span class="jobs-card-label">Address</span>
+                      <span class="jobs-card-value jobs-card-value--address">{{ full_address or '-' }}</span>
                     </div>
                     <div class="jobs-card-row">
                       <span class="jobs-card-label">Date Scheduled</span>
                       <span class="jobs-card-value">{{ job.scheduled_date }} {{ job.scheduled_time|default('', true) }}</span>
-                    </div>
-                    <div class="jobs-card-row">
-                      <span class="jobs-card-label">Total</span>
-                      <span class="jobs-card-value">{{ job.total_amount|currency }}</span>
                     </div>
                   </a>
                 {% endfor %}

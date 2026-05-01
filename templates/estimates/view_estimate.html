@@ -129,7 +129,7 @@
             </div>
             <div class="view-job-detail-item">
               <h4>Proposed Job Date</h4>
-              <p>{{ estimate.proposed_job_date|default('N/A', true) }}</p>
+              <p>{{ estimate.proposed_job_date|default('Not Yet Scheduled' if not is_staff_view else 'N/A', true) }}</p>
             </div>
             <div class="view-job-detail-item">
               <h4>Proposed Job Time</h4>
@@ -138,14 +138,16 @@
                   class="localized-estimate-time"
                   data-estimate-date="{{ estimate.proposed_job_date_iso|default('', true) }}"
                   data-estimate-time="{{ estimate.proposed_job_time|default('', true) }}"
-                >{{ estimate.proposed_job_time|default('N/A', true) }}</span>
+                >{{ estimate.proposed_job_time|default('Not Yet Scheduled' if not is_staff_view else 'N/A', true) }}</span>
               </p>
             </div>
+            {% if is_staff_view %}
             <div class="view-job-detail-item">
               <h4>Job Type</h4>
               <p>{{ estimate.job_schedule_type_label|default('One-Time', true) }}</p>
             </div>
-            {% if estimate.job_schedule_type == 'recurring' %}
+            {% endif %}
+            {% if is_staff_view and estimate.job_schedule_type == 'recurring' %}
               <div class="view-job-detail-item">
                 <h4>Recurrence</h4>
                 <p>{{ estimate.recurrence_summary|default('Recurring', true) }}</p>

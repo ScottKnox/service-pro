@@ -146,7 +146,7 @@ p {
 }
 
 #main-container {
-  width: 60vw;
+  width: min(1360px, 92vw);
   height: auto;
   margin: 0 auto;
 }
@@ -154,6 +154,14 @@ p {
 .home-scheduling-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
+}
+
+@media (min-width: 1400px) {
+  .home-scheduling-row {
+    grid-template-columns: minmax(0, 740px) minmax(0, 560px);
+    justify-content: center;
+    gap: 1rem;
+  }
 }
 
 #home-latest-row {
@@ -1392,6 +1400,90 @@ p {
   background-color: #F8FAFC;
 }
 
+.jobs-compact-list,
+.estimates-compact-list {
+  gap: 0.75rem;
+}
+
+@media (min-width: 1200px) {
+  #jobs-list-grid.jobs-compact-list,
+  #estimates-list-grid.estimates-compact-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+    margin-top: 0.5rem;
+  }
+
+  .jobs-compact-list .jobs-card,
+  .estimates-compact-list .jobs-card {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.55rem 0.7rem;
+    min-height: 3.7rem;
+  }
+
+  .jobs-compact-list .jobs-card-row,
+  .estimates-compact-list .jobs-card-row {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.22rem;
+    padding: 0;
+    border: 0;
+    grid-template-columns: none;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .jobs-compact-list .jobs-card-row--status,
+  .estimates-compact-list .jobs-card-row--status {
+    padding-right: 0.55rem;
+    margin-right: 0.1rem;
+    border-right: 1px solid #D1D5DB;
+  }
+
+  .jobs-compact-list .jobs-card-row--address {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .jobs-compact-list .jobs-card-label,
+  .estimates-compact-list .jobs-card-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+  }
+
+  .jobs-compact-list .jobs-card-value,
+  .estimates-compact-list .jobs-card-value {
+    text-align: left;
+    font-size: 0.86rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 14rem;
+  }
+
+  .jobs-compact-list .jobs-card-value--address {
+    max-width: 32rem;
+  }
+}
+
+@media (max-width: 1199px) {
+  .jobs-compact-list .jobs-card,
+  .estimates-compact-list .jobs-card {
+    gap: 0.55rem;
+    padding: 0.85rem;
+    min-height: 7rem;
+  }
+}
+
+@media (max-width: 699px) {
+  .jobs-compact-list .jobs-card,
+  .estimates-compact-list .jobs-card {
+    min-height: 0;
+  }
+}
+
 .catalog-compact-list {
   gap: 0.75rem;
 }
@@ -1530,15 +1622,94 @@ p {
 
 #customers-controls-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(180px, 0.75fr) 2.25fr;
   gap: 1rem;
-  align-items: end;
+  align-items: start;
 }
 
 .customers-controls-left h2 {
-  margin: 0 0 0.5rem;
+  margin: 0;
   font-size: 1.1rem;
-  color: #1B263B;
+  color: var(--kl-text, #1B263B);
+}
+
+.customers-filter-list {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.customers-filter-group {
+  border: 1px solid var(--kl-border, #C5C7CB);
+  border-radius: 4px;
+  background-color: var(--kl-surface, #FFFFFF);
+  overflow: hidden;
+}
+
+.customers-filter-group summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.55rem 0.7rem;
+  background: linear-gradient(135deg, var(--kl-header, #1B263B) 0%, var(--kl-header-soft, #27364F) 100%);
+  color: var(--kl-accent-contrast, #F8F9FA);
+  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 0.96rem;
+  font-weight: 600;
+}
+
+.customers-filter-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.customers-filter-group summary::after {
+  content: "+";
+  float: right;
+  font-weight: 700;
+}
+
+.customers-filter-group[open] summary::after {
+  content: "-";
+}
+
+.customers-filter-content {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.7rem;
+}
+
+.customers-filter-content label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--kl-text, #1B263B);
+  font-size: 0.95rem;
+}
+
+.customers-controls-right {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 0.85rem;
+}
+
+.customers-controls-right-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.customers-controls-right-top h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--kl-text, #1B263B);
+}
+
+.customers-controls-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 #customers-search-form {
@@ -1548,8 +1719,7 @@ p {
 }
 
 #customers-search-input {
-  width: 100%;
-  max-width: 560px;
+  width: 260px;
   padding: 0.55rem 0.75rem;
   border: 1px solid #C5C7CB;
   border-radius: 4px;
@@ -1582,14 +1752,8 @@ p {
   border-color: #27364F;
 }
 
-.customers-controls-right {
-  display: flex;
-  align-items: end;
-  gap: 0.5rem;
-}
-
 .customers-add-button,
-.customers-controls-right a {
+.customers-controls-right-actions a {
   display: inline-block;
   padding: 0.55rem 0.95rem;
   border: 1px solid #C5C7CB;
@@ -1601,27 +1765,16 @@ p {
 }
 
 .customers-add-button:hover,
-.customers-controls-right a:hover {
+.customers-controls-right-actions a:hover {
   background-color: #F1F5F9;
   border-color: #A9B0BA;
-}
-
-#all-customers-title-row {
-  margin-top: 1.5rem;
-}
-
-#all-customers-title-row h2 {
-  margin: 0;
-  text-align: center;
-  color: #1B263B;
-  font-size: 1.5rem;
 }
 
 #customers-list-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1rem;
-  margin-top: 1.5rem;
+  margin-top: 0.5rem;
 }
 
 .customer-card {
@@ -1639,6 +1792,81 @@ p {
 .customer-card:hover {
   background-color: #F8FAFC;
   box-shadow: 0 2px 8px rgba(27, 38, 59, 0.1);
+}
+
+.customers-compact-list {
+  gap: 0.75rem;
+}
+
+@media (min-width: 1200px) {
+  #customers-list-grid.customers-compact-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+    margin-top: 0.5rem;
+  }
+
+  .customers-compact-list .customer-card {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.6rem;
+    min-height: 3.5rem;
+  }
+
+  .customers-compact-list .customer-card-row {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.2rem;
+    padding: 0;
+    border: 0;
+    grid-template-columns: none;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  .customers-compact-list .customer-card-row--status {
+    padding-right: 0.55rem;
+    margin-right: 0.1rem;
+    border-right: 1px solid #D1D5DB;
+  }
+
+  .customers-compact-list .customer-card-row--address {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .customers-compact-list .customer-card-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+  }
+
+  .customers-compact-list .customer-card-value {
+    text-align: left;
+    font-size: 0.86rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 14rem;
+  }
+
+  .customers-compact-list .customer-card-value--address {
+    max-width: 32rem;
+  }
+}
+
+@media (max-width: 1199px) {
+  .customers-compact-list .customer-card {
+    gap: 0.55rem;
+    padding: 0.85rem;
+    min-height: 7rem;
+  }
+}
+
+@media (max-width: 699px) {
+  .customers-compact-list .customer-card {
+    min-height: 0;
+  }
 }
 
 .customer-card-row {
@@ -1971,7 +2199,7 @@ p {
 
 .resource-customers .customer-card {
   border-top-color: #0F766E;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F1FBF8 100%);
+  background: #FFFFFF;
 }
 
 .resource-customers .customer-card:hover {
@@ -3337,6 +3565,17 @@ p {
   border-radius: 4px;
 }
 
+#add-customer-form .create-job-form-section-header {
+  margin: 1rem 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--kl-accent-contrast);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: left;
+  background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
+  border-radius: 4px;
+}
+
 .add-customer-form-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3467,6 +3706,54 @@ p {
 .add-customer-form-field textarea {
   resize: vertical;
   font-family: inherit;
+}
+
+.job-client-inline {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.3rem 0;
+}
+
+.job-client-label {
+  color: #6B7280;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.job-client-name {
+  color: #1B263B;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.job-property-address-preview {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  background: #F8FAFC;
+  color: #1F2937;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+
+.job-property-address-preview-name {
+  display: inline;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1B263B;
+}
+
+.job-property-info-block {
+  gap: 0.5rem;
+}
+
+.job-property-add-button {
+  width: fit-content;
+  margin-top: 0.25rem;
 }
 
 .hvac-diagnostics-readonly-input:disabled {

@@ -14,6 +14,7 @@
   const customerProperties = form && form.dataset.customerProperties ? JSON.parse(form.dataset.customerProperties) : [];
 
   const propertySelect = document.querySelector('[data-job-property-select]');
+  const propertyAddressPreview = document.querySelector('[data-job-property-address]');
   const addressLine1Field = document.getElementById('job-address-line-1');
   const addressLine2Field = document.getElementById('job-address-line-2');
   const cityField = document.getElementById('job-city');
@@ -28,6 +29,40 @@
     zip_code: zipCodeField ? zipCodeField.value : '',
   };
 
+  function buildPropertyAddressHTML(propertyData) {
+    if (!propertyData) {
+      return 'Select a property above to see the job address.';
+    }
+
+    const propertyName = String(propertyData.property_name || '').trim() || 'Property';
+    const addressLine1 = String(propertyData.address_line_1 || '').trim();
+    const addressLine2 = String(propertyData.address_line_2 || '').trim();
+    const city = String(propertyData.city || '').trim();
+    const state = String(propertyData.state || '').trim();
+    const zipCode = String(propertyData.zip_code || '').trim();
+
+    function escapeHTML(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    const streetLine = [addressLine1, addressLine2].filter(Boolean).join(', ');
+    const cityStateZip = [city, state].filter(Boolean).join(', ');
+    const lastLine = [cityStateZip, zipCode].filter(Boolean).join(' ');
+
+    const addressLines = [streetLine, lastLine].filter(Boolean);
+    const addressText = addressLines.length ? addressLines.join('\n') : 'No address on file for this property.';
+
+    return '<span class="job-property-address-preview-name">' + escapeHTML(propertyName) + '</span>\n' + escapeHTML(addressText);
+  }
+
+  function updatePropertyAddressPreview(propertyData) {
+    if (!propertyAddressPreview) {
+      return;
+    }
+
+    propertyAddressPreview.innerHTML = buildPropertyAddressHTML(propertyData);
+  }
+
   function applyPropertyAddress(propertyId) {
     if (!propertyId) {
       if (addressLine1Field) addressLine1Field.value = initialAddressValues.address_line_1;
@@ -35,6 +70,7 @@
       if (cityField) cityField.value = initialAddressValues.city;
       if (stateField) stateField.value = initialAddressValues.state;
       if (zipCodeField) zipCodeField.value = initialAddressValues.zip_code;
+      updatePropertyAddressPreview(null);
       return;
     }
 
@@ -45,6 +81,7 @@
       : null;
 
     if (!selectedProperty) {
+      updatePropertyAddressPreview(null);
       return;
     }
 
@@ -53,6 +90,7 @@
     if (cityField) cityField.value = selectedProperty.city || '';
     if (stateField) stateField.value = selectedProperty.state || '';
     if (zipCodeField) zipCodeField.value = selectedProperty.zip_code || '';
+    updatePropertyAddressPreview(selectedProperty);
   }
 
   if (propertySelect) {
@@ -205,9 +243,6 @@
 
     // Get all inputs and selects that are required
     const requiredFields = [
-      'job-address-line-1',
-      'job-city',
-      'job-state',
       'job-date',
       'job-time',
       'job-assigned-employee'
@@ -1432,9 +1467,6 @@
 
   // Add event listeners to validate on input change
   const fieldsToValidate = [
-    'job-address-line-1',
-    'job-city',
-    'job-state',
     'job-date',
     'job-time',
     'job-assigned-employee'
