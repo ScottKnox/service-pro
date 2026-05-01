@@ -49,6 +49,8 @@ RECURRING_END_TYPE_OPTIONS = (
     ("after_occurrences", "After Number of Visits"),
 )
 
+RECURRING_END_TYPE_LABELS = dict(RECURRING_END_TYPE_OPTIONS)
+
 
 def _parse_mmddyyyy_date(date_text):
     raw_date = str(date_text or "").strip()
@@ -73,15 +75,21 @@ def _mmddyyyy_to_iso_date(value):
     return parsed.strftime("%Y-%m-%d")
 
 
-def _format_iso_datetime_for_display(value):
+def _iso_datetime_to_utc_parts(value):
     raw_value = str(value or "").strip()
     if not raw_value:
-        return ""
+        return "", "", ""
     try:
         normalized = raw_value.replace("Z", "+00:00")
-        return datetime.fromisoformat(normalized).strftime("%m/%d/%Y %H:%M:%S")
+        parsed = datetime.fromisoformat(normalized)
     except ValueError:
-        return raw_value
+        return "", "", ""
+
+    return (
+        parsed.strftime("%Y-%m-%d"),
+        parsed.strftime("%H:%M:%S"),
+        parsed.strftime("%m/%d/%Y"),
+    )
 
 
 def _normalize_payment_due_days(value, fallback=30):
@@ -524,6 +532,146 @@ def serialize_estimate_for_pdf(estimate):
     estimate_notes = str(serialized.get("estimate_notes") or "").strip()
     serialized["notes"] = [{"text": estimate_notes}] if estimate_notes else []
     return serialized
+
+
+def _build_estimate_recurrence_form_state(estimate=None):
+    source = estimate or {}
+    schedule_type = "recurring" if str(source.get("job_schedule_type") or "").strip() == "recurring" else "one_time"
+    if schedule_type != "recurring":
+        return {
+            "schedule_type": "one_time",
+            "frequency": "",
+            "end_type": "never",
+            "end_date": "",
+            "max_occurrences": "",
+        }
+
+    max_occurrences = source.get("recurring_end_after")
+    if max_occurrences in (None, ""):
+        max_occurrences = source.get("max_occurrences")
+
+    return {
+        "schedule_type": "recurring",
+        "frequency": str(source.get("recurring_frequency") or "").strip(),
+        "end_type": str(source.get("recurring_end_type") or "never").strip() or "never",
+        "end_date": str(source.get("recurring_end_date") or "").strip(),
+        "max_occurrences": str(max_occurrences or "").strip(),
+    }
+
+
+def _clone_line_item_list(value):
+    cloned = []
+    for item in (value or []):
+        if isinstance(item, dict):
+            cloned.append(dict(item))
+    return cloned
+
+
+def _create_job_from_accepted_estimate(db, estimate_id):
+    estimate = db.estimates.find_one({"_id": object_id_or_404(estimate_id)})
+    if not estimate:
+        return ""
+
+    existing_job_id = str(estimate.get("created_job_id") or "").strip()
+    if existing_job_id and ObjectId.is_valid(existing_job_id):
+        existing_job = db.jobs.find_one({"_id": ObjectId(existing_job_id)}, {"_id": 1})
+        if existing_job:
+            return existing_job_id
+
+    schedule_type = "recurring" if str(estimate.get("job_schedule_type") or "").strip() == "recurring" else "one_time"
+    recurring_frequency = str(estimate.get("recurring_frequency") or "").strip() if schedule_type == "recurring" else ""
+    recurring_end_type = str(estimate.get("recurring_end_type") or "never").strip() if schedule_type == "recurring" else "never"
+    recurring_end_date = str(estimate.get("recurring_end_date") or "").strip() if schedule_type == "recurring" else ""
+    recurring_end_after = estimate.get("recurring_end_after") if schedule_type == "recurring" else None
+    recurrence_summary = str(estimate.get("recurrence_summary") or "").strip() if schedule_type == "recurring" else ""
+    if schedule_type == "recurring" and not recurrence_summary:
+        recurrence_summary = _build_recurrence_summary(recurring_frequency)
+
+    services = _clone_line_item_list(estimate.get("services"))
+    parts = _clone_line_item_list(estimate.get("parts"))
+    labors = _clone_line_item_list(estimate.get("labors"))
+    materials = _clone_line_item_list(estimate.get("materials"))
+    equipments = _clone_line_item_list(estimate.get("equipments"))
+    discounts = _clone_line_item_list(estimate.get("discounts"))
+
+    proposed_date = str(estimate.get("proposed_job_date") or "").strip()
+    proposed_time = str(estimate.get("proposed_job_time") or "").strip()
+    date_scheduled = proposed_date if (proposed_date and proposed_time) else ""
+
+    customer_name = str(estimate.get("customer_name") or "").strip()
+    customer_company = str(estimate.get("company") or "").strip()
+    customer_id_ref = estimate.get("customer_id")
+    customer_doc = None
+    if customer_id_ref:
+        customer_doc = db.customers.find_one(build_reference_filter("_id", customer_id_ref))
+
+    if customer_doc and not customer_name:
+        customer_name = f"{customer_doc.get('first_name', '')} {customer_doc.get('last_name', '')}".strip()
+    if customer_doc and not customer_company:
+        customer_company = str(customer_doc.get("company") or "").strip()
+    if not customer_name:
+        customer_name = "Unknown Customer"
+
+    primary_service = services[0].get("type") if services else "No services added."
+    payment_due_days = _resolve_default_payment_due_days(db)
+    business_id = estimate.get("business_id") or resolve_current_business_id(db)
+
+    new_job = {
+        "customer_id": customer_id_ref,
+        "customer_name": customer_name,
+        "company": customer_company,
+        "property_id": str(estimate.get("property_id") or "").strip(),
+        "property_name": str(estimate.get("property_name") or "").strip(),
+        "job_type": primary_service,
+        "services": services,
+        "parts": parts,
+        "labors": labors,
+        "materials": materials,
+        "equipments": equipments,
+        "discounts": discounts,
+        "status": "Pending",
+        "scheduled_date": proposed_date,
+        "scheduled_time": proposed_time,
+        "dateScheduled": date_scheduled,
+        "address_line_1": str(estimate.get("address_line_1") or "").strip(),
+        "address_line_2": str(estimate.get("address_line_2") or "").strip(),
+        "city": str(estimate.get("city") or "").strip(),
+        "state": str(estimate.get("state") or "").strip().upper(),
+        "zip_code": str(estimate.get("zip_code") or "").strip(),
+        "assigned_employee": str(estimate.get("created_by_employee") or "").strip(),
+        "total_amount": float(estimate.get("total_amount") or 0.0),
+        "invoice_notes": "",
+        "payment_due_days": payment_due_days,
+        "internal_notes": [],
+        "date_created": datetime.now().strftime("%m/%d/%Y"),
+        "created_at": datetime.utcnow(),
+        "invoices": [],
+        "business_id": business_id,
+        "job_kind": "one_time",
+        "series_id": None,
+        "occurrence_index": None,
+        "recurrence_summary": recurrence_summary,
+        "job_schedule_type": schedule_type,
+        "recurring_frequency": recurring_frequency,
+        "recurring_end_type": recurring_end_type,
+        "recurring_end_date": recurring_end_date,
+        "recurring_end_after": recurring_end_after,
+        "source_estimate_id": ObjectId(estimate_id),
+    }
+
+    inserted = db.jobs.insert_one(new_job)
+    created_job_id = str(inserted.inserted_id)
+    db.estimates.update_one(
+        {"_id": ObjectId(estimate_id)},
+        {
+            "$set": {
+                "created_job_id": created_job_id,
+                "job_created_from_estimate_at": datetime.utcnow(),
+            }
+        },
+    )
+
+    return created_job_id
 
 
 def remove_estimate_pdf_file(file_url):
@@ -1166,6 +1314,7 @@ def create_estimate(customerId):
         estimate_notes = request.form.get("estimate_notes", "").strip()
         proposed_job_date = format_date(request.form.get("proposed_job_date", ""))
         proposed_job_time = request.form.get("proposed_job_time", "").strip()
+        recurrence_data = _parse_recurrence_request(request, proposed_job_date, proposed_job_time)
         estimate_expiration_days = _normalize_estimate_expiration_days(
             request.form.get("estimate_expiration_days", ""),
             default_estimate_expiration_days,
@@ -1201,6 +1350,12 @@ def create_estimate(customerId):
             "estimated_by_employee": estimated_by_employee,
             "proposed_job_date": proposed_job_date,
             "proposed_job_time": proposed_job_time,
+            "job_schedule_type": recurrence_data.get("schedule_type") or "one_time",
+            "recurring_frequency": recurrence_data.get("frequency") or "",
+            "recurring_end_type": recurrence_data.get("end_type") or "never",
+            "recurring_end_date": recurrence_data.get("end_date") or "",
+            "recurring_end_after": recurrence_data.get("max_occurrences"),
+            "recurrence_summary": recurrence_data.get("summary") or "",
             "total_amount": float(total or 0.0),
             "estimate_notes": estimate_notes,
             "estimate_expiration_days": estimate_expiration_days,
@@ -1321,6 +1476,9 @@ def create_estimate(customerId):
         estimate_expiration_days=default_estimate_expiration_days,
         proposed_job_date_value="",
         proposed_job_time_value="",
+        recurring_frequency_options=RECURRING_FREQUENCY_OPTIONS,
+        recurring_end_type_options=RECURRING_END_TYPE_OPTIONS,
+        recurrence_state=_build_estimate_recurrence_form_state(),
     )
 
 
@@ -1367,9 +1525,20 @@ def view_estimate(estimateId):
     estimate_doc["date_sent_iso"] = _mmddyyyy_to_iso_date(estimate_doc.get("date_sent"))
     estimate_doc["date_accepted_iso"] = _mmddyyyy_to_iso_date(estimate_doc.get("date_accepted"))
     estimate_doc["date_declined_iso"] = _mmddyyyy_to_iso_date(estimate_doc.get("date_declined"))
-    estimate_doc["accepted_signature_captured_display"] = _format_iso_datetime_for_display(
+    estimate_doc["job_schedule_type"] = "recurring" if str(estimate_doc.get("job_schedule_type") or "").strip() == "recurring" else "one_time"
+    estimate_doc["job_schedule_type_label"] = "Recurring" if estimate_doc["job_schedule_type"] == "recurring" else "One-Time"
+    estimate_doc["recurring_end_type_label"] = RECURRING_END_TYPE_LABELS.get(
+        str(estimate_doc.get("recurring_end_type") or "").strip(),
+        "Never",
+    )
+    if estimate_doc["job_schedule_type"] == "recurring" and not str(estimate_doc.get("recurrence_summary") or "").strip():
+        estimate_doc["recurrence_summary"] = _build_recurrence_summary(estimate_doc.get("recurring_frequency"))
+    accepted_signature_date_iso, accepted_signature_time, accepted_signature_date_display = _iso_datetime_to_utc_parts(
         estimate_doc.get("accepted_signature_captured_at")
     )
+    estimate_doc["accepted_signature_captured_date_iso"] = accepted_signature_date_iso
+    estimate_doc["accepted_signature_captured_time"] = accepted_signature_time
+    estimate_doc["accepted_signature_captured_date_display"] = accepted_signature_date_display
     pricing_summary = _build_estimate_pricing_summary(estimate_doc)
 
     return render_template(
@@ -1485,6 +1654,7 @@ def update_estimate(estimateId):
         estimate_notes = request.form.get("estimate_notes", "").strip()
         proposed_job_date = format_date(request.form.get("proposed_job_date", ""))
         proposed_job_time = request.form.get("proposed_job_time", "").strip()
+        recurrence_data = _parse_recurrence_request(request, proposed_job_date, proposed_job_time)
         estimate_expiration_days = _normalize_estimate_expiration_days(
             request.form.get("estimate_expiration_days", ""),
             default_estimate_expiration_days,
@@ -1507,6 +1677,12 @@ def update_estimate(estimateId):
             "estimated_by_employee": estimated_by_employee,
             "proposed_job_date": proposed_job_date,
             "proposed_job_time": proposed_job_time,
+            "job_schedule_type": recurrence_data.get("schedule_type") or "one_time",
+            "recurring_frequency": recurrence_data.get("frequency") or "",
+            "recurring_end_type": recurrence_data.get("end_type") or "never",
+            "recurring_end_date": recurrence_data.get("end_date") or "",
+            "recurring_end_after": recurrence_data.get("max_occurrences"),
+            "recurrence_summary": recurrence_data.get("summary") or "",
             "estimate_notes": estimate_notes,
             "estimate_expiration_days": estimate_expiration_days,
             "total_amount": float(total or 0.0),
@@ -1614,6 +1790,7 @@ def update_estimate(estimateId):
         selected_property_id = str((default_property or {}).get("property_id") or "").strip()
     proposed_job_date_value = _mmddyyyy_to_iso_date(estimate_doc.get("proposed_job_date"))
     proposed_job_time_value = str(estimate_doc.get("proposed_job_time") or "").strip()
+    recurrence_state = _build_estimate_recurrence_form_state(estimate_doc)
 
     return render_template(
         "estimates/update_estimate.html",
@@ -1642,6 +1819,9 @@ def update_estimate(estimateId):
         estimate_expiration_days=estimate_expiration_days,
         proposed_job_date_value=proposed_job_date_value,
         proposed_job_time_value=proposed_job_time_value,
+        recurring_frequency_options=RECURRING_FREQUENCY_OPTIONS,
+        recurring_end_type_options=RECURRING_END_TYPE_OPTIONS,
+        recurrence_state=recurrence_state,
     )
 
 
@@ -1750,6 +1930,14 @@ def accept_estimate(estimateId):
         {"_id": ObjectId(estimateId)},
         {"$set": update_data},
     )
+
+    try:
+        created_job_id = _create_job_from_accepted_estimate(db, estimateId)
+        if created_job_id:
+            current_app.logger.info("Job auto-created from estimate acceptance: estimate_id=%s job_id=%s", estimateId, created_job_id)
+    except Exception as exc:
+        current_app.logger.error("Job auto-create failed for accepted estimate: estimate_id=%s error=%s", estimateId, exc)
+
     return redirect(_build_estimate_view_url(estimateId, access_token=token_value if not is_staff_view else ""))
 
 

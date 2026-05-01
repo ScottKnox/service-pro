@@ -85,6 +85,7 @@
   const recurringSettings = document.getElementById('job-recurring-settings');
   const recurringFrequencyField = document.getElementById('recurring-frequency');
   const recurringEndTypeField = document.getElementById('recurring-end-type');
+  const recurringEndTypeWrap = recurringEndTypeField ? recurringEndTypeField.closest('.add-customer-form-field') : null;
   const recurringEndDateField = document.getElementById('recurring-end-date');
   const recurringEndAfterField = document.getElementById('recurring-end-after');
   const recurringEndDateWrap = document.getElementById('recurring-end-date-wrap');
@@ -139,12 +140,18 @@
   }
 
   function syncRecurringSettingsVisibility() {
+    const recurringSelected = isRecurringJob();
+
     if (recurringSettings) {
-      recurringSettings.hidden = !isRecurringJob();
-      recurringSettings.style.display = isRecurringJob() ? '' : 'none';
+      recurringSettings.hidden = !recurringSelected;
+      recurringSettings.style.display = recurringSelected ? '' : 'none';
+    }
+    if (recurringEndTypeWrap) {
+      recurringEndTypeWrap.hidden = !recurringSelected;
+      recurringEndTypeWrap.style.display = recurringSelected ? '' : 'none';
     }
     if (recurringFrequencyField) {
-      recurringFrequencyField.required = isRecurringJob();
+      recurringFrequencyField.required = recurringSelected;
     }
     syncRecurringEndFields();
     syncScheduledDateVisibility();

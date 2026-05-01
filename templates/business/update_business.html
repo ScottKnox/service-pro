@@ -191,6 +191,13 @@
           </div>
         </div>
 
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="report-email-template">Report Email Template</label>
+            <textarea id="report-email-template" name="report_email_template" rows="8" placeholder="Enter the email template text for reports...">{{ business.get('report_email_template', '') }}</textarea>
+          </div>
+        </div>
+
         <div id="add-customer-form-actions">
           <button type="submit">Save Business Profile</button>
         </div>

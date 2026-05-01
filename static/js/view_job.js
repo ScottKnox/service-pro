@@ -98,11 +98,13 @@
   let currentEmailType = 'estimate';
 
   function openModal() {
+    modal.hidden = false;
     modal.classList.add('is-open');
   }
 
   function closeModal() {
     modal.classList.remove('is-open');
+    modal.hidden = true;
   }
 
   emailButtons.forEach(function (btn) {
@@ -119,6 +121,9 @@
       if (emailType === 'invoice') {
         subjectInput.value = `Invoice: ${estimateTitle}`;
         bodyInput.value = invoiceTemplate || `Hi ${customerName},\n\nPlease find attached your invoice.\n\nPlease let us know if you have any questions.\n\nBest regards`;
+      } else if (emailType === 'report') {
+        subjectInput.value = `Report: ${estimateTitle}`;
+        bodyInput.value = quoteTemplate || `Hi ${customerName},\n\nPlease find attached your report.\n\nPlease let us know if you have any questions.\n\nBest regards`;
       } else {
         subjectInput.value = `Estimate: ${estimateTitle}`;
         bodyInput.value = quoteTemplate || `Hi ${customerName},\n\nPlease find attached your estimate.\n\nPlease let us know if you have any questions.\n\nBest regards`;
@@ -184,7 +189,7 @@
           alert('Email sent successfully!');
           closeModal();
           emailForm.reset();
-          if (currentEmailType === 'estimate') {
+          if (currentEmailType === 'estimate' || currentEmailType === 'invoice') {
             window.location.reload();
           }
         } else {

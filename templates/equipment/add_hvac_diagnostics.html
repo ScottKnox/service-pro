@@ -23,10 +23,11 @@
         <p class="form-field-error">{{ error }}</p>
       {% endif %}
 
-      <form id="add-customer-form" action="{{ url_for('customers.add_hvac_diagnostics', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id) }}" method="post">
+      <form id="add-customer-form" action="{{ url_for('customers.add_hvac_diagnostics', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id) }}" method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         {% for section_label, fields in diagnostics_sections %}
+          {% set section_key = section_label|lower|replace(' ', '_') %}
           <details class="hvac-diagnostics-section">
             <summary>{{ section_label }}</summary>
             <div class="hvac-diagnostics-section-content">
@@ -86,6 +87,29 @@
                   </div>
                 </div>
               {% endfor %}
+
+              <div class="hvac-diagnostic-section-photos" data-section-key="{{ section_key }}">
+                <h4>Section Photos</h4>
+                <p class="hvac-photos-note">Upload photos for {{ section_label }} results. Captions are optional.</p>
+
+                <div class="hvac-photos-grid" data-photo-grid="{{ section_key }}">
+                  <label class="hvac-photo-tile hvac-photo-tile--add" title="Upload a photo">
+                    <input
+                      type="file"
+                      id="section-photo-input-{{ section_key }}"
+                      name="section_photos__{{ section_key }}[]"
+                      accept=".jpg,.jpeg,.png,.webp,.heic"
+                      class="hvac-photo-file-input"
+                      data-section-photo-input
+                      data-section-key="{{ section_key }}"
+                    >
+                    <svg viewBox="0 0 24 24" width="28" height="28" focusable="false" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+                    <span>Add Photo</span>
+                  </label>
+                </div>
+
+                <div data-photo-captions-container="{{ section_key }}"></div>
+              </div>
             </div>
           </details>
         {% endfor %}
@@ -94,6 +118,22 @@
           <button type="submit">Save Diagnostics</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div id="diagnostic-photo-caption-modal" class="hvac-photo-modal" role="dialog" aria-modal="true" aria-label="Add photo caption" hidden>
+    <div class="hvac-photo-modal-backdrop"></div>
+    <div class="hvac-photo-modal-content hvac-photo-caption-modal-content">
+      <button type="button" class="hvac-photo-modal-close" id="diagnostic-photo-caption-close" aria-label="Close caption dialog">
+        <svg viewBox="0 0 24 24" width="24" height="24" focusable="false" aria-hidden="true"><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </button>
+      <img id="diagnostic-photo-caption-preview" src="" alt="Selected photo" class="hvac-photo-modal-img" />
+      <label for="diagnostic-photo-caption-input" class="hvac-photo-caption-label">Photo Caption</label>
+      <textarea id="diagnostic-photo-caption-input" class="hvac-photo-caption-input" rows="3" maxlength="220" placeholder="Add a short caption to describe what this photo shows."></textarea>
+      <div class="hvac-photo-caption-actions">
+        <button type="button" id="diagnostic-photo-caption-cancel" class="secondary-button">Cancel</button>
+        <button type="button" id="diagnostic-photo-caption-save">Add Photo</button>
+      </div>
     </div>
   </div>
 {% endblock %}
@@ -135,6 +175,204 @@
       supplyField.addEventListener('input', updateTotalPressure);
       returnField.addEventListener('input', updateTotalPressure);
       updateTotalPressure();
+    })();
+
+    (function () {
+      const modal = document.getElementById('diagnostic-photo-caption-modal');
+      const modalBackdrop = modal && modal.querySelector('.hvac-photo-modal-backdrop');
+      const modalClose = document.getElementById('diagnostic-photo-caption-close');
+      const modalCancel = document.getElementById('diagnostic-photo-caption-cancel');
+      const modalSave = document.getElementById('diagnostic-photo-caption-save');
+      const modalPreview = document.getElementById('diagnostic-photo-caption-preview');
+      const modalCaptionInput = document.getElementById('diagnostic-photo-caption-input');
+      const sectionInputs = document.querySelectorAll('[data-section-photo-input]');
+      if (!modal || !modalPreview || !modalCaptionInput || sectionInputs.length === 0) {
+        return;
+      }
+
+      const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
+      const allowedExtensions = new Set(['jpg', 'jpeg', 'png', 'webp', 'heic']);
+      const maxSize = 10 * 1024 * 1024;
+      const sectionState = {};
+      let pendingSelection = null;
+
+      const ensureSectionState = (sectionKey) => {
+        if (!sectionState[sectionKey]) {
+          sectionState[sectionKey] = [];
+        }
+        return sectionState[sectionKey];
+      };
+
+      const closeModal = () => {
+        if (!pendingSelection || !pendingSelection.previewUrl) {
+          modalPreview.src = '';
+        }
+        modal.hidden = true;
+        document.body.style.overflow = '';
+      };
+
+      const clearPendingSelection = () => {
+        if (pendingSelection && pendingSelection.previewUrl) {
+          URL.revokeObjectURL(pendingSelection.previewUrl);
+        }
+        pendingSelection = null;
+        modalPreview.src = '';
+        modalCaptionInput.value = '';
+      };
+
+      const syncSectionFiles = (sectionKey) => {
+        const sectionItems = ensureSectionState(sectionKey);
+        const sectionInput = document.querySelector(`[data-section-photo-input][data-section-key="${sectionKey}"]`);
+        const captionsContainer = document.querySelector(`[data-photo-captions-container="${sectionKey}"]`);
+        if (!sectionInput || !captionsContainer) {
+          return;
+        }
+
+        const fileTransfer = new DataTransfer();
+        captionsContainer.innerHTML = '';
+
+        sectionItems.forEach((item) => {
+          fileTransfer.items.add(item.file);
+
+          const captionInput = document.createElement('input');
+          captionInput.type = 'hidden';
+          captionInput.name = `section_photo_captions__${sectionKey}[]`;
+          captionInput.value = item.caption;
+          captionsContainer.appendChild(captionInput);
+        });
+
+        sectionInput.files = fileTransfer.files;
+      };
+
+      const renderSectionTiles = (sectionKey) => {
+        const sectionItems = ensureSectionState(sectionKey);
+        const photoGrid = document.querySelector(`[data-photo-grid="${sectionKey}"]`);
+        if (!photoGrid) {
+          return;
+        }
+
+        const addTile = photoGrid.querySelector('.hvac-photo-tile--add');
+        photoGrid.querySelectorAll('[data-diagnostic-photo-tile]').forEach((tile) => tile.remove());
+
+        sectionItems.forEach((item) => {
+          const tile = document.createElement('div');
+          tile.className = 'hvac-photo-tile';
+          tile.setAttribute('data-diagnostic-photo-tile', 'true');
+
+          const image = document.createElement('img');
+          image.src = item.previewUrl;
+          image.alt = item.caption || 'Diagnostic section photo';
+          image.className = 'hvac-photo-thumb';
+          image.loading = 'lazy';
+
+          const caption = document.createElement('div');
+          caption.className = 'hvac-diagnostic-photo-caption';
+          caption.textContent = item.caption;
+
+          const deleteBtn = document.createElement('button');
+          deleteBtn.type = 'button';
+          deleteBtn.className = 'hvac-photo-delete-btn';
+          deleteBtn.setAttribute('aria-label', 'Delete photo');
+          deleteBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" focusable="false" aria-hidden="true"><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+          deleteBtn.addEventListener('click', () => {
+            const idx = sectionItems.findIndex((entry) => entry.id === item.id);
+            if (idx === -1) {
+              return;
+            }
+            URL.revokeObjectURL(sectionItems[idx].previewUrl);
+            sectionItems.splice(idx, 1);
+            syncSectionFiles(sectionKey);
+            renderSectionTiles(sectionKey);
+          });
+
+          tile.appendChild(image);
+          tile.appendChild(caption);
+          tile.appendChild(deleteBtn);
+
+          if (addTile) {
+            photoGrid.insertBefore(tile, addTile);
+          } else {
+            photoGrid.appendChild(tile);
+          }
+        });
+      };
+
+      sectionInputs.forEach((input) => {
+        input.addEventListener('change', () => {
+          const file = input.files && input.files[0];
+          if (!file) {
+            return;
+          }
+
+          const extension = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : '';
+          if (!allowedExtensions.has(extension) && !allowedTypes.has(file.type)) {
+            alert('Unsupported file type. Please upload JPG, JPEG, PNG, WEBP, or HEIC.');
+            input.value = '';
+            return;
+          }
+
+          if (file.size > maxSize) {
+            alert('Photo is too large. Maximum allowed size is 10 MB.');
+            input.value = '';
+            return;
+          }
+
+          pendingSelection = {
+            sectionKey: input.dataset.sectionKey,
+            file,
+            previewUrl: URL.createObjectURL(file),
+          };
+          modalCaptionInput.value = '';
+          modalPreview.src = pendingSelection.previewUrl;
+          modal.hidden = false;
+          document.body.style.overflow = 'hidden';
+          modalCaptionInput.focus();
+
+          input.value = '';
+        });
+      });
+
+      const cancelPending = () => {
+        clearPendingSelection();
+        closeModal();
+      };
+
+      const savePending = () => {
+        if (!pendingSelection) {
+          return;
+        }
+        const caption = modalCaptionInput.value.trim();
+
+        const sectionKey = pendingSelection.sectionKey;
+        const sectionItems = ensureSectionState(sectionKey);
+        sectionItems.push({
+          id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
+          file: pendingSelection.file,
+          previewUrl: pendingSelection.previewUrl,
+          caption,
+        });
+
+        syncSectionFiles(sectionKey);
+        renderSectionTiles(sectionKey);
+        pendingSelection = null;
+        modalPreview.src = '';
+        modalCaptionInput.value = '';
+        closeModal();
+      };
+
+      modalSave.addEventListener('click', savePending);
+      modalClose.addEventListener('click', cancelPending);
+      modalCancel.addEventListener('click', cancelPending);
+      modalBackdrop.addEventListener('click', cancelPending);
+
+      document.addEventListener('keydown', (event) => {
+        if (modal.hidden) {
+          return;
+        }
+        if (event.key === 'Escape') {
+          cancelPending();
+        }
+      });
     })();
   </script>
 {% endblock %}

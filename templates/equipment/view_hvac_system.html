@@ -27,11 +27,6 @@
           {% else %}
             <span class="view-customer-action-link is-disabled" aria-disabled="true">View System Diagnostics</span>
           {% endif %}
-          {% if hvac_system.reports and hvac_system.reports[0].file_path %}
-            <a href="{{ hvac_system.reports[0].file_path }}">View Reports</a>
-          {% else %}
-            <span class="view-customer-action-link is-disabled" aria-disabled="true">View Reports</span>
-          {% endif %}
           <form method="POST" action="{{ url_for('customers.delete_hvac_system', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id) }}" onsubmit="return confirm('Delete this HVAC system? This cannot be undone.');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Delete HVAC System</button>

@@ -4669,6 +4669,23 @@ p {
   gap: 0.75rem;
 }
 
+.hvac-diagnostic-section-photos {
+  margin-top: 0.85rem;
+  border-top: 1px dashed #D6DCE5;
+  padding-top: 0.8rem;
+}
+
+.hvac-diagnostic-section-photos h4,
+.hvac-diagnostic-section-photos-preview h5 {
+  margin: 0 0 0.55rem;
+  font-size: 0.9rem;
+  color: #2A3A54;
+}
+
+.hvac-diagnostic-section-photos .hvac-photos-note {
+  margin-top: 0;
+}
+
 .hvac-photo-tile {
   position: relative;
   aspect-ratio: 1 / 1;
@@ -4693,6 +4710,18 @@ p {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.hvac-diagnostic-photo-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.33rem 0.45rem;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(5, 8, 14, 0.82) 90%);
 }
 
 .hvac-photo-delete-form {
@@ -4780,6 +4809,170 @@ p {
   max-width: min(92vw, 1000px);
   max-height: 92dvh;
   padding: 0.5rem;
+}
+
+.hvac-photo-caption-modal-content {
+  width: min(92vw, 640px);
+  background: #0E1827;
+  border: 1px solid rgba(169, 190, 214, 0.25);
+  border-radius: 10px;
+  padding: 0.8rem;
+}
+
+.hvac-photo-caption-label {
+  width: 100%;
+  margin: 0.75rem 0 0.35rem;
+  color: #D5E4F6;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.hvac-photo-caption-input {
+  width: 100%;
+  max-width: 100%;
+  min-height: 86px;
+  resize: vertical;
+  border-radius: 8px;
+  border: 1px solid #2A3F59;
+  background: #122136;
+  color: #fff;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.hvac-photo-caption-input:focus {
+  outline: 2px solid #4A90D9;
+  outline-offset: 1px;
+}
+
+.hvac-photo-caption-actions {
+  width: 100%;
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.hvac-photo-caption-actions button {
+  border-radius: 7px;
+  border: 1px solid #355374;
+  background: #173150;
+  color: #E8F0FA;
+  padding: 0.42rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hvac-photo-caption-actions button:hover,
+.hvac-photo-caption-actions button:focus-visible {
+  background: #1D3D63;
+  border-color: #4A90D9;
+}
+
+.hvac-photo-caption-actions .secondary-button {
+  background: transparent;
+  border-color: #516982;
+}
+
+.hvac-photo-caption-actions .secondary-button:hover,
+.hvac-photo-caption-actions .secondary-button:focus-visible {
+  background: rgba(108, 135, 164, 0.2);
+}
+
+.hvac-diagnostic-section-photos-preview {
+  margin-top: 0.85rem;
+  padding-top: 0.8rem;
+  border-top: 1px dashed #D6DCE5;
+}
+
+.hvac-diagnostic-section-photos-preview .hvac-photo-tile {
+  aspect-ratio: auto;
+  overflow: visible;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
+  gap: 0.4rem;
+}
+
+.hvac-diagnostic-section-photos-preview .hvac-photo-thumb-link {
+  height: 120px;
+}
+
+.hvac-diagnostic-section-photos-preview .hvac-photo-thumb {
+  border-bottom: 1px solid #D6DCE5;
+}
+
+.hvac-diagnostic-section-photos-preview .hvac-diagnostic-photo-caption {
+  position: static;
+  color: #1E293B;
+  background: #F8FAFD;
+  border-bottom: 1px solid #E2E8F0;
+  min-height: 2.15rem;
+}
+
+.hvac-diagnostic-photo-actions {
+  padding: 0.45rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+}
+
+.hvac-diagnostic-photo-gallery-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: center;
+}
+
+.hvac-diagnostic-photo-gallery-more-btn {
+  border: 1px solid #355374;
+  border-radius: 999px;
+  background: #173150;
+  color: #E8F0FA;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.45rem 0.85rem;
+  cursor: pointer;
+}
+
+.hvac-diagnostic-photo-gallery-more-btn:hover,
+.hvac-diagnostic-photo-gallery-more-btn:focus-visible {
+  background: #1D3D63;
+  border-color: #4A90D9;
+}
+
+.hvac-diagnostic-photo-actions form {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hvac-diagnostic-photo-actions input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.76rem;
+}
+
+.hvac-diagnostic-photo-save-btn {
+  border: 1px solid #355374;
+  border-radius: 6px;
+  background: #173150;
+  color: #E8F0FA;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.28rem 0.52rem;
+  cursor: pointer;
+}
+
+.hvac-diagnostic-photo-save-btn:hover,
+.hvac-diagnostic-photo-save-btn:focus-visible {
+  background: #1D3D63;
+  border-color: #4A90D9;
 }
 
 .hvac-photo-modal-close {
@@ -4967,6 +5160,10 @@ p {
 }
 
 .hvac-diagnostics-section-content .hvac-diagnostics-row-full {
+  grid-column: 1 / -1;
+}
+
+.hvac-diagnostics-section-content .hvac-diagnostic-section-photos {
   grid-column: 1 / -1;
 }
 

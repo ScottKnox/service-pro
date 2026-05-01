@@ -1019,13 +1019,31 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
     )
 
     # Right column - Service Details
+    schedule_type = "recurring" if str(job.get("job_schedule_type") or "").strip() == "recurring" else "one_time"
+    recurrence_summary = str(job.get("recurrence_summary") or "").strip()
+    recurring_end_type = str(job.get("recurring_end_type") or "never").strip() or "never"
+    recurring_end_label = {
+        "never": "Never",
+        "on_date": "On Date",
+        "after_occurrences": "After Number of Visits",
+    }.get(recurring_end_type, "Never")
+
     service_info = [
         ["Location:", f"{job.get('address_line_1', 'N/A')}"],
         ["", f"{job.get('city', 'N/A')}, {job.get('state', 'N/A')}"],
         ["Assigned Employee:", job.get("assigned_employee", "N/A")],
         ["Proposed Job Date:", job.get("scheduled_date", "N/A")],
         ["Proposed Job Time:", _format_time_to_am_pm(job.get("scheduled_time"))],
+        ["Job Type:", "Recurring" if schedule_type == "recurring" else "One-Time"],
     ]
+    if schedule_type == "recurring":
+        service_info.append(["Recurrence:", recurrence_summary or "Recurring"])
+        service_info.append(["Recurrence Ends:", recurring_end_label])
+        if recurring_end_type == "on_date":
+            service_info.append(["Recurrence End Date:", str(job.get("recurring_end_date") or "N/A")])
+        elif recurring_end_type == "after_occurrences":
+            service_info.append(["Number of Visits:", str(job.get("recurring_end_after") or "N/A")])
+
     service_table = Table(service_info, colWidths=[0.9 * inch, 2.3 * inch])
     service_table.setStyle(
         TableStyle(

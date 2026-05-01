@@ -19,7 +19,7 @@
     function resizeCanvas() {
       const ratio = Math.max(window.devicePixelRatio || 1, 1);
       const parentWidth = canvas.parentElement ? canvas.parentElement.clientWidth : canvas.clientWidth;
-      const targetWidth = Math.max(320, parentWidth);
+      const targetWidth = Math.max(1, Math.floor(parentWidth));
       const targetHeight = 260;
 
       canvas.style.width = targetWidth + 'px';

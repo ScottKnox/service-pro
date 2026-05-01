@@ -39,6 +39,23 @@
               Generate Report
             </button>
           </form>
+          {% if diagnostic.reports and diagnostic.reports[0].file_path %}
+            <a href="{{ diagnostic.reports[0].file_path }}" target="_blank" rel="noopener noreferrer">View Reports</a>
+            <button
+              type="button"
+              class="estimate-email-btn"
+              data-estimate-title="HVAC Diagnostic Report {{ reference_id[:8]|upper }}"
+              data-estimate-file="{{ diagnostic.reports[0].file_path|default('', true) }}"
+              data-customer-email="{{ customer.email|default('') }}"
+              data-customer-name="{{ customer.first_name|default('') }} {{ customer.last_name|default('') }}"
+              data-email-type="report"
+            >
+              Send Report
+            </button>
+          {% else %}
+            <span class="view-customer-action-link is-disabled" aria-disabled="true">View Reports</span>
+            <span class="view-customer-action-link is-disabled" aria-disabled="true">Send Report</span>
+          {% endif %}
         </div>
       </section>
 
@@ -82,6 +99,42 @@
                         <strong>{{ row.value }}</strong>
                       </div>
                     {% endfor %}
+
+                    {% if section.photos %}
+                      <div class="hvac-diagnostic-section-photos-preview" data-diagnostic-photo-gallery>
+                        <h5>Section Photos</h5>
+                        <div class="hvac-photos-grid" data-diagnostic-photo-grid>
+                          {% for photo in section.photos %}
+                            <div class="hvac-photo-tile" data-diagnostic-photo-item {% if loop.index > 6 %}hidden{% endif %}>
+                              <button type="button" class="hvac-photo-thumb-link" data-lightbox-src="{{ photo.url }}" data-lightbox-caption="{{ photo.caption|default('Section photo', true) }}" aria-label="View section photo">
+                                <img {% if loop.index <= 6 %}src="{{ photo.url }}"{% else %}data-photo-src="{{ photo.url }}"{% endif %} alt="{{ photo.caption|default('Diagnostic section photo', true) }}" class="hvac-photo-thumb" loading="lazy">
+                              </button>
+                              {% if photo.caption %}
+                                <div class="hvac-diagnostic-photo-caption">{{ photo.caption }}</div>
+                              {% endif %}
+
+                              <div class="hvac-diagnostic-photo-actions">
+                                <form method="POST" action="{{ url_for('customers.delete_hvac_diagnostic_photo', customerId=customerId, reference_type=reference_type, reference_id=reference_id, diagnosticId=diagnostic.diagnostic_id, property_id=property_id) }}" onsubmit="return confirm('Delete this photo? This cannot be undone.');">
+
+                                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                  <input type="hidden" name="diagnostic_index" value="{{ diagnostic.diagnostic_index }}">
+                                  <input type="hidden" name="section_key" value="{{ section.key }}">
+                                  <input type="hidden" name="filename" value="{{ photo.filename }}">
+                                  <button type="submit" class="hvac-photo-delete-btn" aria-label="Delete photo">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" focusable="false" aria-hidden="true"><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                                  </button>
+                                </form>
+                              </div>
+                            </div>
+                          {% endfor %}
+                        </div>
+                        {% if section.photos|length > 6 %}
+                          <div class="hvac-diagnostic-photo-gallery-actions">
+                            <button type="button" class="hvac-diagnostic-photo-gallery-more-btn" data-diagnostic-photo-more data-initial-label="Show More Photos">Show More Photos</button>
+                          </div>
+                        {% endif %}
+                      </div>
+                    {% endif %}
                   </div>
                 </article>
               {% endfor %}
@@ -91,4 +144,129 @@
       </section>
     </div>
   </div>
+
+  <div id="hvac-photo-modal" class="hvac-photo-modal" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden>
+    <div class="hvac-photo-modal-backdrop"></div>
+    <div class="hvac-photo-modal-content">
+      <button type="button" class="hvac-photo-modal-close" aria-label="Close photo">
+        <svg viewBox="0 0 24 24" width="24" height="24" focusable="false" aria-hidden="true"><path d="M6 6l12 12M6 18L18 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </button>
+      <img id="hvac-photo-modal-img" src="" alt="" class="hvac-photo-modal-img">
+      <p id="hvac-photo-modal-caption" class="hvac-photo-modal-caption"></p>
+    </div>
+  </div>
+
+  <div id="email-estimate-modal" class="modal" hidden>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Email Report</h2>
+        <button class="modal-close-btn" id="modal-close-btn">&times;</button>
+      </div>
+      <form
+        id="email-estimate-form"
+        method="POST"
+        data-send-url="{{ url_for('customers.send_hvac_report_email', customerId=customerId, reference_type=reference_type, reference_id=reference_id, diagnostic_index=diagnostic.diagnostic_index, property_id=property_id) }}"
+        data-quote-template="{{ report_email_template|default('', true)|e }}"
+        data-invoice-template=""
+      >
+        <div class="form-group">
+          <label for="email-recipient">Recipient Email:</label>
+          <input type="email" id="email-recipient" name="recipient_email" required readonly class="email-readonly-input">
+        </div>
+        <div class="form-group">
+          <label for="email-subject">Subject:</label>
+          <input type="text" id="email-subject" name="subject" required>
+        </div>
+        <div class="form-group">
+          <label for="email-body">Message:</label>
+          <textarea id="email-body" name="body" rows="8" required></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="modal-send-btn">Send Email</button>
+          <button type="button" class="modal-cancel-btn" id="modal-cancel-btn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script defer>
+    (function () {
+      document.querySelectorAll('[data-diagnostic-photo-gallery]').forEach((gallery) => {
+        const items = Array.from(gallery.querySelectorAll('[data-diagnostic-photo-item]'));
+        const moreButton = gallery.querySelector('[data-diagnostic-photo-more]');
+        const batchSize = 6;
+        if (!moreButton || items.length <= batchSize) {
+          return;
+        }
+
+        let visibleCount = batchSize;
+
+        const syncButtonLabel = () => {
+          const remaining = Math.max(0, items.length - visibleCount);
+          if (remaining === 0) {
+            moreButton.hidden = true;
+            return;
+          }
+          moreButton.textContent = `Show ${Math.min(batchSize, remaining)} More Photo${Math.min(batchSize, remaining) === 1 ? '' : 's'}`;
+        };
+
+        const revealNextBatch = () => {
+          const nextVisibleCount = Math.min(items.length, visibleCount + batchSize);
+          for (let index = visibleCount; index < nextVisibleCount; index += 1) {
+            const item = items[index];
+            item.hidden = false;
+            const image = item.querySelector('img[data-photo-src]');
+            if (image) {
+              image.src = image.dataset.photoSrc;
+              image.removeAttribute('data-photo-src');
+            }
+          }
+          visibleCount = nextVisibleCount;
+          syncButtonLabel();
+        };
+
+        moreButton.addEventListener('click', revealNextBatch);
+        syncButtonLabel();
+      });
+
+      const modal = document.getElementById('hvac-photo-modal');
+      const modalImg = document.getElementById('hvac-photo-modal-img');
+      const modalCaption = document.getElementById('hvac-photo-modal-caption');
+      const closeBtn = modal && modal.querySelector('.hvac-photo-modal-close');
+      const backdrop = modal && modal.querySelector('.hvac-photo-modal-backdrop');
+      if (!modal || !modalImg || !modalCaption || !closeBtn || !backdrop) {
+        return;
+      }
+
+      const openModal = (src, caption) => {
+        modalImg.src = src;
+        modalImg.alt = caption || '';
+        modalCaption.textContent = caption || '';
+        modal.hidden = false;
+        document.body.style.overflow = 'hidden';
+      };
+
+      const closeModal = () => {
+        modal.hidden = true;
+        modalImg.src = '';
+        modalCaption.textContent = '';
+        document.body.style.overflow = '';
+      };
+
+      document.querySelectorAll('[data-lightbox-src]').forEach((button) => {
+        button.addEventListener('click', () => {
+          openModal(button.dataset.lightboxSrc, button.dataset.lightboxCaption || '');
+        });
+      });
+
+      closeBtn.addEventListener('click', closeModal);
+      backdrop.addEventListener('click', closeModal);
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !modal.hidden) {
+          closeModal();
+        }
+      });
+    })();
+  </script>
+  <script src="{{ url_for('static', filename='js/view_job.js') }}" defer></script>
 {% endblock %}

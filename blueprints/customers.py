@@ -4,11 +4,14 @@ import os
 import re
 
 from bson import ObjectId
-from flask import Blueprint, current_app, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, jsonify, redirect, render_template, request, session, url_for
+from flask_mail import Message
+from werkzeug.utils import secure_filename
 
 ALLOWED_PHOTO_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "heic"}
 MAX_PHOTO_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 HVAC_PHOTO_UPLOAD_SUBDIR = os.path.join("uploads", "hvac_photos")
+MAX_PHOTO_CAPTION_LENGTH = 220
 
 from mongo import build_reference_filter, ensure_connection_or_500, object_id_or_404, reference_value, serialize_doc
 from hvac_report_generator import generate_hvac_system_health_report
@@ -903,6 +906,79 @@ def _format_diagnostics_key(key):
     return str(key).replace("_", " ").strip().title()
 
 
+def _diagnostic_section_key(section_label):
+    section_text = str(section_label or "").strip().lower()
+    if not section_text:
+        return "section"
+
+    normalized = re.sub(r"[^a-z0-9]+", "_", section_text)
+    normalized = normalized.strip("_")
+    return normalized or "section"
+
+
+def _build_hvac_photo_url(filename):
+    safe_filename = str(filename or "").strip()
+    if not safe_filename:
+        return ""
+    upload_path = os.path.join(HVAC_PHOTO_UPLOAD_SUBDIR, safe_filename).replace("\\", "/")
+    return url_for("static", filename=upload_path)
+
+
+def _normalize_diagnostic_photo_entry(raw_photo):
+    if not isinstance(raw_photo, dict):
+        return None
+
+    filename = str(raw_photo.get("filename") or "").strip()
+    url = str(raw_photo.get("url") or "").strip() or _build_hvac_photo_url(filename)
+    if not filename and not url:
+        return None
+
+    return {
+        "filename": filename,
+        "url": url,
+        "caption": str(raw_photo.get("caption") or "").strip(),
+        "uploaded_at": str(raw_photo.get("uploaded_at") or "").strip(),
+    }
+
+
+def _build_diagnostic_section_photos_from_entry(diagnostic_entry):
+    section_photos = {}
+    raw_section_photos = (diagnostic_entry or {}).get("section_photos")
+    if not isinstance(raw_section_photos, dict):
+        return section_photos
+
+    for section_key, photos in raw_section_photos.items():
+        normalized_key = _diagnostic_section_key(section_key)
+        if not isinstance(photos, list):
+            continue
+
+        normalized_photos = []
+        for photo in photos:
+            normalized_photo = _normalize_diagnostic_photo_entry(photo)
+            if normalized_photo:
+                normalized_photos.append(normalized_photo)
+
+        if normalized_photos:
+            section_photos[normalized_key] = normalized_photos
+
+    return section_photos
+
+
+def _resolve_section_photo_bucket(section_photos, section_key):
+    if not isinstance(section_photos, dict):
+        section_photos = {}
+
+    normalized_target = _diagnostic_section_key(section_key)
+    for existing_key, existing_photos in section_photos.items():
+        if _diagnostic_section_key(existing_key) == normalized_target and isinstance(existing_photos, list):
+            return section_photos, existing_key, existing_photos
+
+    if normalized_target not in section_photos or not isinstance(section_photos.get(normalized_target), list):
+        section_photos[normalized_target] = []
+
+    return section_photos, normalized_target, section_photos[normalized_target]
+
+
 _NUMERIC_VALUE_PATTERN = re.compile(r"[-+]?\d*\.?\d+")
 
 
@@ -1183,9 +1259,27 @@ def _build_hvac_diagnostic_detail(diagnostics_entries, diagnostic_index):
 
     selected_diagnostic = sorted_diagnostics[diagnostic_index]
     date_performed = str(selected_diagnostic.get("date_performed", "")).strip() or "-"
+    section_photo_lookup = _build_diagnostic_section_photos_from_entry(selected_diagnostic)
+    diagnostic_reports = []
+    raw_reports = selected_diagnostic.get("reports")
+    if isinstance(raw_reports, list):
+        for report in raw_reports:
+            if not isinstance(report, dict):
+                continue
+            report_path = str(report.get("file_path") or "").strip()
+            if not report_path:
+                continue
+            diagnostic_reports.append(
+                {
+                    "report_number": str(report.get("report_number") or "System Health Report").strip() or "System Health Report",
+                    "file_path": report_path,
+                    "date_generated": str(report.get("date_generated") or "").strip() or "-",
+                }
+            )
     section_details = []
 
     for section_label, fields in HVAC_DIAGNOSTIC_SECTIONS:
+        section_key = _diagnostic_section_key(section_label)
         rows = []
         for field in fields:
             field_name = field["name"]
@@ -1197,13 +1291,17 @@ def _build_hvac_diagnostic_detail(diagnostics_entries, diagnostic_index):
             })
         section_details.append({
             "label": section_label,
+            "key": section_key,
             "rows": rows,
+            "photos": section_photo_lookup.get(section_key, []),
         })
 
     return {
+        "diagnostic_id": str(selected_diagnostic.get("_id") or "").strip(),
         "diagnostic_index": diagnostic_index,
         "date_performed": date_performed,
         "sections": section_details,
+        "reports": diagnostic_reports,
     }
 
 
@@ -2058,6 +2156,24 @@ def view_hvac_diagnostic(customerId, reference_type, reference_id, diagnostic_in
             )
         )
 
+    report_email_template = ""
+    employee_id = session.get("employee_id")
+    if employee_id and ObjectId.is_valid(employee_id):
+        employee = db.employees.find_one({"_id": ObjectId(employee_id)})
+        if employee:
+            business_ref = employee.get("business")
+            business_oid = None
+            if isinstance(business_ref, ObjectId):
+                business_oid = business_ref
+            elif isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
+                business_oid = ObjectId(business_ref)
+            if business_oid:
+                business = db.businesses.find_one({"_id": business_oid})
+                if business:
+                    report_email_template = str(business.get("report_email_template") or "").strip()
+
+    latest_report_file = diagnostic_detail.get("reports", [{}])[0].get("file_path", "") if diagnostic_detail.get("reports") else ""
+
     return render_template(
         "equipment/view_hvac_diagnostic_detail.html",
         customerId=customerId,
@@ -2066,6 +2182,8 @@ def view_hvac_diagnostic(customerId, reference_type, reference_id, diagnostic_in
         reference_id=reference_id,
         hvac_system=serialized_system,
         diagnostic=diagnostic_detail,
+        latest_report_file=latest_report_file,
+        report_email_template=report_email_template,
         property_id=property_id,
     )
 
@@ -2100,12 +2218,100 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
             for field_name, _label in HVAC_DIAGNOSTIC_FIELDS
         }
 
+        upload_dir = os.path.join(current_app.root_path, "static", HVAC_PHOTO_UPLOAD_SUBDIR)
+        os.makedirs(upload_dir, exist_ok=True)
+
+        section_photos = {}
+        saved_file_paths = []
+        for section_label, _fields in HVAC_DIAGNOSTIC_SECTIONS:
+            section_key = _diagnostic_section_key(section_label)
+            photo_files = request.files.getlist(f"section_photos__{section_key}[]")
+            photo_captions = request.form.getlist(f"section_photo_captions__{section_key}[]")
+            photo_files = [f for f in photo_files if getattr(f, "filename", "")]
+            if not photo_files:
+                continue
+
+            saved_photos = []
+            for photo_index, photo_file in enumerate(photo_files):
+                original_name = str(getattr(photo_file, "filename", "") or "").strip()
+                if not original_name:
+                    continue
+
+                extension = original_name.rsplit(".", 1)[-1].lower() if "." in original_name else ""
+                if extension not in ALLOWED_PHOTO_EXTENSIONS:
+                    error = (
+                        f"Unsupported file type for {section_label} photos. "
+                        "Please upload JPG, JPEG, PNG, WEBP, or HEIC."
+                    )
+                    break
+
+                photo_file.seek(0, 2)
+                file_size = photo_file.tell()
+                photo_file.seek(0)
+                if file_size > MAX_PHOTO_FILE_SIZE:
+                    error = f"A {section_label} photo exceeded the 10 MB size limit."
+                    break
+
+                safe_name = (
+                    f"diag_{reference_id}_{section_key}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}_"
+                    f"{secure_filename(original_name)}"
+                )
+                save_path = os.path.join(upload_dir, safe_name)
+                try:
+                    photo_file.save(save_path)
+                    saved_file_paths.append(save_path)
+                except Exception:
+                    error = f"Failed to upload a photo for {section_label}. Please try again."
+                    break
+
+                caption = ""
+                if photo_index < len(photo_captions):
+                    caption = str(photo_captions[photo_index] or "").strip()
+                if len(caption) > MAX_PHOTO_CAPTION_LENGTH:
+                    caption = caption[:MAX_PHOTO_CAPTION_LENGTH]
+
+                saved_photos.append(
+                    {
+                        "filename": safe_name,
+                        "url": _build_hvac_photo_url(safe_name),
+                        "caption": caption,
+                        "uploaded_at": datetime.now().strftime("%m/%d/%Y"),
+                    }
+                )
+
+            if error:
+                break
+
+            if saved_photos:
+                section_photos[section_key] = saved_photos
+
+        if error:
+            for saved_file_path in saved_file_paths:
+                try:
+                    if os.path.exists(saved_file_path):
+                        os.remove(saved_file_path)
+                except Exception:
+                    pass
+            return render_template(
+                "equipment/add_hvac_diagnostics.html",
+                customerId=customerId,
+                customer=serialize_doc(customer),
+                reference_type=reference_type,
+                reference_id=reference_id,
+                hvac_system=serialize_doc(hvac_system),
+                error=error,
+                form_data=form_data,
+                diagnostics_sections=HVAC_DIAGNOSTIC_SECTIONS,
+                property_id=property_id,
+            )
+
         diagnostics_entry = _build_hvac_diagnostics_entry(form_data)
         diagnostics_entry.update(
             {
                 "hvac_system_id": reference_value(reference_id),
                 "customer_id": reference_value(customerId),
                 "property_id": reference_value(property_id) if property_id else None,
+                "section_photos": section_photos,
                 "created_at": datetime.utcnow(),
             }
         )
@@ -2133,6 +2339,170 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
         form_data=form_data,
         diagnostics_sections=HVAC_DIAGNOSTIC_SECTIONS,
         property_id=property_id,
+    )
+
+
+@bp.route("/customers/<customerId>/hvac/<reference_type>/<reference_id>/diagnostics/<diagnosticId>/photos/caption", methods=["POST"])
+def update_hvac_diagnostic_photo_caption(customerId, reference_type, reference_id, diagnosticId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers.customers"))
+    property_id = str(request.args.get("property_id") or "").strip()
+    if reference_type != "system":
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    hvac_system = db.hvacSystems.find_one({"$and": [{"_id": object_id_or_404(reference_id)}, build_reference_filter("customer_id", customerId)]})
+    if not hvac_system:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+    if property_id and str(hvac_system.get("property_id") or "").strip() != property_id:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    diagnostic = db.hvacDiagnostics.find_one(
+        {
+            "$and": [
+                {"_id": object_id_or_404(diagnosticId)},
+                build_reference_filter("customer_id", customerId),
+                build_reference_filter("hvac_system_id", reference_id),
+            ]
+        }
+    )
+    if not diagnostic:
+        return redirect(
+            url_for(
+                "customers.view_hvac_diagnostics",
+                customerId=customerId,
+                reference_type=reference_type,
+                reference_id=reference_id,
+                property_id=property_id,
+            )
+        )
+
+    section_key = _diagnostic_section_key(request.form.get("section_key", ""))
+    filename = str(request.form.get("filename", "")).strip()
+    new_caption = str(request.form.get("caption", "")).strip()
+    if len(new_caption) > MAX_PHOTO_CAPTION_LENGTH:
+        new_caption = new_caption[:MAX_PHOTO_CAPTION_LENGTH]
+
+    section_photos, resolved_key, photo_list = _resolve_section_photo_bucket(diagnostic.get("section_photos"), section_key)
+    if filename:
+        for photo in photo_list:
+            if not isinstance(photo, dict):
+                continue
+            if str(photo.get("filename") or "").strip() == filename:
+                photo["caption"] = new_caption
+                break
+
+        db.hvacDiagnostics.update_one(
+            {"_id": diagnostic["_id"]},
+            {
+                "$set": {
+                    "section_photos": section_photos,
+                    "updated_at": datetime.utcnow(),
+                }
+            },
+        )
+
+    diagnostic_index_raw = str(request.form.get("diagnostic_index") or "0").strip()
+    try:
+        diagnostic_index = max(0, int(diagnostic_index_raw))
+    except ValueError:
+        diagnostic_index = 0
+
+    return redirect(
+        url_for(
+            "customers.view_hvac_diagnostic",
+            customerId=customerId,
+            reference_type=reference_type,
+            reference_id=reference_id,
+            diagnostic_index=diagnostic_index,
+            property_id=property_id,
+        )
+    )
+
+
+@bp.route("/customers/<customerId>/hvac/<reference_type>/<reference_id>/diagnostics/<diagnosticId>/photos/delete", methods=["POST"])
+def delete_hvac_diagnostic_photo(customerId, reference_type, reference_id, diagnosticId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers.customers"))
+    property_id = str(request.args.get("property_id") or "").strip()
+    if reference_type != "system":
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    hvac_system = db.hvacSystems.find_one({"$and": [{"_id": object_id_or_404(reference_id)}, build_reference_filter("customer_id", customerId)]})
+    if not hvac_system:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+    if property_id and str(hvac_system.get("property_id") or "").strip() != property_id:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    diagnostic = db.hvacDiagnostics.find_one(
+        {
+            "$and": [
+                {"_id": object_id_or_404(diagnosticId)},
+                build_reference_filter("customer_id", customerId),
+                build_reference_filter("hvac_system_id", reference_id),
+            ]
+        }
+    )
+    if not diagnostic:
+        return redirect(
+            url_for(
+                "customers.view_hvac_diagnostics",
+                customerId=customerId,
+                reference_type=reference_type,
+                reference_id=reference_id,
+                property_id=property_id,
+            )
+        )
+
+    section_key = _diagnostic_section_key(request.form.get("section_key", ""))
+    filename = str(request.form.get("filename", "")).strip()
+    section_photos, resolved_key, photo_list = _resolve_section_photo_bucket(diagnostic.get("section_photos"), section_key)
+
+    if filename:
+        updated_photo_list = []
+        for photo in photo_list:
+            if not isinstance(photo, dict):
+                continue
+            if str(photo.get("filename") or "").strip() == filename:
+                continue
+            updated_photo_list.append(photo)
+
+        section_photos[resolved_key] = updated_photo_list
+        db.hvacDiagnostics.update_one(
+            {"_id": diagnostic["_id"]},
+            {
+                "$set": {
+                    "section_photos": section_photos,
+                    "updated_at": datetime.utcnow(),
+                }
+            },
+        )
+
+        file_path = os.path.join(current_app.root_path, "static", HVAC_PHOTO_UPLOAD_SUBDIR, filename)
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+
+    diagnostic_index_raw = str(request.form.get("diagnostic_index") or "0").strip()
+    try:
+        diagnostic_index = max(0, int(diagnostic_index_raw))
+    except ValueError:
+        diagnostic_index = 0
+
+    return redirect(
+        url_for(
+            "customers.view_hvac_diagnostic",
+            customerId=customerId,
+            reference_type=reference_type,
+            reference_id=reference_id,
+            diagnostic_index=diagnostic_index,
+            property_id=property_id,
+        )
     )
 
 
@@ -2177,7 +2547,39 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
             )
         )
 
-    existing_reports = serialized_system.get("reports", [])
+    selected_diagnostic_id = str(raw_diagnostics.get("_id") or "").strip()
+    if not ObjectId.is_valid(selected_diagnostic_id):
+        return redirect(
+            url_for(
+                "customers.view_hvac_diagnostics",
+                customerId=customerId,
+                reference_type=reference_type,
+                reference_id=reference_id,
+                property_id=property_id,
+            )
+        )
+
+    diagnostic_doc = db.hvacDiagnostics.find_one(
+        {
+            "$and": [
+                {"_id": ObjectId(selected_diagnostic_id)},
+                build_reference_filter("customer_id", customerId),
+                build_reference_filter("hvac_system_id", reference_id),
+            ]
+        }
+    )
+    if not diagnostic_doc:
+        return redirect(
+            url_for(
+                "customers.view_hvac_diagnostics",
+                customerId=customerId,
+                reference_type=reference_type,
+                reference_id=reference_id,
+                property_id=property_id,
+            )
+        )
+
+    existing_reports = diagnostic_doc.get("reports", [])
     reports_history = existing_reports if isinstance(existing_reports, list) else []
     report_number = f"RPT-{reference_id[:8].upper()}-{len(reports_history) + 1:02d}"
 
@@ -2198,20 +2600,93 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
         "diagnostics_date_performed": diagnostics_card.get("date_performed", "-"),
     }
 
-    db.hvacSystems.update_one(
-        {"$and": [{"_id": hvac_system["_id"]}, build_reference_filter("customer_id", customerId)]},
-        {"$set": {"reports": [report_item, *reports_history]}},
+    db.hvacDiagnostics.update_one(
+        {"_id": diagnostic_doc["_id"]},
+        {
+            "$set": {
+                "reports": [report_item, *reports_history],
+                "updated_at": datetime.utcnow(),
+            }
+        },
     )
 
     return redirect(
         url_for(
-            "customers.view_hvac_system",
+            "customers.view_hvac_diagnostic",
             customerId=customerId,
             reference_type=reference_type,
             reference_id=reference_id,
+            diagnostic_index=selected_index,
             property_id=property_id,
         )
     )
+
+
+@bp.route("/customers/<customerId>/hvac/<reference_type>/<reference_id>/diagnostics/<int:diagnostic_index>/email", methods=["POST"])
+def send_hvac_report_email(customerId, reference_type, reference_id, diagnostic_index):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return jsonify({"success": False, "error": "Customer not found"}), 404
+
+    property_id = str(request.args.get("property_id") or "").strip()
+    if reference_type != "system":
+        return jsonify({"success": False, "error": "Unsupported reference type"}), 400
+
+    hvac_system = db.hvacSystems.find_one({"$and": [{"_id": object_id_or_404(reference_id)}, build_reference_filter("customer_id", customerId)]})
+    if not hvac_system:
+        return jsonify({"success": False, "error": "HVAC system not found"}), 404
+    if property_id and str(hvac_system.get("property_id") or "").strip() != property_id:
+        return jsonify({"success": False, "error": "Invalid property"}), 403
+
+    diagnostics_entries = _sort_diagnostics_by_date_desc(_fetch_hvac_diagnostics_history(db, reference_id))
+    if diagnostic_index < 0 or diagnostic_index >= len(diagnostics_entries):
+        return jsonify({"success": False, "error": "Diagnostic not found"}), 404
+
+    selected_diagnostic = diagnostics_entries[diagnostic_index]
+
+    try:
+        data = request.get_json() or {}
+        recipient_email = str(data.get("recipient_email") or "").strip()
+        subject = str(data.get("subject") or "").strip()
+        body = str(data.get("body") or "").strip()
+        report_file = str(data.get("estimate_file") or "").strip()
+
+        if not recipient_email or not subject or not body or not report_file:
+            return jsonify({"success": False, "error": "Missing required fields"}), 400
+
+        filename = report_file.split("/")[-1]
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        invoices_dir = os.path.join(base_dir, "invoices")
+        filepath = os.path.join(invoices_dir, filename)
+
+        if not os.path.exists(filepath) or not os.path.abspath(filepath).startswith(os.path.abspath(invoices_dir)):
+            return jsonify({"success": False, "error": "Report file not found"}), 404
+
+        msg = Message(
+            subject=subject,
+            recipients=[recipient_email],
+            body=body,
+        )
+
+        with open(filepath, "rb") as report_fp:
+            msg.attach(filename, "application/pdf", report_fp.read())
+
+        current_app.extensions["mail"].send(msg)
+
+        db.hvacDiagnostics.update_one(
+            {"_id": object_id_or_404(str(selected_diagnostic.get("_id") or ""))},
+            {
+                "$set": {
+                    "report_email_last_sent_at": datetime.utcnow(),
+                    "report_email_last_recipient": recipient_email,
+                }
+            },
+        )
+        return jsonify({"success": True}), 200
+    except Exception as exc:
+        current_app.logger.error("HVAC report email send failed: customer_id=%s reference_id=%s diagnostic_index=%s error=%s", customerId, reference_id, diagnostic_index, exc)
+        return jsonify({"success": False, "error": str(exc)}), 500
 
 
 @bp.route("/customers/<customerId>/hvac/<reference_type>/<reference_id>/components/<component_key>")
@@ -2503,7 +2978,6 @@ def upload_hvac_photo(customerId, reference_type, reference_id):
     upload_dir = os.path.join(current_app.root_path, "static", HVAC_PHOTO_UPLOAD_SUBDIR)
     os.makedirs(upload_dir, exist_ok=True)
 
-    from werkzeug.utils import secure_filename
     safe_name = f"{reference_id}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{secure_filename(filename)}"
     save_path = os.path.join(upload_dir, safe_name)
     try:

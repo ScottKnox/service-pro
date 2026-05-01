@@ -142,6 +142,32 @@
               </p>
             </div>
             <div class="view-job-detail-item">
+              <h4>Job Type</h4>
+              <p>{{ estimate.job_schedule_type_label|default('One-Time', true) }}</p>
+            </div>
+            {% if estimate.job_schedule_type == 'recurring' %}
+              <div class="view-job-detail-item">
+                <h4>Recurrence</h4>
+                <p>{{ estimate.recurrence_summary|default('Recurring', true) }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Recurrence Ends</h4>
+                <p>{{ estimate.recurring_end_type_label|default('Never', true) }}</p>
+              </div>
+              {% if estimate.recurring_end_type == 'on_date' and estimate.recurring_end_date %}
+                <div class="view-job-detail-item">
+                  <h4>Recurrence End Date</h4>
+                  <p>{{ estimate.recurring_end_date }}</p>
+                </div>
+              {% endif %}
+              {% if estimate.recurring_end_type == 'after_occurrences' and estimate.recurring_end_after %}
+                <div class="view-job-detail-item">
+                  <h4>Number of Visits</h4>
+                  <p>{{ estimate.recurring_end_after }}</p>
+                </div>
+              {% endif %}
+            {% endif %}
+            <div class="view-job-detail-item">
               <h4>Estimated By</h4>
               <p>{{ estimate.estimated_by_employee|default('N/A', true) }}</p>
             </div>
@@ -166,19 +192,21 @@
               {% endif %}
             </div>
 
-            {% if estimate_status_normalized == 'accepted' and (estimate.accepted_signature_data_url or estimate.accepted_signature_ip or estimate.accepted_signature_user_agent) %}
+            {% if is_staff_view and estimate_status_normalized == 'accepted' and estimate.accepted_signature_data_url %}
               <div class="view-job-detail-item estimate-signature-details-card">
                 <h4>Accepted Signature Details</h4>
-                {% if estimate.accepted_signature_data_url %}
-                  <div class="estimate-signature-preview-wrap">
-                    <img src="{{ estimate.accepted_signature_data_url }}" alt="Customer signature" class="estimate-signature-preview" />
-                  </div>
-                {% endif %}
-                <ul class="estimate-signature-details-list">
-                  <li><strong>Signed At:</strong> {{ estimate.accepted_signature_captured_display|default('N/A', true) }}</li>
-                  <li><strong>Customer IP:</strong> {{ estimate.accepted_signature_ip|default('N/A', true) }}</li>
-                  <li><strong>User Agent:</strong> {{ estimate.accepted_signature_user_agent|default('N/A', true) }}</li>
-                </ul>
+                <div class="estimate-signature-preview-wrap">
+                  <img src="{{ estimate.accepted_signature_data_url }}" alt="Customer signature" class="estimate-signature-preview" />
+                </div>
+                <p class="estimate-signature-signed-at">
+                  <strong>Signed At:</strong>
+                  {{ estimate.accepted_signature_captured_date_display|default('N/A', true) }}
+                  <span
+                    class="localized-estimate-time"
+                    data-estimate-date="{{ estimate.accepted_signature_captured_date_iso|default('', true) }}"
+                    data-estimate-time="{{ estimate.accepted_signature_captured_time|default('', true) }}"
+                  >{{ estimate.accepted_signature_captured_time|default('N/A', true) }}</span>
+                </p>
               </div>
             {% endif %}
           </div>
@@ -299,7 +327,7 @@
           <div class="estimate-stack-block estimate-customer-actions-block">
             {% if estimate_status_normalized == 'accepted' %}
               <h3>Estimate Accepted</h3>
-              <p class="estimate-customer-status-text">Thank you. This estimate has already been accepted.</p>
+              <p class="estimate-customer-status-text">Thank you. This estimate has been accepted.</p>
               {% if estimate.accepted_signature_data_url %}
                 <div class="estimate-signature-preview-wrap">
                   <img src="{{ estimate.accepted_signature_data_url }}" alt="Customer signature" class="estimate-signature-preview" />
@@ -328,7 +356,7 @@
               <div id="estimate-signature-modal" class="modal" aria-hidden="true">
                 <div class="modal-content estimate-signature-modal-content">
                   <div class="modal-header">
-                    <h2>Sign to Accept Estimate</h2>
+                    <h2>Sign and Accept</h2>
                     <button type="button" class="modal-close-btn" id="estimate-signature-close-btn">&times;</button>
                   </div>
                   <div class="estimate-signature-modal-body">
@@ -337,7 +365,7 @@
                     <div class="estimate-signature-actions">
                       <button type="button" id="estimate-signature-clear-btn" class="modal-cancel-btn">Clear Signature</button>
                       <button type="button" id="estimate-signature-cancel-btn" class="modal-cancel-btn">Cancel</button>
-                      <button type="button" id="estimate-signature-submit-btn" class="modal-send-btn">Submit Acceptance</button>
+                      <button type="button" id="estimate-signature-submit-btn" class="modal-send-btn">Accept</button>
                     </div>
                   </div>
                 </div>

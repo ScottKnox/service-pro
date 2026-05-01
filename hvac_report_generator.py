@@ -4,6 +4,7 @@ Produces a customer-friendly multi-page PDF using ReportLab.
 Designed to match the Knox Diagnostic Report layout.
 """
 from datetime import datetime
+from io import BytesIO
 import os
 import re
 
@@ -11,8 +12,10 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
     HRFlowable,
+    Image as ReportImage,
     KeepTogether,
     Paragraph,
     SimpleDocTemplate,
@@ -20,6 +23,7 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+from PIL import Image, ImageOps
 
 # ---------------------------------------------------------------------------
 # Field/section definitions
@@ -90,6 +94,13 @@ _REPORT_SECTIONS = (
 
 _NUMERIC_PATTERN = re.compile(r"[-+]?\d*\.?\d+")
 
+_REPORT_SECTION_PHOTO_KEYS = {
+    "Airflow and duct system": ("airflow", "ductwork"),
+    "Refrigerant circuit": ("refrigerant",),
+    "Electrical system": ("electrical",),
+    "Indoor air quality": ("indoor_air_quality",),
+}
+
 
 # ---------------------------------------------------------------------------
 # Utility helpers
@@ -98,6 +109,107 @@ _NUMERIC_PATTERN = re.compile(r"[-+]?\d*\.?\d+")
 def _safe(value, fallback="-"):
     text = str(value or "").strip()
     return text if text else fallback
+
+
+def _normalize_section_key(value):
+    key_text = str(value or "").strip().lower()
+    if not key_text:
+        return ""
+    return re.sub(r"[^a-z0-9]+", "_", key_text).strip("_")
+
+
+def _resolve_photo_absolute_path(photo):
+    if not isinstance(photo, dict):
+        return ""
+
+    filename = str(photo.get("filename") or "").strip()
+    if filename:
+        candidate = os.path.abspath(os.path.join(os.path.dirname(__file__), "static", "uploads", "hvac_photos", filename))
+        if os.path.exists(candidate):
+            return candidate
+
+    raw_url = str(photo.get("url") or "").strip()
+    if raw_url.startswith("/static/"):
+        relative_path = raw_url[len("/static/"):]
+        candidate = os.path.abspath(os.path.join(os.path.dirname(__file__), "static", relative_path.replace("/", os.sep)))
+        if os.path.exists(candidate):
+            return candidate
+
+    return ""
+
+
+def _section_photo_entries_for_report(raw_diagnostics, report_section_label):
+    if not isinstance(raw_diagnostics, dict):
+        return []
+
+    section_photos = raw_diagnostics.get("section_photos")
+    if not isinstance(section_photos, dict):
+        return []
+
+    requested_keys = _REPORT_SECTION_PHOTO_KEYS.get(report_section_label, (_normalize_section_key(report_section_label),))
+    normalized_photo_map = {
+        _normalize_section_key(section_key): photos
+        for section_key, photos in section_photos.items()
+        if isinstance(photos, list)
+    }
+
+    merged_entries = []
+    for requested_key in requested_keys:
+        normalized_key = _normalize_section_key(requested_key)
+        if not normalized_key:
+            continue
+        for photo in normalized_photo_map.get(normalized_key, []):
+            if isinstance(photo, dict):
+                merged_entries.append(photo)
+
+    return merged_entries
+
+
+def _build_pdf_photo_flowable(photo_path, max_width, max_height):
+    try:
+        with Image.open(photo_path) as source_image:
+            normalized_image = ImageOps.exif_transpose(source_image)
+            if normalized_image.mode not in ("RGB", "L"):
+                normalized_image = normalized_image.convert("RGB")
+            elif normalized_image.mode == "L":
+                normalized_image = normalized_image.convert("RGB")
+
+            normalized_image.thumbnail((1800, 1800), Image.Resampling.LANCZOS)
+
+            encoded = BytesIO()
+            normalized_image.save(encoded, format="JPEG", quality=80, optimize=True)
+            encoded.seek(0)
+
+        reader = ImageReader(encoded)
+        width_px, height_px = reader.getSize()
+        if not width_px or not height_px:
+            return None
+
+        scale_ratio = min(max_width / float(width_px), max_height / float(height_px), 1.0)
+        flowable = ReportImage(
+            encoded,
+            width=float(width_px) * scale_ratio,
+            height=float(height_px) * scale_ratio,
+        )
+        flowable.hAlign = "LEFT"
+        flowable._image_buffer = encoded
+        return flowable
+    except Exception:
+        try:
+            reader = ImageReader(photo_path)
+            width_px, height_px = reader.getSize()
+            if not width_px or not height_px:
+                return None
+            scale_ratio = min(max_width / float(width_px), max_height / float(height_px), 1.0)
+            flowable = ReportImage(
+                photo_path,
+                width=float(width_px) * scale_ratio,
+                height=float(height_px) * scale_ratio,
+            )
+            flowable.hAlign = "LEFT"
+            return flowable
+        except Exception:
+            return None
 
 
 def _parse_float(value):
@@ -884,6 +996,63 @@ def generate_hvac_system_health_report(
         detail_table.setStyle(TableStyle(det_style))
 
         story.append(KeepTogether([sec_header, detail_table]))
+
+        section_photos = _section_photo_entries_for_report(raw, section_label)
+        photo_cards = []
+        for photo in section_photos:
+            photo_path = _resolve_photo_absolute_path(photo)
+            if not photo_path:
+                continue
+
+            max_width = 3.15 * inch
+            max_height = 2.0 * inch
+            image_flowable = _build_pdf_photo_flowable(photo_path, max_width=max_width, max_height=max_height)
+            if not image_flowable:
+                continue
+
+            caption_text = str(photo.get("caption") or "").strip()
+            card_rows = [[image_flowable]]
+            if caption_text:
+                card_rows.append([Paragraph(caption_text, S["detail_value"])])
+
+            photo_card = Table(card_rows, colWidths=[3.15 * inch])
+            photo_card.setStyle(TableStyle([
+                ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#D7E1EE")),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.white),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]))
+            photo_cards.append(photo_card)
+
+        if photo_cards:
+            photo_rows = []
+            for index in range(0, len(photo_cards), 2):
+                left_card = photo_cards[index]
+                right_card = photo_cards[index + 1] if (index + 1) < len(photo_cards) else Spacer(1, 0.01 * inch)
+                photo_rows.append([left_card, right_card])
+
+            photo_header = Table([[Paragraph("Section photos", S["section_subtitle"])]], colWidths=[6.75 * inch])
+            photo_header.setStyle(TableStyle([
+                ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ]))
+
+            photo_grid = Table(photo_rows, colWidths=[3.3 * inch, 3.3 * inch])
+            photo_grid.setStyle(TableStyle([
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]))
+
+            story.append(photo_header)
+            story.append(photo_grid)
+
         story.append(Spacer(1, 0.12 * inch))
 
     # ------------------------------------------------------------------ #

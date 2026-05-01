@@ -218,6 +218,7 @@ def update_business():
         tax_materials_rate = request.form.get("tax_materials_rate", "0").strip()
         quote_email_template = request.form.get("quote_email_template", "").strip()
         invoice_email_template = request.form.get("invoice_email_template", "").strip()
+        report_email_template = request.form.get("report_email_template", "").strip()
         default_estimate_expiration_days_raw = request.form.get("default_estimate_expiration_days", "").strip()
         default_payment_due_days_raw = request.form.get("default_payment_due_days", "").strip()
 
@@ -263,6 +264,7 @@ def update_business():
                     "tax_materials_rate": tax_materials_rate,
                     "quote_email_template": quote_email_template,
                     "invoice_email_template": invoice_email_template,
+                    "report_email_template": report_email_template,
                     "default_estimate_expiration_days": default_estimate_expiration_days,
                     "default_payment_due_days": default_payment_due_days,
                 }
@@ -297,6 +299,7 @@ def update_business():
     business["website"] = str(business.get("website") or "").strip()
     business["license_number"] = str(business.get("license_number") or "").strip()
     business["warranty_info"] = str(business.get("warranty_info") or "").strip()
+    business["report_email_template"] = str(business.get("report_email_template") or "").strip()
     try:
         business["default_estimate_expiration_days"] = max(1, int(business.get("default_estimate_expiration_days") or 30))
     except (TypeError, ValueError):
