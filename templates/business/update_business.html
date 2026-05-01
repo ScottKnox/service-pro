@@ -89,6 +89,20 @@
           </div>
         </div>
 
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="default-estimate-expiration-days">Default Estimate Expiration Days</label>
+            <input id="default-estimate-expiration-days" name="default_estimate_expiration_days" type="number" min="1" step="1" value="{{ business.get('default_estimate_expiration_days', 30) }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="default-payment-due-days">Default Payment Due Days</label>
+            <input id="default-payment-due-days" name="default_payment_due_days" type="number" min="1" step="1" value="{{ business.get('default_payment_due_days', 30) }}" />
+          </div>
+        </div>
+
         <h2 class="create-job-form-section-header">Tax Configuration</h2>
 
         <div class="add-customer-form-row">

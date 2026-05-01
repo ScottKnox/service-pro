@@ -10,6 +10,8 @@ from flask_wtf.csrf import CSRFProtect
 
 from blueprints import register_blueprints
 from mongo import build_reference_filter, ensure_connection_or_500, serialize_doc
+from utils.currency import normalize_currency
+
 app = Flask(__name__)
 
 # Session Configuration
@@ -29,6 +31,9 @@ app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER")
 mail = Mail(app)
 csrf = CSRFProtect(app)
 register_blueprints(app)
+
+# Jinja2 template filters
+app.jinja_env.filters['currency'] = lambda val: normalize_currency(val)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,7 +56,16 @@ def internal_error(e):
 @app.before_request
 def require_login():
     """Redirect unauthenticated users to login for all protected endpoints."""
-    open_endpoints = {"auth.login", "auth.logout", "static", "home", "error_page"}
+    open_endpoints = {
+        "auth.login",
+        "auth.logout",
+        "static",
+        "home",
+        "error_page",
+        "jobs.view_estimate",
+        "jobs.accept_estimate",
+        "jobs.decline_estimate",
+    }
     endpoint = request.endpoint
     if endpoint is None:
         return

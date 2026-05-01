@@ -241,6 +241,44 @@ window.homePageFilter = {
   },
 };
 
+function getHomeSelectedDateFromUrl() {
+  const params = new URLSearchParams(window.location.search || '');
+  const rawDate = (params.get('selected_date') || '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : null;
+}
+
+function syncHomeActionFormsSelectedDate() {
+  const actionForms = document.querySelectorAll('.home-job-action-form');
+  if (!actionForms.length) {
+    return;
+  }
+
+  actionForms.forEach((form) => {
+    form.addEventListener('submit', () => {
+      const nextInput = form.querySelector('input[name="next"]');
+      if (!nextInput) {
+        return;
+      }
+
+      const selectedDate = (window.homePageFilter && window.homePageFilter.filterData
+        ? window.homePageFilter.filterData.selectedDate
+        : null) || null;
+
+      try {
+        const nextUrl = new URL(nextInput.value, window.location.origin);
+        if (selectedDate) {
+          nextUrl.searchParams.set('selected_date', selectedDate);
+        } else {
+          nextUrl.searchParams.delete('selected_date');
+        }
+        nextInput.value = `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`;
+      } catch (_error) {
+        // Ignore malformed next URLs and preserve existing behavior.
+      }
+    });
+  });
+}
+
 function formatHomeJobTimes() {
   const timeElements = document.querySelectorAll('.home-job-time-display');
 
@@ -331,11 +369,15 @@ function formatHomeJobTimes() {
   }
 
   const today = new Date();
-  const selectedDays = new Set([
-    dayKey(today.getFullYear(), today.getMonth(), today.getDate()),
-  ]);
+  const initialSelectedKey = getHomeSelectedDateFromUrl() || dayKey(today.getFullYear(), today.getMonth(), today.getDate());
+  const selectedDays = new Set([initialSelectedKey]);
   const visibleMonth = new Date();
-  visibleMonth.setDate(1);
+  const [initialYear, initialMonth] = initialSelectedKey.split('-').map(Number);
+  if (!Number.isNaN(initialYear) && !Number.isNaN(initialMonth)) {
+    visibleMonth.setFullYear(initialYear, initialMonth - 1, 1);
+  } else {
+    visibleMonth.setDate(1);
+  }
 
   function dayKey(year, month, day) {
     return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -455,8 +497,9 @@ function formatHomeJobTimes() {
   window.homePageFilter.refreshCalendarHighlights = renderCalendar;
 
   renderCalendar();
-  updateHeadline(todayKey());
-  // Set initial filter to today's date
-  window.homePageFilter.filterData.selectedDate = todayKey();
+  updateHeadline(initialSelectedKey);
+  window.homePageFilter.filterData.selectedDate = initialSelectedKey;
   window.homePageFilter.filterAndDisplay();
 })();
+
+syncHomeActionFormsSelectedDate();

@@ -1,7 +1,10 @@
 import calendar
 from datetime import datetime, timedelta
+import hashlib
+import hmac
 import json
 import os
+import secrets
 
 from bson import ObjectId
 from flask import Blueprint, current_app, jsonify, redirect, render_template, request, session, url_for
@@ -61,6 +64,44 @@ def _format_mmddyyyy_date(value):
     if not value:
         return ""
     return value.strftime("%m/%d/%Y")
+
+
+def _mmddyyyy_to_iso_date(value):
+    parsed = _parse_mmddyyyy_date(value)
+    if not parsed:
+        return ""
+    return parsed.strftime("%Y-%m-%d")
+
+
+def _format_iso_datetime_for_display(value):
+    raw_value = str(value or "").strip()
+    if not raw_value:
+        return ""
+    try:
+        normalized = raw_value.replace("Z", "+00:00")
+        return datetime.fromisoformat(normalized).strftime("%m/%d/%Y %H:%M:%S")
+    except ValueError:
+        return raw_value
+
+
+def _normalize_payment_due_days(value, fallback=30):
+    try:
+        normalized = int(str(value or "").strip())
+    except (TypeError, ValueError):
+        normalized = int(fallback)
+    return max(1, normalized)
+
+
+def _resolve_default_payment_due_days(db, fallback=30):
+    business_id = resolve_current_business_id(db)
+    if not business_id:
+        return _normalize_payment_due_days(fallback, fallback)
+
+    business_doc = db.businesses.find_one({"_id": business_id}, {"default_payment_due_days": 1})
+    if not business_doc:
+        return _normalize_payment_due_days(fallback, fallback)
+
+    return _normalize_payment_due_days(business_doc.get("default_payment_due_days"), fallback)
 
 
 def _add_months(value, months):
@@ -241,11 +282,17 @@ def _series_allows_occurrence(series_doc, occurrence_index, scheduled_date):
     return True
 
 
-def _build_recurring_series_document(customer, business_id, selected_property, selected_property_id, primary_service, services, parts, labors, materials, equipments, discounts, total, assigned_employee, recurring_data, scheduled_date, scheduled_time, request_obj):
+def _build_recurring_series_document(customer, business_id, selected_property, selected_property_id, primary_service, services, parts, labors, materials, equipments, discounts, total, assigned_employee, recurring_data, scheduled_date, scheduled_time, payment_due_days_offset, request_obj):
     series_anchor_date = scheduled_date
     anchor_date_dt = _parse_mmddyyyy_date(series_anchor_date)
     next_occurrence_date = _advance_recurring_date(anchor_date_dt, recurring_data.get("frequency"))
     next_occurrence_text = _format_mmddyyyy_date(next_occurrence_date)
+
+    try:
+        recurring_due_offset = int(str(payment_due_days_offset or "").strip())
+    except (TypeError, ValueError):
+        recurring_due_offset = 30
+    recurring_due_offset = max(0, recurring_due_offset)
 
     series_doc = {
         "customer_id": reference_value(customer.get("_id")),
@@ -275,9 +322,9 @@ def _build_recurring_series_document(customer, business_id, selected_property, s
         "state": request_obj.form.get("job_state", "").strip().upper(),
         "zip_code": request_obj.form.get("job_zip_code", "").strip(),
         "assigned_employee": assigned_employee,
-        "total": f"${total:.2f}" if total else "$0.00",
         "total_amount": float(total or 0.0),
         "invoice_notes": request_obj.form.get("invoice_notes", "").strip(),
+        "payment_due_days_offset": recurring_due_offset,
         "business_id": business_id,
         "created_at": datetime.utcnow(),
     }
@@ -311,6 +358,12 @@ def _create_occurrence_from_series(db, series_doc, scheduled_date, occurrence_in
     equipments = list(series_doc.get("equipments") or [])
     discounts = list(series_doc.get("discounts") or [])
     scheduled_time = str(series_doc.get("anchor_time") or "").strip()
+    try:
+        payment_due_days_offset = int(str(series_doc.get("payment_due_days_offset") or "").strip())
+    except (TypeError, ValueError):
+        payment_due_days_offset = 30
+    payment_due_days_offset = max(0, payment_due_days_offset)
+    payment_due_days = payment_due_days_offset
     occurrence_doc = {
         "customer_id": series_doc.get("customer_id"),
         "customer_name": str(series_doc.get("customer_name") or "").strip(),
@@ -334,9 +387,9 @@ def _create_occurrence_from_series(db, series_doc, scheduled_date, occurrence_in
         "state": str(series_doc.get("state") or "").strip().upper(),
         "zip_code": str(series_doc.get("zip_code") or "").strip(),
         "assigned_employee": str(series_doc.get("assigned_employee") or "").strip(),
-        "total": str(series_doc.get("total") or "$0.00").strip() or "$0.00",
         "total_amount": float(series_doc.get("total_amount") or 0.0),
         "invoice_notes": str(series_doc.get("invoice_notes") or "").strip(),
+        "payment_due_days": payment_due_days,
         "internal_notes": [],
         "date_created": datetime.now().strftime("%m/%d/%Y"),
         "created_at": datetime.utcnow(),
@@ -466,6 +519,8 @@ def serialize_estimate_for_pdf(estimate):
     serialized = dict(estimate or {})
     estimated_by = str(serialized.get("estimated_by_employee") or "").strip()
     serialized["assigned_employee"] = estimated_by
+    serialized["scheduled_date"] = str(serialized.get("proposed_job_date") or "").strip()
+    serialized["scheduled_time"] = str(serialized.get("proposed_job_time") or "").strip()
     estimate_notes = str(serialized.get("estimate_notes") or "").strip()
     serialized["notes"] = [{"text": estimate_notes}] if estimate_notes else []
     return serialized
@@ -539,6 +594,115 @@ def resolve_current_business_id(db):
     if isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
         return ObjectId(business_ref)
     return None
+
+
+def _is_authenticated_employee():
+    employee_id = session.get("employee_id")
+    return bool(employee_id and ObjectId.is_valid(employee_id))
+
+
+def _extract_client_ip():
+    forwarded_for = str(request.headers.get("X-Forwarded-For") or "").strip()
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return str(request.remote_addr or "").strip()
+
+
+def _build_estimate_view_url(estimate_id, access_token=None, external=False):
+    token_value = str(access_token or "").strip()
+    if token_value:
+        return url_for("jobs.view_estimate", estimateId=estimate_id, token=token_value, _external=external)
+    return url_for("jobs.view_estimate", estimateId=estimate_id, _external=external)
+
+
+def _issue_estimate_access_token(db, estimate_id, recipient_email=""):
+    token_value = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token_value.encode("utf-8")).hexdigest()
+    db.estimates.update_one(
+        {"_id": ObjectId(estimate_id)},
+        {
+            "$set": {
+                "access_token_hash": token_hash,
+                "access_token_created_at": datetime.utcnow(),
+                "access_token_recipient": str(recipient_email or "").strip(),
+            }
+        },
+    )
+    return token_value
+
+
+def _verify_estimate_access_token(estimate, provided_token):
+    token_value = str(provided_token or "").strip()
+    stored_hash = str((estimate or {}).get("access_token_hash") or "").strip()
+    if not token_value or not stored_hash:
+        return False
+
+    candidate_hash = hashlib.sha256(token_value.encode("utf-8")).hexdigest()
+    return hmac.compare_digest(candidate_hash, stored_hash)
+
+
+def _coerce_line_amount(value):
+    return float(currency_to_float(value))
+
+
+def _build_estimate_pricing_summary(estimate):
+    estimate_doc = estimate or {}
+
+    services_total = sum(_coerce_line_amount(service.get("price")) for service in (estimate_doc.get("services") or []))
+    parts_total = sum(_coerce_line_amount(part.get("price")) for part in (estimate_doc.get("parts") or []))
+    labors_total = sum(
+        _coerce_line_amount(labor.get("line_total") or labor.get("hourly_rate"))
+        for labor in (estimate_doc.get("labors") or [])
+    )
+    materials_total = sum(
+        _coerce_line_amount(material.get("line_total") or material.get("price"))
+        for material in (estimate_doc.get("materials") or [])
+    )
+    equipment_total = sum(
+        _coerce_line_amount(equipment.get("line_total") or equipment.get("price"))
+        for equipment in (estimate_doc.get("equipments") or [])
+    )
+
+    discounts_total = 0.0
+    for discount in (estimate_doc.get("discounts") or []):
+        line_value = _coerce_line_amount(discount.get("discount_amount") or discount.get("line_total"))
+        discounts_total += abs(line_value)
+
+    subtotal = services_total + parts_total + labors_total + materials_total + equipment_total
+    pre_tax_total = max(0.0, subtotal - discounts_total)
+    total_due = _coerce_line_amount(estimate_doc.get("total_amount"))
+    tax_total = max(0.0, total_due - pre_tax_total)
+
+    return {
+        "subtotal": subtotal,
+        "tax_total": tax_total,
+        "discounts_total": discounts_total,
+        "total_due": total_due,
+        "subtotal_display": normalize_currency(subtotal),
+        "tax_total_display": normalize_currency(tax_total),
+        "discounts_total_display": normalize_currency(discounts_total),
+        "total_due_display": normalize_currency(total_due),
+    }
+
+
+def _normalize_estimate_expiration_days(value, fallback=30):
+    try:
+        normalized = int(str(value or "").strip())
+    except (TypeError, ValueError):
+        normalized = int(fallback)
+    return max(1, normalized)
+
+
+def _resolve_default_estimate_expiration_days(db, fallback=30):
+    business_id = resolve_current_business_id(db)
+    if not business_id:
+        return _normalize_estimate_expiration_days(fallback, fallback)
+
+    business_doc = db.businesses.find_one({"_id": business_id}, {"default_estimate_expiration_days": 1})
+    if not business_doc:
+        return _normalize_estimate_expiration_days(fallback, fallback)
+
+    return _normalize_estimate_expiration_days(business_doc.get("default_estimate_expiration_days"), fallback)
 
 
 def _get_customer_properties(customer):
@@ -626,7 +790,12 @@ def export_jobs_csv():
     business_id = resolve_current_business_id(db)
     query = {"business_id": business_id} if business_id else {"_id": None}
     jobs_rows = list(db.jobs.find(query).sort([("scheduled_date", 1), ("date_created", -1), ("_id", -1)]))
-    return build_csv_export_response(jobs_rows, "jobs_export.csv")
+    return build_csv_export_response(
+        jobs_rows,
+        "jobs_export.csv",
+        excluded_fields={"total"},
+        field_transformers={"total_amount": normalize_currency},
+    )
 
 
 @bp.route("/estimates")
@@ -652,7 +821,12 @@ def export_estimates_csv():
     business_id = resolve_current_business_id(db)
     query = {"business_id": business_id} if business_id else {"_id": None}
     estimates_rows = list(db.estimates.find(query).sort([("created_at", -1), ("_id", -1)]))
-    return build_csv_export_response(estimates_rows, "estimates_export.csv")
+    return build_csv_export_response(
+        estimates_rows,
+        "estimates_export.csv",
+        excluded_fields={"total"},
+        field_transformers={"total_amount": normalize_currency},
+    )
 
 
 @bp.route("/customers/<customerId>/jobs/create", methods=["GET", "POST"])
@@ -664,6 +838,7 @@ def create_job(customerId):
 
     if request.method == "POST":
         business_id = resolve_current_business_id(db)
+        default_payment_due_days = _resolve_default_payment_due_days(db)
         selected_property_id = request.form.get("job_property_id", "").strip()
         if not selected_property_id:
             default_property = _resolve_default_property(customer)
@@ -748,6 +923,11 @@ def create_job(customerId):
         primary_service = services[0]["type"] if services else "No services added."
         scheduled_date = format_date(request.form.get("job_date", ""))
         scheduled_time = request.form.get("job_time", "").strip()
+        payment_due_days = _normalize_payment_due_days(
+            request.form.get("payment_due_days", ""),
+            default_payment_due_days,
+        )
+        payment_due_days_offset = payment_due_days
         date_scheduled = datetime.now().strftime("%m/%d/%Y") if (scheduled_date and scheduled_time) else ""
         job_status = resolve_job_status(scheduled_date, scheduled_time, services, parts, labors, materials, equipments, discounts)
 
@@ -773,6 +953,7 @@ def create_job(customerId):
                 recurring_data,
                 scheduled_date,
                 scheduled_time,
+                payment_due_days_offset,
                 request,
             )
             series_inserted = db.recurring_job_series.insert_one(series_doc)
@@ -805,9 +986,9 @@ def create_job(customerId):
             "state": request.form.get("job_state", "").strip().upper(),
             "zip_code": request.form.get("job_zip_code", "").strip(),
             "assigned_employee": assigned_employee,
-            "total": f"${total:.2f}" if total else "$0.00",
             "total_amount": float(total or 0.0),
             "invoice_notes": invoice_notes,
+            "payment_due_days": payment_due_days,
             "internal_notes": [],
             "date_created": datetime.now().strftime("%m/%d/%Y"),
             "created_at": datetime.utcnow(),
@@ -844,6 +1025,8 @@ def create_job(customerId):
     discounts_catalog = build_discount_catalog(discounts)
     parts_by_id = {p["_id"]: p["part_code"] for p in parts}
     materials_by_id = {m["_id"]: m["material_name"] for m in materials}
+    default_payment_due_days = _resolve_default_payment_due_days(db)
+    payment_due_days_value = default_payment_due_days
     default_property = _resolve_default_property(customer)
     selected_property_id = str((default_property or {}).get("property_id") or "").strip()
     initial_address_line_1 = (default_property or {}).get("address_line_1") or customer.get("address_line_1", "")
@@ -878,6 +1061,7 @@ def create_job(customerId):
         discounts_catalog=discounts_catalog,
         parts_by_id=parts_by_id,
         materials_by_id=materials_by_id,
+        payment_due_days_value=payment_due_days_value,
         recurring_frequency_options=RECURRING_FREQUENCY_OPTIONS,
         recurring_end_type_options=RECURRING_END_TYPE_OPTIONS,
         recurrence_state=_build_recurrence_form_state(),
@@ -894,6 +1078,7 @@ def create_estimate(customerId):
 
     if request.method == "POST":
         business_id = resolve_current_business_id(db)
+        default_estimate_expiration_days = _resolve_default_estimate_expiration_days(db)
         selected_property_id = request.form.get("job_property_id", "").strip()
         if not selected_property_id:
             default_property = _resolve_default_property(customer)
@@ -979,6 +1164,12 @@ def create_estimate(customerId):
 
         estimated_by_employee = request.form.get("job_assigned_employee", "").strip()
         estimate_notes = request.form.get("estimate_notes", "").strip()
+        proposed_job_date = format_date(request.form.get("proposed_job_date", ""))
+        proposed_job_time = request.form.get("proposed_job_time", "").strip()
+        estimate_expiration_days = _normalize_estimate_expiration_days(
+            request.form.get("estimate_expiration_days", ""),
+            default_estimate_expiration_days,
+        )
 
         new_estimate = {
             "customer_id": reference_value(customerId),
@@ -1008,9 +1199,11 @@ def create_estimate(customerId):
             "zip_code": request.form.get("job_zip_code", "").strip(),
             "created_by_employee": (session.get("employee_name") or "").strip(),
             "estimated_by_employee": estimated_by_employee,
-            "total": f"${total:.2f}" if total else "$0.00",
+            "proposed_job_date": proposed_job_date,
+            "proposed_job_time": proposed_job_time,
             "total_amount": float(total or 0.0),
             "estimate_notes": estimate_notes,
+            "estimate_expiration_days": estimate_expiration_days,
             "file_path": [],
             "latest_file_path": "",
             "created_at": datetime.utcnow(),
@@ -1021,11 +1214,35 @@ def create_estimate(customerId):
 
         try:
             business_logo_path = resolve_current_business_logo_path(db)
+            business_payload = {}
+            business_id = resolve_current_business_id(db)
+            if business_id:
+                business_doc = db.businesses.find_one(
+                    {"_id": business_id},
+                    {
+                        "company_name": 1,
+                        "business_name": 1,
+                        "address_line_1": 1,
+                        "address_line_2": 1,
+                        "city": 1,
+                        "state": 1,
+                        "zip_code": 1,
+                        "phone_number": 1,
+                        "fax_number": 1,
+                        "email": 1,
+                        "website": 1,
+                        "license_number": 1,
+                        "warranty_info": 1,
+                    },
+                )
+                if business_doc:
+                    business_payload = serialize_doc(business_doc)
             estimate_pdf_path = generate_estimate(
                 estimate_id,
                 serialize_estimate_for_pdf(new_estimate),
                 serialize_doc(customer),
                 business_logo_path=business_logo_path,
+                business=business_payload,
             )
             filename = os.path.basename(estimate_pdf_path)
             public_file_path = url_for("download_invoice", filename=filename)
@@ -1048,6 +1265,7 @@ def create_estimate(customerId):
         return redirect(url_for("jobs.view_estimate", estimateId=estimate_id))
 
     business_id = resolve_current_business_id(db)
+    default_estimate_expiration_days = _resolve_default_estimate_expiration_days(db)
     service_query = {"business_id": business_id} if business_id else {"_id": None}
     part_query = {"business_id": business_id} if business_id else {"_id": None}
     labor_query = {"business_id": business_id} if business_id else {"_id": None}
@@ -1100,6 +1318,9 @@ def create_estimate(customerId):
         discounts_catalog=discounts_catalog,
         parts_by_id=parts_by_id,
         materials_by_id=materials_by_id,
+        estimate_expiration_days=default_estimate_expiration_days,
+        proposed_job_date_value="",
+        proposed_job_time_value="",
     )
 
 
@@ -1110,9 +1331,15 @@ def view_estimate(estimateId):
     if not estimate:
         return redirect(url_for("home"))
 
+    token_value = str(request.args.get("token") or "").strip()
+    is_staff_view = _is_authenticated_employee()
+    has_customer_token = _verify_estimate_access_token(estimate, token_value)
+    if not is_staff_view and not has_customer_token:
+        return redirect(url_for("auth.login"))
+
     quote_email_template = ""
     employee_id = session.get("employee_id")
-    if employee_id and ObjectId.is_valid(employee_id):
+    if is_staff_view and employee_id and ObjectId.is_valid(employee_id):
         employee = db.employees.find_one({"_id": ObjectId(employee_id)})
         if employee:
             business_ref = employee.get("business")
@@ -1135,6 +1362,15 @@ def view_estimate(estimateId):
 
     estimate_doc = serialize_doc(estimate)
     estimate_doc["latest_file_path"] = resolve_estimate_file_path(estimate_doc)
+    estimate_doc["proposed_job_date_iso"] = _mmddyyyy_to_iso_date(estimate_doc.get("proposed_job_date"))
+    estimate_doc["date_created_iso"] = _mmddyyyy_to_iso_date(estimate_doc.get("date_created"))
+    estimate_doc["date_sent_iso"] = _mmddyyyy_to_iso_date(estimate_doc.get("date_sent"))
+    estimate_doc["date_accepted_iso"] = _mmddyyyy_to_iso_date(estimate_doc.get("date_accepted"))
+    estimate_doc["date_declined_iso"] = _mmddyyyy_to_iso_date(estimate_doc.get("date_declined"))
+    estimate_doc["accepted_signature_captured_display"] = _format_iso_datetime_for_display(
+        estimate_doc.get("accepted_signature_captured_at")
+    )
+    pricing_summary = _build_estimate_pricing_summary(estimate_doc)
 
     return render_template(
         "estimates/view_estimate.html",
@@ -1142,6 +1378,9 @@ def view_estimate(estimateId):
         estimate=estimate_doc,
         customer=customer,
         quote_email_template=quote_email_template,
+        is_staff_view=is_staff_view,
+        access_token=token_value,
+        pricing_summary=pricing_summary,
     )
 
 
@@ -1154,6 +1393,7 @@ def update_estimate(estimateId):
 
     if request.method == "POST":
         business_id = resolve_current_business_id(db)
+        default_estimate_expiration_days = _resolve_default_estimate_expiration_days(db)
         selected_property_id = request.form.get("job_property_id", "").strip()
         customer_for_property = {}
         estimate_customer_id = estimate.get("customer_id")
@@ -1243,6 +1483,12 @@ def update_estimate(estimateId):
 
         estimated_by_employee = request.form.get("job_assigned_employee", "").strip()
         estimate_notes = request.form.get("estimate_notes", "").strip()
+        proposed_job_date = format_date(request.form.get("proposed_job_date", ""))
+        proposed_job_time = request.form.get("proposed_job_time", "").strip()
+        estimate_expiration_days = _normalize_estimate_expiration_days(
+            request.form.get("estimate_expiration_days", ""),
+            default_estimate_expiration_days,
+        )
 
         updated_data = {
             "services": services,
@@ -1259,8 +1505,10 @@ def update_estimate(estimateId):
             "state": request.form.get("job_state", "").strip().upper(),
             "zip_code": request.form.get("job_zip_code", "").strip(),
             "estimated_by_employee": estimated_by_employee,
+            "proposed_job_date": proposed_job_date,
+            "proposed_job_time": proposed_job_time,
             "estimate_notes": estimate_notes,
-            "total": f"${total:.2f}" if total else "$0.00",
+            "estimate_expiration_days": estimate_expiration_days,
             "total_amount": float(total or 0.0),
             "date_updated": datetime.now().strftime("%m/%d/%Y"),
             "time_updated": datetime.now().strftime("%H:%M:%S"),
@@ -1277,12 +1525,36 @@ def update_estimate(estimateId):
                 customer = serialize_doc(customer_doc)
 
         business_logo_path = resolve_current_business_logo_path(db)
+        business_payload = {}
+        business_id = resolve_current_business_id(db)
+        if business_id:
+            business_doc = db.businesses.find_one(
+                {"_id": business_id},
+                {
+                    "company_name": 1,
+                    "business_name": 1,
+                    "address_line_1": 1,
+                    "address_line_2": 1,
+                    "city": 1,
+                    "state": 1,
+                    "zip_code": 1,
+                    "phone_number": 1,
+                    "fax_number": 1,
+                    "email": 1,
+                    "website": 1,
+                    "license_number": 1,
+                    "warranty_info": 1,
+                },
+            )
+            if business_doc:
+                business_payload = serialize_doc(business_doc)
         previous_file_path = resolve_estimate_file_path(estimate)
         estimate_pdf_path = generate_estimate(
             estimateId,
             serialize_estimate_for_pdf(estimate_for_pdf),
             customer,
             business_logo_path=business_logo_path,
+            business=business_payload,
         )
         filename = os.path.basename(estimate_pdf_path)
         public_file_path = url_for("download_invoice", filename=filename)
@@ -1331,10 +1603,17 @@ def update_estimate(estimateId):
 
     estimate_doc = serialize_doc(estimate)
     estimate_doc["file_path"] = normalize_estimate_file_history(estimate_doc.get("file_path"))
+    default_estimate_expiration_days = _resolve_default_estimate_expiration_days(db)
+    estimate_expiration_days = _normalize_estimate_expiration_days(
+        estimate_doc.get("estimate_expiration_days"),
+        default_estimate_expiration_days,
+    )
     selected_property_id = str(estimate_doc.get("property_id") or "").strip()
     if not selected_property_id:
         default_property = _resolve_default_property(customer)
         selected_property_id = str((default_property or {}).get("property_id") or "").strip()
+    proposed_job_date_value = _mmddyyyy_to_iso_date(estimate_doc.get("proposed_job_date"))
+    proposed_job_time_value = str(estimate_doc.get("proposed_job_time") or "").strip()
 
     return render_template(
         "estimates/update_estimate.html",
@@ -1360,6 +1639,9 @@ def update_estimate(estimateId):
         discounts_catalog=discounts_catalog,
         parts_by_id=parts_by_id,
         materials_by_id=materials_by_id,
+        estimate_expiration_days=estimate_expiration_days,
+        proposed_job_date_value=proposed_job_date_value,
+        proposed_job_time_value=proposed_job_time_value,
     )
 
 
@@ -1388,10 +1670,18 @@ def send_estimate_email_by_id(estimateId):
         if not os.path.exists(filepath) or not os.path.abspath(filepath).startswith(os.path.abspath(invoices_dir)):
             return jsonify({"success": False, "error": "Estimate file not found"}), 404
 
+        access_token = _issue_estimate_access_token(db, estimateId, recipient_email)
+        estimate_link = _build_estimate_view_url(estimateId, access_token=access_token, external=True)
+        appended_body = (
+            f"{body}\n\n"
+            "You can also view and accept or decline this estimate online, here:\n"
+            f"{estimate_link}"
+        )
+
         msg = Message(
             subject=subject,
             recipients=[recipient_email],
-            body=body,
+            body=appended_body,
         )
 
         with open(filepath, "rb") as f:
@@ -1423,22 +1713,44 @@ def accept_estimate(estimateId):
     if not estimate:
         return redirect(url_for("home"))
 
+    token_value = str(request.form.get("access_token") or request.args.get("token") or "").strip()
+    is_staff_view = _is_authenticated_employee()
+    if not is_staff_view and not _verify_estimate_access_token(estimate, token_value):
+        return redirect(url_for("auth.login"))
+
     current_status = str(estimate.get("status") or "").strip().lower()
     if current_status in {"accepted", "declined"}:
-        return redirect(url_for("jobs.view_estimate", estimateId=estimateId))
+        return redirect(_build_estimate_view_url(estimateId, access_token=token_value if not is_staff_view else ""))
+
+    update_data = {}
+    if not is_staff_view:
+        signature_data_url = str(request.form.get("signature_data_url") or "").strip()
+        if not signature_data_url.startswith("data:image/"):
+            return redirect(_build_estimate_view_url(estimateId, access_token=token_value))
+
+        update_data.update(
+            {
+                "accepted_signature_data_url": signature_data_url,
+                "accepted_signature_ip": _extract_client_ip(),
+                "accepted_signature_user_agent": str(request.headers.get("User-Agent") or "").strip(),
+                "accepted_signature_captured_at": datetime.utcnow(),
+                "accepted_signature_source": "public_estimate_link",
+            }
+        )
 
     now = datetime.now()
+    update_data.update(
+        {
+            "status": "Accepted",
+            "date_accepted": now.strftime("%m/%d/%Y"),
+            "time_accepted": now.strftime("%H:%M:%S"),
+        }
+    )
     db.estimates.update_one(
         {"_id": ObjectId(estimateId)},
-        {
-            "$set": {
-                "status": "Accepted",
-                "date_accepted": now.strftime("%m/%d/%Y"),
-                "time_accepted": now.strftime("%H:%M:%S"),
-            }
-        },
+        {"$set": update_data},
     )
-    return redirect(url_for("jobs.view_estimate", estimateId=estimateId))
+    return redirect(_build_estimate_view_url(estimateId, access_token=token_value if not is_staff_view else ""))
 
 
 @bp.route("/estimates/<estimateId>/decline", methods=["POST"])
@@ -1448,9 +1760,14 @@ def decline_estimate(estimateId):
     if not estimate:
         return redirect(url_for("home"))
 
+    token_value = str(request.form.get("access_token") or request.args.get("token") or "").strip()
+    is_staff_view = _is_authenticated_employee()
+    if not is_staff_view and not _verify_estimate_access_token(estimate, token_value):
+        return redirect(url_for("auth.login"))
+
     current_status = str(estimate.get("status") or "").strip().lower()
     if current_status in {"accepted", "declined"}:
-        return redirect(url_for("jobs.view_estimate", estimateId=estimateId))
+        return redirect(_build_estimate_view_url(estimateId, access_token=token_value if not is_staff_view else ""))
 
     now = datetime.now()
     db.estimates.update_one(
@@ -1463,7 +1780,7 @@ def decline_estimate(estimateId):
             }
         },
     )
-    return redirect(url_for("jobs.view_estimate", estimateId=estimateId))
+    return redirect(_build_estimate_view_url(estimateId, access_token=token_value if not is_staff_view else ""))
 
 
 @bp.route("/estimates/<estimateId>/delete", methods=["POST"])
@@ -1856,7 +2173,7 @@ def complete_job(jobId):
 
     if customer_oid and customer_doc:
         current_balance = float(customer_doc.get("balance_due_amount", currency_to_float(customer_doc.get("balance_due", "$0.00"))))
-        invoice_total = currency_to_float(job.get("total", "$0.00"))
+        invoice_total = float(job.get("total_amount", 0.0))
         updated_balance_amount = float(current_balance + invoice_total)
         updated_balance = normalize_currency(str(updated_balance_amount))
 
@@ -1938,6 +2255,7 @@ def update_job(jobId):
 
     if request.method == "POST":
         business_id = resolve_current_business_id(db)
+        default_payment_due_days = _resolve_default_payment_due_days(db)
         selected_property_id = request.form.get("job_property_id", "").strip()
         customer_for_property = {}
         job_customer_id = job.get("customer_id")
@@ -2026,6 +2344,11 @@ def update_job(jobId):
         primary_service = services[0]["type"] if services else "No services added."
         scheduled_date = format_date(request.form.get("job_date", ""))
         scheduled_time = request.form.get("job_time", "").strip()
+        payment_due_days = _normalize_payment_due_days(
+            request.form.get("payment_due_days", ""),
+            default_payment_due_days,
+        )
+        payment_due_days_offset = payment_due_days
         existing_scheduled_date = str(job.get("scheduled_date") or "").strip()
         existing_scheduled_time = str(job.get("scheduled_time") or "").strip()
         existing_date_scheduled = str(job.get("dateScheduled") or "").strip()
@@ -2082,7 +2405,7 @@ def update_job(jobId):
             "zip_code": request.form.get("job_zip_code", "").strip(),
             "assigned_employee": assigned_employee,
             "invoice_notes": request.form.get("invoice_notes", "").strip(),
-            "total": f"${total:.2f}" if total else "$0.00",
+            "payment_due_days": payment_due_days,
             "total_amount": float(total or 0.0),
         }
 
@@ -2118,7 +2441,7 @@ def update_job(jobId):
                     "zip_code": request.form.get("job_zip_code", "").strip(),
                     "assigned_employee": assigned_employee,
                     "invoice_notes": request.form.get("invoice_notes", "").strip(),
-                    "total": f"${total:.2f}" if total else "$0.00",
+                    "payment_due_days_offset": payment_due_days_offset,
                     "total_amount": float(total or 0.0),
                 }
                 if int(job.get("occurrence_index") or 0) == 1:
@@ -2151,6 +2474,7 @@ def update_job(jobId):
                     recurring_data,
                     scheduled_date,
                     scheduled_time,
+                    payment_due_days_offset,
                     request,
                 )
                 inserted_series = db.recurring_job_series.insert_one(series_doc)
@@ -2210,6 +2534,8 @@ def update_job(jobId):
     discounts_catalog = build_discount_catalog(discounts)
     parts_by_id = {p["_id"]: p["part_code"] for p in parts}
     materials_by_id = {m["_id"]: m["material_name"] for m in materials}
+    default_payment_due_days = _resolve_default_payment_due_days(db)
+    payment_due_days_value = _normalize_payment_due_days(job.get("payment_due_days"), default_payment_due_days)
     selected_property_id = str(job.get("property_id") or "").strip()
     if not selected_property_id:
         default_property = _resolve_default_property(customer)
@@ -2239,6 +2565,7 @@ def update_job(jobId):
         discounts_catalog=discounts_catalog,
         parts_by_id=parts_by_id,
         materials_by_id=materials_by_id,
+        payment_due_days_value=payment_due_days_value,
         recurring_frequency_options=RECURRING_FREQUENCY_OPTIONS,
         recurring_end_type_options=RECURRING_END_TYPE_OPTIONS,
     )

@@ -3,7 +3,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as ReportImage
 from reportlab.lib import colors
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 from PIL import Image as PILImage
@@ -70,6 +70,36 @@ def _format_time_to_am_pm(time_string):
     period = "PM" if hours24 >= 12 else "AM"
     hours12 = hours24 % 12 or 12
     return f"{hours12}:{minutes:02d} {period}"
+
+
+def _parse_mmddyyyy_date(date_string):
+    raw_value = str(date_string or "").strip()
+    if not raw_value:
+        return None
+    try:
+        return datetime.strptime(raw_value, "%m/%d/%Y")
+    except ValueError:
+        return None
+
+
+def _resolve_invoice_due_date(job):
+    existing_due_date = str((job or {}).get("payment_due_date") or "").strip()
+    if existing_due_date:
+        return existing_due_date
+
+    try:
+        payment_due_days = int(str((job or {}).get("payment_due_days") or "").strip())
+    except (TypeError, ValueError):
+        payment_due_days = 30
+    payment_due_days = max(1, payment_due_days)
+
+    base_date = _parse_mmddyyyy_date((job or {}).get("scheduled_date"))
+    if not base_date:
+        base_date = _parse_mmddyyyy_date((job or {}).get("date_created"))
+    if not base_date:
+        base_date = datetime.now()
+
+    return (base_date + timedelta(days=payment_due_days)).strftime("%m/%d/%Y")
 
 
 def _build_section_table(story, heading_style, title, headers, rows, col_widths, section_spacing=0.22 * inch):
@@ -253,6 +283,7 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
     )
 
     invoice_number = f"INV-{str(job_id)[:8].upper()}"
+    payment_due_date = _resolve_invoice_due_date(job)
 
     logo_flowable = _build_logo_flowable(business_logo_path)
     business_contact_rows = []
@@ -357,7 +388,7 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
     invoice_info_rows = [
         [Paragraph("Invoice #", info_label_style), Paragraph(invoice_number, info_value_style)],
         [Paragraph("Invoice Date", info_label_style), Paragraph(datetime.now().strftime("%m/%d/%Y"), info_value_style)],
-        [Paragraph("Due Date", info_label_style), Paragraph("TBD", info_value_style)],
+        [Paragraph("Due Date", info_label_style), Paragraph(payment_due_date, info_value_style)],
     ]
     invoice_info_table = Table(invoice_info_rows, colWidths=[1.3 * inch, 1.8 * inch])
     invoice_info_table.setStyle(
@@ -444,8 +475,8 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
         service_rows.append([Paragraph(f"{service_city}, {service_state}".strip(", "), info_value_style)])
     service_rows.extend(
         [
-            [Paragraph(f"Scheduled Date: {str(job.get('scheduled_date') or 'N/A')}", info_value_style)],
-            [Paragraph(f"Scheduled Time: {_format_time_to_am_pm(job.get('scheduled_time'))}", info_value_style)],
+            [Paragraph(f"Proposed Job Date: {str(job.get('scheduled_date') or 'N/A')}", info_value_style)],
+            [Paragraph(f"Proposed Job Time: {_format_time_to_am_pm(job.get('scheduled_time'))}", info_value_style)],
             [Paragraph(f"Assigned Employee: {str(job.get('assigned_employee') or 'N/A')}", info_value_style)],
         ]
     )
@@ -638,7 +669,7 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
     invoice_note_text = str(job.get("invoice_notes") or "").strip()
     notes_panel = None
     if invoice_note_text:
-        notes_rows = [[Paragraph("Invoice Note", section_panel_heading_style)]]
+        notes_rows = [[Paragraph("Invoice Notes", section_panel_heading_style)]]
         notes_rows.append([Paragraph(invoice_note_text, info_value_style)])
 
         notes_panel = Table(notes_rows, colWidths=[2.8 * inch])
@@ -702,12 +733,24 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
     story.append(Spacer(1, line_items_to_totals_spacer_height))
 
     story.append(totals_panel)
-    if notes_panel:
+    if notes_panel or warranty_panel:
         story.append(Spacer(1, 0.08 * inch))
-        story.append(notes_panel)
-    if warranty_panel:
-        story.append(Spacer(1, 0.08 * inch))
-        story.append(warranty_panel)
+        notes_warranty_row = Table(
+            [[notes_panel or Spacer(1, 0.01 * inch), warranty_panel or Spacer(1, 0.01 * inch)]],
+            colWidths=[3.3 * inch, 3.3 * inch],
+        )
+        notes_warranty_row.setStyle(
+            TableStyle(
+                [
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+        )
+        story.append(notes_warranty_row)
 
     story.append(Spacer(1, totals_spacer_height))
     story.append(footer_paragraph)
@@ -716,7 +759,7 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
     return filepath
 
 
-def generate_quote(job_id, job, customer, business_logo_path=""):
+def generate_quote(job_id, job, customer, business_logo_path="", business=None):
     """
     Generate a PDF quote for a job in Estimate status.
 
@@ -739,6 +782,7 @@ def generate_quote(job_id, job, customer, business_logo_path=""):
     doc = SimpleDocTemplate(filepath, pagesize=letter, topMargin=0.5 * inch, bottomMargin=0.5 * inch)
     story = []
     styles = getSampleStyleSheet()
+    business = business or {}
 
     # Custom styles
     title_style = ParagraphStyle(
@@ -758,6 +802,33 @@ def generate_quote(job_id, job, customer, business_logo_path=""):
         spaceAfter=12,
     )
 
+    info_label_style = ParagraphStyle(
+        "QuoteInfoLabel",
+        parent=styles["Normal"],
+        fontSize=8,
+        textColor=colors.HexColor("#5A6B82"),
+        fontName="Helvetica-Bold",
+        spaceAfter=2,
+        spaceBefore=1,
+        leading=9,
+    )
+
+    info_value_style = ParagraphStyle(
+        "QuoteInfoValue",
+        parent=styles["Normal"],
+        fontSize=10,
+        textColor=colors.HexColor("#1B263B"),
+        fontName="Helvetica",
+        leading=12,
+    )
+
+    section_panel_heading_style = ParagraphStyle(
+        "QuoteSectionPanelHeading",
+        parent=heading_style,
+        fontSize=11,
+        spaceAfter=4,
+    )
+
     normal_style = ParagraphStyle(
         "CustomNormal",
         parent=styles["Normal"],
@@ -765,30 +836,163 @@ def generate_quote(job_id, job, customer, business_logo_path=""):
         textColor=colors.HexColor("#1B263B"),
     )
 
-    _append_logo(story, business_logo_path)
+    company_name = (
+        str(business.get("company_name") or "").strip()
+        or str(business.get("business_name") or "").strip()
+        or "Klovent"
+    )
 
-    # Title
-    story.append(Paragraph("ESTIMATE / QUOTE", title_style))
-    story.append(Spacer(1, 0.2 * inch))
+    expiration_days_raw = str(job.get("estimate_expiration_days") or "").strip()
+    try:
+        expiration_days = max(1, int(expiration_days_raw))
+    except ValueError:
+        expiration_days = 30
 
-    # Quote header info
-    quote_info = [
-        ["Quote Date:", datetime.now().strftime("%m/%d/%Y")],
-        ["Job ID:", str(job_id)],
-        ["Valid Until:", (datetime.now() + __import__('datetime').timedelta(days=30)).strftime("%m/%d/%Y")],
-    ]
-    quote_table = Table(quote_info, colWidths=[1.5 * inch, 2 * inch])
-    quote_table.setStyle(
+    valid_until_date = (datetime.now() + timedelta(days=expiration_days)).strftime("%m/%d/%Y")
+
+    logo_flowable = _build_logo_flowable(business_logo_path)
+    business_contact_rows = []
+    if logo_flowable:
+        business_contact_rows.append([logo_flowable])
+        business_contact_rows.append([Spacer(1, 0.03 * inch)])
+    else:
+        business_contact_rows.append([Paragraph(company_name, heading_style)])
+
+    address_line_1 = str(business.get("address_line_1") or "").strip()
+    address_line_2 = str(business.get("address_line_2") or "").strip()
+    city = str(business.get("city") or "").strip()
+    state = str(business.get("state") or "").strip()
+    zip_code = str(business.get("zip_code") or "").strip()
+    phone_number = str(business.get("phone_number") or "").strip()
+    fax_number = str(business.get("fax_number") or "").strip()
+    business_email = str(business.get("email") or "").strip()
+    website = str(business.get("website") or "").strip()
+    license_number = str(business.get("license_number") or "").strip()
+
+    left_contact_rows = []
+    right_contact_rows = []
+
+    location_parts = [part for part in [city, state] if part]
+    location_line = ", ".join(location_parts)
+    if zip_code:
+        location_line = f"{location_line} {zip_code}".strip()
+
+    if address_line_1:
+        left_contact_rows.append([Paragraph(address_line_1, info_value_style)])
+    if address_line_2:
+        left_contact_rows.append([Paragraph(address_line_2, info_value_style)])
+    if location_line:
+        left_contact_rows.append([Paragraph(location_line, info_value_style)])
+    if left_contact_rows:
+        left_contact_rows.append([Spacer(1, 0.08 * inch)])
+
+    if phone_number:
+        left_contact_rows.append([Paragraph(f"Phone: {phone_number}", info_value_style)])
+        left_contact_rows.append([Spacer(1, 0.06 * inch)])
+    if fax_number:
+        left_contact_rows.append([Paragraph(f"Fax: {fax_number}", info_value_style)])
+    if license_number:
+        left_contact_rows.append([Spacer(1, 0.03 * inch)])
+        left_contact_rows.append([Paragraph(f"License #: {license_number}", info_value_style)])
+
+    if business_email:
+        right_contact_rows.append([Paragraph(business_email, info_value_style)])
+        right_contact_rows.append([Spacer(1, 0.06 * inch)])
+    if website:
+        right_contact_rows.append([Paragraph(website, info_value_style)])
+        right_contact_rows.append([Spacer(1, 0.06 * inch)])
+
+    if not left_contact_rows and not right_contact_rows:
+        left_contact_rows.append([Paragraph(company_name, info_value_style)])
+
+    left_contact_table = Table(left_contact_rows or [[Paragraph("", info_value_style)]], colWidths=[1.55 * inch])
+    right_contact_table = Table(right_contact_rows or [[Paragraph("", info_value_style)]], colWidths=[1.55 * inch])
+    for contact_table in (left_contact_table, right_contact_table):
+        contact_table.setStyle(
+            TableStyle(
+                [
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+        )
+
+    business_contact_rows.append([Table([[left_contact_table, right_contact_table]], colWidths=[1.58 * inch, 1.58 * inch])])
+
+    left_header_block = Table(business_contact_rows, colWidths=[3.2 * inch])
+    left_header_block.setStyle(
         TableStyle(
             [
-                ("FONT", (0, 0), (-1, -1), "Helvetica", 11),
-                ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1B263B")),
-                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ]
         )
     )
-    story.append(quote_table)
+
+    quote_heading_style = ParagraphStyle(
+        "QuoteHeading",
+        parent=title_style,
+        alignment=2,
+        spaceAfter=18,
+        fontSize=21,
+    )
+
+    # Quote header info
+    quote_info = [
+        [Paragraph("Quote Date", info_label_style), Paragraph(datetime.now().strftime("%m/%d/%Y"), info_value_style)],
+        [Paragraph("Valid Until", info_label_style), Paragraph(valid_until_date, info_value_style)],
+    ]
+    quote_table = Table(quote_info, colWidths=[1.3 * inch, 1.8 * inch])
+    quote_table.setStyle(
+        TableStyle(
+            [
+                ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 1),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+                ("ALIGN", (0, 0), (0, -1), "RIGHT"),
+                ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ]
+        )
+    )
+
+    right_header_block = Table(
+        [[Paragraph("ESTIMATE / QUOTE", quote_heading_style)], [Spacer(1, 0.08 * inch)], [quote_table]],
+        colWidths=[3.2 * inch],
+    )
+    right_header_block.setStyle(
+        TableStyle(
+            [
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]
+        )
+    )
+
+    header_table = Table([[left_header_block, right_header_block]], colWidths=[3.4 * inch, 3.2 * inch])
+    header_table.setStyle(
+        TableStyle(
+            [
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]
+        )
+    )
+
+    story.append(header_table)
     story.append(Spacer(1, 0.3 * inch))
 
     # Customer Information and Service Details - Two Column Layout
@@ -819,8 +1023,8 @@ def generate_quote(job_id, job, customer, business_logo_path=""):
         ["Location:", f"{job.get('address_line_1', 'N/A')}"],
         ["", f"{job.get('city', 'N/A')}, {job.get('state', 'N/A')}"],
         ["Assigned Employee:", job.get("assigned_employee", "N/A")],
-        ["Scheduled Date:", job.get("scheduled_date", "N/A")],
-        ["Scheduled Time:", job.get("scheduled_time", "N/A")],
+        ["Proposed Job Date:", job.get("scheduled_date", "N/A")],
+        ["Proposed Job Time:", _format_time_to_am_pm(job.get("scheduled_time"))],
     ]
     service_table = Table(service_info, colWidths=[0.9 * inch, 2.3 * inch])
     service_table.setStyle(
@@ -942,7 +1146,7 @@ def generate_quote(job_id, job, customer, business_logo_path=""):
 
     # Estimated Amount
     total_amount_data = [
-        ["Estimated Total:", job.get("total", "$0.00")],
+        ["Estimated Total:", _format_currency(job.get("total_amount", 0.0))],
     ]
     total_table = Table(total_amount_data, colWidths=[3 * inch, 1 * inch])
     total_table.setStyle(
@@ -959,6 +1163,79 @@ def generate_quote(job_id, job, customer, business_logo_path=""):
     )
     story.append(total_table)
     story.append(Spacer(1, 0.3 * inch))
+
+    estimate_note_text = str(job.get("estimate_notes") or "").strip()
+    if not estimate_note_text:
+        first_note = ""
+        for note in (job.get("notes") or []):
+            if isinstance(note, dict):
+                first_note = str(note.get("text") or "").strip()
+                if first_note:
+                    break
+        estimate_note_text = first_note
+
+    notes_panel = None
+    if estimate_note_text:
+        notes_rows = [[Paragraph("Estimate Notes", section_panel_heading_style)]]
+        notes_rows.append([Paragraph(estimate_note_text, normal_style)])
+        notes_panel = Table(notes_rows, colWidths=[3.3 * inch])
+        notes_panel.setStyle(
+            TableStyle(
+                [
+                    ("LINEBELOW", (0, 0), (-1, 0), 0.8, colors.HexColor("#A8B1BD")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 7),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+                    ("TOPPADDING", (0, 0), (-1, -1), 5),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+        )
+
+    business_doc = business or {}
+    warranty_info = str(business_doc.get("warranty_info") or "").strip()
+    warranty_panel = None
+    if warranty_info:
+        warranty_rows = [[Paragraph("Warranty Info", section_panel_heading_style)]]
+        for line in warranty_info.splitlines():
+            clean_line = str(line).strip()
+            if clean_line:
+                warranty_rows.append([Paragraph(clean_line, normal_style)])
+        if len(warranty_rows) == 1:
+            warranty_rows.append([Paragraph(warranty_info, normal_style)])
+
+        warranty_panel = Table(warranty_rows, colWidths=[3.3 * inch])
+        warranty_panel.setStyle(
+            TableStyle(
+                [
+                    ("LINEBELOW", (0, 0), (-1, 0), 0.8, colors.HexColor("#A8B1BD")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 7),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 7),
+                    ("TOPPADDING", (0, 0), (-1, -1), 5),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+        )
+
+    if notes_panel or warranty_panel:
+        notes_warranty_row = Table(
+            [[notes_panel or Spacer(1, 0.01 * inch), warranty_panel or Spacer(1, 0.01 * inch)]],
+            colWidths=[3.3 * inch, 3.3 * inch],
+        )
+        notes_warranty_row.setStyle(
+            TableStyle(
+                [
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+        )
+        story.append(notes_warranty_row)
+        story.append(Spacer(1, 0.18 * inch))
 
     # Footer
     footer_style = ParagraphStyle(
@@ -981,7 +1258,7 @@ def generate_quote(job_id, job, customer, business_logo_path=""):
     return filepath
 
 
-def generate_estimate(estimate_id, estimate, customer, business_logo_path=""):
+def generate_estimate(estimate_id, estimate, customer, business_logo_path="", business=None):
     """Generate a PDF estimate from an estimate document.
 
     This reuses the quote layout generator by adapting estimate keys to the
@@ -993,4 +1270,10 @@ def generate_estimate(estimate_id, estimate, customer, business_logo_path=""):
         note_text = str(estimate_payload.get("estimate_notes") or "").strip()
         estimate_payload["notes"] = [{"text": note_text}] if note_text else []
 
-    return generate_quote(estimate_id, estimate_payload, customer, business_logo_path=business_logo_path)
+    return generate_quote(
+        estimate_id,
+        estimate_payload,
+        customer,
+        business_logo_path=business_logo_path,
+        business=business,
+    )

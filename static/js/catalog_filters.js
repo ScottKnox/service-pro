@@ -12,6 +12,7 @@
   filterRoots.forEach(function (root) {
     const cards = Array.from(root.querySelectorAll('[data-catalog-card]'));
     const noResultsMessage = root.querySelector('#catalog-filter-no-results');
+    const searchInput = root.querySelector('[data-catalog-search-input]');
 
     cards.forEach(function (card) {
       const cardLinkUrl = card.dataset.cardLinkUrl;
@@ -51,16 +52,19 @@
       const selectedCategories = getCheckedValues('filter_category');
       const selectedCodes = getCheckedValues('filter_code');
       const selectedManufacturers = getCheckedValues('filter_manufacturer');
+      const searchQuery = normalizeValue(searchInput ? searchInput.value : '');
       let visibleCount = 0;
 
       cards.forEach(function (card) {
         const category = normalizeValue(card.dataset.filterCategory);
         const code = normalizeValue(card.dataset.filterCode);
         const manufacturer = normalizeValue(card.dataset.filterManufacturer);
+        const name = normalizeValue(card.dataset.filterName);
         const matchesCategory = selectedCategories.size === 0 || selectedCategories.has(category);
         const matchesCode = selectedCodes.size === 0 || selectedCodes.has(code);
         const matchesManufacturer = selectedManufacturers.size === 0 || selectedManufacturers.has(manufacturer);
-        const shouldShow = matchesCategory && matchesCode && matchesManufacturer;
+        const matchesSearch = searchQuery === '' || name.indexOf(searchQuery) !== -1;
+        const shouldShow = matchesCategory && matchesCode && matchesManufacturer && matchesSearch;
         card.style.display = shouldShow ? '' : 'none';
         if (shouldShow) {
           visibleCount += 1;
@@ -75,6 +79,11 @@
     root.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
       checkbox.addEventListener('change', applyFilters);
     });
+
+    if (searchInput) {
+      searchInput.addEventListener('input', applyFilters);
+      searchInput.addEventListener('search', applyFilters);
+    }
 
     applyFilters();
   });

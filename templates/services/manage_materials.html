@@ -62,6 +62,18 @@
           </div>
 
           <div class="jobs-controls-right-bottom">
+            <form action="#" method="get" class="catalog-search-form">
+              <label class="catalog-search-form-label" for="catalog-search-materials">Search Materials:</label>
+              <input
+                id="catalog-search-materials"
+                type="search"
+                name="q"
+                placeholder="Search materials by name"
+                aria-label="Search materials by name"
+                data-catalog-search-input
+              />
+            </form>
+
             <div id="jobs-list-container">
               <div id="jobs-list-grid" class="catalog-compact-list">
                 {% if materials %}
@@ -70,6 +82,7 @@
                       class="jobs-card"
                       href="{{ url_for('catalog.view_material', materialId=material._id) }}"
                       data-catalog-card
+                      data-filter-name="{{ material.material_name }}"
                       data-filter-category="{{ material.category }}"
                       data-filter-manufacturer="{{ material.manufacturer }}"
                     >
@@ -100,7 +113,7 @@
                 {% endif %}
               </div>
               {% if materials %}
-                <p id="catalog-filter-no-results" hidden>No materials match the selected filters.</p>
+                <p id="catalog-filter-no-results" hidden>No materials match the current search or filters.</p>
               {% endif %}
             </div>
           </div>

@@ -129,6 +129,19 @@
         <div class="add-customer-form-row job-details-layout">
           <div class="job-details-stack">
             <div class="add-customer-form-field">
+              <label for="proposed-job-date">Proposed Job Date</label>
+              <input id="proposed-job-date" name="proposed_job_date" type="date" value="{{ proposed_job_date_value|default('', true) }}" />
+            </div>
+
+            <div class="add-customer-form-field">
+              <label for="proposed-job-time">Proposed Job Time</label>
+              <input id="proposed-job-time" name="proposed_job_time" type="time" value="{{ proposed_job_time_value|default('', true) }}" />
+              <button id="clear-date-time" type="button">Clear Date and Time</button>
+            </div>
+          </div>
+
+          <div class="job-details-stack">
+            <div class="add-customer-form-field">
               <label for="job-assigned-employee">Estimated By:</label>
               <select id="job-assigned-employee" name="job_assigned_employee" required>
                 <option value="">-- Select an employee --</option>
@@ -139,8 +152,13 @@
             </div>
 
             <div class="add-customer-form-field">
-              <label for="estimate-notes">Estimate Note</label>
-              <textarea id="estimate-notes" name="estimate_notes" rows="4" placeholder="Add a note that will appear on the estimate">{{ estimate.estimate_notes|default('', true) }}</textarea>
+              <label for="estimate-notes">Estimate Notes</label>
+              <textarea id="estimate-notes" name="estimate_notes" rows="4" placeholder="Example: Scope assumptions, recommended options, exclusions, timeline expectations, and approval/payment terms for the estimate.">{{ estimate.estimate_notes|default('', true) }}</textarea>
+            </div>
+
+            <div class="add-customer-form-field">
+              <label for="estimate-expiration-days">Estimate Expiration Days</label>
+              <input id="estimate-expiration-days" name="estimate_expiration_days" type="number" min="1" step="1" value="{{ estimate_expiration_days|default(30, true) }}" required />
             </div>
           </div>
         </div>

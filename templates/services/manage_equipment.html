@@ -62,6 +62,18 @@
           </div>
 
           <div class="jobs-controls-right-bottom">
+            <form action="#" method="get" class="catalog-search-form">
+              <label class="catalog-search-form-label" for="catalog-search-equipment">Search Equipment:</label>
+              <input
+                id="catalog-search-equipment"
+                type="search"
+                name="q"
+                placeholder="Search equipment by name"
+                aria-label="Search equipment by name"
+                data-catalog-search-input
+              />
+            </form>
+
             <div id="jobs-list-container">
               <div id="jobs-list-grid" class="catalog-compact-list">
                 {% if equipment_items %}
@@ -70,6 +82,7 @@
                       class="jobs-card"
                       href="{{ url_for('catalog.view_equipment', equipmentId=equipment._id) }}"
                       data-catalog-card
+                      data-filter-name="{{ equipment.equipment_name }}"
                       data-filter-category="{{ equipment.category }}"
                       data-filter-manufacturer="{{ equipment.manufacturer }}"
                     >
@@ -100,7 +113,7 @@
                 {% endif %}
               </div>
               {% if equipment_items %}
-                <p id="catalog-filter-no-results" hidden>No equipment matches the selected filters.</p>
+                <p id="catalog-filter-no-results" hidden>No equipment matches the current search or filters.</p>
               {% endif %}
             </div>
           </div>

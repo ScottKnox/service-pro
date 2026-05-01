@@ -47,6 +47,18 @@
           </div>
 
           <div class="jobs-controls-right-bottom">
+            <form action="#" method="get" class="catalog-search-form">
+              <label class="catalog-search-form-label" for="catalog-search-labor">Search Labor:</label>
+              <input
+                id="catalog-search-labor"
+                type="search"
+                name="q"
+                placeholder="Search labor by name"
+                aria-label="Search labor by name"
+                data-catalog-search-input
+              />
+            </form>
+
             <div id="jobs-list-container">
               <div id="jobs-list-grid" class="catalog-compact-list">
                 {% if labors %}
@@ -55,6 +67,7 @@
                       class="jobs-card"
                       href="{{ url_for('catalog.view_labor', laborId=labor._id) }}"
                       data-catalog-card
+                      data-filter-name="{{ labor.labor_description }}"
                       data-filter-category="{{ labor.labor_category }}"
                     >
                       <div class="jobs-card-row">
@@ -80,7 +93,7 @@
                 {% endif %}
               </div>
               {% if labors %}
-                <p id="catalog-filter-no-results" hidden>No labor matches the selected filters.</p>
+                <p id="catalog-filter-no-results" hidden>No labor matches the current search or filters.</p>
               {% endif %}
             </div>
           </div>

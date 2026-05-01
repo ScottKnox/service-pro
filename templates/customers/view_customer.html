@@ -177,7 +177,7 @@
                 {% for estimate in customer_estimates %}
                   {% set estimate_status_normalized = estimate.status|default('', true)|lower %}
                   <a class="view-customer-card-link" href="{{ url_for('jobs.view_estimate', estimateId=estimate._id) }}">
-                    <h4>{{ estimate.date_created|default('N/A', true) }} - {{ estimate.total|default('$0.00', true) }}</h4>
+                    <h4>{{ estimate.date_created|default('N/A', true) }} - {{ estimate.total_amount|currency }}</h4>
                     <p>
                       <span class="jobs-status-chip{% if estimate_status_normalized == 'created' %} is-pending{% elif estimate_status_normalized == 'sent' %} is-scheduled{% elif estimate_status_normalized == 'accepted' %} is-started{% elif estimate_status_normalized == 'declined' %} is-declined{% endif %}">{{ estimate.status|default('Created', true) }}</span>
                       {% if estimate.estimated_by_employee %} | Estimated By {{ estimate.estimated_by_employee }}{% endif %}

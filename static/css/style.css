@@ -1272,6 +1272,37 @@ p {
   min-height: 48px;
 }
 
+.catalog-search-form {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.catalog-search-form-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1B263B;
+  white-space: nowrap;
+}
+
+.catalog-search-form input[type="search"] {
+  width: 100%;
+  max-width: 560px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #C5C7CB;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: #FFFFFF;
+  color: #1B263B;
+}
+
+.catalog-search-form input[type="search"]:focus {
+  outline: 2px solid #5FA3D3;
+  outline-offset: 1px;
+  border-color: #5FA3D3;
+}
+
 #jobs-list-container {
   width: 100%;
 }

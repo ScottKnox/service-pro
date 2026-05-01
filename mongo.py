@@ -168,7 +168,7 @@ def ensure_collection_validators(db):
     jobs_validator = {
         "$jsonSchema": {
             "bsonType": "object",
-            "required": ["customer_id", "status", "services", "total", "total_amount"],
+            "required": ["customer_id", "status", "services", "total_amount", "payment_due_days"],
             "properties": {
                 "customer_id": {"bsonType": ["objectId"]},
                 "business_id": {"bsonType": ["objectId", "null"]},
@@ -184,8 +184,8 @@ def ensure_collection_validators(db):
                 "labors": {"bsonType": "array"},
                 "equipments": {"bsonType": "array"},
                 "discounts": {"bsonType": "array"},
-                "total": {"bsonType": ["string", "null"]},
                 "total_amount": {"bsonType": ["double", "int", "long", "decimal"]},
+                "payment_due_days": {"bsonType": ["int", "long"]},
                 "created_at": {"bsonType": ["date"]},
                 "scheduled_at": {"bsonType": ["date", "null"]},
                 "completed_at": {"bsonType": ["date", "null"]},
@@ -196,7 +196,7 @@ def ensure_collection_validators(db):
     recurring_job_series_validator = {
         "$jsonSchema": {
             "bsonType": "object",
-            "required": ["customer_id", "business_id", "status", "frequency", "anchor_date", "services", "total", "total_amount"],
+            "required": ["customer_id", "business_id", "status", "frequency", "anchor_date", "services", "total_amount"],
             "properties": {
                 "customer_id": {"bsonType": ["objectId"]},
                 "business_id": {"bsonType": ["objectId", "null"]},
@@ -215,10 +215,10 @@ def ensure_collection_validators(db):
                 "labors": {"bsonType": "array"},
                 "equipments": {"bsonType": "array"},
                 "discounts": {"bsonType": "array"},
-                "total": {"bsonType": ["string", "null"]},
                 "total_amount": {"bsonType": ["double", "int", "long", "decimal"]},
                 "assigned_employee": {"bsonType": ["string", "null"]},
                 "invoice_notes": {"bsonType": ["string", "null"]},
+                "payment_due_days_offset": {"bsonType": ["int", "long", "null"]},
                 "property_id": {"bsonType": ["objectId", "string", "null"]},
                 "property_name": {"bsonType": ["string", "null"]},
                 "address_line_1": {"bsonType": ["string", "null"]},
@@ -234,7 +234,7 @@ def ensure_collection_validators(db):
     estimates_validator = {
         "$jsonSchema": {
             "bsonType": "object",
-            "required": ["customer_id", "status", "services", "total", "total_amount"],
+            "required": ["customer_id", "status", "services", "total_amount", "estimate_expiration_days", "proposed_job_date", "proposed_job_time"],
             "properties": {
                 "customer_id": {"bsonType": ["objectId"]},
                 "status": {"enum": ["Created", "Sent", "Accepted", "Declined"]},
@@ -245,7 +245,9 @@ def ensure_collection_validators(db):
                 "equipments": {"bsonType": "array"},
                 "discounts": {"bsonType": "array"},
                 "estimate_notes": {"bsonType": ["string", "null"]},
-                "total": {"bsonType": ["string", "null"]},
+                "estimate_expiration_days": {"bsonType": ["int", "long"]},
+                "proposed_job_date": {"bsonType": ["string"]},
+                "proposed_job_time": {"bsonType": ["string"]},
                 "total_amount": {"bsonType": ["double", "int", "long", "decimal"]},
                 "created_at": {"bsonType": ["date"]},
             },

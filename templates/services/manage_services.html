@@ -62,6 +62,18 @@
           </div>
 
           <div class="jobs-controls-right-bottom">
+            <form action="#" method="get" class="catalog-search-form">
+              <label class="catalog-search-form-label" for="catalog-search-services">Search Services:</label>
+              <input
+                id="catalog-search-services"
+                type="search"
+                name="q"
+                placeholder="Search services by name"
+                aria-label="Search services by name"
+                data-catalog-search-input
+              />
+            </form>
+
             <div id="jobs-list-container">
               <div id="jobs-list-grid" class="catalog-compact-list">
                 {% if services %}
@@ -70,6 +82,7 @@
                       class="jobs-card"
                       href="{{ url_for('catalog.view_service', serviceId=service._id) }}"
                       data-catalog-card
+                      data-filter-name="{{ service.service_name }}"
                       data-filter-category="{{ service.category }}"
                       data-filter-code="{{ service.service_code }}"
                     >
@@ -100,7 +113,7 @@
                 {% endif %}
               </div>
               {% if services %}
-                <p id="catalog-filter-no-results" hidden>No services match the selected filters.</p>
+                <p id="catalog-filter-no-results" hidden>No services match the current search or filters.</p>
               {% endif %}
             </div>
           </div>

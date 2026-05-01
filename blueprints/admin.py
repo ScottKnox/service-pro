@@ -6,7 +6,6 @@ from bson import ObjectId
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
 
 from mongo import ensure_connection_or_500
-from utils.currency import currency_to_float
 from utils.invoices import collect_invoice_items
 
 bp = Blueprint("admin_bp", __name__)
@@ -176,7 +175,7 @@ def _build_revenue_performance_report(db, business_id=None):
         _rev_filter["business_id"] = business_id
     completed_jobs = db.jobs.find(
         _rev_filter,
-        {"total": 1, "total_amount": 1, "dateCompleted": 1, "completed_at": 1},
+        {"total_amount": 1, "dateCompleted": 1, "completed_at": 1},
     )
 
     for job in completed_jobs:
@@ -184,7 +183,7 @@ def _build_revenue_performance_report(db, business_id=None):
         if not completed_at:
             continue
         completed_day = completed_at.date()
-        amount = _coerce_float(job.get("total_amount")) if job.get("total_amount") is not None else currency_to_float(job.get("total"))
+        amount = _coerce_float(job.get("total_amount"))
 
         if mtd_start <= completed_day <= mtd_end:
             mtd_total += amount
@@ -288,7 +287,6 @@ def _build_accounts_receivable_summary(db, business_id=None):
             "datePaid": 1,
             "paid_at": 1,
             "status": 1,
-            "total": 1,
             "total_amount": 1,
         },
     ))
@@ -689,7 +687,6 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
         rev_filter,
         {
             "total_amount": 1,
-            "total": 1,
             "completed_at": 1,
             "dateCompleted": 1,
             "services": 1,
@@ -707,7 +704,7 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
             if not completed_at:
                 continue
             if range_start <= completed_at <= range_end:
-                amount = _coerce_float(job.get("total_amount")) if job.get("total_amount") is not None else currency_to_float(job.get("total"))
+                amount = _coerce_float(job.get("total_amount"))
                 total += amount
                 count += 1
                 for svc in (job.get("services") or []):
@@ -755,7 +752,7 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
         completed_at = _job_completed_datetime(job)
         if not completed_at or not (start_dt <= completed_at <= end_dt):
             continue
-        job_amount = _coerce_float(job.get("total_amount")) if job.get("total_amount") is not None else currency_to_float(job.get("total"))
+        job_amount = _coerce_float(job.get("total_amount"))
         services_list = job.get("services") or []
         if not services_list:
             service_type_totals.setdefault("Uncategorized", 0.0)
@@ -785,7 +782,7 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
         if not completed_at or not (start_dt <= completed_at <= end_dt):
             continue
 
-        job_amount = _coerce_float(job.get("total_amount")) if job.get("total_amount") is not None else currency_to_float(job.get("total"))
+        job_amount = _coerce_float(job.get("total_amount"))
 
         equipment_list = job.get("equipments") or []
         if equipment_list:
@@ -848,7 +845,7 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
         if not completed_at or not (start_dt <= completed_at <= end_dt):
             continue
 
-        amount = _coerce_float(job.get("total_amount")) if job.get("total_amount") is not None else currency_to_float(job.get("total"))
+        amount = _coerce_float(job.get("total_amount"))
         customer_id = str(job.get("customer_id") or "").strip()
         added_at = customer_map.get(customer_id)
         age_days = (completed_at - added_at).days if added_at else None

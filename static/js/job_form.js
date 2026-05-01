@@ -76,7 +76,9 @@
   const estimateField = document.getElementById('job-is-estimate');
   const dateField = document.getElementById('job-date');
   const timeField = document.getElementById('job-time');
-  const clearDateTimeButton = document.getElementById('clear-date-time');
+  const clearDateTimeButton = document.getElementById('clear-date-time') || document.getElementById('clear-proposed-date-time');
+  const clearableDateField = dateField || document.getElementById('proposed-job-date');
+  const clearableTimeField = timeField || document.getElementById('proposed-job-time');
   const dateFieldContainer = dateField ? dateField.closest('.add-customer-form-field') : null;
   const timeFieldContainer = timeField ? timeField.closest('.add-customer-form-field') : null;
   const scheduleTypeField = document.getElementById('job-schedule-type');
@@ -1479,11 +1481,11 @@
 
   if (clearDateTimeButton) {
     clearDateTimeButton.addEventListener('click', function () {
-      if (dateField) {
-        dateField.value = '';
+      if (clearableDateField) {
+        clearableDateField.value = '';
       }
-      if (timeField) {
-        timeField.value = '';
+      if (clearableTimeField) {
+        clearableTimeField.value = '';
       }
       dateTouched = false;
       timeTouched = false;

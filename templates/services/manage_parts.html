@@ -86,6 +86,18 @@
           </div>
 
           <div class="jobs-controls-right-bottom">
+            <form action="#" method="get" class="catalog-search-form">
+              <label class="catalog-search-form-label" for="catalog-search-parts">Search Parts:</label>
+              <input
+                id="catalog-search-parts"
+                type="search"
+                name="q"
+                placeholder="Search parts by name"
+                aria-label="Search parts by name"
+                data-catalog-search-input
+              />
+            </form>
+
             <div id="jobs-list-container">
               <div id="jobs-list-grid" class="catalog-compact-list">
                 {% if parts %}
@@ -94,6 +106,7 @@
                       class="jobs-card"
                       data-catalog-card
                       data-card-link-url="{{ url_for('catalog.view_part', partId=part._id) }}"
+                      data-filter-name="{{ part.part_name }}"
                       data-filter-category="{{ part.category }}"
                       data-filter-code="{{ part.part_code }}"
                       data-filter-manufacturer="{{ part.manufacturer|default('', true) }}"
@@ -133,7 +146,7 @@
                 {% endif %}
               </div>
               {% if parts %}
-                <p id="catalog-filter-no-results" hidden>No parts match the selected filters.</p>
+                <p id="catalog-filter-no-results" hidden>No parts match the current search or filters.</p>
               {% endif %}
             </div>
           </div>

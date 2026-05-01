@@ -89,6 +89,16 @@
               </div>
 
               <div class="view-customer-detail-item">
+                <h4>Default Estimate Expiration Days</h4>
+                <p>{{ business.get('default_estimate_expiration_days', 30) }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Default Payment Due Days</h4>
+                <p>{{ business.get('default_payment_due_days', 30) }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
                 <h4>Quote Email Template</h4>
                 <p>{{ business.get('quote_email_template', '') }}</p>
               </div>

@@ -142,6 +142,11 @@
               <span id="error-time" class="form-field-error" style="display:none;">Scheduled Time is required</span>
               <button id="clear-date-time" type="button">Clear Date and Time</button>
             </div>
+
+            <div class="add-customer-form-field">
+              <label for="payment-due-days">Payment Due Days</label>
+              <input id="payment-due-days" name="payment_due_days" type="number" min="1" step="1" value="{{ payment_due_days_value|default(30, true) }}" required />
+            </div>
           </div>
 
           <div class="job-details-stack">
@@ -172,8 +177,8 @@
             </div>
 
             <div class="add-customer-form-field">
-              <label for="invoice-notes">Invoice Note</label>
-              <textarea id="invoice-notes" name="invoice_notes" rows="4" placeholder="Add a note that will appear on the invoice">{{ job.invoice_notes|default('', true) }}</textarea>
+              <label for="invoice-notes">Invoice Notes</label>
+              <textarea id="invoice-notes" name="invoice_notes" rows="4" placeholder="Example: Payment terms, permit details, parts/labor summary, completion scope, and customer care instructions shown on the invoice.">{{ job.invoice_notes|default('', true) }}</textarea>
             </div>
           </div>
         </div>

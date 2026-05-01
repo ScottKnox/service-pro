@@ -213,7 +213,7 @@
               {% endif %}
               <div class="view-job-detail-item">
                 <h4>Total</h4>
-                <p>{{ job.total }}</p>
+                <p>{{ job.total_amount|currency }}</p>
               </div>
               {% if detail_job_status_normalized == 'started' or detail_job_status_normalized == 'completed' or detail_job_status_normalized == 'paid' %}
               <div class="view-job-detail-item">

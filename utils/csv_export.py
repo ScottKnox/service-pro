@@ -21,8 +21,9 @@ def _serialize_csv_value(value):
     return str(value)
 
 
-def build_csv_export_response(rows, filename, excluded_fields=None):
+def build_csv_export_response(rows, filename, excluded_fields=None, field_transformers=None):
     excluded_fields = set(excluded_fields or [])
+    field_transformers = dict(field_transformers or {})
     header_fields = []
 
     for row in rows:
@@ -41,7 +42,9 @@ def build_csv_export_response(rows, filename, excluded_fields=None):
     for row in rows:
         writer.writerow(
             {
-                key: _serialize_csv_value(row.get(key))
+                key: _serialize_csv_value(
+                    field_transformers[key](row.get(key)) if key in field_transformers else row.get(key)
+                )
                 for key in header_fields
             }
         )
