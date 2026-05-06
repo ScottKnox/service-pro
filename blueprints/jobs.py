@@ -954,6 +954,30 @@ def _build_job_paid_timestamp_text():
     return datetime.now().strftime("%m/%d/%Y %H:%M:%S")
 
 
+def _resolve_invoice_identifiers_from_session_id(db, stripe_session_id):
+    session_id = str(stripe_session_id or "").strip()
+    if not session_id:
+        return "", ""
+
+    job = db.jobs.find_one(
+        {"invoices.stripe_checkout_session_id": session_id},
+        {"_id": 1, "invoices": 1},
+    )
+    if not job:
+        return "", ""
+
+    job_id = str(job.get("_id") or "").strip()
+    for entry in list(job.get("invoices") or []):
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("stripe_checkout_session_id") or "").strip() != session_id:
+            continue
+        invoice_ref = str(entry.get("invoice_id") or entry.get("invoice_number") or "").strip()
+        if invoice_ref:
+            return job_id, invoice_ref
+    return "", ""
+
+
 def _finalize_invoice_payment(db, job_id, invoice_ref, stripe_session_id="", payment_intent_id="", amount_paid=0.0):
     job = db.jobs.find_one({"_id": ObjectId(job_id)})
     if not job:
@@ -1025,14 +1049,32 @@ def _finalize_invoice_payment(db, job_id, invoice_ref, stripe_session_id="", pay
 
 
 def process_stripe_checkout_completed(db, checkout_session):
+    stripe_session_id = str(_stripe_obj_value(checkout_session, "id", "") or "").strip()
     metadata_raw = _stripe_obj_value(checkout_session, "metadata", {}) or {}
     metadata = _stripe_obj_dict(metadata_raw)
     job_id = str(metadata.get("job_id") or "").strip()
     invoice_ref = str(metadata.get("invoice_ref") or "").strip()
+
+    if not job_id or not invoice_ref:
+        client_reference_id = str(_stripe_obj_value(checkout_session, "client_reference_id", "") or "").strip()
+        if ":" in client_reference_id:
+            parsed_job_id, parsed_invoice_ref = client_reference_id.split(":", 1)
+            if not job_id:
+                job_id = str(parsed_job_id or "").strip()
+            if not invoice_ref:
+                invoice_ref = str(parsed_invoice_ref or "").strip()
+
+    if (not job_id or not invoice_ref) and stripe_session_id:
+        resolved_job_id, resolved_invoice_ref = _resolve_invoice_identifiers_from_session_id(db, stripe_session_id)
+        if not job_id:
+            job_id = resolved_job_id
+        if not invoice_ref:
+            invoice_ref = resolved_invoice_ref
+
     if not job_id or not invoice_ref or not ObjectId.is_valid(job_id):
         current_app.logger.warning(
             "Stripe checkout completion ignored due to missing metadata: session_id=%s job_id=%s invoice_ref=%s",
-            str(_stripe_obj_value(checkout_session, "id", "") or ""),
+            stripe_session_id,
             job_id,
             invoice_ref,
         )
@@ -1040,7 +1082,6 @@ def process_stripe_checkout_completed(db, checkout_session):
 
     amount_total = float(_stripe_obj_value(checkout_session, "amount_total", 0) or 0) / 100.0
     payment_intent_id = str(_stripe_obj_value(checkout_session, "payment_intent", "") or "").strip()
-    stripe_session_id = str(_stripe_obj_value(checkout_session, "id", "") or "").strip()
     return _finalize_invoice_payment(
         db,
         job_id,
@@ -2594,6 +2635,7 @@ def create_invoice_checkout_session(jobId, invoiceRef):
         mode="payment",
         payment_method_types=["card"],
         customer_email=customer_email or None,
+        client_reference_id=f"{jobId}:{str(invoice.get('invoice_id') or invoiceRef)}",
         line_items=[
             {
                 "price_data": {
@@ -2623,6 +2665,26 @@ def create_invoice_checkout_session(jobId, invoiceRef):
         success_url=success_url,
         cancel_url=cancel_url,
     )
+
+    checkout_session_id = str(getattr(checkout_session, "id", "") or checkout_session.get("id") or "").strip()
+    if checkout_session_id:
+        updated_invoices = []
+        normalized_invoice_ref = str(invoiceRef or "").strip()
+        for entry in list(job_doc.get("invoices") or []):
+            if not isinstance(entry, dict):
+                updated_invoices.append(entry)
+                continue
+            entry_invoice_id = str(entry.get("invoice_id") or "").strip()
+            entry_invoice_number = str(entry.get("invoice_number") or "").strip()
+            updated_entry = dict(entry)
+            if normalized_invoice_ref in {entry_invoice_id, entry_invoice_number}:
+                updated_entry["stripe_checkout_session_id"] = checkout_session_id
+            updated_invoices.append(updated_entry)
+
+        db.jobs.update_one(
+            {"_id": ObjectId(jobId)},
+            {"$set": {"invoices": updated_invoices, "updated_at": datetime.utcnow()}},
+        )
 
     return jsonify({"success": True, "checkout_url": checkout_session.url}), 200
 
