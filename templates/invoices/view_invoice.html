@@ -7,6 +7,9 @@
   <div id="main-container">
     <div id="view-job-panel">
       <h1>Invoice {{ invoice.invoice_number|default('', true) }}</h1>
+      {% set invoice_status_normalized = invoice.payment_status|default('', true)|lower %}
+      {% set job_status_normalized = job.status|default('', true)|lower %}
+      {% set invoice_is_paid = invoice_status_normalized == 'paid' or job_status_normalized == 'paid' %}
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
@@ -20,11 +23,38 @@
         </ol>
       </nav>
 
+      {% if payment_state == 'success' and not invoice_is_paid %}
+        <div id="view-job-recurring-status-note" style="border: 1px solid #B7D8C9; background-color: #EEF9F1; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
+          <p style="margin: 0; color: #185A37; font-weight: 600;">Payment session completed successfully. We are confirming the payment now.</p>
+        </div>
+      {% elif payment_state == 'canceled' %}
+        <div id="view-job-missing-scheduling-note" style="border: 1px solid #FFA500; background-color: #FFF8DC; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
+          <p style="color: #B8860B; font-weight: 600; margin: 0;">Payment was canceled before completion.</p>
+        </div>
+      {% endif %}
+
+      {% if invoice_is_paid %}
+        <div id="view-job-recurring-status-note" style="border: 1px solid #B7D8C9; background-color: #EEF9F1; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
+          <p style="margin: 0; color: #185A37; font-weight: 600;">
+            Payment received{% if invoice.paid_at %} on {{ invoice.paid_at }}{% elif job.datePaid %} on {{ job.datePaid }}{% endif %}.
+          </p>
+        </div>
+      {% endif %}
+
       {% if is_staff_view %}
       <section id="view-job-actions" aria-labelledby="view-job-actions-header">
         <h2 id="view-job-actions-header">Actions</h2>
         <div id="view-job-actions-row">
           <a href="{{ url_for('jobs.view_job', jobId=jobId) }}">Back To Job</a>
+          {% if not invoice_is_paid %}
+            <button type="button" id="open-payment-options-modal" class="estimate-customer-action-btn estimate-customer-action-btn-accept">
+              Collect Payment
+            </button>
+          {% else %}
+            <button type="button" class="estimate-customer-action-btn estimate-customer-action-btn-accept" disabled>
+              Payment Collected
+            </button>
+          {% endif %}
           <button
             type="button"
             class="estimate-email-btn"
@@ -200,10 +230,20 @@
         {% if not is_staff_view %}
           <div class="estimate-stack-block estimate-customer-actions-block">
             <h3>Make A Payment</h3>
-            <p class="estimate-customer-status-text">Online payment is coming soon. You can still call our office to pay this invoice today.</p>
+            {% if invoice_is_paid %}
+              <p class="estimate-customer-status-text">This invoice has already been paid. Thank you.</p>
+            {% else %}
+              <p class="estimate-customer-status-text">Choose a payment method to continue. Card and ACH checkout are coming soon.</p>
+              {% if not stripe_connect_ready and stripe_connect_reason %}
+                <p class="estimate-customer-status-text" style="color: #b8860b;">{{ stripe_connect_reason }}</p>
+              {% endif %}
+            {% endif %}
             <div class="estimate-customer-actions">
-              <button type="button" class="estimate-customer-action-btn estimate-customer-action-btn-accept" disabled>Pay By Card (Coming Soon)</button>
-              <button type="button" class="estimate-customer-action-btn estimate-customer-action-btn-decline" disabled>Pay By ACH (Coming Soon)</button>
+              {% if not invoice_is_paid %}
+                <button type="button" id="open-payment-options-modal" class="estimate-customer-action-btn estimate-customer-action-btn-accept">Make Payment</button>
+              {% else %}
+                <button type="button" class="estimate-customer-action-btn estimate-customer-action-btn-accept" disabled>Invoice Paid</button>
+              {% endif %}
             </div>
           </div>
         {% endif %}
@@ -245,10 +285,121 @@
     </div>
   </div>
   {% endif %}
+
+  <div id="payment-options-modal" class="modal" hidden>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>{% if is_staff_view %}Collect Payment{% else %}Make Payment{% endif %}</h2>
+        <button class="modal-close-btn" id="payment-modal-close-btn">&times;</button>
+      </div>
+      <div class="estimate-stack-block" style="margin: 0;">
+        {% if invoice_is_paid %}
+          <p class="estimate-customer-status-text" style="margin-bottom: 1rem;">This invoice is already paid.</p>
+        {% else %}
+          <p class="estimate-customer-status-text" style="margin-bottom: 1rem;">
+            {% if is_staff_view %}
+              Choose how you want to collect this invoice payment.
+            {% else %}
+              Choose your preferred payment method.
+            {% endif %}
+          </p>
+          {% if not stripe_connect_ready and stripe_connect_reason %}
+            <p class="estimate-customer-status-text" style="margin-bottom: 1rem; color: #b8860b;">{{ stripe_connect_reason }}</p>
+          {% endif %}
+        {% endif %}
+        <div class="estimate-customer-actions" style="flex-direction: column; align-items: stretch;">
+          <button type="button" id="start-stripe-card-checkout" class="estimate-customer-action-btn estimate-customer-action-btn-accept" {% if invoice_is_paid or not stripe_connect_ready %}disabled{% endif %}>Pay By Card</button>
+          <button type="button" class="estimate-customer-action-btn estimate-customer-action-btn-accept" disabled>Pay By ACH (Coming Soon)</button>
+          <button type="button" class="estimate-customer-action-btn" {% if invoice_is_paid %}disabled{% endif %}>Pay By Check</button>
+          <button type="button" class="estimate-customer-action-btn" {% if invoice_is_paid %}disabled{% endif %}>Pay By Cash</button>
+          <button type="button" class="estimate-customer-action-btn" {% if invoice_is_paid %}disabled{% endif %}>Pay By Phone</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-cancel-btn" id="payment-modal-cancel-btn">Close</button>
+      </div>
+    </div>
+  </div>
 {% endblock %}
 
 {% block scripts %}
   {% if is_staff_view %}
     <script src="{{ url_for('static', filename='js/view_job.js') }}" defer></script>
   {% endif %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var paymentModal = document.getElementById('payment-options-modal');
+      var openPaymentButtons = document.querySelectorAll('#open-payment-options-modal');
+      var closePaymentBtn = document.getElementById('payment-modal-close-btn');
+      var cancelPaymentBtn = document.getElementById('payment-modal-cancel-btn');
+      var stripeCheckoutBtn = document.getElementById('start-stripe-card-checkout');
+
+      if (!paymentModal || !openPaymentButtons.length) {
+        return;
+      }
+
+      function openPaymentModal() {
+        paymentModal.hidden = false;
+        paymentModal.classList.add('is-open');
+      }
+
+      function closePaymentModal() {
+        paymentModal.classList.remove('is-open');
+        paymentModal.hidden = true;
+      }
+
+      openPaymentButtons.forEach(function (button) {
+        button.addEventListener('click', function (event) {
+          event.preventDefault();
+          openPaymentModal();
+        });
+      });
+
+      if (closePaymentBtn) {
+        closePaymentBtn.addEventListener('click', closePaymentModal);
+      }
+      if (cancelPaymentBtn) {
+        cancelPaymentBtn.addEventListener('click', closePaymentModal);
+      }
+
+      paymentModal.addEventListener('click', function (event) {
+        if (event.target === paymentModal) {
+          closePaymentModal();
+        }
+      });
+
+      if (stripeCheckoutBtn) {
+        stripeCheckoutBtn.addEventListener('click', function () {
+          var originalText = stripeCheckoutBtn.textContent;
+          stripeCheckoutBtn.disabled = true;
+          stripeCheckoutBtn.textContent = 'Redirecting...';
+
+          var checkoutUrl = new URL("{{ url_for('jobs.create_invoice_checkout_session', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true), _external=True) }}");
+          checkoutUrl.searchParams.set('access_token', "{{ access_token|default('', true) }}");
+          checkoutUrl.searchParams.set('customer_email', "{{ customer.email|default('', true) }}");
+
+          fetch(checkoutUrl.toString(), {
+            method: 'GET',
+          })
+            .then(function (response) {
+              return response.json();
+            })
+            .then(function (data) {
+              if (data.success && data.checkout_url) {
+                window.location.href = data.checkout_url;
+                return;
+              }
+              stripeCheckoutBtn.disabled = false;
+              stripeCheckoutBtn.textContent = originalText;
+              alert('Unable to start card payment: ' + (data.error || 'Unknown error'));
+            })
+            .catch(function (error) {
+              stripeCheckoutBtn.disabled = false;
+              stripeCheckoutBtn.textContent = originalText;
+              alert('Unable to start card payment: ' + error);
+            });
+        });
+      }
+    });
+  </script>
 {% endblock %}

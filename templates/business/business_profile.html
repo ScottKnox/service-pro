@@ -19,8 +19,18 @@
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
           <a href="{{ url_for('business.update_business') }}">Update Business</a>
+          <form method="POST" action="{{ url_for('business.connect_stripe_account') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit">{% if stripe_connect_ready %}Manage Stripe Connect{% else %}Connect Stripe Account{% endif %}</button>
+          </form>
         </div>
       </section>
+
+      {% if stripe_status_message %}
+        <p class="business-logo-status {{ 'is-success' if stripe_status_kind == 'success' else 'is-error' }}" style="margin-top: 0.8rem; margin-bottom: 0.8rem;">
+          {{ stripe_status_message }}
+        </p>
+      {% endif %}
 
       <section id="view-customer-details" aria-label="Business details">
         <h2>Business Details</h2>
@@ -111,6 +121,26 @@
               <div class="view-customer-detail-item">
                 <h4>Report Email Template</h4>
                 <p>{{ business.get('report_email_template', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Stripe Account ID</h4>
+                <p>{{ stripe_account_id|default('Not Connected', true) }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Stripe Charges Enabled</h4>
+                <p>{{ 'Yes' if stripe_charges_enabled else 'No' }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Stripe Payouts Enabled</h4>
+                <p>{{ 'Yes' if stripe_payouts_enabled else 'No' }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Stripe Connect Ready</h4>
+                <p>{{ 'Yes' if stripe_connect_ready else 'No' }}</p>
               </div>
             </div>
 

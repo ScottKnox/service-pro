@@ -3,6 +3,7 @@ import os
 from PIL import Image
 from bson import ObjectId
 from flask import Blueprint, current_app, redirect, render_template, request, session, url_for
+import stripe
 
 from mongo import ensure_connection_or_500, serialize_doc
 
@@ -15,6 +16,43 @@ MIN_LOGO_HEIGHT = 100
 MAX_LOGO_WIDTH = 2400
 MAX_LOGO_HEIGHT = 1400
 LOGO_UPLOAD_SUBDIR = os.path.join("uploads", "logos")
+
+
+def _configure_stripe_client():
+    secret_key = str(os.getenv("STRIPE_SECRET_KEY") or "").strip()
+    if not secret_key:
+        return ""
+    stripe.api_key = secret_key
+    return secret_key
+
+
+def _stripe_status_payload(status):
+    if status == "connected":
+        return "success", "Stripe account connected successfully."
+    if status == "refreshed":
+        return "error", "Stripe onboarding expired. Please try connecting again."
+    if status == "missing_config":
+        return "error", "Stripe is not configured. Add STRIPE_SECRET_KEY first."
+    if status == "connect_failed":
+        return "error", "Unable to start Stripe onboarding. Please try again."
+    return "", ""
+
+
+def _stripe_obj_value(obj, key, default=None):
+    if obj is None:
+        return default
+    try:
+        value = getattr(obj, key)
+        if value is not None:
+            return value
+    except Exception:
+        pass
+    try:
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return obj[key]
+    except Exception:
+        return default
 
 
 def _is_authorized():
@@ -96,6 +134,12 @@ def business_profile():
         logo_url = url_for("static", filename=f"{LOGO_UPLOAD_SUBDIR}/{custom_logo}")
 
     logo_status_kind, logo_status_message = _logo_status_payload(request.args.get("logo_status", ""))
+    stripe_status_kind, stripe_status_message = _stripe_status_payload(request.args.get("stripe_status", ""))
+
+    stripe_account_id = str(business.get("stripe_account_id") or "").strip()
+    stripe_charges_enabled = bool(business.get("stripe_charges_enabled"))
+    stripe_payouts_enabled = bool(business.get("stripe_payouts_enabled"))
+    stripe_connect_ready = bool(stripe_account_id and stripe_charges_enabled and stripe_payouts_enabled)
 
     return render_template(
         "business/business_profile.html",
@@ -103,7 +147,125 @@ def business_profile():
         logo_url=logo_url,
         logo_status_kind=logo_status_kind,
         logo_status_message=logo_status_message,
+        stripe_status_kind=stripe_status_kind,
+        stripe_status_message=stripe_status_message,
+        stripe_account_id=stripe_account_id,
+        stripe_charges_enabled=stripe_charges_enabled,
+        stripe_payouts_enabled=stripe_payouts_enabled,
+        stripe_connect_ready=stripe_connect_ready,
     )
+
+
+@bp.route("/business/stripe/connect", methods=["POST"])
+def connect_stripe_account():
+    if not _is_authorized():
+        return redirect(url_for("admin_bp.admin"))
+
+    db = ensure_connection_or_500()
+    employee, business_oid, business = _business_context(db)
+    if not employee:
+        session.clear()
+        return redirect(url_for("auth.login"))
+    if not business_oid or not business:
+        return redirect(url_for("error_page", error="no_business"))
+
+    if not _configure_stripe_client():
+        return redirect(url_for("business.business_profile", stripe_status="missing_config"))
+
+    company_name = str((business or {}).get("company_name") or (business or {}).get("business_name") or "").strip()
+    business_email = str((business or {}).get("email") or "").strip()
+    business_website = str((business or {}).get("website") or "").strip()
+
+    try:
+        stripe_account_id = str((business or {}).get("stripe_account_id") or "").strip()
+        if stripe_account_id:
+            account = stripe.Account.retrieve(stripe_account_id)
+        else:
+            account = stripe.Account.create(
+                type="express",
+                country=str(os.getenv("STRIPE_COUNTRY") or "US").strip() or "US",
+                email=business_email or None,
+                business_profile={
+                    "name": company_name or None,
+                    "url": business_website or None,
+                },
+                metadata={
+                    "business_id": str(business_oid),
+                },
+            )
+            stripe_account_id = str(_stripe_obj_value(account, "id", "") or "").strip()
+
+        if not stripe_account_id:
+            current_app.logger.error("Stripe onboarding failed before account link creation: missing account id for business_id=%s", str(business_oid))
+            return redirect(url_for("business.business_profile", stripe_status="connect_failed"))
+
+        refresh_url = url_for("business.refresh_stripe_connect", _external=True)
+        return_url = url_for("business.complete_stripe_connect", _external=True)
+        account_link = stripe.AccountLink.create(
+            account=stripe_account_id,
+            refresh_url=refresh_url,
+            return_url=return_url,
+            type="account_onboarding",
+        )
+
+        db.businesses.update_one(
+            {"_id": business_oid},
+            {
+                "$set": {
+                    "stripe_account_id": stripe_account_id,
+                    "stripe_connect_status": "pending",
+                }
+            },
+        )
+
+        return redirect(str(_stripe_obj_value(account_link, "url", "") or url_for("business.business_profile")))
+    except Exception as exc:
+        current_app.logger.exception("Stripe onboarding failed: business_id=%s error=%s", str(business_oid), exc)
+        return redirect(url_for("business.business_profile", stripe_status="connect_failed"))
+
+
+@bp.route("/business/stripe/refresh")
+def refresh_stripe_connect():
+    return redirect(url_for("business.business_profile", stripe_status="refreshed"))
+
+
+@bp.route("/business/stripe/complete")
+def complete_stripe_connect():
+    if not _is_authorized():
+        return redirect(url_for("admin_bp.admin"))
+
+    db = ensure_connection_or_500()
+    employee, business_oid, business = _business_context(db)
+    if not employee:
+        session.clear()
+        return redirect(url_for("auth.login"))
+    if not business_oid or not business:
+        return redirect(url_for("error_page", error="no_business"))
+    if not _configure_stripe_client():
+        return redirect(url_for("business.business_profile", stripe_status="missing_config"))
+
+    stripe_account_id = str((business or {}).get("stripe_account_id") or "").strip()
+    if not stripe_account_id:
+        return redirect(url_for("business.business_profile", stripe_status="connect_failed"))
+
+    try:
+        account = stripe.Account.retrieve(stripe_account_id)
+        db.businesses.update_one(
+            {"_id": business_oid},
+            {
+                "$set": {
+                    "stripe_account_id": stripe_account_id,
+                    "stripe_charges_enabled": bool(_stripe_obj_value(account, "charges_enabled", False)),
+                    "stripe_payouts_enabled": bool(_stripe_obj_value(account, "payouts_enabled", False)),
+                    "stripe_details_submitted": bool(_stripe_obj_value(account, "details_submitted", False)),
+                    "stripe_connect_status": "connected" if (_stripe_obj_value(account, "charges_enabled", False) and _stripe_obj_value(account, "payouts_enabled", False)) else "pending",
+                }
+            },
+        )
+        return redirect(url_for("business.business_profile", stripe_status="connected"))
+    except Exception as exc:
+        current_app.logger.exception("Stripe connect completion failed: business_id=%s stripe_account_id=%s error=%s", str(business_oid), stripe_account_id, exc)
+        return redirect(url_for("business.business_profile", stripe_status="connect_failed"))
 
 
 @bp.route("/business/logo", methods=["POST"])

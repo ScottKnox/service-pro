@@ -38,3 +38,44 @@ The app reads and writes these collections in the configured database:
 - customers
 - jobs
 - services
+
+## Stripe test payments (local)
+
+Use this checklist to test invoice card payments in Stripe test mode only.
+
+Install Stripe: winget install Stripe.StripeCLI
+
+1. Add Stripe test variables to `.env`:
+	STRIPE_SECRET_KEY=sk_test_your_secret_key
+	STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key
+	STRIPE_WEBHOOK_SECRET=whsec_from_stripe_cli
+	STRIPE_CURRENCY=usd
+	STRIPE_COUNTRY=US
+	STRIPE_PLATFORM_FEE_PERCENT=0
+
+2. Restart the app after editing `.env`:
+	python app.py
+
+3. In another terminal, start Stripe webhook forwarding:
+	stripe login
+	stripe listen --forward-to http://127.0.0.1:5000/payments/stripe/webhook --forward-connect-to http://127.0.0.1:5000/payments/stripe/webhook
+
+4. Copy the `whsec_...` value printed by `stripe listen` into `STRIPE_WEBHOOK_SECRET` in `.env`, then restart the app again.
+
+5. Open a tokenized customer invoice link and click:
+	Make Payment -> Pay By Card
+
+6. Use Stripe test card details:
+	Card number: 4242 4242 4242 4242
+	Expiry: any future date
+	CVC: any 3 digits
+	ZIP: any value
+
+7. Verify results:
+	Stripe Dashboard (Test mode): payment succeeds and `checkout.session.completed` event is delivered.
+	Klovent: invoice shows paid state, job status moves to Paid, customer balance is reduced.
+
+Notes:
+- Keep Stripe Dashboard in Test mode while validating.
+- Never place `sk_live_...` or `pk_live_...` keys in local `.env`.
+- For Stripe Connect destination charges, include `--forward-connect-to` in the Stripe CLI command so connected account events reach your webhook.

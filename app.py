@@ -7,6 +7,7 @@ from bson import ObjectId
 from flask import Flask, redirect, render_template, request, send_file, session, url_for
 from flask_mail import Mail
 from flask_wtf.csrf import CSRFProtect
+import stripe
 
 from blueprints import register_blueprints
 from mongo import build_reference_filter, ensure_connection_or_500, serialize_doc
@@ -64,8 +65,10 @@ def require_login():
         "error_page",
         "jobs.view_estimate",
         "jobs.view_invoice",
+        "jobs.create_invoice_checkout_session",
         "jobs.accept_estimate",
         "jobs.decline_estimate",
+        "stripe_webhook",
     }
     endpoint = request.endpoint
     if endpoint is None:
@@ -718,6 +721,36 @@ def download_invoice(filename):
     if os.path.exists(filepath) and os.path.abspath(filepath).startswith(os.path.abspath(invoices_dir)):
         return send_file(filepath, mimetype="application/pdf", as_attachment=False)
     return "Invoice not found", 404
+
+
+@app.route("/payments/stripe/webhook", methods=["POST"])
+@csrf.exempt
+def stripe_webhook():
+    webhook_secret = str(os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip()
+    stripe_secret_key = str(os.getenv("STRIPE_SECRET_KEY") or "").strip()
+    if not webhook_secret or not stripe_secret_key:
+        return "Stripe webhook is not configured", 500
+
+    stripe.api_key = stripe_secret_key
+    payload = request.get_data(as_text=True)
+    signature = request.headers.get("Stripe-Signature", "")
+
+    try:
+        event = stripe.Webhook.construct_event(payload, signature, webhook_secret)
+    except ValueError as exc:
+        app.logger.warning("Stripe webhook payload parse failed: %s", exc)
+        return "Invalid payload", 400
+    except stripe.error.SignatureVerificationError as exc:
+        app.logger.warning("Stripe webhook signature verification failed: %s", exc)
+        return "Invalid signature", 400
+
+    if event.get("type") in {"checkout.session.completed", "checkout.session.async_payment_succeeded"}:
+        from blueprints.jobs import process_stripe_checkout_completed
+
+        db = ensure_connection_or_500()
+        process_stripe_checkout_completed(db, event.get("data", {}).get("object", {}))
+
+    return "", 200
 
 
 if __name__ == "__main__":

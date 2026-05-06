@@ -9,6 +9,7 @@ import secrets
 from bson import ObjectId
 from flask import Blueprint, current_app, jsonify, redirect, render_template, request, session, url_for
 from flask_mail import Message
+import stripe
 
 from invoice_generator import generate_estimate, generate_invoice
 from mongo import build_reference_filter, coerce_object_id, ensure_connection_or_500, object_id_or_404, reference_value, serialize_doc
@@ -863,6 +864,141 @@ def _verify_invoice_access_token(invoice_entry, provided_token):
 
     candidate_hash = hashlib.sha256(token_value.encode("utf-8")).hexdigest()
     return hmac.compare_digest(candidate_hash, stored_hash)
+
+
+def _resolve_stripe_secret_key():
+    return str(os.getenv("STRIPE_SECRET_KEY") or "").strip()
+
+
+def _resolve_stripe_publishable_key():
+    return str(os.getenv("STRIPE_PUBLISHABLE_KEY") or "").strip()
+
+
+def _resolve_stripe_webhook_secret():
+    return str(os.getenv("STRIPE_WEBHOOK_SECRET") or "").strip()
+
+
+def _resolve_platform_fee_percent(default=0.0):
+    raw_value = str(os.getenv("STRIPE_PLATFORM_FEE_PERCENT") or "").strip()
+    if not raw_value:
+        return float(default)
+    try:
+        parsed = float(raw_value)
+    except ValueError:
+        parsed = float(default)
+    return max(0.0, min(parsed, 100.0))
+
+
+def _configure_stripe_client():
+    secret_key = _resolve_stripe_secret_key()
+    if not secret_key:
+        return ""
+    stripe.api_key = secret_key
+    return secret_key
+
+
+def _build_invoice_payment_label(job_doc, invoice_entry):
+    invoice_number = str((invoice_entry or {}).get("invoice_number") or "").strip()
+    customer_name = str((job_doc or {}).get("customer_name") or "").strip()
+    if invoice_number and customer_name:
+        return f"{invoice_number} for {customer_name}"
+    if invoice_number:
+        return invoice_number
+    return "Invoice Payment"
+
+
+def _build_job_paid_timestamp_text():
+    return datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+
+
+def _finalize_invoice_payment(db, job_id, invoice_ref, stripe_session_id="", payment_intent_id="", amount_paid=0.0):
+    job = db.jobs.find_one({"_id": ObjectId(job_id)})
+    if not job:
+        return False
+
+    job_doc = serialize_doc(job)
+    invoice_entry = _find_invoice_entry(job_doc, invoice_ref=invoice_ref)
+    if not invoice_entry:
+        return False
+
+    if str(invoice_entry.get("payment_status") or "").strip().lower() == "paid":
+        return True
+
+    paid_at_utc = datetime.utcnow()
+    paid_at_text = _build_job_paid_timestamp_text()
+    normalized_invoice_ref = str(invoice_ref or "").strip()
+
+    updated_invoices = []
+    for entry in list(job_doc.get("invoices") or []):
+        if not isinstance(entry, dict):
+            updated_invoices.append(entry)
+            continue
+
+        entry_invoice_id = str(entry.get("invoice_id") or "").strip()
+        entry_invoice_number = str(entry.get("invoice_number") or "").strip()
+        updated_entry = dict(entry)
+        if normalized_invoice_ref in {entry_invoice_id, entry_invoice_number}:
+            updated_entry["payment_status"] = "paid"
+            updated_entry["paid_at"] = paid_at_text
+            if stripe_session_id:
+                updated_entry["stripe_checkout_session_id"] = stripe_session_id
+            if payment_intent_id:
+                updated_entry["stripe_payment_intent_id"] = payment_intent_id
+            if amount_paid:
+                updated_entry["amount_paid"] = round(float(amount_paid), 2)
+        updated_invoices.append(updated_entry)
+
+    db.jobs.update_one(
+        {"_id": ObjectId(job_id)},
+        {
+            "$set": {
+                "status": "Paid",
+                "datePaid": paid_at_text,
+                "paid_at": paid_at_utc,
+                "updated_at": paid_at_utc,
+                "invoices": updated_invoices,
+            }
+        },
+    )
+
+    customer_id = job.get("customer_id")
+    if customer_id:
+        customer_doc = db.customers.find_one(build_reference_filter("_id", customer_id))
+        if customer_doc:
+            current_balance = float(customer_doc.get("balance_due_amount", currency_to_float(customer_doc.get("balance_due", "$0.00"))))
+            payment_value = float(amount_paid or job.get("total_amount") or 0.0)
+            updated_balance_amount = max(0.0, round(current_balance - payment_value, 2))
+            db.customers.update_one(
+                {"_id": customer_doc.get("_id")},
+                {
+                    "$set": {
+                        "balance_due_amount": updated_balance_amount,
+                        "balance_due": normalize_currency(str(updated_balance_amount)),
+                    }
+                },
+            )
+
+    return True
+
+
+def process_stripe_checkout_completed(db, checkout_session):
+    metadata = dict((checkout_session or {}).get("metadata") or {})
+    job_id = str(metadata.get("job_id") or "").strip()
+    invoice_ref = str(metadata.get("invoice_ref") or "").strip()
+    if not job_id or not invoice_ref or not ObjectId.is_valid(job_id):
+        return False
+
+    amount_total = float((checkout_session or {}).get("amount_total") or 0) / 100.0
+    payment_intent_id = str((checkout_session or {}).get("payment_intent") or "").strip()
+    stripe_session_id = str((checkout_session or {}).get("id") or "").strip()
+    return _finalize_invoice_payment(
+        db,
+        job_id,
+        invoice_ref,
+        stripe_session_id=stripe_session_id,
+        payment_intent_id=payment_intent_id,
+        amount_paid=amount_total,
+    )
 
 
 def _coerce_line_amount(value):
@@ -2222,10 +2358,43 @@ def view_invoice(jobId, invoiceRef):
         return redirect(url_for("jobs.view_job", jobId=jobId))
 
     token_value = str(request.args.get("token") or "").strip()
+    payment_state = str(request.args.get("payment") or "").strip().lower()
+    returned_session_id = str(request.args.get("session_id") or "").strip()
     is_staff_view = _is_authenticated_employee()
     has_customer_token = _verify_invoice_access_token(invoice, token_value)
     if not is_staff_view and not has_customer_token:
         return redirect(url_for("auth.login"))
+
+    invoice_status = str((invoice or {}).get("payment_status") or "").strip().lower()
+    job_status = str((job_doc or {}).get("status") or "").strip().lower()
+    invoice_is_paid = invoice_status == "paid" or job_status == "paid"
+
+    # Fallback: if webhook is delayed/missed, finalize payment from returned Checkout Session.
+    if (
+        payment_state == "success"
+        and returned_session_id
+        and "CHECKOUT_SESSION_ID" not in returned_session_id
+        and not invoice_is_paid
+        and _configure_stripe_client()
+    ):
+        try:
+            checkout_session = stripe.checkout.Session.retrieve(returned_session_id)
+            process_stripe_checkout_completed(db, checkout_session)
+
+            refreshed_job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+            if refreshed_job:
+                job_doc = serialize_doc(refreshed_job)
+                refreshed_invoice = _find_invoice_entry(job_doc, invoice_ref=invoiceRef)
+                if refreshed_invoice:
+                    invoice = refreshed_invoice
+        except Exception as exc:
+            current_app.logger.warning(
+                "Invoice success-return fallback failed: job_id=%s invoice_ref=%s session_id=%s error=%s",
+                jobId,
+                invoiceRef,
+                returned_session_id,
+                exc,
+            )
 
     invoice_email_template = ""
     if is_staff_view:
@@ -2257,6 +2426,20 @@ def view_invoice(jobId, invoiceRef):
     if completed_dt:
         due_date = (completed_dt + timedelta(days=payment_due_days)).strftime("%m/%d/%Y")
 
+    stripe_connect_ready = False
+    stripe_connect_reason = ""
+    business_id = str(job_doc.get("business_id") or "").strip()
+    if not business_id:
+        stripe_connect_reason = "Missing business context on this invoice."
+    else:
+        business = db.businesses.find_one(build_reference_filter("_id", business_id)) or {}
+        stripe_account_id = str((business or {}).get("stripe_account_id") or "").strip()
+        charges_enabled = bool((business or {}).get("stripe_charges_enabled"))
+        payouts_enabled = bool((business or {}).get("stripe_payouts_enabled"))
+        stripe_connect_ready = bool(stripe_account_id and charges_enabled and payouts_enabled)
+        if not stripe_connect_ready:
+            stripe_connect_reason = "Card payments are unavailable until this business connects Stripe and enables charges/payouts."
+
     pricing_summary = _build_invoice_pricing_summary(job_doc)
 
     return render_template(
@@ -2272,7 +2455,110 @@ def view_invoice(jobId, invoiceRef):
         is_staff_view=is_staff_view,
         access_token=token_value,
         invoice_email_template=invoice_email_template,
+        payment_state=payment_state,
+        stripe_publishable_key=_resolve_stripe_publishable_key(),
+        stripe_connect_ready=stripe_connect_ready,
+        stripe_connect_reason=stripe_connect_reason,
     )
+
+
+@bp.route("/jobs/<jobId>/invoices/<invoiceRef>/stripe-checkout", methods=["GET", "POST"])
+def create_invoice_checkout_session(jobId, invoiceRef):
+    db = ensure_connection_or_500()
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return jsonify({"success": False, "error": "Job not found"}), 404
+
+    job_doc = serialize_doc(job)
+    invoice = _find_invoice_entry(job_doc, invoice_ref=invoiceRef)
+    if not invoice:
+        return jsonify({"success": False, "error": "Invoice not found"}), 404
+
+    request_data = request.get_json(silent=True) or {}
+    token_value = str(request_data.get("access_token") or request.form.get("access_token") or request.args.get("token") or "").strip()
+    is_staff_view = _is_authenticated_employee()
+    if not is_staff_view and not _verify_invoice_access_token(invoice, token_value):
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+
+    secret_key = _configure_stripe_client()
+    if not secret_key:
+        return jsonify({"success": False, "error": "Stripe is not configured"}), 500
+
+    amount_total = int(round(float(job_doc.get("total_amount") or 0.0) * 100))
+    if amount_total <= 0:
+        return jsonify({"success": False, "error": "Invoice total must be greater than zero"}), 400
+
+    business_id = str(job_doc.get("business_id") or "").strip()
+    if not business_id:
+        return jsonify({"success": False, "error": "Missing business context for this invoice"}), 400
+
+    business = db.businesses.find_one(build_reference_filter("_id", business_id)) or {}
+    stripe_account_id = str((business or {}).get("stripe_account_id") or "").strip()
+    charges_enabled = bool((business or {}).get("stripe_charges_enabled"))
+    payouts_enabled = bool((business or {}).get("stripe_payouts_enabled"))
+    if not stripe_account_id or not charges_enabled or not payouts_enabled:
+        return jsonify({"success": False, "error": "Business Stripe account is not connected for payments"}), 400
+
+    platform_fee_percent = _resolve_platform_fee_percent(0.0)
+    application_fee_amount = int(round(amount_total * (platform_fee_percent / 100.0))) if platform_fee_percent > 0 else 0
+
+    customer_email = str((request_data.get("customer_email") or "")).strip() or str((job_doc.get("email") or "")).strip()
+    if not customer_email:
+        customer_email = str((db.customers.find_one(build_reference_filter("_id", job.get("customer_id")), {"email": 1}) or {}).get("email") or "").strip()
+
+    success_url_base = url_for(
+        "jobs.view_invoice",
+        jobId=jobId,
+        invoiceRef=invoiceRef,
+        token=token_value if not is_staff_view else None,
+        payment="success",
+        _external=True,
+    )
+    success_url = f"{success_url_base}&session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = url_for(
+        "jobs.view_invoice",
+        jobId=jobId,
+        invoiceRef=invoiceRef,
+        token=token_value if not is_staff_view else None,
+        payment="canceled",
+        _external=True,
+    )
+
+    checkout_session = stripe.checkout.Session.create(
+        mode="payment",
+        payment_method_types=["card"],
+        customer_email=customer_email or None,
+        line_items=[
+            {
+                "price_data": {
+                    "currency": str(os.getenv("STRIPE_CURRENCY") or "usd").strip() or "usd",
+                    "product_data": {
+                        "name": _build_invoice_payment_label(job_doc, invoice),
+                    },
+                    "unit_amount": amount_total,
+                },
+                "quantity": 1,
+            }
+        ],
+        metadata={
+            "job_id": jobId,
+            "invoice_ref": str(invoice.get("invoice_id") or invoice.get("invoice_number") or invoiceRef),
+            "business_id": business_id,
+        },
+        payment_intent_data={
+            "application_fee_amount": application_fee_amount,
+            "transfer_data": {"destination": stripe_account_id},
+            "metadata": {
+                "job_id": jobId,
+                "invoice_ref": str(invoice.get("invoice_id") or invoice.get("invoice_number") or invoiceRef),
+                "business_id": business_id,
+            },
+        },
+        success_url=success_url,
+        cancel_url=cancel_url,
+    )
+
+    return jsonify({"success": True, "checkout_url": checkout_session.url}), 200
 
 
 @bp.route("/jobs/<jobId>")

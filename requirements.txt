@@ -6,6 +6,7 @@ pillow>=10.0.0
 pymongo>=4.8.0
 python-dotenv>=1.0.1
 Flask-Mail>=0.9.1
+stripe>=11.0.0
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
 mongomock>=4.1.2
