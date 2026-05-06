@@ -914,6 +914,32 @@ def _stripe_obj_value(obj, key, default=None):
         return default
 
 
+def _stripe_obj_dict(obj):
+    if obj is None:
+        return {}
+    if isinstance(obj, dict):
+        return obj
+    try:
+        to_dict_recursive = getattr(obj, "to_dict_recursive", None)
+        if callable(to_dict_recursive):
+            converted = to_dict_recursive()
+            if isinstance(converted, dict):
+                return converted
+    except Exception:
+        pass
+    try:
+        return dict(obj)
+    except Exception:
+        pass
+    try:
+        items = getattr(obj, "items", None)
+        if callable(items):
+            return {k: v for k, v in items()}
+    except Exception:
+        pass
+    return {}
+
+
 def _build_invoice_payment_label(job_doc, invoice_entry):
     invoice_number = str((invoice_entry or {}).get("invoice_number") or "").strip()
     customer_name = str((job_doc or {}).get("customer_name") or "").strip()
@@ -1000,7 +1026,7 @@ def _finalize_invoice_payment(db, job_id, invoice_ref, stripe_session_id="", pay
 
 def process_stripe_checkout_completed(db, checkout_session):
     metadata_raw = _stripe_obj_value(checkout_session, "metadata", {}) or {}
-    metadata = dict(metadata_raw) if isinstance(metadata_raw, dict) else {}
+    metadata = _stripe_obj_dict(metadata_raw)
     job_id = str(metadata.get("job_id") or "").strip()
     invoice_ref = str(metadata.get("invoice_ref") or "").strip()
     if not job_id or not invoice_ref or not ObjectId.is_valid(job_id):
