@@ -2678,28 +2678,49 @@ def send_estimate_email(jobId):
         return jsonify({"success": False, "error": "Job not found"}), 404
 
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         recipient_email = data.get("recipient_email", "")
         subject = data.get("subject", "")
         body = data.get("body", "")
-        estimate_file = data.get("estimate_file", "")
+        estimate_file = str(data.get("estimate_file", "") or "").strip()
         email_type = str(data.get("email_type", "estimate") or "estimate").strip().lower()
 
         if not recipient_email or not subject or not body:
             return jsonify({"success": False, "error": "Missing required fields"}), 400
 
-        filename = estimate_file.split("/")[-1]
-        base_dir = os.path.dirname(os.path.dirname(__file__))
-        invoices_dir = os.path.join(base_dir, "invoices")
-        filepath = os.path.join(invoices_dir, filename)
+        resolved_invoice_entry = None
+        if email_type == "invoice":
+            job_doc = serialize_doc(job)
+            resolved_invoice_entry = _find_invoice_entry(job_doc, file_path=estimate_file)
 
-        if not os.path.exists(filepath) or not os.path.abspath(filepath).startswith(os.path.abspath(invoices_dir)):
+            if not resolved_invoice_entry:
+                # Subject typically looks like "Invoice: INV-XXXXXXXX".
+                subject_invoice_ref = str(subject or "").split(":", 1)[-1].strip()
+                if subject_invoice_ref:
+                    resolved_invoice_entry = _find_invoice_entry(job_doc, invoice_ref=subject_invoice_ref)
+
+            if not resolved_invoice_entry:
+                invoices = [entry for entry in (job_doc.get("invoices") or []) if isinstance(entry, dict)]
+                if invoices:
+                    resolved_invoice_entry = invoices[-1]
+
+            if not estimate_file and resolved_invoice_entry:
+                estimate_file = str(resolved_invoice_entry.get("file_path") or "").strip()
+
+        filepath = estimate_pdf_absolute_path_from_url(estimate_file)
+        if not filepath or not os.path.exists(filepath):
+            if email_type == "invoice":
+                return jsonify({"success": False, "error": "Invoice file not found"}), 404
             return jsonify({"success": False, "error": "Estimate file not found"}), 404
+
+        filename = os.path.basename(filepath)
 
         appended_body = body
         if email_type == "invoice":
-            job_doc = serialize_doc(job)
-            invoice_entry = _find_invoice_entry(job_doc, file_path=estimate_file)
+            invoice_entry = resolved_invoice_entry
+            if not invoice_entry:
+                job_doc = serialize_doc(job)
+                invoice_entry = _find_invoice_entry(job_doc, file_path=estimate_file)
             invoice_ref = ""
             if invoice_entry:
                 invoice_ref = str(invoice_entry.get("invoice_id") or invoice_entry.get("invoice_number") or "").strip()
