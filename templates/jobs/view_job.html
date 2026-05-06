@@ -384,9 +384,9 @@
               {% if job.invoices %}
                 {% for invoice in job.invoices %}
                   <div class="estimate-card-wrapper">
-                    <a href="{{ invoice.file_path }}" target="_blank" class="view-customer-card-link">
+                    <a href="{{ url_for('jobs.view_invoice', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true)) }}" class="view-customer-card-link">
                       <h4>{{ invoice.invoice_number }}</h4>
-                      <p>Download Invoice</p>
+                      <p>View Invoice</p>
                     </a>
                     <button class="estimate-email-btn" 
                             data-estimate-title="{{ invoice.invoice_number }}"

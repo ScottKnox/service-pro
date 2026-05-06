@@ -763,6 +763,13 @@ def _build_estimate_view_url(estimate_id, access_token=None, external=False):
     return url_for("jobs.view_estimate", estimateId=estimate_id, _external=external)
 
 
+def _build_invoice_view_url(job_id, invoice_ref, access_token=None, external=False):
+    token_value = str(access_token or "").strip()
+    if token_value:
+        return url_for("jobs.view_invoice", jobId=job_id, invoiceRef=invoice_ref, token=token_value, _external=external)
+    return url_for("jobs.view_invoice", jobId=job_id, invoiceRef=invoice_ref, _external=external)
+
+
 def _issue_estimate_access_token(db, estimate_id, recipient_email=""):
     token_value = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(token_value.encode("utf-8")).hexdigest()
@@ -782,6 +789,75 @@ def _issue_estimate_access_token(db, estimate_id, recipient_email=""):
 def _verify_estimate_access_token(estimate, provided_token):
     token_value = str(provided_token or "").strip()
     stored_hash = str((estimate or {}).get("access_token_hash") or "").strip()
+    if not token_value or not stored_hash:
+        return False
+
+    candidate_hash = hashlib.sha256(token_value.encode("utf-8")).hexdigest()
+    return hmac.compare_digest(candidate_hash, stored_hash)
+
+
+def _find_invoice_entry(job_doc, invoice_ref="", file_path=""):
+    invoices = list((job_doc or {}).get("invoices") or [])
+    normalized_ref = str(invoice_ref or "").strip()
+    normalized_file_name = str(file_path or "").strip().split("/")[-1]
+
+    for invoice in invoices:
+        if not isinstance(invoice, dict):
+            continue
+        invoice_id = str(invoice.get("invoice_id") or "").strip()
+        invoice_number = str(invoice.get("invoice_number") or "").strip()
+        invoice_file = str(invoice.get("file_path") or "").strip()
+        invoice_file_name = invoice_file.split("/")[-1] if invoice_file else ""
+
+        if normalized_ref and (invoice_id == normalized_ref or invoice_number == normalized_ref):
+            return invoice
+        if normalized_file_name and invoice_file_name == normalized_file_name:
+            return invoice
+
+    return None
+
+
+def _issue_invoice_access_token(db, job_id, invoice_ref, recipient_email=""):
+    job = db.jobs.find_one({"_id": ObjectId(job_id)})
+    if not job:
+        return ""
+
+    job_doc = serialize_doc(job)
+    invoice_entry = _find_invoice_entry(job_doc, invoice_ref=invoice_ref)
+    if not invoice_entry:
+        return ""
+
+    token_value = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token_value.encode("utf-8")).hexdigest()
+    normalized_invoice_ref = str(invoice_ref or "").strip()
+
+    updated_invoices = []
+    for entry in list(job_doc.get("invoices") or []):
+        if not isinstance(entry, dict):
+            updated_invoices.append(entry)
+            continue
+
+        entry_invoice_id = str(entry.get("invoice_id") or "").strip()
+        entry_invoice_number = str(entry.get("invoice_number") or "").strip()
+        if normalized_invoice_ref in {entry_invoice_id, entry_invoice_number}:
+            updated = dict(entry)
+            updated["access_token_hash"] = token_hash
+            updated["access_token_created_at"] = datetime.utcnow().isoformat()
+            updated["access_token_recipient"] = str(recipient_email or "").strip()
+            updated_invoices.append(updated)
+        else:
+            updated_invoices.append(entry)
+
+    db.jobs.update_one(
+        {"_id": ObjectId(job_id)},
+        {"$set": {"invoices": updated_invoices}},
+    )
+    return token_value
+
+
+def _verify_invoice_access_token(invoice_entry, provided_token):
+    token_value = str(provided_token or "").strip()
+    stored_hash = str((invoice_entry or {}).get("access_token_hash") or "").strip()
     if not token_value or not stored_hash:
         return False
 
@@ -819,6 +895,45 @@ def _build_estimate_pricing_summary(estimate):
     subtotal = services_total + parts_total + labors_total + materials_total + equipment_total
     pre_tax_total = max(0.0, subtotal - discounts_total)
     total_due = _coerce_line_amount(estimate_doc.get("total_amount"))
+    tax_total = max(0.0, total_due - pre_tax_total)
+
+    return {
+        "subtotal": subtotal,
+        "tax_total": tax_total,
+        "discounts_total": discounts_total,
+        "total_due": total_due,
+        "subtotal_display": normalize_currency(subtotal),
+        "tax_total_display": normalize_currency(tax_total),
+        "discounts_total_display": normalize_currency(discounts_total),
+        "total_due_display": normalize_currency(total_due),
+    }
+
+
+def _build_invoice_pricing_summary(job_doc):
+    payload = job_doc or {}
+    services_total = sum(_coerce_line_amount(service.get("price")) for service in (payload.get("services") or []))
+    parts_total = sum(_coerce_line_amount(part.get("price")) for part in (payload.get("parts") or []))
+    labors_total = sum(
+        _coerce_line_amount(labor.get("line_total") or labor.get("hourly_rate"))
+        for labor in (payload.get("labors") or [])
+    )
+    materials_total = sum(
+        _coerce_line_amount(material.get("line_total") or material.get("price"))
+        for material in (payload.get("materials") or [])
+    )
+    equipment_total = sum(
+        _coerce_line_amount(equipment.get("line_total") or equipment.get("price"))
+        for equipment in (payload.get("equipments") or [])
+    )
+
+    discounts_total = 0.0
+    for discount in (payload.get("discounts") or []):
+        line_value = _coerce_line_amount(discount.get("discount_amount") or discount.get("line_total"))
+        discounts_total += abs(line_value)
+
+    subtotal = services_total + parts_total + labors_total + materials_total + equipment_total
+    pre_tax_total = max(0.0, subtotal - discounts_total)
+    total_due = _coerce_line_amount(payload.get("total_amount"))
     tax_total = max(0.0, total_due - pre_tax_total)
 
     return {
@@ -2094,6 +2209,72 @@ def delete_estimate(estimateId):
     return redirect(redirect_target)
 
 
+@bp.route("/jobs/<jobId>/invoices/<invoiceRef>")
+def view_invoice(jobId, invoiceRef):
+    db = ensure_connection_or_500()
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    job_doc = serialize_doc(job)
+    invoice = _find_invoice_entry(job_doc, invoice_ref=invoiceRef)
+    if not invoice:
+        return redirect(url_for("jobs.view_job", jobId=jobId))
+
+    token_value = str(request.args.get("token") or "").strip()
+    is_staff_view = _is_authenticated_employee()
+    has_customer_token = _verify_invoice_access_token(invoice, token_value)
+    if not is_staff_view and not has_customer_token:
+        return redirect(url_for("auth.login"))
+
+    invoice_email_template = ""
+    if is_staff_view:
+        employee_id = session.get("employee_id")
+        if employee_id and ObjectId.is_valid(employee_id):
+            employee = db.employees.find_one({"_id": ObjectId(employee_id)})
+            if employee:
+                business_ref = employee.get("business")
+                business_oid = None
+                if isinstance(business_ref, ObjectId):
+                    business_oid = business_ref
+                elif isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
+                    business_oid = ObjectId(business_ref)
+                if business_oid:
+                    business = db.businesses.find_one({"_id": business_oid})
+                    if business:
+                        invoice_email_template = business.get("invoice_email_template", "")
+
+    customer = {}
+    customer_id = job.get("customer_id")
+    if customer_id:
+        customer_doc = db.customers.find_one(build_reference_filter("_id", customer_id))
+        if customer_doc:
+            customer = serialize_doc(customer_doc)
+
+    completed_dt = _parse_mmddyyyy_date(str(job_doc.get("dateCompleted") or "")[:10])
+    payment_due_days = _normalize_payment_due_days(job_doc.get("payment_due_days"), 30)
+    due_date = ""
+    if completed_dt:
+        due_date = (completed_dt + timedelta(days=payment_due_days)).strftime("%m/%d/%Y")
+
+    pricing_summary = _build_invoice_pricing_summary(job_doc)
+
+    return render_template(
+        "invoices/view_invoice.html",
+        jobId=jobId,
+        invoiceRef=invoiceRef,
+        invoice=invoice,
+        job=job_doc,
+        customer=customer,
+        pricing_summary=pricing_summary,
+        payment_due_days=payment_due_days,
+        due_date=due_date,
+        is_staff_view=is_staff_view,
+        access_token=token_value,
+        invoice_email_template=invoice_email_template,
+    )
+
+
 @bp.route("/jobs/<jobId>")
 def view_job(jobId):
     db = ensure_connection_or_500()
@@ -2445,6 +2626,7 @@ def complete_job(jobId):
             },
             "$push": {
                 "invoices": {
+                    "invoice_id": str(ObjectId()),
                     "invoice_number": f"INV-{jobId[:8].upper()}",
                     "file_path": url_for("download_invoice", filename=filename),
                 }
@@ -2514,10 +2696,27 @@ def send_estimate_email(jobId):
         if not os.path.exists(filepath) or not os.path.abspath(filepath).startswith(os.path.abspath(invoices_dir)):
             return jsonify({"success": False, "error": "Estimate file not found"}), 404
 
+        appended_body = body
+        if email_type == "invoice":
+            job_doc = serialize_doc(job)
+            invoice_entry = _find_invoice_entry(job_doc, file_path=estimate_file)
+            invoice_ref = ""
+            if invoice_entry:
+                invoice_ref = str(invoice_entry.get("invoice_id") or invoice_entry.get("invoice_number") or "").strip()
+            if invoice_ref:
+                access_token = _issue_invoice_access_token(db, jobId, invoice_ref, recipient_email)
+                if access_token:
+                    invoice_link = _build_invoice_view_url(jobId, invoice_ref, access_token=access_token, external=True)
+                    appended_body = (
+                        f"{body}\n\n"
+                        "You can also view this invoice online here:\n"
+                        f"{invoice_link}"
+                    )
+
         msg = Message(
             subject=subject,
             recipients=[recipient_email],
-            body=body,
+            body=appended_body,
         )
 
         with open(filepath, "rb") as f:
