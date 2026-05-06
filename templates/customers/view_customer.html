@@ -134,7 +134,7 @@
               {% if customer_jobs %}
                 {% for job in customer_jobs %}
                   <a class="view-customer-card-link" href="{{ url_for('jobs.view_job', jobId=job._id) }}">
-                    <h4>{{ job.scheduled_date }} {{ job.scheduled_time|default('', true) }} - {{ job.job_type }}</h4>
+                    <h4>{% if job.scheduled_date %}{{ job.scheduled_date }} {{ job.scheduled_time|default('', true) }}{% else %}Unscheduled{% endif %} - {{ job.job_type }}</h4>
                     <p>Assigned to {{ job.assigned_employee or 'Unassigned' }}</p>
                   </a>
                 {% endfor %}

@@ -110,7 +110,7 @@
                     </div>
                     <div class="jobs-card-row">
                       <span class="jobs-card-label">Date Scheduled</span>
-                      <span class="jobs-card-value">{{ job.scheduled_date }} {{ job.scheduled_time|default('', true) }}</span>
+                      <span class="jobs-card-value">{% if job.scheduled_date %}{{ job.scheduled_date }} {{ job.scheduled_time|default('', true) }}{% else %}Unscheduled{% endif %}</span>
                     </div>
                   </a>
                 {% endfor %}

@@ -36,7 +36,7 @@ body {
 }
 
 #header-container {
-  width: 60vw;
+  width: 80vw;
   min-height: 60px;
   margin: 0 auto;
   color: var(--kl-accent-contrast);
@@ -146,7 +146,7 @@ p {
 }
 
 #main-container {
-  width: min(1360px, 92vw);
+  width: 80vw;
   height: auto;
   margin: 0 auto;
 }
@@ -156,13 +156,6 @@ p {
   grid-template-columns: 1fr 1fr;
 }
 
-@media (min-width: 1400px) {
-  .home-scheduling-row {
-    grid-template-columns: minmax(0, 740px) minmax(0, 560px);
-    justify-content: center;
-    gap: 1rem;
-  }
-}
 
 #home-latest-row {
   display: grid;
@@ -475,33 +468,6 @@ p {
   color: var(--kl-accent);
 }
 
-@media (max-width: 768px) {
-  .home-hvac-system-row-item {
-    grid-template-columns: 1fr;
-    gap: 0.45rem;
-  }
-
-  .home-hvac-diagnostics-button {
-    width: 100%;
-    min-height: 38px;
-    padding: 0.4rem 0.45rem;
-    font-size: 0.8rem;
-  }
-
-  #home-activity-content {
-    grid-template-columns: 1fr;
-    min-height: 0;
-  }
-
-  #home-activity-feed-column {
-    border-right: 0;
-    border-bottom: 1px solid var(--kl-border);
-  }
-
-  #home-activity-map {
-    min-height: 310px;
-  }
-}
 
 #home-outstanding-estimates-list {
   width: 100%;
@@ -997,42 +963,6 @@ p {
   color: var(--kl-text);
 }
 
-@media (max-width: 768px) {
-  .home-job {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-
-  .home-job-actions {
-    flex-direction: row;
-    gap: 0.45rem;
-    padding: 0 0.55rem 0.55rem;
-    border-top: 1px solid var(--kl-border);
-  }
-
-  .home-job-action-form,
-  .home-job-actions > a,
-  .home-job-actions > button {
-    flex: 1 1 0;
-  }
-
-  .home-job-action-button {
-    width: 100%;
-    min-height: 38px;
-    padding: 0.4rem 0.45rem;
-    font-size: 0.8rem;
-  }
-
-  .home-job-title-line {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.1rem;
-  }
-
-  .home-job-last-note {
-    font-size: 0.84rem;
-  }
-}
 
 .home-job-top-row {
   display: grid;
@@ -1405,84 +1335,6 @@ p {
   gap: 0.75rem;
 }
 
-@media (min-width: 1200px) {
-  #jobs-list-grid.jobs-compact-list,
-  #estimates-list-grid.estimates-compact-list {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.55rem;
-    margin-top: 0.5rem;
-  }
-
-  .jobs-compact-list .jobs-card,
-  .estimates-compact-list .jobs-card {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    padding: 0.55rem 0.7rem;
-    min-height: 3.7rem;
-  }
-
-  .jobs-compact-list .jobs-card-row,
-  .estimates-compact-list .jobs-card-row {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.22rem;
-    padding: 0;
-    border: 0;
-    grid-template-columns: none;
-    min-width: 0;
-    white-space: nowrap;
-  }
-
-  .jobs-compact-list .jobs-card-row--status,
-  .estimates-compact-list .jobs-card-row--status {
-    padding-right: 0.55rem;
-    margin-right: 0.1rem;
-    border-right: 1px solid #D1D5DB;
-  }
-
-  .jobs-compact-list .jobs-card-row--address {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .jobs-compact-list .jobs-card-label,
-  .estimates-compact-list .jobs-card-label {
-    font-size: 0.7rem;
-    letter-spacing: 0.04em;
-  }
-
-  .jobs-compact-list .jobs-card-value,
-  .estimates-compact-list .jobs-card-value {
-    text-align: left;
-    font-size: 0.86rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 14rem;
-  }
-
-  .jobs-compact-list .jobs-card-value--address {
-    max-width: 32rem;
-  }
-}
-
-@media (max-width: 1199px) {
-  .jobs-compact-list .jobs-card,
-  .estimates-compact-list .jobs-card {
-    gap: 0.55rem;
-    padding: 0.85rem;
-    min-height: 7rem;
-  }
-}
-
-@media (max-width: 699px) {
-  .jobs-compact-list .jobs-card,
-  .estimates-compact-list .jobs-card {
-    min-height: 0;
-  }
-}
 
 .catalog-compact-list {
   gap: 0.75rem;
@@ -1499,77 +1351,11 @@ p {
   background: linear-gradient(180deg, #FFFFFF 0%, #EFF3F8 100%);
 }
 
-@media (min-width: 1200px) {
-  .catalog-compact-list {
-    display: flex !important;
-    flex-direction: column;
-    gap: 0.55rem;
-    margin-top: 0.5rem;
-  }
-
-  .catalog-compact-list .jobs-card {
-    display: flex;
-    align-items: center;
-    gap: 0.9rem;
-    padding: 0.65rem 0.8rem;
-    min-height: 4.25rem;
-  }
-
-  .catalog-compact-list .jobs-card-row {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.35rem;
-    padding: 0;
-    border: 0;
-    grid-template-columns: none;
-    min-width: 0;
-    white-space: nowrap;
-  }
-
-  .catalog-compact-list .jobs-card-label {
-    font-size: 0.74rem;
-    letter-spacing: 0.04em;
-  }
-
-  .catalog-compact-list .jobs-card-value {
-    text-align: left;
-    font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 18rem;
-  }
-
-  .catalog-compact-list .jobs-card-actions {
-    margin-top: 0;
-    margin-left: auto;
-    flex-shrink: 0;
-  }
-}
-
-@media (max-width: 1199px) {
-  .catalog-compact-list .jobs-card {
-    gap: 0.55rem;
-    padding: 0.85rem;
-    min-height: 7rem;
-  }
-}
-
-@media (max-width: 699px) {
-  .catalog-compact-list .jobs-card {
-    min-height: 0;
-  }
-}
 
 #create-part-form .part-form-row--two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-@media (max-width: 900px) {
-  #create-part-form .part-form-row--two {
-    grid-template-columns: 1fr;
-  }
-}
 
 .jobs-status-chip {
   display: inline-flex;
@@ -1708,48 +1494,28 @@ p {
 .customers-controls-right-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
 
-#customers-search-form {
+.customers-results-search {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  width: 100%;
 }
 
-#customers-search-input {
-  width: 260px;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid #C5C7CB;
-  border-radius: 4px;
-  font-size: 1rem;
-  background-color: #FFFFFF;
-  color: #1B263B;
+#customers-search-form.catalog-search-form {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  margin-bottom: 0;
+  width: 100%;
 }
 
-#customers-search-input:focus {
-  outline: 2px solid #5FA3D3;
-  outline-offset: 1px;
-  border-color: #5FA3D3;
-}
-
-#customers-search-form button {
-  padding: 0.55rem 0.95rem;
-  border: 1px solid #1B263B;
-  border-radius: 4px;
-  background-color: #1B263B;
-  color: #F8F9FA;
-  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-#customers-search-form button:hover {
-  background-color: #27364F;
-  border-color: #27364F;
+#customers-search-form.catalog-search-form input[type="search"] {
+  width: min(100%, 720px);
+  max-width: 720px;
 }
 
 .customers-add-button,
@@ -1772,9 +1538,12 @@ p {
 
 #customers-list-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 1rem;
   margin-top: 0.5rem;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .customer-card {
@@ -1787,6 +1556,10 @@ p {
   color: #1B263B;
   text-decoration: none;
   transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .customer-card:hover {
@@ -1798,80 +1571,10 @@ p {
   gap: 0.75rem;
 }
 
-@media (min-width: 1200px) {
-  #customers-list-grid.customers-compact-list {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.55rem;
-    margin-top: 0.5rem;
-  }
-
-  .customers-compact-list .customer-card {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.6rem;
-    min-height: 3.5rem;
-  }
-
-  .customers-compact-list .customer-card-row {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.2rem;
-    padding: 0;
-    border: 0;
-    grid-template-columns: none;
-    min-width: 0;
-    white-space: nowrap;
-  }
-
-  .customers-compact-list .customer-card-row--status {
-    padding-right: 0.55rem;
-    margin-right: 0.1rem;
-    border-right: 1px solid #D1D5DB;
-  }
-
-  .customers-compact-list .customer-card-row--address {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .customers-compact-list .customer-card-label {
-    font-size: 0.7rem;
-    letter-spacing: 0.04em;
-  }
-
-  .customers-compact-list .customer-card-value {
-    text-align: left;
-    font-size: 0.86rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 14rem;
-  }
-
-  .customers-compact-list .customer-card-value--address {
-    max-width: 32rem;
-  }
-}
-
-@media (max-width: 1199px) {
-  .customers-compact-list .customer-card {
-    gap: 0.55rem;
-    padding: 0.85rem;
-    min-height: 7rem;
-  }
-}
-
-@media (max-width: 699px) {
-  .customers-compact-list .customer-card {
-    min-height: 0;
-  }
-}
 
 .customer-card-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 0.75rem;
   align-items: center;
 }
@@ -1888,6 +1591,7 @@ p {
   font-size: 0.95rem;
   color: #1B263B;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 #add-customer-panel,
@@ -2560,17 +2264,6 @@ p {
   margin-bottom: 1.5rem;
 }
 
-@media (max-width: 900px) {
-  .rev-kpi-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 540px) {
-  .rev-kpi-row {
-    grid-template-columns: 1fr;
-  }
-}
 
 .rev-kpi-card {
   background: #F4F7FC;
@@ -2634,11 +2327,6 @@ p {
   margin-top: 1rem;
 }
 
-@media (max-width: 700px) {
-  .rev-breakdown-row {
-    grid-template-columns: 1fr;
-  }
-}
 
 .rev-breakdown-card {
   background: #F4F7FC;
@@ -3060,17 +2748,31 @@ p {
   border-left: 3px solid #9BD3AE;
 }
 
-@media (max-width: 1024px) {
-  .reporting-kpi-row--three-column {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+/* Footer styles */
+#footer-bg {
+  width: 100vw;
+  background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
+  margin-left: calc(-50vw + 50%);
+  margin-top: 2rem;
 }
 
-@media (max-width: 640px) {
-  .reporting-kpi-row--three-column {
-    grid-template-columns: 1fr;
-  }
+#footer {
+  width: 100vw;
+  background: none;
+  color: var(--kl-accent-contrast);
+  padding: 0;
+  margin-left: calc(-50vw + 50%);
 }
+
+#footer-container {
+  width: 80vw;
+  margin: 0 auto;
+  text-align: left;
+  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 1rem;
+  padding: 1rem 0;
+}
+
 
 .reporting-chart {
   width: 100%;
@@ -3157,110 +2859,6 @@ p {
   font-size: 12px;
 }
 
-@media (max-width: 900px) {
-  .reporting-axis-label-x,
-  .reporting-axis-label-y {
-    font-size: 13.5px;
-  }
-
-  .reporting-axis-title-x,
-  .reporting-axis-title-y {
-    font-size: 14.5px;
-  }
-
-  .reporting-day-label {
-    font-size: 12.5px;
-  }
-}
-
-@media (max-width: 1024px) {
-  .reporting-kpi-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .reporting-kpi-row--four-column {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 900px) {
-  .reporting-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .reporting-sidebar {
-    order: 1;
-  }
-
-  .reporting-main {
-    order: 2;
-  }
-}
-
-@media (max-width: 520px) {
-  .reporting-kpi-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .reporting-chart {
-    height: 180px;
-  }
-
-  .reporting-kpi-row--two-column {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .reporting-kpi-row--four-column {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .reporting-jobs-pagination {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .reporting-jobs-pagination-links {
-    justify-content: flex-start;
-  }
-
-  .reporting-day-label {
-    font-size: 13px;
-  }
-
-  .reporting-day-label-hide-sm {
-    display: none;
-  }
-
-  .reporting-axis-label-x,
-  .reporting-axis-label-y {
-    font-size: 14px;
-  }
-
-  .reporting-axis-title-x,
-  .reporting-axis-title-y {
-    font-size: 15px;
-  }
-}
-
-@media (max-width: 420px) {
-  .reporting-day-label {
-    font-size: 12px;
-  }
-
-  .reporting-day-label-alt {
-    display: none;
-  }
-
-  .reporting-axis-label-x,
-  .reporting-axis-label-y {
-    font-size: 13px;
-  }
-
-  .reporting-axis-title-x,
-  .reporting-axis-title-y {
-    font-size: 14px;
-  }
-}
 
 .subscription-actions form {
   margin: 0;
@@ -3327,682 +2925,3871 @@ p {
   box-sizing: border-box;
 }
 
-@media (max-width: 640px) {
-  .subscription-cancel-reason-label {
-    font-size: 1.2rem;
-    margin-top: 1.4rem;
-  }
 
-  .subscription-cancel-reason-field {
-    margin-bottom: 1rem;
-  }
+/* ================================================================
+   RESPONSIVE STYLES
+   All media queries are consolidated here, ordered largest → smallest.
+   ================================================================ */
 
-  .subscription-cancel-reason-field textarea {
-    min-height: 220px;
-    font-size: 1rem;
-  }
+/* --- DESKTOP        (≥ 1200px) --- */
+@media (min-width: 1200px) {
+  #jobs-list-grid.jobs-compact-list,
+    #estimates-list-grid.estimates-compact-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.55rem;
+      margin-top: 0.5rem;
+    }
 
-  .subscription-cancel-actions-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
-  }
+    .jobs-compact-list .jobs-card,
+    .estimates-compact-list .jobs-card {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.55rem 0.7rem;
+      min-height: 3.7rem;
+    }
 
-  .subscription-cancel-actions-row .home-latest-action-link,
-  .subscription-cancel-actions-row .subscription-remove-button {
-    width: 100%;
-    text-align: center;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    font-size: 13px;
+    .jobs-compact-list .jobs-card-row,
+    .estimates-compact-list .jobs-card-row {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.22rem;
+      padding: 0;
+      border: 0;
+      grid-template-columns: none;
+      min-width: 0;
+      white-space: nowrap;
+    }
+
+    .jobs-compact-list .jobs-card-row--status,
+    .estimates-compact-list .jobs-card-row--status {
+      padding-right: 0.55rem;
+      margin-right: 0.1rem;
+      border-right: 1px solid #D1D5DB;
+    }
+
+    .jobs-compact-list .jobs-card-row--address {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .jobs-compact-list .jobs-card-label,
+    .estimates-compact-list .jobs-card-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+    }
+
+    .jobs-compact-list .jobs-card-value,
+    .estimates-compact-list .jobs-card-value {
+      text-align: left;
+      font-size: 0.86rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 14rem;
+    }
+
+    .jobs-compact-list .jobs-card-value--address {
+      max-width: 32rem;
+    }
+
+    .catalog-compact-list {
+      display: flex !important;
+      flex-direction: column;
+      gap: 0.55rem;
+      margin-top: 0.5rem;
+    }
+
+    .catalog-compact-list .jobs-card {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      padding: 0.65rem 0.8rem;
+      min-height: 4.25rem;
+    }
+
+    .catalog-compact-list .jobs-card-row {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.35rem;
+      padding: 0;
+      border: 0;
+      grid-template-columns: none;
+      min-width: 0;
+      white-space: nowrap;
+    }
+
+    .catalog-compact-list .jobs-card-label {
+      font-size: 0.74rem;
+      letter-spacing: 0.04em;
+    }
+
+    .catalog-compact-list .jobs-card-value {
+      text-align: left;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 18rem;
+    }
+
+    .catalog-compact-list .jobs-card-actions {
+      margin-top: 0;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    #customers-list-grid.customers-compact-list {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.55rem;
+      margin-top: 0.5rem;
+    }
+
+    .customers-compact-list .customer-card {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.6rem;
+      min-height: 3.5rem;
+    }
+
+    .customers-compact-list .customer-card-row {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.2rem;
+      padding: 0;
+      border: 0;
+      grid-template-columns: none;
+      min-width: 0;
+      white-space: nowrap;
+    }
+
+    .customers-compact-list .customer-card-row--status {
+      padding-right: 0.55rem;
+      margin-right: 0.1rem;
+      border-right: 1px solid #D1D5DB;
+    }
+
+    .customers-compact-list .customer-card-row--address {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .customers-compact-list .customer-card-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+    }
+
+    .customers-compact-list .customer-card-value {
+      text-align: left;
+      font-size: 0.86rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 14rem;
+    }
+
+    .customers-compact-list .customer-card-value--address {
+      max-width: 32rem;
+    }
 }
 
-/* Reactivate subscription page */
-.reactivate-subscription-panel {
-  display: flex;
-    font-size: 14px;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 3rem 2rem;
-    font-size: 12px;
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 14px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-}
-      font-size: 13.5px;
-.reactivate-subscription-message {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text-primary, #1e293b);
-      font-size: 14.5px;
-  line-height: 1.5;
-  margin-bottom: 2rem;
-}
-      font-size: 12.5px;
-.reactivate-subscription-button {
-  background: linear-gradient(180deg, #3B5BA9 0%, #2d4a8e 100%);
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-      font-size: 13px;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: not-allowed;
-      font-size: 14px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+/* --- LARGE DESKTOP  (≥ 1400px) --- */
+@media (min-width: 1400px) {
+  .home-scheduling-row {
+      grid-template-columns: minmax(0, 740px) minmax(0, 560px);
+      justify-content: center;
+      gap: 1rem;
+    }
 }
 
-.subscription-cancel-button,
-      font-size: 15px;
-  border: 1px solid #D26B6B;
-  background: linear-gradient(180deg, #FFF2F2 0%, #FFE5E5 100%);
-  color: #8E1E1E;
-  border-radius: 8px;
-      font-size: 12px;
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-      font-size: 13px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+/* --- BELOW DESKTOP  (≤ 1199px) --- */
+@media (max-width: 1199px) {
+  .jobs-compact-list .jobs-card,
+    .estimates-compact-list .jobs-card {
+      gap: 0.55rem;
+      padding: 0.85rem;
+      min-height: 7rem;
+    }
+
+    .catalog-compact-list .jobs-card {
+      gap: 0.55rem;
+      padding: 0.85rem;
+      min-height: 7rem;
+    }
+
+    .customers-compact-list .customer-card {
+      gap: 0.55rem;
+      padding: 0.85rem;
+      min-height: 7rem;
+    }
 }
 
-.subscription-cancel-button:hover,
-      font-size: 14px;
-  background: linear-gradient(180deg, #FFE9E9 0%, #FFD9D9 100%);
-  border-color: #C04F4F;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.10);
+/* --- TABLET LARGE   (≤ 1024px) --- */
+@media (max-width: 1024px) {
+  .reporting-kpi-row--three-column {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .reporting-kpi-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .reporting-kpi-row--four-column {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
-.subscription-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
-}
-
-.subscription-summary-card,
-.subscription-panel-card {
-  border: 1px solid #D8E0EA;
-  border-top: 3px solid #334155;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
-  box-shadow: 0 4px 12px rgba(16, 33, 55, 0.06);
-  padding: 1rem;
-}
-
-.subscription-summary-kicker {
-  margin: 0;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #4B5E76;
-}
-
-.subscription-summary-card h3,
-.subscription-panel-card h3 {
-  margin: 0.25rem 0 0;
-  color: #102237;
-}
-
-.subscription-summary-amount {
-  margin: 0.5rem 0 0;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #0B5E55;
-}
-
-.subscription-summary-note {
-  margin: 0.35rem 0 0;
-  color: #4B5563;
-}
-
-.subscription-detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.subscription-detail-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.75rem;
-  padding: 0.55rem 0;
-  border-bottom: 1px solid #E3EAF2;
-}
-
-.subscription-detail-row:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-.subscription-detail-row span {
-  color: #4B5E76;
-}
-
-.subscription-detail-row strong {
-  color: #102237;
-}
-
-.subscription-addon-card {
-  border: 1px solid #D8E0EA;
-  border-radius: 10px;
-  background-color: #FFFFFF;
-  padding: 0.85rem;
-  margin-top: 0.75rem;
-}
-
-.subscription-addon-name {
-  margin: 0;
-  font-weight: 700;
-  color: #102237;
-}
-
-.subscription-addon-description {
-  margin: 0.35rem 0 0.45rem;
-  color: #4B5563;
-}
-
-.subscription-addon-form {
-  margin-top: 0.75rem;
-}
-
-.subscription-empty {
-  margin: 0.5rem 0 0;
-  color: #4B5563;
-}
-
+/* --- TABLET         (≤ 900px) --- */
 @media (max-width: 900px) {
+  #create-part-form .part-form-row--two {
+      grid-template-columns: 1fr;
+    }
+
+    .rev-kpi-row {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .reporting-axis-label-x,
+    .reporting-axis-label-y {
+      font-size: 13.5px;
+    }
+
+    .reporting-axis-title-x,
+    .reporting-axis-title-y {
+      font-size: 14.5px;
+    }
+
+    .reporting-day-label {
+      font-size: 12.5px;
+    }
+
+    .reporting-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .reporting-sidebar {
+      order: 1;
+    }
+
+    .reporting-main {
+      order: 2;
+    }
+}
+
+/* --- TABLET SMALL   (≤ 768px) --- */
+@media (max-width: 768px) {
+  .home-hvac-system-row-item {
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
+    }
+
+    .home-hvac-diagnostics-button {
+      width: 100%;
+      min-height: 38px;
+      padding: 0.4rem 0.45rem;
+      font-size: 0.8rem;
+    }
+
+    #home-activity-content {
+      grid-template-columns: 1fr;
+      min-height: 0;
+    }
+
+    #home-activity-feed-column {
+      border-right: 0;
+      border-bottom: 1px solid var(--kl-border);
+    }
+
+    #home-activity-map {
+      min-height: 310px;
+    }
+
+    .home-job {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .home-job-actions {
+      flex-direction: row;
+      gap: 0.45rem;
+      padding: 0 0.55rem 0.55rem;
+      border-top: 1px solid var(--kl-border);
+    }
+
+    .home-job-action-form,
+    .home-job-actions > a,
+    .home-job-actions > button {
+      flex: 1 1 0;
+    }
+
+    .home-job-action-button {
+      width: 100%;
+      min-height: 38px;
+      padding: 0.4rem 0.45rem;
+      font-size: 0.8rem;
+    }
+
+    .home-job-title-line {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.1rem;
+    }
+
+    .home-job-last-note {
+      font-size: 0.84rem;
+    }
+}
+
+/* --- TABLET SMALL   (≤ 700px) --- */
+@media (max-width: 700px) {
+  .rev-breakdown-row {
+      grid-template-columns: 1fr;
+    }
+}
+
+/* --- TABLET SMALL   (≤ 699px) --- */
+@media (max-width: 699px) {
+  .jobs-compact-list .jobs-card,
+    .estimates-compact-list .jobs-card {
+      min-height: 0;
+    }
+
+    .catalog-compact-list .jobs-card {
+      min-height: 0;
+    }
+
+    #customers-list-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .customers-compact-list .customer-card {
+      min-height: 0;
+    }
+}
+
+/* --- MOBILE LARGE   (≤ 640px) --- */
+@media (max-width: 640px) {
+  .reporting-kpi-row--three-column {
+      grid-template-columns: 1fr;
+    }
+
+    .subscription-cancel-reason-label {
+      font-size: 1.2rem;
+      margin-top: 1.4rem;
+    }
+
+    .subscription-cancel-reason-field {
+      margin-bottom: 1rem;
+    }
+
+    .subscription-cancel-reason-field textarea {
+      min-height: 220px;
+      font-size: 1rem;
+    }
+
+    .subscription-cancel-actions-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+    }
+
+    .subscription-cancel-actions-row .home-latest-action-link,
+    .subscription-cancel-actions-row .subscription-remove-button {
+      width: 100%;
+      text-align: center;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+  }
+
+  /* Reactivate subscription page */
+  .reactivate-subscription-panel {
+    display: flex;
+      font-size: 14px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 3rem 2rem;
+      font-size: 12px;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  }
+
+  .reactivate-subscription-message {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary, #1e293b);
+        font-size: 14.5px;
+    line-height: 1.5;
+    margin-bottom: 2rem;
+  }
+
+  .reactivate-subscription-button {
+    background: linear-gradient(180deg, #3B5BA9 0%, #2d4a8e 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+        font-size: 13px;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: not-allowed;
+        font-size: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+
+  .subscription-cancel-button {
+        font-size: 15px;
+    border: 1px solid #D26B6B;
+    background: linear-gradient(180deg, #FFF2F2 0%, #FFE5E5 100%);
+    color: #8E1E1E;
+    border-radius: 8px;
+        font-size: 12px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+        font-size: 13px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+
+  .subscription-cancel-button:hover {
+        font-size: 14px;
+    background: linear-gradient(180deg, #FFE9E9 0%, #FFD9D9 100%);
+    border-color: #C04F4F;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.10);
+  }
+
   .subscription-summary-grid {
-    grid-template-columns: 1fr;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .subscription-summary-card,
+  .subscription-panel-card {
+    border: 1px solid #D8E0EA;
+    border-top: 3px solid #334155;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
+    box-shadow: 0 4px 12px rgba(16, 33, 55, 0.06);
+    padding: 1rem;
+  }
+
+  .subscription-summary-kicker {
+    margin: 0;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #4B5E76;
+  }
+
+  .subscription-summary-card h3,
+  .subscription-panel-card h3 {
+    margin: 0.25rem 0 0;
+    color: #102237;
+  }
+
+  .subscription-summary-amount {
+    margin: 0.5rem 0 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #0B5E55;
+  }
+
+  .subscription-summary-note {
+    margin: 0.35rem 0 0;
+    color: #4B5563;
   }
 
   .subscription-detail-grid {
-    grid-template-columns: 1fr;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
   }
+
+  .subscription-detail-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid #E3EAF2;
+  }
+
+  .subscription-detail-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .subscription-detail-row span {
+    color: #4B5E76;
+  }
+
+  .subscription-detail-row strong {
+    color: #102237;
+  }
+
+  .subscription-addon-card {
+    border: 1px solid #D8E0EA;
+    border-radius: 10px;
+    background-color: #FFFFFF;
+    padding: 0.85rem;
+    margin-top: 0.75rem;
+  }
+
+  .subscription-addon-name {
+    margin: 0;
+    font-weight: 700;
+    color: #102237;
+  }
+
+  .subscription-addon-description {
+    margin: 0.35rem 0 0.45rem;
+    color: #4B5563;
+  }
+
+  .subscription-addon-form {
+    margin-top: 0.75rem;
+  }
+
+  .subscription-empty {
+    margin: 0.5rem 0 0;
+    color: #4B5563;
+  }
+
+  @media (max-width: 900px) {
+    .subscription-summary-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .subscription-detail-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .jobs-card-row,
+    .customer-card-row {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
+      align-items: start;
+    }
+
+    .jobs-card-value,
+    .customer-card-value {
+      text-align: left;
+    }
+
+    .home-job-card-content {
+      grid-template-columns: 1fr;
+      gap: 0.55rem;
+    }
+
+    .home-job-card-column--left {
+      border-right: 0;
+      border-bottom: 1px solid #E3EAF2;
+      padding-bottom: 0.55rem;
+    }
+
+    .home-job-card-column--right {
+      padding-left: 0.4rem;
+    }
+  }
+
 }
 
-@media (max-width: 640px) {
-  .jobs-card-row,
-  .customer-card-row {
-    grid-template-columns: 1fr;
-    gap: 0.25rem;
+  #create-job-form .create-job-form-section-header {
+    margin: 1rem 0 0.75rem;
+    padding: 0.5rem 0.75rem;
+    color: var(--kl-accent-contrast);
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-align: left;
+    background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
+    border-radius: 4px;
+  }
+
+  #add-customer-form .create-job-form-section-header {
+    margin: 1rem 0 0.75rem;
+    padding: 0.5rem 0.75rem;
+    color: var(--kl-accent-contrast);
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-align: left;
+    background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
+    border-radius: 4px;
+  }
+
+  .add-customer-form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .add-customer-form-row[hidden],
+  .add-customer-form-field[hidden] {
+    display: none !important;
+  }
+
+  .add-customer-form-row--top-aligned {
     align-items: start;
   }
 
-  .jobs-card-value,
-  .customer-card-value {
-    text-align: left;
+  .add-customer-form-row--single {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: calc(50% - 0.5rem);
   }
 
-  .home-job-card-content {
+  #create-service-form.materials-form .materials-form-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  #create-service-form.materials-form .materials-form-row--pricing {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 720px) {
+    #create-service-form.materials-form .materials-form-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .add-customer-form-field {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .add-customer-form-field label {
+    color: #1B263B;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .add-customer-form-field input,
+  .add-customer-form-field select,
+  .add-customer-form-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #C5C7CB;
+    border-radius: 4px;
+    background-color: #FFFFFF;
+    color: #1B263B;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+
+  .add-customer-form-field input,
+  .add-customer-form-field select {
+    min-height: 44px;
+    line-height: 1.2;
+  }
+
+  .add-customer-form-field select {
+    display: block;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #1B263B 50%),
+      linear-gradient(135deg, #1B263B 50%, transparent 50%);
+    background-position:
+      calc(100% - 1rem) calc(50% + 1px),
+      calc(100% - 0.7rem) calc(50% + 1px);
+    background-size: 0.35rem 0.35rem, 0.35rem 0.35rem;
+    background-repeat: no-repeat;
+    padding-right: 2.25rem;
+    cursor: pointer;
+  }
+
+  .category-input-toggle {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .category-input-toggle input[data-category-input] {
+    grid-column: 1 / -1;
+  }
+
+  .category-toggle-button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 1px solid #1B263B;
+    border-radius: 4px;
+    background-color: #FFFFFF;
+    color: #1B263B;
+    font-size: 1.2rem;
+    line-height: 1;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .category-toggle-button:hover {
+    background-color: #F1F5F9;
+  }
+
+  .add-customer-form-field input:focus,
+  .add-customer-form-field select:focus,
+  .add-customer-form-field textarea:focus {
+    outline: 2px solid #5FA3D3;
+    outline-offset: 1px;
+    border-color: #5FA3D3;
+  }
+
+  #create-job-form #job-customer-name:disabled,
+  #create-job-form #job-customer-phone:disabled {
+    background-color: #EEF1F4;
+    color: #6B7280;
+    border-color: #D1D5DB;
+    cursor: not-allowed;
+  }
+
+  .add-customer-form-field textarea {
+    resize: vertical;
+    font-family: inherit;
+  }
+
+  .job-client-inline {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    padding: 0.3rem 0;
+  }
+
+  .job-client-label {
+    color: #6B7280;
+    font-size: 0.95rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .job-client-name {
+    color: #1B263B;
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+
+  .job-property-address-preview {
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 4px;
+    background: #F8FAFC;
+    color: #1F2937;
+    font-size: 0.95rem;
+    line-height: 1.65;
+    white-space: pre-line;
+  }
+
+  .job-property-address-preview-name {
+    display: inline;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1B263B;
+  }
+
+  .job-property-info-block {
+    gap: 0.5rem;
+  }
+
+  .job-property-add-button {
+    width: fit-content;
+    margin-top: 0.25rem;
+  }
+
+  .hvac-diagnostics-readonly-input:disabled {
+    background: linear-gradient(180deg, #F2F4F7 0%, #E7EBF0 100%);
+    border-color: #C7CED6;
+    color: #6B7280;
+    cursor: not-allowed;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  .hvac-diagnostics-readonly-input:disabled::placeholder {
+    color: #9CA3AF;
+  }
+
+  #job-services-list {
+    display: grid;
+    gap: 1rem;
+  }
+
+  #job-materials-list {
+    display: grid;
+    gap: 1rem;
+  }
+
+  #job-discounts-list {
+    display: grid;
+    gap: 1rem;
+  }
+
+  #job-materials-list .job-material-row {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  #service-materials-list .service-material-row {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
+    grid-column: span 2;
+  }
+
+  #service-materials-list .service-material-row .add-customer-form-field:nth-child(1) {
+    grid-column: span 2;
+  }
+
+  #job-discounts-list .job-discount-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  #job-discounts-list .job-discount-row .add-customer-form-field:nth-child(1) {
+    grid-column: span 2;
+  }
+
+  @media (max-width: 1280px) {
+    #job-materials-list .job-material-row {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    #service-materials-list .service-material-row {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
+      grid-column: span 3;
+    }
+
+    #service-materials-list .service-material-row .add-customer-form-field:nth-child(1) {
+      grid-column: span 3;
+    }
+
+    #job-discounts-list .job-discount-row {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    #job-discounts-list .job-discount-row .add-customer-form-field:nth-child(1) {
+      grid-column: span 3;
+    }
+  }
+
+  @media (max-width: 900px) {
+    #job-materials-list .job-material-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #service-materials-list .service-material-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
+      grid-column: span 2;
+    }
+
+    #service-materials-list .service-material-row .add-customer-form-field:nth-child(1) {
+      grid-column: span 2;
+    }
+
+    #job-discounts-list .job-discount-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #job-discounts-list .job-discount-row .add-customer-form-field:nth-child(1) {
+      grid-column: span 2;
+    }
+  }
+
+  @media (max-width: 640px) {
+    #job-materials-list .job-material-row {
+      grid-template-columns: 1fr;
+    }
+
+    #service-materials-list .service-material-row {
+      grid-template-columns: 1fr;
+    }
+
+    #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
+      grid-column: auto;
+    }
+
+    #service-materials-list .service-material-row .add-customer-form-field:nth-child(1) {
+      grid-column: auto;
+    }
+
+    #job-discounts-list .job-discount-row {
+      grid-template-columns: 1fr;
+    }
+
+    #job-discounts-list .job-discount-row .add-customer-form-field:nth-child(1) {
+      grid-column: auto;
+    }
+  }
+
+  #job-services-actions,
+  #job-parts-actions,
+  #job-labors-actions,
+  #job-materials-actions,
+  #job-equipments-actions,
+  #job-discounts-actions,
+  #service-parts-actions,
+  #service-materials-actions {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  #add-job-service-button,
+  #add-job-part-button,
+  #add-job-labor-button,
+  #add-job-material-button,
+  #add-job-equipment-button,
+  #add-job-discount-button,
+  #add-service-part-button,
+  #add-service-material-button {
+    padding: 0.55rem 0.95rem;
+    border: 1px solid #1B263B;
+    border-radius: 4px;
+    background-color: #FFFFFF;
+    color: #1B263B;
+    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  #add-job-service-button:hover,
+  #add-job-part-button:hover,
+  #add-job-labor-button:hover,
+  #add-job-material-button:hover,
+  #add-job-equipment-button:hover,
+  #add-job-discount-button:hover,
+  #add-service-part-button:hover,
+  #add-service-material-button:hover {
+    background-color: #F1F5F9;
+  }
+
+  .job-row-remove-wrap {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .job-row-remove-button {
+    padding: 0.45rem 0.75rem;
+    border: 1px solid #B91C1C;
+    border-radius: 4px;
+    background-color: #FEF2F2;
+    color: #991B1B;
+    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .job-row-remove-button:hover {
+    background-color: #FEE2E2;
+  }
+
+  #create-job-form #job-date,
+  #create-job-form #job-time {
+    height: 44px;
+  }
+
+  .job-details-layout {
+    align-items: start;
+  }
+
+  .job-details-stack {
+    display: grid;
+    gap: 1rem;
+  }
+
+  #clear-date-time {
+    margin-top: 0.5rem;
+    align-self: start;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid #9CA3AF;
+    border-radius: 4px;
+    background-color: #F8FAFC;
+    color: #374151;
+    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+
+  #clear-date-time:hover {
+    background-color: #FEE2E2;
+    border-color: #EF4444;
+    color: #991B1B;
+  }
+
+  #clear-date-time:focus {
+    outline: 2px solid #5FA3D3;
+    outline-offset: 1px;
+  }
+
+  #add-customer-form-actions,
+  #create-job-form-actions,
+  #create-service-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+  }
+
+  #add-customer-form-actions button,
+  #create-job-form-actions button,
+  #create-service-form-actions button {
+    padding: 0.65rem 1.1rem;
+    border: 1px solid #1B263B;
+    border-radius: 4px;
+    background-color: #1B263B;
+    color: #F8F9FA;
+    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  #add-customer-form-actions button:hover,
+  #create-job-form-actions button:hover,
+  #create-service-form-actions button:hover {
+    background-color: #27364F;
+    border-color: #27364F;
+  }
+
+  #add-customer-form-actions button:disabled,
+  #create-job-form-actions button:disabled,
+  #create-service-form-actions button:disabled {
+    background-color: #C5C7CB;
+    border-color: #C5C7CB;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .form-field-error {
+    display: block;
+    color: #D32F2F;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-top: 0.35rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .form-field-note {
+    margin: 0.5rem 0;
+    color: #4B5563;
+    font-size: 0.9rem;
+  }
+
+  .form-field-note--compact {
+    margin-top: 0.2rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .service-emergency-warning {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #e7c98b;
+    border-radius: 8px;
+    background-color: #fff6df;
+    color: #8a5a00;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .service-emergency-call-field {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.5rem !important;
+  }
+
+  .service-emergency-call-field label {
+    margin-bottom: 0;
+  }
+
+  .service-emergency-call-toggle {
+    width: 1.4rem !important;
+    height: 1.4rem !important;
+    min-width: 1.4rem;
+    cursor: pointer;
+    accent-color: #1B263B;
+  }
+
+  .field-validation-error {
+    min-height: 1.1rem;
+    margin: 0.2rem 0 0;
+    color: #D32F2F;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.2;
+    visibility: hidden;
+  }
+
+  .field-validation-error.is-visible {
+    visibility: visible;
+  }
+
+  .form-field-input-error {
+    border-color: #D32F2F !important;
+    box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.12);
+    background: linear-gradient(180deg, #FFF8F8 0%, #FFFFFF 100%);
+  }
+
+  .customer-status-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.65rem;
+    border-radius: 999px;
+    background-color: #E5E7EB;
+    color: #1F2937;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .customer-status-chip.is-lead {
+    background-color: #FDE6C8;
+    color: #9A4D00;
+  }
+
+  .customer-status-chip.is-active {
+    background-color: #DDF5E3;
+    color: #1F6B35;
+  }
+
+  .employee-status-chip {
+    padding: 0.24rem 0.8rem;
+    font-size: 1.15rem;
+  }
+
+  #error-services {
+    display: block;
+    color: #D32F2F;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+    margin-top: -0.5rem;
+  }
+
+  #view-customer-panel {
+    width: 100%;
+    padding: 0 0.75rem 0.75rem;
+    box-sizing: border-box;
+  }
+
+  #view-customer-panel h1 {
+    margin: 0 -0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
+    color: var(--kl-accent-contrast);
+    font-family: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  #view-customer-actions {
+    border: 1px solid #C5C7CB;
+    background-color: #FFFFFF;
+    margin-bottom: 1rem;
+  }
+
+  #view-customer-actions-header {
+    margin: 0;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #C5C7CB;
+    background-color: var(--kl-accent-soft);
+    color: var(--kl-text);
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  #view-customer-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 0.75rem;
+  }
+
+  #view-customer-actions-note {
+    margin: 0 0.75rem 0.75rem;
+    color: #7C2D12;
+    font-size: 0.875rem;
+  }
+
+  #view-customer-actions-row a,
+  #view-customer-actions-row .view-customer-action-link {
+    display: inline-block;
+    padding: 0.55rem 0.95rem;
+    border: 1px solid #1B263B;
+    border-radius: 4px;
+    background-color: #1B263B;
+    color: #F8F9FA;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  #view-customer-actions-row .view-customer-action-link.is-disabled {
+    background-color: #C5C7CB;
+    border-color: #C5C7CB;
+    color: #F8F9FA;
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  #view-customer-actions-row form {
+    margin: 0;
+    padding: 0;
+    display: inline;
+  }
+
+  #view-customer-actions-row button {
+    display: inline-block;
+    padding: 0.55rem 0.95rem;
+    border: 1px solid #1B263B;
+    border-radius: 4px;
+    background-color: #1B263B;
+    color: #F8F9FA;
+    font-weight: 600;
+    font-family: inherit;
+    font-size: inherit;
+    cursor: pointer;
+  }
+
+  #view-customer-actions-row a:hover,
+  #view-customer-actions-row button:hover {
+    background-color: #27364F;
+    border-color: #27364F;
+  }
+
+  #view-customer-actions-row .view-customer-action-link.is-disabled:hover {
+    background-color: #C5C7CB;
+    border-color: #C5C7CB;
+  }
+
+  #view-customer-details {
+    margin-top: 0.5rem;
+  }
+
+  #view-customer-details > h2 {
+    margin: 0 0 0.75rem;
+    color: var(--kl-header-soft);
+  }
+
+  .view-customer-section-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-top: 1px solid #808080;
+  }
+
+  .view-customer-section-row--full {
     grid-template-columns: 1fr;
+  }
+
+  .view-customer-section-row--full .view-customer-section-column:first-child {
+    border-right: 0;
+  }
+
+  #view-profile-details-columns {
+    grid-template-columns: 1fr;
+  }
+
+  #view-profile-details-columns .view-customer-section-column:first-child {
+    border-right: 0;
+  }
+
+  #view-employee-details-columns {
+    grid-template-columns: 1fr;
+  }
+
+  #view-employee-details-columns .view-customer-section-column:first-child {
+    border-right: 0;
+  }
+
+  #view-equipment-details-columns {
+    grid-template-columns: 1fr;
+  }
+
+  #view-equipment-details-columns .view-customer-section-column:first-child {
+    border-right: 0;
+  }
+
+  #view-hvac-reports-columns {
+    grid-template-columns: 1fr;
+  }
+
+  #view-hvac-reports-columns .view-customer-section-column:first-child {
+    border-right: 0;
+  }
+
+  #view-hvac-components-columns {
+    grid-template-columns: 1fr;
+  }
+
+  #view-hvac-components-columns .view-customer-section-column:first-child {
+    border-right: 0;
+  }
+
+  #view-hvac-diagnostics-reports-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #view-hvac-diagnostic-columns,
+  #view-hvac-diagnostic-sections-columns {
+    grid-template-columns: 1fr;
+  }
+
+  #view-hvac-diagnostic-columns .view-customer-section-column:first-child,
+  #view-hvac-diagnostic-sections-columns .view-customer-section-column:first-child {
+    border-right: 0;
+  }
+
+  #view-customer-account-columns {
+    margin-top: 1rem;
+  }
+
+  #view-customer-estimates-columns {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  #view-customer-estimates-columns .view-customer-section-column {
+    border-right: 1px solid #F8F9FA;
+  }
+
+  #view-customer-estimates-columns .view-customer-section-column:last-child {
+    border-right: 0;
+  }
+
+  .view-customer-section-column {
+    padding: 0 0.75rem 0.75rem;
+  }
+
+  .view-customer-section-column:first-child {
+    border-right: 1px solid #F8F9FA;
+  }
+
+  .view-customer-section-column > h3 {
+    text-align: center;
+    background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
+    color: var(--kl-accent-contrast);
+    margin: 0 -0.75rem 0.75rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  #view-customer-details-list,
+  #view-customer-account-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+    padding: 0.25rem 0;
+  }
+
+  .view-customer-detail-item {
+    padding: 0;
+  }
+
+  .view-customer-detail-item h4 {
+    margin: 0 0 0.2rem;
+    color: #1B263B;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .view-customer-detail-item p {
+    margin: 0;
+    color: #1B263B;
+    font-size: 1.25rem;
+  }
+
+  #view-customer-estimates-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+  }
+
+  .view-customer-card-link,
+  .view-customer-estimate-item {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #C5C7CB;
+    background-color: #FFFFFF;
+    color: inherit;
+    text-decoration: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .view-customer-card-link h4,
+  .view-customer-estimate-item h4 {
+    margin: 0 0 0.2rem;
+    color: #1B263B;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .view-customer-card-link p,
+  .view-customer-estimate-item p {
+    margin: 0;
+    color: #1B263B;
+    font-size: 1rem;
+  }
+
+  .view-customer-jobs-list,
+  .view-customer-payments-list,
+  .view-customer-estimates-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+  }
+
+  .view-customer-properties-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.25rem 0;
+  }
+
+  .view-customer-properties-header,
+  .view-customer-properties-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 88px;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .view-customer-properties-header {
+    color: #344054;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0 0.25rem;
+  }
+
+  .view-customer-properties-header span:last-child {
+    text-align: center;
+  }
+
+  .view-customer-property-default-form {
+    display: flex;
+    justify-content: center;
+  }
+
+  .view-customer-property-default-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .view-customer-property-default-toggle input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .view-customer-property-default-toggle span {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 1px solid #98A2B3;
+    background: #FFFFFF;
+    box-shadow: inset 0 1px 1px rgba(16, 24, 40, 0.04);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .view-customer-property-default-toggle input:checked + span {
+    border-color: #14532D;
+    background: #15803D;
+  }
+
+  .view-customer-property-default-toggle input:checked + span::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 10px;
+    border-right: 2px solid #FFFFFF;
+    border-bottom: 2px solid #FFFFFF;
+    transform: translate(-50%, -55%) rotate(45deg);
+  }
+
+  .view-customer-property-default-toggle input:focus-visible + span {
+    outline: 2px solid #1D4ED8;
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 720px) {
+    .view-customer-properties-header,
+    .view-customer-properties-row {
+      grid-template-columns: minmax(0, 1fr) 72px;
+    }
+  }
+
+  .view-customer-hvac-card {
+    padding: 0;
+    overflow: hidden;
+    border-radius: 14px;
+    border: 1px solid #D3DBE6;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
+    box-shadow: 0 4px 14px rgba(22, 44, 77, 0.08);
+  }
+
+  .view-customer-hvac-card-header {
+    padding: 0.8rem 0.9rem 0.72rem;
+    border-bottom: 1px solid #DDE5F0;
+    background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-accent-soft) 100%);
+  }
+
+  .view-customer-hvac-card-kicker {
+    margin: 0;
+    font-size: 0.74rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--kl-text-muted);
+  }
+
+  .view-customer-hvac-card-header h4 {
+    margin: 0.2rem 0 0;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--kl-text);
+  }
+
+  .view-customer-hvac-card-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8rem;
+    align-items: center;
+    padding: 0.66rem 0.9rem;
+    border-bottom: 1px solid #E4EAF2;
+  }
+
+  .view-customer-hvac-card-row:last-child {
+    border-bottom: 0;
+  }
+
+  .view-customer-hvac-card-label {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #344054;
+  }
+
+  .view-customer-hvac-card-value {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #1B263B;
+    text-align: right;
+  }
+
+  .view-customer-hvac-card--heat-pump {
+    border-top: 3px solid #2563EB;
+  }
+
+  .view-customer-hvac-card--heat-pump .view-customer-hvac-card-header {
+    background: linear-gradient(180deg, #EFF6FF 0%, #E4EEFF 100%);
+  }
+
+  .view-customer-hvac-card--heat-pump .view-customer-hvac-card-kicker {
+    color: #1E3A8A;
+  }
+
+  .view-customer-hvac-card--split {
+    border-top: 3px solid #0F766E;
+  }
+
+  .view-customer-hvac-card--split .view-customer-hvac-card-header {
+    background: linear-gradient(180deg, #ECFDF5 0%, #DFF7EE 100%);
+  }
+
+  .view-customer-hvac-card--split .view-customer-hvac-card-kicker {
+    color: #115E59;
+  }
+
+  .view-customer-hvac-card--package {
+    border-top: 3px solid #D97706;
+  }
+
+  .view-customer-sub-property-card {
+    border-top: 3px solid #0F766E;
+  }
+
+  .view-customer-sub-property-card .view-customer-hvac-card-header {
+    background: linear-gradient(180deg, #ECFDF5 0%, #DFF7EE 100%);
+  }
+
+  .view-customer-sub-property-card .view-customer-hvac-card-kicker {
+    color: #115E59;
+  }
+
+  .view-customer-hvac-card--package .view-customer-hvac-card-header {
+    background: linear-gradient(180deg, #FFFBEB 0%, #FFF3D8 100%);
+  }
+
+  .view-customer-hvac-card--package .view-customer-hvac-card-kicker {
+    color: #92400E;
+  }
+
+  .view-customer-hvac-card--mini-split {
+    border-top: 3px solid #7C3AED;
+  }
+
+  .view-customer-hvac-card--mini-split .view-customer-hvac-card-header {
+    background: linear-gradient(180deg, #F5F3FF 0%, #ECE7FF 100%);
+  }
+
+  .view-customer-hvac-card--mini-split .view-customer-hvac-card-kicker {
+    color: #5B21B6;
+  }
+
+  .hvac-diagnostics-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .hvac-system-diagnostics-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .hvac-system-diagnostics-link .hvac-component-card {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  }
+
+  .hvac-system-diagnostics-link:hover .hvac-component-card,
+  .hvac-system-diagnostics-link:focus-visible .hvac-component-card {
+    border-color: #AFC6E4;
+    box-shadow: 0 8px 18px rgba(15, 76, 129, 0.14);
+    transform: translateY(-1px);
+  }
+
+  .hvac-system-diagnostics-link:focus-visible {
+    outline: none;
+  }
+
+  .hvac-system-diagnostics-card {
+    flex: 1;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(22, 44, 77, 0.08);
+  }
+
+  .hvac-system-diagnostics-card .hvac-component-card-header {
+    background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-accent-soft) 100%);
+  }
+
+  .hvac-system-diagnostics-card .hvac-component-row span {
+    font-weight: 600;
+  }
+
+  .hvac-system-diagnostics-card .hvac-component-row strong {
+    font-weight: 700;
+  }
+
+  .hvac-diagnostic-sections-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+    padding: 0.25rem 0;
+  }
+
+  .hvac-diagnostic-section-card {
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(22, 44, 77, 0.08);
+  }
+
+  .hvac-components-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+    padding: 0.25rem 0;
+  }
+
+  .hvac-component-card {
+    display: block;
+    border: 1px solid #D6DCE5;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
+    color: inherit;
+    text-decoration: none;
+    overflow: hidden;
+    transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .hvac-component-card--detail-page {
+    min-height: 100%;
+  }
+
+  .hvac-component-card--air-handler {
+    border-top: 3px solid #2B6CB0;
+  }
+
+  .hvac-component-card--condenser {
+    border-top: 3px solid #0F766E;
+  }
+
+  .hvac-component-card--unit-package {
+    border-top: 3px solid #92400E;
+  }
+
+  .hvac-component-card--unit-mini {
+    border-top: 3px solid #7C3AED;
+  }
+
+  .hvac-component-card--ductwork {
+    border-top: 3px solid #4B5563;
+  }
+
+  .hvac-component-card--diagnostics {
+    border-top: 3px solid #1B4D8C;
+  }
+
+  .hvac-component-card--report {
+    border-top: 3px solid #0B5E55;
+  }
+
+  .hvac-component-card:hover {
+    border-color: #B9C7DA;
+    box-shadow: 0 2px 8px rgba(27, 38, 59, 0.08);
+  }
+
+  .hvac-component-card-header {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid #DDE4EE;
+  }
+
+  .hvac-component-card-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #1B263B;
+    background-color: #EAF1F8;
+    border: 1px solid #C9D7E7;
+    flex-shrink: 0;
+  }
+
+  .hvac-component-card-icon--air-handler {
+    color: #1D4E89;
+    background-color: #E7F0FA;
+    border-color: #B7CEE9;
+  }
+
+  .hvac-component-card-icon--condenser {
+    color: #115E59;
+    background-color: #E6F5F3;
+    border-color: #B9E1DC;
+  }
+
+  .hvac-component-card-icon--unit-package {
+    color: #7C2D12;
+    background-color: #FFF1E7;
+    border-color: #F6D0B5;
+  }
+
+  .hvac-component-card-icon--unit-mini {
+    color: #5B21B6;
+    background-color: #F2EBFF;
+    border-color: #D9C3FF;
+  }
+
+  .hvac-component-card-icon--ductwork {
+    color: #374151;
+    background-color: #F0F3F6;
+    border-color: #D6DCE5;
+  }
+
+  .hvac-component-card-icon--diagnostics {
+    color: #0F4C81;
+    background-color: #E8F2FD;
+    border-color: #BDD8F6;
+  }
+
+  .hvac-component-card-icon--report {
+    color: #0B5E55;
+    background-color: #E8F8F5;
+    border-color: #B8E5DC;
+  }
+
+  .hvac-component-card-system-type {
+    margin: 0;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #475467;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .hvac-component-card-heading-text h4 {
+    margin: 0.15rem 0 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--kl-text);
+  }
+
+  .hvac-component-card-body {
+    padding: 0.1rem 0.85rem;
+  }
+
+  .hvac-component-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 0.62rem 0;
+    border-bottom: 1px solid #E4E9F0;
+  }
+
+  .hvac-component-row:last-child {
+    border-bottom: 0;
+  }
+
+  .hvac-component-row span {
+    font-size: 0.92rem;
+    color: #344054;
+  }
+
+  .hvac-component-row strong {
+    font-size: 0.92rem;
+    color: #1B263B;
+    font-weight: 700;
+    text-align: right;
+  }
+
+  .hvac-component-row--notes {
+    align-items: flex-start;
+  }
+
+  .hvac-component-row--notes span {
+    color: #0B5E55;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .hvac-component-row--notes span::before {
+    content: "i";
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #0B5E55;
+    background: #EAF8F4;
+    border: 1px solid #BEE9DD;
+    flex-shrink: 0;
+  }
+
+  .hvac-component-row--notes strong {
+    max-width: 62%;
+    text-align: left;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  .hvac-component-card--diagnostics .hvac-component-row strong {
+    max-width: 58%;
+    word-break: break-word;
+  }
+
+  .hvac-component-card--report .hvac-component-card-header {
+    background: linear-gradient(180deg, #F5FCFA 0%, #EAF8F4 100%);
+  }
+
+  .hvac-component-card--report .hvac-component-row strong {
+    max-width: 62%;
+    word-break: break-word;
+  }
+
+  .hvac-component-card--report .hvac-report-open-row span {
+    color: #1F4B46;
+    font-weight: 700;
+  }
+
+  .hvac-report-open-affordance {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #0B5E55;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+  }
+
+  .hvac-report-actions {
+    display: inline-flex;
+    align-items: center;
     gap: 0.55rem;
   }
 
-  .home-job-card-column--left {
-    border-right: 0;
-    border-bottom: 1px solid #E3EAF2;
-    padding-bottom: 0.55rem;
+  .hvac-report-action-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #0B5E55;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    text-decoration: none;
   }
 
-  .home-job-card-column--right {
-    padding-left: 0.4rem;
+  .hvac-report-action-link:hover,
+  .hvac-report-action-link:focus-visible {
+    color: #084C45;
+    text-decoration: underline;
   }
-}
 
-#create-job-form .create-job-form-section-header {
-  margin: 1rem 0 0.75rem;
-  padding: 0.5rem 0.75rem;
-  color: var(--kl-accent-contrast);
-  font-size: 1.05rem;
-  font-weight: 700;
-  text-align: left;
-  background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
-  border-radius: 4px;
-}
+  .hvac-component-card--report:hover .hvac-report-open-affordance,
+  .hvac-component-card--report:focus-visible .hvac-report-open-affordance {
+    color: #084C45;
+  }
 
-#add-customer-form .create-job-form-section-header {
-  margin: 1rem 0 0.75rem;
-  padding: 0.5rem 0.75rem;
-  color: var(--kl-accent-contrast);
-  font-size: 1.05rem;
-  font-weight: 700;
-  text-align: left;
-  background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
-  border-radius: 4px;
-}
+  .hvac-component-card--report:hover,
+  .hvac-component-card--report:focus-visible {
+    border-color: #92CFC1;
+    box-shadow: 0 8px 18px rgba(11, 94, 85, 0.14);
+    transform: translateY(-1px);
+  }
 
-.add-customer-form-row {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-}
+  .hvac-system-kpi-grid {
+    margin-top: 0.95rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
 
-.add-customer-form-row[hidden],
-.add-customer-form-field[hidden] {
-  display: none !important;
-}
+  .hvac-system-status-note {
+    margin: 0.45rem 0 0;
+    font-size: 0.78rem;
+    color: #5A677A;
+    text-align: left;
+  }
 
-.add-customer-form-row--top-aligned {
-  align-items: start;
-}
+  /* System Photos */
+  .hvac-photos-note {
+    font-size: 0.8rem;
+    color: #5A677A;
+    background: #F4F6FA;
+    border: 1px solid #D6DCE5;
+    border-radius: 6px;
+    padding: 0.55rem 0.85rem;
+    margin-bottom: 0.95rem;
+    line-height: 1.5;
+  }
 
-.add-customer-form-row--single {
-  grid-template-columns: minmax(0, 1fr);
-  max-width: calc(50% - 0.5rem);
-}
+  .hvac-photos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.75rem;
+  }
 
-#create-service-form.materials-form .materials-form-row {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-}
+  .hvac-diagnostic-section-photos {
+    margin-top: 0.85rem;
+    border-top: 1px dashed #D6DCE5;
+    padding-top: 0.8rem;
+  }
 
-#create-service-form.materials-form .materials-form-row--pricing {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
+  .hvac-diagnostic-section-photos h4,
+  .hvac-diagnostic-section-photos-preview h5 {
+    margin: 0 0 0.55rem;
+    font-size: 0.9rem;
+    color: #2A3A54;
+  }
 
-@media (max-width: 720px) {
-  #create-service-form.materials-form .materials-form-row {
+  .hvac-diagnostic-section-photos .hvac-photos-note {
+    margin-top: 0;
+  }
+
+  .hvac-photo-tile {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #D6DCE5;
+    background: #F4F6FA;
+  }
+
+  .hvac-photo-thumb-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: zoom-in;
+  }
+
+  .hvac-photo-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .hvac-diagnostic-photo-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0.33rem 0.45rem;
+    font-size: 0.72rem;
+    line-height: 1.3;
+    color: #fff;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(5, 8, 14, 0.82) 90%);
+  }
+
+  .hvac-photo-delete-form {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+  }
+
+  .hvac-photo-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: background 0.15s;
+  }
+
+  .hvac-photo-delete-btn:hover {
+    background: rgba(200, 40, 40, 0.85);
+  }
+
+  .hvac-photo-tile--add {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    border: 1.5px dashed #A4B0C0;
+    cursor: pointer;
+    color: #5A677A;
+    font-size: 0.78rem;
+    font-weight: 500;
+    transition: border-color 0.15s, background 0.15s;
+    user-select: none;
+  }
+
+  .hvac-photo-tile--add:hover {
+    border-color: #4A90D9;
+    background: #EBF3FC;
+    color: #2B6CB0;
+  }
+
+  .hvac-photo-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Photo lightbox modal */
+  .hvac-photo-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hvac-photo-modal[hidden] {
+    display: none;
+  }
+
+  .hvac-photo-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    cursor: pointer;
+  }
+
+  .hvac-photo-modal-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: min(92vw, 1000px);
+    max-height: 92dvh;
+    padding: 0.5rem;
+  }
+
+  .hvac-photo-caption-modal-content {
+    width: min(92vw, 640px);
+    background: #0E1827;
+    border: 1px solid rgba(169, 190, 214, 0.25);
+    border-radius: 10px;
+    padding: 0.8rem;
+  }
+
+  .hvac-photo-caption-label {
+    width: 100%;
+    margin: 0.75rem 0 0.35rem;
+    color: #D5E4F6;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .hvac-photo-caption-input {
+    width: 100%;
+    max-width: 100%;
+    min-height: 86px;
+    resize: vertical;
+    border-radius: 8px;
+    border: 1px solid #2A3F59;
+    background: #122136;
+    color: #fff;
+    padding: 0.55rem 0.65rem;
+    font-size: 0.86rem;
+    line-height: 1.45;
+  }
+
+  .hvac-photo-caption-input:focus {
+    outline: 2px solid #4A90D9;
+    outline-offset: 1px;
+  }
+
+  .hvac-photo-caption-actions {
+    width: 100%;
+    margin-top: 0.75rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.55rem;
+  }
+
+  .hvac-photo-caption-actions button {
+    border-radius: 7px;
+    border: 1px solid #355374;
+    background: #173150;
+    color: #E8F0FA;
+    padding: 0.42rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .hvac-photo-caption-actions button:hover,
+  .hvac-photo-caption-actions button:focus-visible {
+    background: #1D3D63;
+    border-color: #4A90D9;
+  }
+
+  .hvac-photo-caption-actions .secondary-button {
+    background: transparent;
+    border-color: #516982;
+  }
+
+  .hvac-photo-caption-actions .secondary-button:hover,
+  .hvac-photo-caption-actions .secondary-button:focus-visible {
+    background: rgba(108, 135, 164, 0.2);
+  }
+
+  .hvac-diagnostic-section-photos-preview {
+    margin-top: 0.85rem;
+    padding-top: 0.8rem;
+    border-top: 1px dashed #D6DCE5;
+  }
+
+  .hvac-diagnostic-section-photos-preview .hvac-photo-tile {
+    aspect-ratio: auto;
+    overflow: visible;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem;
+    gap: 0.4rem;
+  }
+
+  .hvac-diagnostic-section-photos-preview .hvac-photo-thumb-link {
+    height: 120px;
+  }
+
+  .hvac-diagnostic-section-photos-preview .hvac-photo-thumb {
+    border-bottom: 1px solid #D6DCE5;
+  }
+
+  .hvac-diagnostic-section-photos-preview .hvac-diagnostic-photo-caption {
+    position: static;
+    color: #1E293B;
+    background: #F8FAFD;
+    border-bottom: 1px solid #E2E8F0;
+    min-height: 2.15rem;
+  }
+
+  .hvac-diagnostic-photo-actions {
+    padding: 0.45rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+
+  .hvac-diagnostic-photo-gallery-actions {
+    margin-top: 0.75rem;
+    display: flex;
+    justify-content: center;
+  }
+
+  .hvac-diagnostic-photo-gallery-more-btn {
+    border: 1px solid #355374;
+    border-radius: 999px;
+    background: #173150;
+    color: #E8F0FA;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.45rem 0.85rem;
+    cursor: pointer;
+  }
+
+  .hvac-diagnostic-photo-gallery-more-btn:hover,
+  .hvac-diagnostic-photo-gallery-more-btn:focus-visible {
+    background: #1D3D63;
+    border-color: #4A90D9;
+  }
+
+  .hvac-diagnostic-photo-actions form {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .hvac-diagnostic-photo-actions input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    padding: 0.3rem 0.45rem;
+    font-size: 0.76rem;
+  }
+
+  .hvac-diagnostic-photo-save-btn {
+    border: 1px solid #355374;
+    border-radius: 6px;
+    background: #173150;
+    color: #E8F0FA;
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 0.28rem 0.52rem;
+    cursor: pointer;
+  }
+
+  .hvac-diagnostic-photo-save-btn:hover,
+  .hvac-diagnostic-photo-save-btn:focus-visible {
+    background: #1D3D63;
+    border-color: #4A90D9;
+  }
+
+  .hvac-photo-modal-close {
+    position: absolute;
+    top: -2.25rem;
+    right: 0;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  .hvac-photo-modal-close:hover,
+  .hvac-photo-modal-close:focus-visible {
+    background: rgba(255, 255, 255, 0.3);
+    outline: none;
+  }
+
+  .hvac-photo-modal-img {
+    display: block;
+    max-width: 100%;
+    max-height: calc(92dvh - 3rem);
+    border-radius: 6px;
+    object-fit: contain;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  }
+
+  .hvac-photo-modal-caption {
+    margin: 0.6rem 0 0;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+  }
+
+  .hvac-system-kpi-card {
+    border: 1px solid #D6DCE5;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
+    padding: 0.8rem 0.85rem;
+  }
+
+  .hvac-system-kpi-card h4 {
+    margin: 0 0 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: #2A3A54;
+  }
+
+  .hvac-system-kpi-value {
+    margin: 0;
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #1B263B;
+    line-height: 1.1;
+  }
+
+  .hvac-system-kpi-value span {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #2A3A54;
+    margin-left: 0.25rem;
+  }
+
+  .hvac-system-kpi-meta {
+    margin: 0.45rem 0 0.55rem;
+    font-size: 0.9rem;
+    color: #3E4A59;
+  }
+
+  .hvac-system-kpi-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .hvac-system-kpi-chip.is-normal {
+    color: #1F6B35;
+    background-color: #EAF6EE;
+    border-color: #B8DDBF;
+  }
+
+  .hvac-system-kpi-chip.is-high {
+    color: #8E4A06;
+    background-color: #FFF3E4;
+    border-color: #F4C996;
+  }
+
+  .hvac-system-kpi-chip.is-low {
+    color: #0D4E8C;
+    background-color: #E6F1FB;
+    border-color: #B9D7F2;
+  }
+
+  .hvac-system-kpi-chip.is-alert {
+    color: #9B1C1C;
+    background-color: #FDECEC;
+    border-color: #F4B7B7;
+  }
+
+  .hvac-system-kpi-chip.is-info {
+    color: #0D4E8C;
+    background-color: #E6F1FB;
+    border-color: #B9D7F2;
+  }
+
+  .hvac-system-kpi-chip.is-no-data {
+    color: #4B5563;
+    background-color: #F3F4F6;
+    border-color: #D1D5DB;
+  }
+
+  .hvac-diagnostics-section {
+    border: 1px solid #C5C7CB;
+    border-radius: 6px;
+    background-color: #FFFFFF;
+    margin-bottom: 0.9rem;
+    overflow: hidden;
+  }
+
+  .hvac-diagnostics-section summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 48px;
+    padding: 0.75rem 0.9rem;
+    background: linear-gradient(90deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
+    color: var(--kl-accent-contrast);
+    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  .hvac-diagnostics-section summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .hvac-diagnostics-section summary::after {
+    content: "+";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    background-color: rgba(247, 252, 248, 0.22);
+    color: var(--kl-accent-contrast);
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .hvac-diagnostics-section[open] summary::after {
+    content: "-";
+  }
+
+  .hvac-diagnostics-section-content {
+    padding: 0.9rem 0.9rem 0.4rem;
+    background-color: #F9FBFD;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem 0.9rem;
+  }
+
+  .hvac-diagnostics-section-content .add-customer-form-row {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .hvac-diagnostics-section-content .hvac-diagnostics-row-full {
+    grid-column: 1 / -1;
+  }
+
+  .hvac-diagnostics-section-content .hvac-diagnostic-section-photos {
+    grid-column: 1 / -1;
+  }
+
+  .hvac-diagnostics-row-checkbox .add-customer-form-field {
+    display: block;
+  }
+
+  .hvac-diagnostics-checkbox-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 58px;
+    padding: 0.85rem 0.95rem;
+    border: 1px solid #C9D6E8;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F5F9FF 100%);
+    box-shadow: 0 2px 8px rgba(25, 48, 82, 0.08);
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  }
+
+  .hvac-diagnostics-checkbox-card:hover {
+    border-color: #AFC2DE;
+    box-shadow: 0 5px 14px rgba(22, 44, 77, 0.12);
+    transform: translateY(-1px);
+  }
+
+  .hvac-diagnostics-checkbox-card input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .hvac-diagnostics-checkbox-indicator {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid #8EA6C8;
+    border-radius: 4px;
+    background-color: #FFFFFF;
+    flex-shrink: 0;
+    position: relative;
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+  }
+
+  .hvac-diagnostics-checkbox-label {
+    color: #1B263B;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .hvac-diagnostics-checkbox-card input[type="checkbox"]:checked + .hvac-diagnostics-checkbox-indicator {
+    border-color: #1B4D8C;
+    background-color: #1B4D8C;
+  }
+
+  .hvac-diagnostics-checkbox-card input[type="checkbox"]:checked + .hvac-diagnostics-checkbox-indicator::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 0;
+    width: 0.35rem;
+    height: 0.65rem;
+    border: solid #FFFFFF;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .hvac-diagnostics-checkbox-card input[type="checkbox"]:focus-visible + .hvac-diagnostics-checkbox-indicator {
+    outline: 2px solid #5FA3D3;
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 640px) {
+    #view-hvac-diagnostics-reports-columns {
+      grid-template-columns: 1fr;
+    }
+
+    .view-customer-hvac-card-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.3rem;
+    }
+
+    .view-customer-hvac-card-value {
+      text-align: left;
+    }
+
+    .hvac-system-kpi-grid {
+      grid-template-columns: 1fr;
+      gap: 0.6rem;
+    }
+
+    .hvac-components-grid {
+      grid-template-columns: 1fr;
+      gap: 0.65rem;
+    }
+
+    .hvac-diagnostic-sections-grid {
+      grid-template-columns: 1fr;
+      gap: 0.65rem;
+    }
+
+    .hvac-system-kpi-card {
+      padding: 0.72rem 0.75rem;
+    }
+
+    .hvac-system-kpi-value {
+      font-size: 1.45rem;
+    }
+
+    .hvac-diagnostics-section {
+      margin-bottom: 0.75rem;
+    }
+
+    .hvac-diagnostics-section summary {
+      min-height: 52px;
+      padding: 0.8rem 0.8rem;
+      font-size: 1.02rem;
+    }
+
+    .hvac-diagnostics-section-content {
+      padding: 0.75rem 0.75rem 0.35rem;
+      grid-template-columns: 1fr;
+      gap: 0.65rem;
+    }
+
+    .hvac-diagnostics-row {
+      flex-direction: column;
+    }
+
+    .hvac-generate-report-button {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+
+  .hvac-diagnostics-row .view-customer-card-link {
+    flex: 1;
+  }
+
+  .hvac-generate-report-form {
+    margin: 0;
+    display: inline-flex;
+    align-items: stretch;
+  }
+
+  .hvac-generate-report-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-width: 56px;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid #1F6B35;
+    border-radius: 4px;
+    background-color: #EAF6EE;
+    color: #1F6B35;
+    text-decoration: none;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .hvac-generate-report-button:hover {
+    background-color: #DDF5E3;
+  }
+
+  #view-equipment-parts-list {
+    margin-top: 0.25rem;
+  }
+
+  .equipment-part-card-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .equipment-part-card-link {
+    flex: 1;
+  }
+
+  .equipment-part-buy-button {
+    flex-shrink: 0;
+  }
+
+  .view-customer-card-link:hover,
+  .view-customer-estimate-item:hover {
+    background: linear-gradient(180deg, #FFFFFF 0%, #F5F9FD 100%);
+    border-color: #B7C7DA;
+  }
+
+  #view-job-panel {
+    width: 100%;
+    padding: 0 0.75rem 0.75rem;
+    box-sizing: border-box;
+  }
+
+  #view-job-panel h1 {
+    margin: 0 -0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
+    color: var(--kl-accent-contrast);
+    font-family: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  #view-job-actions {
+    border: 1px solid #C5C7CB;
+    background-color: #FFFFFF;
+    margin-bottom: 1rem;
+  }
+
+  #view-job-actions-header {
+    margin: 0;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #C5C7CB;
+    background-color: var(--kl-accent-soft);
+    color: var(--kl-text);
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  #view-job-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 0.75rem;
+  }
+
+  #view-job-actions-row a {
+    display: inline-block;
+    padding: 0.55rem 0.95rem;
+    border: 1px solid #1B263B;
+    border-radius: 4px;
+    background-color: #1B263B;
+    color: #F8F9FA;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  #view-job-actions-row a:hover {
+    background-color: #27364F;
+    border-color: #27364F;
+  }
+
+  #view-job-actions-row form {
+    margin: 0;
+    padding: 0;
+    display: inline;
+  }
+
+  #view-job-actions-row button {
+    display: inline-block;
+    padding: 0.55rem 0.95rem;
+    border: 1px solid #1B263B;
+    border-radius: 4px;
+    background-color: #1B263B;
+    color: #F8F9FA;
+    font-weight: 600;
+    font-family: inherit;
+    font-size: inherit;
+    cursor: pointer;
+  }
+
+  #view-job-actions-row button:hover {
+    background-color: #27364F;
+    border-color: #27364F;
+  }
+
+  .view-job-action-blocked {
+    display: inline-block;
+    padding: 0.55rem 0.95rem;
+    border: 1px solid var(--kl-border);
+    border-radius: 4px;
+    background-color: #edf0f3;
+    color: var(--kl-text-muted);
+    font-weight: 600;
+    font-family: inherit;
+    font-size: inherit;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  #home-job-action-button--blocked,
+  .home-job-action-button--blocked {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  #view-job-details {
+    margin-top: 0.5rem;
+  }
+
+  #view-job-details > h2 {
+    margin: 0 0 0.75rem;
+    color: var(--kl-header-soft);
+  }
+
+  .view-job-section-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-top: 1px solid #808080;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  #view-job-notes-row {
+    margin-top: 1rem;
+  }
+
+  .view-job-section-column {
+    padding: 0 0.75rem 0.75rem;
+    box-sizing: border-box;
+    min-width: 0;
+  }
+
+  .view-job-section-column:first-child {
+    border-right: 1px solid #F8F9FA;
+  }
+
+  .view-job-section-column > h3 {
+    text-align: center;
+    background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
+    color: var(--kl-accent-contrast);
+    margin: 0 -0.75rem 0.75rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  #view-job-details-list,
+  #view-job-location-list,
+  #view-job-notes-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+    padding: 0.25rem 0;
+  }
+
+  #view-job-notes-list {
     grid-template-columns: 1fr;
   }
+
+  #view-job-services-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .view-job-detail-item {
+    padding: 0;
+  }
+
+  .view-job-detail-item h4 {
+    margin: 0 0 0.2rem;
+    color: #1B263B;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .view-job-detail-item p {
+    margin: 0;
+    color: #1B263B;
+    font-size: 1.25rem;
+  }
+
+  #view-service-panel {
+    width: 100%;
+    padding: 0 0.75rem 0.75rem;
+    box-sizing: border-box;
+  }
+
+  #view-service-panel h1 {
+    margin: 0 -0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
+    color: var(--kl-accent-contrast);
+    font-family: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  #view-service-actions {
+    border: 1px solid #C5C7CB;
+    background-color: #FFFFFF;
+    margin-bottom: 1rem;
+  }
+
+  #view-service-actions-header {
+    margin: 0;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #C5C7CB;
+    background-color: var(--kl-accent-soft);
+    color: var(--kl-text);
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  #view-service-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 0.75rem;
+  }
+
+  #view-service-actions-row a {
+    display: inline-block;
+    padding: 0.55rem 0.95rem;
+    border: 1px solid #1B263B;
+    border-radius: 4px;
+    background-color: #1B263B;
+    color: #F8F9FA;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  #view-service-actions-row a:hover {
+    background-color: #27364F;
+    border-color: #27364F;
+  }
+
+  #view-service-actions-row form {
+    margin: 0;
+  }
+
+  #view-service-actions-row button {
+    display: inline-block;
+    padding: 0.55rem 0.95rem;
+    border: 1px solid #1B263B;
+    border-radius: 4px;
+    background-color: #1B263B;
+    color: #F8F9FA;
+    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  #view-service-actions-row button:hover {
+    background-color: #27364F;
+    border-color: #27364F;
+  }
+
+  #view-service-details {
+    margin-top: 0.5rem;
+  }
+
+  #view-service-parts {
+    margin-top: 1.25rem;
+  }
+
+  #view-service-parts > h2 {
+    margin: 0 0 0.75rem;
+    color: var(--kl-header-soft);
+  }
+
+  #view-service-parts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+
+  #view-service-details > h2 {
+    margin: 0 0 0.75rem;
+    color: var(--kl-header-soft);
+  }
+
+  #view-service-details-content {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    padding: 1rem;
+    border: 1px solid #C5C7CB;
+    background-color: #FFFFFF;
+  }
+
+  .view-service-detail-item {
+    padding: 0;
+    min-width: 0;
+  }
+
+  .view-service-detail-item h4 {
+    margin: 0 0 0.2rem;
+    color: #1B263B;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .view-service-detail-item p {
+    margin: 0;
+    color: #1B263B;
+    font-size: 1.25rem;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .view-service-detail-item a {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  @media (max-width: 768px) {
+    .view-customer-section-row {
+      grid-template-columns: 1fr;
+    }
+
+    #view-customer-estimates-columns .view-customer-section-column {
+      border-right: 0;
+      border-bottom: 1px solid #F8F9FA;
+    }
+
+    #view-customer-estimates-columns .view-customer-section-column:last-child {
+      border-bottom: 0;
+    }
+
+    #view-customer-details-list {
+      grid-template-columns: 1fr;
+    }
+
+    .view-customer-section-column:first-child {
+      border-right: 0;
+      border-bottom: 1px solid #F8F9FA;
+    }
+
+    .view-job-section-row {
+      grid-template-columns: 1fr;
+    }
+
+    #view-job-details-list {
+      grid-template-columns: 1fr;
+    }
+
+    #view-job-location-list {
+      grid-template-columns: 1fr;
+    }
+
+    #view-job-services-list {
+      flex-direction: column;
+    }
+
+    #view-job-notes-list {
+      grid-template-columns: 1fr;
+    }
+
+    .view-job-section-column:first-child {
+      border-right: 0;
+      border-bottom: 1px solid #F8F9FA;
+    }
+
+    #view-service-details-content {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 900px) {
+    #header-container {
+      width: 90vw;
+      grid-template-columns: 1fr auto auto;
+      grid-template-areas:
+        "brand toggle login"
+        "nav nav nav";
+      column-gap: 0.75rem;
+      justify-content: normal;
+      padding: 0.75rem 0;
+    }
+
+    #header-container h1 {
+      grid-area: brand;
+    }
+
+    #mobile-nav-toggle {
+      display: inline-block;
+      grid-area: toggle;
+      justify-self: end;
+    }
+
+    #login-button {
+      grid-area: login;
+      justify-self: end;
+      margin-left: 0.5rem;
+    }
+
+    #employee-greeting-link {
+      grid-area: login;
+      justify-self: end;
+      margin-left: 0.5rem;
+    }
+
+    #header-navigation {
+      display: none;
+      grid-area: nav;
+      justify-self: stretch;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(248, 249, 250, 0.2);
+    }
+
+    #header-navigation.is-open {
+      display: block;
+    }
+
+    #header-nav {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    #header-nav li:not(:last-child)::after {
+      content: none;
+    }
+
+    #header-nav a {
+      display: block;
+      padding: 0.2rem 0;
+    }
+
+    .home-scheduling-row {
+      grid-template-columns: 1fr;
+    }
+
+    #home-latest-row {
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+
+    #customers-controls-row {
+      grid-template-columns: 1fr;
+      align-items: start;
+    }
+
+    #jobs-controls-row {
+      grid-template-columns: 1fr;
+    }
+
+    .jobs-controls-right-top {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .jobs-controls-right-actions {
+      width: 100%;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .jobs-controls-right-actions select {
+      min-width: 0;
+      width: 100%;
+      max-width: 340px;
+    }
+
+    .customers-controls-right-top {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .customers-controls-right-actions {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: flex-start;
+    }
+
+    .customers-controls-right-actions a {
+      flex: 1 1 120px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+
+    .jobs-compact-list .jobs-card-row--status .jobs-status-chip,
+    .estimates-compact-list .jobs-card-row--status .jobs-status-chip {
+      justify-self: start;
+    }
+
+    .customers-results-search {
+      width: 100%;
+    }
+
+    .add-customer-form-row {
+      grid-template-columns: 1fr;
+    }
+
+    .add-customer-form-row--single {
+      max-width: none;
+    }
+
+    #add-customer-form-actions,
+    #create-job-form-actions,
+    #create-service-form-actions {
+      justify-content: flex-start;
+    }
+  }
+
+  @media (max-width: 768px) {
+    #header-container,
+    #main-container,
+    #footer-container {
+      width: 95%;
+      box-sizing: border-box;
+    }
+
+    #home-jobs-pages,
+    #home-estimates-pages,
+    #home-payments-pages,
+    .list-pages {
+      gap: 0.10rem;
+    }
+
+    #home-jobs-pages a,
+    #home-estimates-pages a,
+    #home-payments-pages a,
+    .list-pages a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.85rem;
+      padding: 0.2rem 0.35rem;
+      font-size: 1.05rem;
+      border-radius: 4px;
+    }
+
+  }
+
+  /* Unified button language across app resources */
+  #login-button,
+  #customers-search-form button,
+  .jobs-controls-right-actions button,
+  .jobs-controls-right-actions a,
+  #add-customer-form-actions button,
+  #create-job-form-actions button,
+  #create-service-form-actions button,
+  #view-customer-actions-row a,
+  #view-customer-actions-row button,
+  #view-job-actions-row a,
+  #view-job-actions-row button,
+  #view-service-actions-row a,
+  #view-service-actions-row button,
+  .customers-add-button,
+  .customers-controls-right a,
+  #add-job-service-button,
+  #add-job-part-button,
+  #add-job-labor-button,
+  #add-job-material-button,
+  #add-job-equipment-button,
+  #add-job-discount-button,
+  #add-service-part-button,
+  #add-service-material-button,
+  #jobs-clear-date-filters,
+  .home-latest-action-link,
+  .home-call-mobile-button,
+  .estimate-email-btn,
+  .hvac-generate-report-button,
+  .job-row-remove-button {
+    border-radius: 10px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    box-shadow: 0 3px 8px rgba(15, 32, 57, 0.08);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  }
+
+  #login-button:hover,
+  #customers-search-form button:hover,
+  .jobs-controls-right-actions button:hover,
+  .jobs-controls-right-actions a:hover,
+  #add-customer-form-actions button:hover,
+  #create-job-form-actions button:hover,
+  #create-service-form-actions button:hover,
+  #view-customer-actions-row a:hover,
+  #view-customer-actions-row button:hover,
+  #view-job-actions-row a:hover,
+  #view-job-actions-row button:hover,
+  #view-service-actions-row a:hover,
+  #view-service-actions-row button:hover,
+  .customers-add-button:hover,
+  .customers-controls-right a:hover,
+  #add-job-service-button:hover,
+  #add-job-part-button:hover,
+  #add-job-labor-button:hover,
+  #add-job-material-button:hover,
+  #add-job-equipment-button:hover,
+  #add-job-discount-button:hover,
+  #add-service-part-button:hover,
+  #add-service-material-button:hover,
+  #jobs-clear-date-filters:hover,
+  .home-latest-action-link:hover,
+  .home-call-mobile-button:hover,
+  .estimate-email-btn:hover,
+  .hvac-generate-report-button:hover,
+  .job-row-remove-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(15, 45, 77, 0.14);
+  }
+
+  #login-button:focus-visible,
+  #customers-search-form button:focus-visible,
+  .jobs-controls-right-actions button:focus-visible,
+  .jobs-controls-right-actions a:focus-visible,
+  #add-customer-form-actions button:focus-visible,
+  #create-job-form-actions button:focus-visible,
+  #create-service-form-actions button:focus-visible,
+  #view-customer-actions-row a:focus-visible,
+  #view-customer-actions-row button:focus-visible,
+  #view-job-actions-row a:focus-visible,
+  #view-job-actions-row button:focus-visible,
+  #view-service-actions-row a:focus-visible,
+  #view-service-actions-row button:focus-visible,
+  .customers-add-button:focus-visible,
+  .customers-controls-right a:focus-visible,
+  #add-job-service-button:focus-visible,
+  #add-job-part-button:focus-visible,
+  #add-job-labor-button:focus-visible,
+  #add-job-material-button:focus-visible,
+  #add-job-equipment-button:focus-visible,
+  #add-job-discount-button:focus-visible,
+  #add-service-part-button:focus-visible,
+  #add-service-material-button:focus-visible,
+  #jobs-clear-date-filters:focus-visible,
+  .home-latest-action-link:focus-visible,
+  .home-call-mobile-button:focus-visible,
+  .estimate-email-btn:focus-visible,
+  .hvac-generate-report-button:focus-visible,
+  .job-row-remove-button:focus-visible {
+    outline: 2px solid var(--kl-focus);
+    outline-offset: 2px;
+  }
+
+  #login-button,
+  #customers-search-form button,
+  .jobs-controls-right-actions button,
+  .jobs-controls-right-actions a,
+  #add-customer-form-actions button,
+  #create-job-form-actions button,
+  #create-service-form-actions button,
+  #view-customer-actions-row a,
+  #view-customer-actions-row button,
+  #view-job-actions-row a,
+  #view-job-actions-row button,
+  #view-service-actions-row a,
+  #view-service-actions-row button {
+    border-color: var(--kl-accent-strong);
+    background: linear-gradient(180deg, var(--kl-accent) 0%, var(--kl-accent-strong) 100%);
+    color: var(--kl-accent-contrast);
+  }
+
+  #login-button:hover,
+  #customers-search-form button:hover,
+  .jobs-controls-right-actions button:hover,
+  .jobs-controls-right-actions a:hover,
+  #add-customer-form-actions button:hover,
+  #create-job-form-actions button:hover,
+  #create-service-form-actions button:hover,
+  #view-customer-actions-row a:hover,
+  #view-customer-actions-row button:hover,
+  #view-job-actions-row a:hover,
+  #view-job-actions-row button:hover,
+  #view-service-actions-row a:hover,
+  #view-service-actions-row button:hover {
+    border-color: #276b45;
+    background: linear-gradient(180deg, #258a53 0%, #17643c 100%);
+  }
+
+  .customers-add-button,
+  .customers-controls-right a,
+  #add-job-service-button,
+  #add-job-part-button,
+  #add-job-labor-button,
+  #add-job-material-button,
+  #add-job-discount-button,
+  #jobs-clear-date-filters,
+  .home-latest-action-link {
+    border-color: var(--kl-border);
+    background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-surface-soft) 100%);
+    color: var(--kl-text);
+  }
+
+  .resource-subscription #view-customer-actions-row a.home-latest-action-link {
+    border-color: var(--kl-border);
+    background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-surface-soft) 100%);
+    color: var(--kl-text);
+  }
+
+  .customers-add-button:hover,
+  .customers-controls-right a:hover,
+  #add-job-service-button:hover,
+  #add-job-part-button:hover,
+  #add-job-labor-button:hover,
+  #add-job-material-button:hover,
+  #add-job-discount-button:hover,
+  #jobs-clear-date-filters:hover,
+  .home-latest-action-link:hover {
+    border-color: var(--kl-border-strong);
+    background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-surface-softer) 100%);
+    color: var(--kl-accent-strong);
+  }
+
+  .resource-subscription #view-customer-actions-row a.home-latest-action-link:hover {
+    border-color: var(--kl-border-strong);
+    background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-surface-softer) 100%);
+    color: var(--kl-accent-strong);
+  }
+
+  .home-call-mobile-button,
+  .estimate-email-btn,
+  .hvac-generate-report-button {
+    border-color: #227241;
+    background: linear-gradient(180deg, #F0FAF4 0%, #E0F4E8 100%);
+    color: #1C6238;
+  }
+
+  .home-call-mobile-button:hover,
+  .estimate-email-btn:hover,
+  .hvac-generate-report-button:hover {
+    border-color: #1F6B35;
+    background: linear-gradient(180deg, #E9F8EF 0%, #D7F0E0 100%);
+  }
+
+  .job-row-remove-button {
+    border-color: #C73737;
+    background: linear-gradient(180deg, #FFF4F4 0%, #FEEAEA 100%);
+    color: #9B1D1D;
+  }
+
+  .job-row-remove-button:hover {
+    border-color: #B91C1C;
+    background: linear-gradient(180deg, #FEEEEE 0%, #FDE2E2 100%);
+    color: #8E1A1A;
+  }
+
+  #view-customer-actions-row .view-customer-action-link.is-disabled,
+  #view-customer-actions-row .view-customer-action-link.is-disabled:hover {
+    box-shadow: none;
+    transform: none;
+  }
+
+  @media (max-width: 768px) {
+    #view-customer-actions-row,
+    #view-job-actions-row,
+    #view-service-actions-row {
+      gap: 0.5rem;
+    }
+
+    #view-customer-actions-row form,
+    #view-job-actions-row form,
+    #view-service-actions-row form {
+      display: block;
+      flex: 1 1 calc(50% - 0.5rem);
+      min-width: 0;
+    }
+
+    #view-customer-actions-row a,
+    #view-customer-actions-row button,
+    #view-job-actions-row a,
+    #view-job-actions-row button,
+    #view-service-actions-row a,
+    #view-service-actions-row button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 2.55rem;
+      padding: 0.55rem 0.75rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #customers-search-form button,
+    .jobs-controls-right-actions button,
+    .jobs-controls-right-actions a,
+    .customers-controls-right a {
+      min-height: 2.5rem;
+      white-space: nowrap;
+    }
+  }
+
+  @media (max-width: 540px) {
+    #breadcrumb {
+      font-size: 0.84rem;
+      line-height: 1.25;
+    }
+
+    #breadcrumb ol {
+      flex-wrap: wrap;
+      align-items: center;
+      row-gap: 0.3rem;
+    }
+
+    #breadcrumb li {
+      display: inline-flex;
+      align-items: center;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    #breadcrumb li + li::before {
+      margin: 0 0.35rem;
+      line-height: 1;
+    }
+
+    #breadcrumb a,
+    #breadcrumb li[aria-current="page"] {
+      display: inline-block;
+      line-height: 1.2;
+    }
+
+    #view-customer-actions-row form,
+    #view-job-actions-row form,
+    #view-service-actions-row form {
+      flex-basis: 100%;
+    }
+
+    .customers-controls-right,
+    .jobs-controls-right-actions {
+      width: 100%;
+      gap: 0.5rem;
+    }
+
+    #customers-search-form button,
+    .jobs-controls-right-actions button,
+    .jobs-controls-right-actions a,
+    .customers-controls-right a {
+      width: 100%;
+    }
+  }
+
+  #business-logo-section {
+    margin-top: 1.25rem;
+  }
+
+  #business-tax-config-section {
+    margin-top: 1.25rem;
+  }
+
+  #business-tax-config-section > h3 {
+    text-align: center;
+    background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
+    color: var(--kl-accent-contrast);
+    margin: 0 -0.75rem 0.75rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .business-tax-config-list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.9rem;
+    padding: 0.25rem 0;
+  }
+
+  @media (max-width: 1200px) {
+    .business-tax-config-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 900px) {
+    .business-tax-config-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .business-tax-config-list {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .business-logo-status {
+    margin: 0.5rem 0;
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+
+  .business-logo-status.is-success {
+    color: #1f6b35;
+    background-color: #eaf6ee;
+    border: 1px solid #b9debf;
+  }
+
+  .business-logo-status.is-error {
+    color: #9f1239;
+    background-color: #fff1f2;
+    border: 1px solid #fecdd3;
+  }
+
+  .business-logo-placeholder {
+    margin: 0;
+    padding: 1rem 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    text-align: center;
+    color: #5b6473;
+    border: 2px dashed #b8c1cc;
+    border-radius: 12px;
+    background: #eef1f4;
+    box-shadow: none;
+  }
+
+  .business-logo-placeholder-icon {
+    color: #7b8696;
+    font-size: 1rem;
+  }
+
+  .business-logo-note {
+    margin: 0.55rem 0 0;
+    color: #56657a;
+    font-size: 0.9rem;
+  }
+
+  .business-logo-preview-shell {
+    margin: 0;
+    padding: 0.85rem;
+    border: 1px solid #d8e0ea;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #f7fafc 100%);
+    box-shadow: 0 4px 12px rgba(16, 33, 55, 0.06);
+    text-align: center;
+  }
+
+  .business-logo-preview-image {
+    max-width: 100%;
+    max-height: 140px;
+    width: auto;
+    height: auto;
+  }
+
+  .business-logo-upload-form {
+    margin-top: 0.85rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    align-items: stretch;
+  }
+
+  .business-logo-upload-input {
+    flex: 1 1 320px;
+    min-height: 44px;
+    padding: 0.35rem;
+    border: 1px solid #c7cfda;
+    border-radius: 10px;
+    background-color: #ffffff;
+    color: #1f2937;
+    box-sizing: border-box;
+  }
+
+  .business-logo-upload-input::file-selector-button {
+    margin-right: 0.65rem;
+    padding: 0.52rem 0.9rem 0.52rem 2.05rem;
+    border: 1px solid var(--kl-accent-strong);
+    border-radius: 8px;
+    background-color: var(--kl-accent-strong);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23f8f9fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3Cpath d='M20 16.5a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 16.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 0.72rem center;
+    color: #f8f9fa;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .business-logo-upload-input::-webkit-file-upload-button {
+    margin-right: 0.65rem;
+    padding: 0.52rem 0.9rem 0.52rem 2.05rem;
+    border: 1px solid var(--kl-accent-strong);
+    border-radius: 8px;
+    background-color: var(--kl-accent-strong);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23f8f9fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3Cpath d='M20 16.5a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 16.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 0.72rem center;
+    color: #f8f9fa;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .business-logo-upload-input:hover::file-selector-button,
+  .business-logo-upload-input:hover::-webkit-file-upload-button {
+    background-color: var(--kl-accent);
+    border-color: var(--kl-accent);
+  }
+
+  .business-logo-upload-button {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 0.55rem 1rem 0.55rem 2.1rem;
+    border: 1px solid var(--kl-accent-strong);
+    border-radius: 8px;
+    background-color: var(--kl-accent-strong);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23f8f9fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3Cpath d='M20 16.5a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 16.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 0.72rem center;
+    color: #f8f9fa;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .business-logo-upload-button:hover {
+    background-color: var(--kl-accent);
+    border-color: var(--kl-accent);
+  }
+
+  @media (max-width: 640px) {
+    .business-logo-upload-form {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .business-logo-upload-input,
+    .business-logo-upload-button {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .business-logo-upload-input::file-selector-button,
+    .business-logo-upload-input::-webkit-file-upload-button {
+      width: 100%;
+      margin-right: 0;
+      margin-bottom: 0.45rem;
+    }
+  }
+
+.job-hvac-picker {
+  grid-column: 1 / -1;
+  margin-top: 0.35rem;
 }
 
-.add-customer-form-field {
-  display: grid;
+.job-hvac-picker-input {
+  display: none;
+}
+
+.job-hvac-picker-chips {
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
+  margin-top: 0.2rem;
 }
 
-.add-customer-form-field label {
-  color: #1B263B;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.add-customer-form-field input,
-.add-customer-form-field select,
-.add-customer-form-field textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid #C5C7CB;
-  border-radius: 4px;
-  background-color: #FFFFFF;
-  color: #1B263B;
-  font-size: 1rem;
-  font-family: inherit;
-}
-
-.add-customer-form-field input,
-.add-customer-form-field select {
-  min-height: 44px;
-  line-height: 1.2;
-}
-
-.add-customer-form-field select {
-  display: block;
+.job-hvac-chip {
   appearance: none;
   -webkit-appearance: none;
-  background-image:
-    linear-gradient(45deg, transparent 50%, #1B263B 50%),
-    linear-gradient(135deg, #1B263B 50%, transparent 50%);
-  background-position:
-    calc(100% - 1rem) calc(50% + 1px),
-    calc(100% - 0.7rem) calc(50% + 1px);
-  background-size: 0.35rem 0.35rem, 0.35rem 0.35rem;
-  background-repeat: no-repeat;
-  padding-right: 2.25rem;
-  cursor: pointer;
-}
-
-.category-input-toggle {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.category-input-toggle input[data-category-input] {
-  grid-column: 1 / -1;
-}
-
-.category-toggle-button {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0;
-  border: 1px solid #1B263B;
-  border-radius: 4px;
-  background-color: #FFFFFF;
+  border: 1px solid #C5C7CB;
+  border-radius: 999px;
+  background: #FFFFFF;
   color: #1B263B;
-  font-size: 1.2rem;
-  line-height: 1;
-  font-weight: 700;
+  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.38rem 0.72rem;
   cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.category-toggle-button:hover {
-  background-color: #F1F5F9;
+.job-hvac-chip:hover {
+  background: #F3F6FA;
+  border-color: #AAB5C2;
 }
 
-.add-customer-form-field input:focus,
-.add-customer-form-field select:focus,
-.add-customer-form-field textarea:focus {
-  outline: 2px solid #5FA3D3;
-  outline-offset: 1px;
-  border-color: #5FA3D3;
+.job-hvac-chip.is-selected {
+  background: var(--kl-header);
+  border-color: var(--kl-header);
+  color: var(--kl-accent-contrast);
 }
 
-#create-job-form #job-customer-name:disabled,
-#create-job-form #job-customer-phone:disabled {
-  background-color: #EEF1F4;
-  color: #6B7280;
-  border-color: #D1D5DB;
-  cursor: not-allowed;
-}
-
-.add-customer-form-field textarea {
-  resize: vertical;
-  font-family: inherit;
-}
-
-.job-client-inline {
+.job-hvac-picker-empty {
   margin: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 0.35rem;
-  padding: 0.3rem 0;
-}
-
-.job-client-label {
+  font-size: 0.9rem;
   color: #6B7280;
-  font-size: 0.95rem;
-  font-weight: 600;
-  white-space: nowrap;
 }
 
-.job-client-name {
-  color: #1B263B;
-  font-size: 1.15rem;
-  font-weight: 700;
+/* --- MOBILE         (≤ 540px) --- */
+@media (max-width: 540px) {
+  .rev-kpi-row {
+      grid-template-columns: 1fr;
+    }
 }
 
-.job-property-address-preview {
-  padding: 0.65rem 0.75rem;
-  border: 1px solid #D1D5DB;
-  border-radius: 4px;
-  background: #F8FAFC;
-  color: #1F2937;
-  font-size: 0.95rem;
-  line-height: 1.65;
-  white-space: pre-line;
+/* --- MOBILE         (≤ 520px) --- */
+@media (max-width: 520px) {
+  .reporting-kpi-row {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .reporting-chart {
+      height: 180px;
+    }
+
+    .reporting-kpi-row--two-column {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .reporting-kpi-row--four-column {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .reporting-jobs-pagination {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .reporting-jobs-pagination-links {
+      justify-content: flex-start;
+    }
+
+    .reporting-day-label {
+      font-size: 13px;
+    }
+
+    .reporting-day-label-hide-sm {
+      display: none;
+    }
+
+    .reporting-axis-label-x,
+    .reporting-axis-label-y {
+      font-size: 14px;
+    }
+
+    .reporting-axis-title-x,
+    .reporting-axis-title-y {
+      font-size: 15px;
+    }
 }
 
-.job-property-address-preview-name {
-  display: inline;
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: #1B263B;
+/* --- MOBILE SMALL   (≤ 420px) --- */
+@media (max-width: 420px) {
+  .reporting-day-label {
+      font-size: 12px;
+    }
+
+    .reporting-day-label-alt {
+      display: none;
+    }
+
+    .reporting-axis-label-x,
+    .reporting-axis-label-y {
+      font-size: 13px;
+    }
+
+    .reporting-axis-title-x,
+    .reporting-axis-title-y {
+      font-size: 14px;
+    }
 }
 
-.job-property-info-block {
-  gap: 0.5rem;
+
+/* -- Sub-Properties ------------------------------------------------------- */
+
+.sub-properties-tools-section {
+  margin-bottom: 1rem;
 }
 
-.job-property-add-button {
-  width: fit-content;
-  margin-top: 0.25rem;
+.sub-properties-tools-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.hvac-diagnostics-readonly-input:disabled {
-  background: linear-gradient(180deg, #F2F4F7 0%, #E7EBF0 100%);
-  border-color: #C7CED6;
-  color: #6B7280;
-  cursor: not-allowed;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+.sub-properties-actions-divider {
+  border: 0;
+  border-top: 1px solid #d1d5db;
+  margin: 1rem 0;
 }
 
-.hvac-diagnostics-readonly-input:disabled::placeholder {
-  color: #9CA3AF;
-}
-
-#job-services-list {
-  display: grid;
-  gap: 1rem;
-}
-
-#job-materials-list {
-  display: grid;
-  gap: 1rem;
-}
-
-#job-discounts-list {
-  display: grid;
-  gap: 1rem;
-}
-
-#job-materials-list .job-material-row {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  align-items: start;
-}
-
-#service-materials-list .service-material-row {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  align-items: start;
-}
-
-#job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
-  grid-column: span 2;
-}
-
-#service-materials-list .service-material-row .add-customer-form-field:nth-child(1) {
-  grid-column: span 2;
-}
-
-#job-discounts-list .job-discount-row {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  align-items: start;
-}
-
-#job-discounts-list .job-discount-row .add-customer-form-field:nth-child(1) {
-  grid-column: span 2;
-}
-
-@media (max-width: 1280px) {
-  #job-materials-list .job-material-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  #service-materials-list .service-material-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
-    grid-column: span 3;
-  }
-
-  #service-materials-list .service-material-row .add-customer-form-field:nth-child(1) {
-    grid-column: span 3;
-  }
-
-  #job-discounts-list .job-discount-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  #job-discounts-list .job-discount-row .add-customer-form-field:nth-child(1) {
-    grid-column: span 3;
-  }
-}
-
-@media (max-width: 900px) {
-  #job-materials-list .job-material-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  #service-materials-list .service-material-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
-    grid-column: span 2;
-  }
-
-  #service-materials-list .service-material-row .add-customer-form-field:nth-child(1) {
-    grid-column: span 2;
-  }
-
-  #job-discounts-list .job-discount-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  #job-discounts-list .job-discount-row .add-customer-form-field:nth-child(1) {
-    grid-column: span 2;
-  }
-}
-
-@media (max-width: 640px) {
-  #job-materials-list .job-material-row {
-    grid-template-columns: 1fr;
-  }
-
-  #service-materials-list .service-material-row {
-    grid-template-columns: 1fr;
-  }
-
-  #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
-    grid-column: auto;
-  }
-
-  #service-materials-list .service-material-row .add-customer-form-field:nth-child(1) {
-    grid-column: auto;
-  }
-
-  #job-discounts-list .job-discount-row {
-    grid-template-columns: 1fr;
-  }
-
-  #job-discounts-list .job-discount-row .add-customer-form-field:nth-child(1) {
-    grid-column: auto;
-  }
-}
-
-#job-services-actions,
-#job-parts-actions,
-#job-labors-actions,
-#job-materials-actions,
-#job-equipments-actions,
-#job-discounts-actions,
-#service-parts-actions,
-#service-materials-actions {
-  display: flex;
-  justify-content: flex-start;
-}
-
-#add-job-service-button,
-#add-job-part-button,
-#add-job-labor-button,
-#add-job-material-button,
-#add-job-equipment-button,
-#add-job-discount-button,
-#add-service-part-button,
-#add-service-material-button {
-  padding: 0.55rem 0.95rem;
-  border: 1px solid #1B263B;
-  border-radius: 4px;
-  background-color: #FFFFFF;
-  color: #1B263B;
-  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-#add-job-service-button:hover,
-#add-job-part-button:hover,
-#add-job-labor-button:hover,
-#add-job-material-button:hover,
-#add-job-equipment-button:hover,
-#add-job-discount-button:hover,
-#add-service-part-button:hover,
-#add-service-material-button:hover {
-  background-color: #F1F5F9;
-}
-
-.job-row-remove-wrap {
-  grid-column: 1 / -1;
+.sub-properties-tools-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
 }
 
-.job-row-remove-button {
-  padding: 0.45rem 0.75rem;
-  border: 1px solid #B91C1C;
-  border-radius: 4px;
-  background-color: #FEF2F2;
-  color: #991B1B;
-  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.job-row-remove-button:hover {
-  background-color: #FEE2E2;
-}
-
-#create-job-form #job-date,
-#create-job-form #job-time {
-  height: 44px;
-}
-
-.job-details-layout {
-  align-items: start;
-}
-
-.job-details-stack {
-  display: grid;
-  gap: 1rem;
-}
-
-#clear-date-time {
-  margin-top: 0.5rem;
-  align-self: start;
-  padding: 0.45rem 0.75rem;
-  border: 1px solid #9CA3AF;
-  border-radius: 4px;
-  background-color: #F8FAFC;
-  color: #374151;
-  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-}
-
-#clear-date-time:hover {
-  background-color: #FEE2E2;
-  border-color: #EF4444;
-  color: #991B1B;
-}
-
-#clear-date-time:focus {
-  outline: 2px solid #5FA3D3;
-  outline-offset: 1px;
-}
-
-#add-customer-form-actions,
-#create-job-form-actions,
-#create-service-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 1.5rem;
-}
-
-#add-customer-form-actions button,
-#create-job-form-actions button,
-#create-service-form-actions button {
+.sub-properties-primary-btn {
   padding: 0.65rem 1.1rem;
   border: 1px solid #1B263B;
   border-radius: 4px;
@@ -4012,2689 +6799,146 @@ p {
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
+  text-decoration: none;
 }
 
-#add-customer-form-actions button:hover,
-#create-job-form-actions button:hover,
-#create-service-form-actions button:hover {
+.sub-properties-primary-btn:hover {
   background-color: #27364F;
   border-color: #27364F;
 }
 
-#add-customer-form-actions button:disabled,
-#create-job-form-actions button:disabled,
-#create-service-form-actions button:disabled {
-  background-color: #C5C7CB;
-  border-color: #C5C7CB;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.form-field-error {
-  display: block;
-  color: #D32F2F;
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-top: 0.35rem;
-  margin-bottom: 0.35rem;
-}
-
-.form-field-note {
-  margin: 0.5rem 0;
-  color: #4B5563;
-  font-size: 0.9rem;
-}
-
-.form-field-note--compact {
-  margin-top: 0.2rem;
-  margin-bottom: 0.2rem;
-}
-
-.service-emergency-warning {
-  padding: 0.45rem 0.6rem;
-  border: 1px solid #e7c98b;
-  border-radius: 8px;
-  background-color: #fff6df;
-  color: #8a5a00;
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.service-emergency-call-field {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 0.5rem !important;
-}
-
-.service-emergency-call-field label {
-  margin-bottom: 0;
-}
-
-.service-emergency-call-toggle {
-  width: 1.4rem !important;
-  height: 1.4rem !important;
-  min-width: 1.4rem;
-  cursor: pointer;
-  accent-color: #1B263B;
-}
-
-.field-validation-error {
-  min-height: 1.1rem;
-  margin: 0.2rem 0 0;
-  color: #D32F2F;
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.2;
-  visibility: hidden;
-}
-
-.field-validation-error.is-visible {
-  visibility: visible;
-}
-
-.form-field-input-error {
-  border-color: #D32F2F !important;
-  box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.12);
-  background: linear-gradient(180deg, #FFF8F8 0%, #FFFFFF 100%);
-}
-
-.customer-status-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.18rem 0.65rem;
-  border-radius: 999px;
-  background-color: #E5E7EB;
-  color: #1F2937;
-  font-size: 0.9rem;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.customer-status-chip.is-lead {
-  background-color: #FDE6C8;
-  color: #9A4D00;
-}
-
-.customer-status-chip.is-active {
-  background-color: #DDF5E3;
-  color: #1F6B35;
-}
-
-.employee-status-chip {
-  padding: 0.24rem 0.8rem;
-  font-size: 1.15rem;
-}
-
-#error-services {
-  display: block;
-  color: #D32F2F;
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 0.75rem;
-  margin-top: -0.5rem;
-}
-
-#view-customer-panel {
-  width: 100%;
-  padding: 0 0.75rem 0.75rem;
-  box-sizing: border-box;
-}
-
-#view-customer-panel h1 {
-  margin: 0 -0.75rem 1rem;
-  padding: 0.5rem 0.75rem;
-  text-align: center;
-  background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
-  color: var(--kl-accent-contrast);
-  font-family: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
-  font-size: 2rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-#view-customer-actions {
-  border: 1px solid #C5C7CB;
-  background-color: #FFFFFF;
-  margin-bottom: 1rem;
-}
-
-#view-customer-actions-header {
-  margin: 0;
-  padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid #C5C7CB;
-  background-color: var(--kl-accent-soft);
-  color: var(--kl-text);
-  font-size: 1.05rem;
-  font-weight: 700;
-}
-
-#view-customer-actions-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  padding: 0.75rem;
-}
-
-#view-customer-actions-note {
-  margin: 0 0.75rem 0.75rem;
-  color: #7C2D12;
-  font-size: 0.875rem;
-}
-
-#view-customer-actions-row a,
-#view-customer-actions-row .view-customer-action-link {
-  display: inline-block;
-  padding: 0.55rem 0.95rem;
-  border: 1px solid #1B263B;
-  border-radius: 4px;
-  background-color: #1B263B;
-  color: #F8F9FA;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-#view-customer-actions-row .view-customer-action-link.is-disabled {
-  background-color: #C5C7CB;
-  border-color: #C5C7CB;
-  color: #F8F9FA;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-#view-customer-actions-row form {
-  margin: 0;
-  padding: 0;
-  display: inline;
-}
-
-#view-customer-actions-row button {
-  display: inline-block;
-  padding: 0.55rem 0.95rem;
-  border: 1px solid #1B263B;
-  border-radius: 4px;
-  background-color: #1B263B;
-  color: #F8F9FA;
-  font-weight: 600;
-  font-family: inherit;
-  font-size: inherit;
-  cursor: pointer;
-}
-
-#view-customer-actions-row a:hover,
-#view-customer-actions-row button:hover {
-  background-color: #27364F;
-  border-color: #27364F;
-}
-
-#view-customer-actions-row .view-customer-action-link.is-disabled:hover {
-  background-color: #C5C7CB;
-  border-color: #C5C7CB;
-}
-
-#view-customer-details {
-  margin-top: 0.5rem;
-}
-
-#view-customer-details > h2 {
-  margin: 0 0 0.75rem;
-  color: var(--kl-header-soft);
-}
-
-.view-customer-section-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border-top: 1px solid #808080;
-}
-
-.view-customer-section-row--full {
-  grid-template-columns: 1fr;
-}
-
-.view-customer-section-row--full .view-customer-section-column:first-child {
-  border-right: 0;
-}
-
-#view-profile-details-columns {
-  grid-template-columns: 1fr;
-}
-
-#view-profile-details-columns .view-customer-section-column:first-child {
-  border-right: 0;
-}
-
-#view-employee-details-columns {
-  grid-template-columns: 1fr;
-}
-
-#view-employee-details-columns .view-customer-section-column:first-child {
-  border-right: 0;
-}
-
-#view-equipment-details-columns {
-  grid-template-columns: 1fr;
-}
-
-#view-equipment-details-columns .view-customer-section-column:first-child {
-  border-right: 0;
-}
-
-#view-hvac-reports-columns {
-  grid-template-columns: 1fr;
-}
-
-#view-hvac-reports-columns .view-customer-section-column:first-child {
-  border-right: 0;
-}
-
-#view-hvac-components-columns {
-  grid-template-columns: 1fr;
-}
-
-#view-hvac-components-columns .view-customer-section-column:first-child {
-  border-right: 0;
-}
-
-#view-hvac-diagnostics-reports-columns {
-  grid-template-columns: 1fr 1fr;
-}
-
-#view-hvac-diagnostic-columns,
-#view-hvac-diagnostic-sections-columns {
-  grid-template-columns: 1fr;
-}
-
-#view-hvac-diagnostic-columns .view-customer-section-column:first-child,
-#view-hvac-diagnostic-sections-columns .view-customer-section-column:first-child {
-  border-right: 0;
-}
-
-#view-customer-account-columns {
-  margin-top: 1rem;
-}
-
-#view-customer-estimates-columns {
-  grid-template-columns: 1fr 1fr 1fr;
-}
-
-#view-customer-estimates-columns .view-customer-section-column {
-  border-right: 1px solid #F8F9FA;
-}
-
-#view-customer-estimates-columns .view-customer-section-column:last-child {
-  border-right: 0;
-}
-
-.view-customer-section-column {
-  padding: 0 0.75rem 0.75rem;
-}
-
-.view-customer-section-column:first-child {
-  border-right: 1px solid #F8F9FA;
-}
-
-.view-customer-section-column > h3 {
-  text-align: center;
-  background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
-  color: var(--kl-accent-contrast);
-  margin: 0 -0.75rem 0.75rem;
-  padding: 0.5rem 0.75rem;
-}
-
-#view-customer-details-list,
-#view-customer-account-list {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.9rem;
-  padding: 0.25rem 0;
-}
-
-.view-customer-detail-item {
-  padding: 0;
-}
-
-.view-customer-detail-item h4 {
-  margin: 0 0 0.2rem;
-  color: #1B263B;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.view-customer-detail-item p {
-  margin: 0;
-  color: #1B263B;
-  font-size: 1.25rem;
-}
-
-#view-customer-estimates-list {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.25rem 0;
-}
-
-.view-customer-card-link,
-.view-customer-estimate-item {
-  display: block;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #C5C7CB;
-  background-color: #FFFFFF;
-  color: inherit;
-  text-decoration: none;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.view-customer-card-link h4,
-.view-customer-estimate-item h4 {
-  margin: 0 0 0.2rem;
-  color: #1B263B;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.view-customer-card-link p,
-.view-customer-estimate-item p {
-  margin: 0;
-  color: #1B263B;
-  font-size: 1rem;
-}
-
-.view-customer-jobs-list,
-.view-customer-payments-list,
-.view-customer-estimates-list {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.25rem 0;
-}
-
-.view-customer-properties-list {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.25rem 0;
-}
-
-.view-customer-properties-header,
-.view-customer-properties-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 88px;
-  gap: 0.75rem;
-  align-items: center;
-}
-
-.view-customer-properties-header {
-  color: #344054;
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  padding: 0 0.25rem;
-}
-
-.view-customer-properties-header span:last-child {
-  text-align: center;
-}
-
-.view-customer-property-default-form {
-  display: flex;
-  justify-content: center;
-}
-
-.view-customer-property-default-toggle {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.view-customer-property-default-toggle input {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.view-customer-property-default-toggle span {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  border: 1px solid #98A2B3;
-  background: #FFFFFF;
-  box-shadow: inset 0 1px 1px rgba(16, 24, 40, 0.04);
-  transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-
-.view-customer-property-default-toggle input:checked + span {
-  border-color: #14532D;
-  background: #15803D;
-}
-
-.view-customer-property-default-toggle input:checked + span::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 5px;
-  height: 10px;
-  border-right: 2px solid #FFFFFF;
-  border-bottom: 2px solid #FFFFFF;
-  transform: translate(-50%, -55%) rotate(45deg);
-}
-
-.view-customer-property-default-toggle input:focus-visible + span {
-  outline: 2px solid #1D4ED8;
-  outline-offset: 2px;
-}
-
-@media (max-width: 720px) {
-  .view-customer-properties-header,
-  .view-customer-properties-row {
-    grid-template-columns: minmax(0, 1fr) 72px;
-  }
-}
-
-.view-customer-hvac-card {
-  padding: 0;
-  overflow: hidden;
-  border-radius: 14px;
-  border: 1px solid #D3DBE6;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
-  box-shadow: 0 4px 14px rgba(22, 44, 77, 0.08);
-}
-
-.view-customer-hvac-card-header {
-  padding: 0.8rem 0.9rem 0.72rem;
-  border-bottom: 1px solid #DDE5F0;
-  background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-accent-soft) 100%);
-}
-
-.view-customer-hvac-card-kicker {
-  margin: 0;
-  font-size: 0.74rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--kl-text-muted);
-}
-
-.view-customer-hvac-card-header h4 {
-  margin: 0.2rem 0 0;
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: var(--kl-text);
-}
-
-.view-customer-hvac-card-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.8rem;
-  align-items: center;
-  padding: 0.66rem 0.9rem;
-  border-bottom: 1px solid #E4EAF2;
-}
-
-.view-customer-hvac-card-row:last-child {
-  border-bottom: 0;
-}
-
-.view-customer-hvac-card-label {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #344054;
-}
-
-.view-customer-hvac-card-value {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #1B263B;
-  text-align: right;
-}
-
-.view-customer-hvac-card--heat-pump {
-  border-top: 3px solid #2563EB;
-}
-
-.view-customer-hvac-card--heat-pump .view-customer-hvac-card-header {
-  background: linear-gradient(180deg, #EFF6FF 0%, #E4EEFF 100%);
-}
-
-.view-customer-hvac-card--heat-pump .view-customer-hvac-card-kicker {
-  color: #1E3A8A;
-}
-
-.view-customer-hvac-card--split {
-  border-top: 3px solid #0F766E;
-}
-
-.view-customer-hvac-card--split .view-customer-hvac-card-header {
-  background: linear-gradient(180deg, #ECFDF5 0%, #DFF7EE 100%);
-}
-
-.view-customer-hvac-card--split .view-customer-hvac-card-kicker {
-  color: #115E59;
-}
-
-.view-customer-hvac-card--package {
-  border-top: 3px solid #D97706;
-}
-
-.view-customer-hvac-card--package .view-customer-hvac-card-header {
-  background: linear-gradient(180deg, #FFFBEB 0%, #FFF3D8 100%);
-}
-
-.view-customer-hvac-card--package .view-customer-hvac-card-kicker {
-  color: #92400E;
-}
-
-.view-customer-hvac-card--mini-split {
-  border-top: 3px solid #7C3AED;
-}
-
-.view-customer-hvac-card--mini-split .view-customer-hvac-card-header {
-  background: linear-gradient(180deg, #F5F3FF 0%, #ECE7FF 100%);
-}
-
-.view-customer-hvac-card--mini-split .view-customer-hvac-card-kicker {
-  color: #5B21B6;
-}
-
-.hvac-diagnostics-row {
-  display: flex;
-  align-items: stretch;
-  gap: 0.5rem;
-}
-
-.hvac-system-diagnostics-link {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-}
-
-.hvac-system-diagnostics-link .hvac-component-card {
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.hvac-system-diagnostics-link:hover .hvac-component-card,
-.hvac-system-diagnostics-link:focus-visible .hvac-component-card {
-  border-color: #AFC6E4;
-  box-shadow: 0 8px 18px rgba(15, 76, 129, 0.14);
-  transform: translateY(-1px);
-}
-
-.hvac-system-diagnostics-link:focus-visible {
-  outline: none;
-}
-
-.hvac-system-diagnostics-card {
-  flex: 1;
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(22, 44, 77, 0.08);
-}
-
-.hvac-system-diagnostics-card .hvac-component-card-header {
-  background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-accent-soft) 100%);
-}
-
-.hvac-system-diagnostics-card .hvac-component-row span {
-  font-weight: 600;
-}
-
-.hvac-system-diagnostics-card .hvac-component-row strong {
-  font-weight: 700;
-}
-
-.hvac-diagnostic-sections-grid {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-  padding: 0.25rem 0;
-}
-
-.hvac-diagnostic-section-card {
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(22, 44, 77, 0.08);
-}
-
-.hvac-components-grid {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-  padding: 0.25rem 0;
-}
-
-.hvac-component-card {
-  display: block;
-  border: 1px solid #D6DCE5;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
-  color: inherit;
-  text-decoration: none;
-  overflow: hidden;
-  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.hvac-component-card--detail-page {
-  min-height: 100%;
-}
-
-.hvac-component-card--air-handler {
-  border-top: 3px solid #2B6CB0;
-}
-
-.hvac-component-card--condenser {
-  border-top: 3px solid #0F766E;
-}
-
-.hvac-component-card--unit-package {
-  border-top: 3px solid #92400E;
-}
-
-.hvac-component-card--unit-mini {
-  border-top: 3px solid #7C3AED;
-}
-
-.hvac-component-card--ductwork {
-  border-top: 3px solid #4B5563;
-}
-
-.hvac-component-card--diagnostics {
-  border-top: 3px solid #1B4D8C;
-}
-
-.hvac-component-card--report {
-  border-top: 3px solid #0B5E55;
-}
-
-.hvac-component-card:hover {
-  border-color: #B9C7DA;
-  box-shadow: 0 2px 8px rgba(27, 38, 59, 0.08);
-}
-
-.hvac-component-card-header {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.75rem 0.85rem;
-  border-bottom: 1px solid #DDE4EE;
-}
-
-.hvac-component-card-icon {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #1B263B;
-  background-color: #EAF1F8;
-  border: 1px solid #C9D7E7;
-  flex-shrink: 0;
-}
-
-.hvac-component-card-icon--air-handler {
-  color: #1D4E89;
-  background-color: #E7F0FA;
-  border-color: #B7CEE9;
-}
-
-.hvac-component-card-icon--condenser {
-  color: #115E59;
-  background-color: #E6F5F3;
-  border-color: #B9E1DC;
-}
-
-.hvac-component-card-icon--unit-package {
-  color: #7C2D12;
-  background-color: #FFF1E7;
-  border-color: #F6D0B5;
-}
-
-.hvac-component-card-icon--unit-mini {
-  color: #5B21B6;
-  background-color: #F2EBFF;
-  border-color: #D9C3FF;
-}
-
-.hvac-component-card-icon--ductwork {
-  color: #374151;
-  background-color: #F0F3F6;
-  border-color: #D6DCE5;
-}
-
-.hvac-component-card-icon--diagnostics {
-  color: #0F4C81;
-  background-color: #E8F2FD;
-  border-color: #BDD8F6;
-}
-
-.hvac-component-card-icon--report {
-  color: #0B5E55;
-  background-color: #E8F8F5;
-  border-color: #B8E5DC;
-}
-
-.hvac-component-card-system-type {
-  margin: 0;
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #475467;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.hvac-component-card-heading-text h4 {
-  margin: 0.15rem 0 0;
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: var(--kl-text);
-}
-
-.hvac-component-card-body {
-  padding: 0.1rem 0.85rem;
-}
-
-.hvac-component-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.8rem;
-  padding: 0.62rem 0;
-  border-bottom: 1px solid #E4E9F0;
-}
-
-.hvac-component-row:last-child {
-  border-bottom: 0;
-}
-
-.hvac-component-row span {
-  font-size: 0.92rem;
-  color: #344054;
-}
-
-.hvac-component-row strong {
-  font-size: 0.92rem;
-  color: #1B263B;
-  font-weight: 700;
-  text-align: right;
-}
-
-.hvac-component-row--notes {
-  align-items: flex-start;
-}
-
-.hvac-component-row--notes span {
-  color: #0B5E55;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.hvac-component-row--notes span::before {
-  content: "i";
-  width: 1rem;
-  height: 1rem;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.68rem;
-  font-weight: 800;
-  color: #0B5E55;
-  background: #EAF8F4;
-  border: 1px solid #BEE9DD;
-  flex-shrink: 0;
-}
-
-.hvac-component-row--notes strong {
-  max-width: 62%;
-  text-align: left;
-  white-space: normal;
-  word-break: break-word;
-}
-
-.hvac-component-card--diagnostics .hvac-component-row strong {
-  max-width: 58%;
-  word-break: break-word;
-}
-
-.hvac-component-card--report .hvac-component-card-header {
-  background: linear-gradient(180deg, #F5FCFA 0%, #EAF8F4 100%);
-}
-
-.hvac-component-card--report .hvac-component-row strong {
-  max-width: 62%;
-  word-break: break-word;
-}
-
-.hvac-component-card--report .hvac-report-open-row span {
-  color: #1F4B46;
-  font-weight: 700;
-}
-
-.hvac-report-open-affordance {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: #0B5E55;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-}
-
-.hvac-report-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.hvac-report-action-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  color: #0B5E55;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  text-decoration: none;
-}
-
-.hvac-report-action-link:hover,
-.hvac-report-action-link:focus-visible {
-  color: #084C45;
-  text-decoration: underline;
-}
-
-.hvac-component-card--report:hover .hvac-report-open-affordance,
-.hvac-component-card--report:focus-visible .hvac-report-open-affordance {
-  color: #084C45;
-}
-
-.hvac-component-card--report:hover,
-.hvac-component-card--report:focus-visible {
-  border-color: #92CFC1;
-  box-shadow: 0 8px 18px rgba(11, 94, 85, 0.14);
-  transform: translateY(-1px);
-}
-
-.hvac-system-kpi-grid {
-  margin-top: 0.95rem;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.hvac-system-status-note {
-  margin: 0.45rem 0 0;
-  font-size: 0.78rem;
-  color: #5A677A;
-  text-align: left;
-}
-
-/* System Photos */
-.hvac-photos-note {
-  font-size: 0.8rem;
-  color: #5A677A;
-  background: #F4F6FA;
-  border: 1px solid #D6DCE5;
-  border-radius: 6px;
-  padding: 0.55rem 0.85rem;
-  margin-bottom: 0.95rem;
-  line-height: 1.5;
-}
-
-.hvac-photos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 0.75rem;
-}
-
-.hvac-diagnostic-section-photos {
-  margin-top: 0.85rem;
-  border-top: 1px dashed #D6DCE5;
-  padding-top: 0.8rem;
-}
-
-.hvac-diagnostic-section-photos h4,
-.hvac-diagnostic-section-photos-preview h5 {
-  margin: 0 0 0.55rem;
-  font-size: 0.9rem;
-  color: #2A3A54;
-}
-
-.hvac-diagnostic-section-photos .hvac-photos-note {
-  margin-top: 0;
-}
-
-.hvac-photo-tile {
-  position: relative;
-  aspect-ratio: 1 / 1;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #D6DCE5;
-  background: #F4F6FA;
-}
-
-.hvac-photo-thumb-link {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: none;
-  background: none;
-  padding: 0;
-  cursor: zoom-in;
-}
-
-.hvac-photo-thumb {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.hvac-diagnostic-photo-caption {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 0.33rem 0.45rem;
-  font-size: 0.72rem;
-  line-height: 1.3;
-  color: #fff;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(5, 8, 14, 0.82) 90%);
-}
-
-.hvac-photo-delete-form {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-}
-
-.hvac-photo-delete-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  transition: background 0.15s;
-}
-
-.hvac-photo-delete-btn:hover {
-  background: rgba(200, 40, 40, 0.85);
-}
-
-.hvac-photo-tile--add {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  border: 1.5px dashed #A4B0C0;
-  cursor: pointer;
-  color: #5A677A;
-  font-size: 0.78rem;
-  font-weight: 500;
-  transition: border-color 0.15s, background 0.15s;
-  user-select: none;
-}
-
-.hvac-photo-tile--add:hover {
-  border-color: #4A90D9;
-  background: #EBF3FC;
-  color: #2B6CB0;
-}
-
-.hvac-photo-file-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Photo lightbox modal */
-.hvac-photo-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 9000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.hvac-photo-modal[hidden] {
-  display: none;
-}
-
-.hvac-photo-modal-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.88);
-  cursor: pointer;
-}
-
-.hvac-photo-modal-content {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: min(92vw, 1000px);
-  max-height: 92dvh;
-  padding: 0.5rem;
-}
-
-.hvac-photo-caption-modal-content {
-  width: min(92vw, 640px);
-  background: #0E1827;
-  border: 1px solid rgba(169, 190, 214, 0.25);
-  border-radius: 10px;
-  padding: 0.8rem;
-}
-
-.hvac-photo-caption-label {
-  width: 100%;
-  margin: 0.75rem 0 0.35rem;
-  color: #D5E4F6;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.hvac-photo-caption-input {
-  width: 100%;
-  max-width: 100%;
-  min-height: 86px;
-  resize: vertical;
-  border-radius: 8px;
-  border: 1px solid #2A3F59;
-  background: #122136;
-  color: #fff;
-  padding: 0.55rem 0.65rem;
-  font-size: 0.86rem;
-  line-height: 1.45;
-}
-
-.hvac-photo-caption-input:focus {
-  outline: 2px solid #4A90D9;
-  outline-offset: 1px;
-}
-
-.hvac-photo-caption-actions {
-  width: 100%;
-  margin-top: 0.75rem;
+.sub-properties-action-row {
   display: flex;
   justify-content: flex-end;
-  gap: 0.55rem;
-}
-
-.hvac-photo-caption-actions button {
-  border-radius: 7px;
-  border: 1px solid #355374;
-  background: #173150;
-  color: #E8F0FA;
-  padding: 0.42rem 0.75rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.hvac-photo-caption-actions button:hover,
-.hvac-photo-caption-actions button:focus-visible {
-  background: #1D3D63;
-  border-color: #4A90D9;
-}
-
-.hvac-photo-caption-actions .secondary-button {
-  background: transparent;
-  border-color: #516982;
-}
-
-.hvac-photo-caption-actions .secondary-button:hover,
-.hvac-photo-caption-actions .secondary-button:focus-visible {
-  background: rgba(108, 135, 164, 0.2);
-}
-
-.hvac-diagnostic-section-photos-preview {
-  margin-top: 0.85rem;
-  padding-top: 0.8rem;
-  border-top: 1px dashed #D6DCE5;
-}
-
-.hvac-diagnostic-section-photos-preview .hvac-photo-tile {
-  aspect-ratio: auto;
-  overflow: visible;
-  background: #fff;
-  display: flex;
-  flex-direction: column;
-  padding: 0.5rem;
-  gap: 0.4rem;
-}
-
-.hvac-diagnostic-section-photos-preview .hvac-photo-thumb-link {
-  height: 120px;
-}
-
-.hvac-diagnostic-section-photos-preview .hvac-photo-thumb {
-  border-bottom: 1px solid #D6DCE5;
-}
-
-.hvac-diagnostic-section-photos-preview .hvac-diagnostic-photo-caption {
-  position: static;
-  color: #1E293B;
-  background: #F8FAFD;
-  border-bottom: 1px solid #E2E8F0;
-  min-height: 2.15rem;
-}
-
-.hvac-diagnostic-photo-actions {
-  padding: 0.45rem;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.4rem;
-}
-
-.hvac-diagnostic-photo-gallery-actions {
-  margin-top: 0.75rem;
-  display: flex;
-  justify-content: center;
-}
-
-.hvac-diagnostic-photo-gallery-more-btn {
-  border: 1px solid #355374;
-  border-radius: 999px;
-  background: #173150;
-  color: #E8F0FA;
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 0.45rem 0.85rem;
-  cursor: pointer;
-}
-
-.hvac-diagnostic-photo-gallery-more-btn:hover,
-.hvac-diagnostic-photo-gallery-more-btn:focus-visible {
-  background: #1D3D63;
-  border-color: #4A90D9;
-}
-
-.hvac-diagnostic-photo-actions form {
-  display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.6rem;
+  margin: 1rem 0;
 }
 
-.hvac-diagnostic-photo-actions input[type="text"] {
-  flex: 1;
-  min-width: 0;
-  border: 1px solid #CBD5E1;
-  border-radius: 6px;
-  padding: 0.3rem 0.45rem;
-  font-size: 0.76rem;
-}
-
-.hvac-diagnostic-photo-save-btn {
-  border: 1px solid #355374;
-  border-radius: 6px;
-  background: #173150;
-  color: #E8F0FA;
-  font-size: 0.74rem;
-  font-weight: 700;
-  padding: 0.28rem 0.52rem;
-  cursor: pointer;
-}
-
-.hvac-diagnostic-photo-save-btn:hover,
-.hvac-diagnostic-photo-save-btn:focus-visible {
-  background: #1D3D63;
-  border-color: #4A90D9;
-}
-
-.hvac-photo-modal-close {
-  position: absolute;
-  top: -2.25rem;
-  right: 0;
-  background: rgba(255, 255, 255, 0.15);
-  border: none;
-  border-radius: 50%;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.15s;
-  padding: 0;
-  flex-shrink: 0;
-}
-
-.hvac-photo-modal-close:hover,
-.hvac-photo-modal-close:focus-visible {
-  background: rgba(255, 255, 255, 0.3);
-  outline: none;
-}
-
-.hvac-photo-modal-img {
-  display: block;
-  max-width: 100%;
-  max-height: calc(92dvh - 3rem);
-  border-radius: 6px;
-  object-fit: contain;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-}
-
-.hvac-photo-modal-caption {
-  margin: 0.6rem 0 0;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.7);
-  text-align: center;
-}
-
-.hvac-system-kpi-card {
-  border: 1px solid #D6DCE5;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
-  padding: 0.8rem 0.85rem;
-}
-
-.hvac-system-kpi-card h4 {
-  margin: 0 0 0.35rem;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  color: #2A3A54;
-}
-
-.hvac-system-kpi-value {
-  margin: 0;
-  font-size: 1.7rem;
-  font-weight: 800;
-  color: #1B263B;
-  line-height: 1.1;
-}
-
-.hvac-system-kpi-value span {
+.sub-properties-action-link {
+  display: inline-block;
+  padding: 0.5rem 1.2rem;
+  border-radius: 4px;
   font-size: 0.95rem;
-  font-weight: 700;
-  color: #2A3A54;
-  margin-left: 0.25rem;
-}
-
-.hvac-system-kpi-meta {
-  margin: 0.45rem 0 0.55rem;
-  font-size: 0.9rem;
-  color: #3E4A59;
-}
-
-.hvac-system-kpi-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
   border: 1px solid transparent;
-  font-size: 0.78rem;
-  font-weight: 700;
 }
 
-.hvac-system-kpi-chip.is-normal {
-  color: #1F6B35;
-  background-color: #EAF6EE;
-  border-color: #B8DDBF;
+.sub-properties-action-link--secondary {
+  background: transparent;
+  color: #374151;
+  border-color: #d1d5db;
 }
 
-.hvac-system-kpi-chip.is-high {
-  color: #8E4A06;
-  background-color: #FFF3E4;
-  border-color: #F4C996;
+.sub-properties-action-link--secondary:hover {
+  background: #f3f4f6;
 }
 
-.hvac-system-kpi-chip.is-low {
-  color: #0D4E8C;
-  background-color: #E6F1FB;
-  border-color: #B9D7F2;
-}
-
-.hvac-system-kpi-chip.is-alert {
-  color: #9B1C1C;
-  background-color: #FDECEC;
-  border-color: #F4B7B7;
-}
-
-.hvac-system-kpi-chip.is-info {
-  color: #0D4E8C;
-  background-color: #E6F1FB;
-  border-color: #B9D7F2;
-}
-
-.hvac-system-kpi-chip.is-no-data {
-  color: #4B5563;
-  background-color: #F3F4F6;
-  border-color: #D1D5DB;
-}
-
-.hvac-diagnostics-section {
-  border: 1px solid #C5C7CB;
-  border-radius: 6px;
-  background-color: #FFFFFF;
-  margin-bottom: 0.9rem;
-  overflow: hidden;
-}
-
-.hvac-diagnostics-section summary {
-  list-style: none;
-  cursor: pointer;
+.sub-properties-same-address-field {
   display: flex;
+  flex-direction: row !important;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  min-height: 48px;
-  padding: 0.75rem 0.9rem;
-  background: linear-gradient(90deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
-  color: var(--kl-accent-contrast);
-  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  gap: 0.5rem;
+  min-height: 2.4rem;
+  margin-top: 1.8rem;
 }
 
-.hvac-diagnostics-section summary::-webkit-details-marker {
-  display: none;
+.sub-properties-same-address-field label {
+  margin: 0;
 }
 
-.hvac-diagnostics-section summary::after {
-  content: "+";
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.4rem;
-  height: 1.4rem;
-  border-radius: 999px;
-  background-color: rgba(247, 252, 248, 0.22);
-  color: var(--kl-accent-contrast);
-  font-weight: 700;
-  line-height: 1;
-}
-
-.hvac-diagnostics-section[open] summary::after {
-  content: "-";
-}
-
-.hvac-diagnostics-section-content {
-  padding: 0.9rem 0.9rem 0.4rem;
-  background-color: #F9FBFD;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem 0.9rem;
-}
-
-.hvac-diagnostics-section-content .add-customer-form-row {
-  grid-template-columns: minmax(0, 1fr);
-  width: 100%;
-  margin-bottom: 0;
-}
-
-.hvac-diagnostics-section-content .hvac-diagnostics-row-full {
-  grid-column: 1 / -1;
-}
-
-.hvac-diagnostics-section-content .hvac-diagnostic-section-photos {
-  grid-column: 1 / -1;
-}
-
-.hvac-diagnostics-row-checkbox .add-customer-form-field {
-  display: block;
-}
-
-.hvac-diagnostics-checkbox-card {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-height: 58px;
-  padding: 0.85rem 0.95rem;
-  border: 1px solid #C9D6E8;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F5F9FF 100%);
-  box-shadow: 0 2px 8px rgba(25, 48, 82, 0.08);
-  cursor: pointer;
-  user-select: none;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-}
-
-.hvac-diagnostics-checkbox-card:hover {
-  border-color: #AFC2DE;
-  box-shadow: 0 5px 14px rgba(22, 44, 77, 0.12);
-  transform: translateY(-1px);
-}
-
-.hvac-diagnostics-checkbox-card input[type="checkbox"] {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.hvac-diagnostics-checkbox-indicator {
+.sub-properties-checkbox {
   width: 1.25rem;
   height: 1.25rem;
-  border: 2px solid #8EA6C8;
-  border-radius: 4px;
-  background-color: #FFFFFF;
-  flex-shrink: 0;
-  position: relative;
-  transition: border-color 0.18s ease, background-color 0.18s ease;
-}
-
-.hvac-diagnostics-checkbox-label {
-  color: #1B263B;
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.hvac-diagnostics-checkbox-card input[type="checkbox"]:checked + .hvac-diagnostics-checkbox-indicator {
-  border-color: #1B4D8C;
-  background-color: #1B4D8C;
-}
-
-.hvac-diagnostics-checkbox-card input[type="checkbox"]:checked + .hvac-diagnostics-checkbox-indicator::after {
-  content: "";
-  position: absolute;
-  left: 3px;
-  top: 0;
-  width: 0.35rem;
-  height: 0.65rem;
-  border: solid #FFFFFF;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-.hvac-diagnostics-checkbox-card input[type="checkbox"]:focus-visible + .hvac-diagnostics-checkbox-indicator {
-  outline: 2px solid #5FA3D3;
-  outline-offset: 2px;
-}
-
-@media (max-width: 640px) {
-  #view-hvac-diagnostics-reports-columns {
-    grid-template-columns: 1fr;
-  }
-
-  .view-customer-hvac-card-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.3rem;
-  }
-
-  .view-customer-hvac-card-value {
-    text-align: left;
-  }
-
-  .hvac-system-kpi-grid {
-    grid-template-columns: 1fr;
-    gap: 0.6rem;
-  }
-
-  .hvac-components-grid {
-    grid-template-columns: 1fr;
-    gap: 0.65rem;
-  }
-
-  .hvac-diagnostic-sections-grid {
-    grid-template-columns: 1fr;
-    gap: 0.65rem;
-  }
-
-  .hvac-system-kpi-card {
-    padding: 0.72rem 0.75rem;
-  }
-
-  .hvac-system-kpi-value {
-    font-size: 1.45rem;
-  }
-
-  .hvac-diagnostics-section {
-    margin-bottom: 0.75rem;
-  }
-
-  .hvac-diagnostics-section summary {
-    min-height: 52px;
-    padding: 0.8rem 0.8rem;
-    font-size: 1.02rem;
-  }
-
-  .hvac-diagnostics-section-content {
-    padding: 0.75rem 0.75rem 0.35rem;
-    grid-template-columns: 1fr;
-    gap: 0.65rem;
-  }
-
-  .hvac-diagnostics-row {
-    flex-direction: column;
-  }
-
-  .hvac-generate-report-button {
-    width: 100%;
-    min-width: 0;
-  }
-}
-
-.hvac-diagnostics-row .view-customer-card-link {
-  flex: 1;
-}
-
-.hvac-generate-report-form {
-  margin: 0;
-  display: inline-flex;
-  align-items: stretch;
-}
-
-.hvac-generate-report-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  min-width: 56px;
-  padding: 0.5rem 0.85rem;
-  border: 1px solid #1F6B35;
-  border-radius: 4px;
-  background-color: #EAF6EE;
-  color: #1F6B35;
-  text-decoration: none;
-  font-weight: 700;
   cursor: pointer;
 }
 
-.hvac-generate-report-button:hover {
-  background-color: #DDF5E3;
+.sub-properties-hvac-preview {
+  margin-top: 1.5rem;
 }
 
-#view-equipment-parts-list {
-  margin-top: 0.25rem;
-}
-
-.equipment-part-card-row {
-  display: flex;
-  align-items: stretch;
-  gap: 0.5rem;
-}
-
-.equipment-part-card-link {
-  flex: 1;
-}
-
-.equipment-part-buy-button {
-  flex-shrink: 0;
-}
-
-.view-customer-card-link:hover,
-.view-customer-estimate-item:hover {
-  background: linear-gradient(180deg, #FFFFFF 0%, #F5F9FD 100%);
-  border-color: #B7C7DA;
-}
-
-#view-job-panel {
-  width: 100%;
-  padding: 0 0.75rem 0.75rem;
-  box-sizing: border-box;
-}
-
-#view-job-panel h1 {
-  margin: 0 -0.75rem 1rem;
-  padding: 0.5rem 0.75rem;
-  text-align: center;
-  background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
-  color: var(--kl-accent-contrast);
-  font-family: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
-  font-size: 2rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-#view-job-actions {
-  border: 1px solid #C5C7CB;
-  background-color: #FFFFFF;
-  margin-bottom: 1rem;
-}
-
-#view-job-actions-header {
-  margin: 0;
-  padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid #C5C7CB;
-  background-color: var(--kl-accent-soft);
-  color: var(--kl-text);
+.sub-properties-section-title {
+  margin: 0 0 0.75rem;
+  padding: 0.45rem 0.75rem;
+  background: var(--kl-header);
+  border: 1px solid var(--kl-header-soft);
+  border-radius: 4px;
+  color: #ffffff;
   font-size: 1.05rem;
   font-weight: 700;
 }
 
-#view-job-actions-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  padding: 0.75rem;
+#sub-properties-list-title {
+  margin-top: 1.25rem;
 }
 
-#view-job-actions-row a {
-  display: inline-block;
-  padding: 0.55rem 0.95rem;
-  border: 1px solid #1B263B;
-  border-radius: 4px;
-  background-color: #1B263B;
-  color: #F8F9FA;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-#view-job-actions-row a:hover {
-  background-color: #27364F;
-  border-color: #27364F;
-}
-
-#view-job-actions-row form {
-  margin: 0;
-  padding: 0;
-  display: inline;
-}
-
-#view-job-actions-row button {
-  display: inline-block;
-  padding: 0.55rem 0.95rem;
-  border: 1px solid #1B263B;
-  border-radius: 4px;
-  background-color: #1B263B;
-  color: #F8F9FA;
-  font-weight: 600;
-  font-family: inherit;
-  font-size: inherit;
-  cursor: pointer;
-}
-
-#view-job-actions-row button:hover {
-  background-color: #27364F;
-  border-color: #27364F;
-}
-
-.view-job-action-blocked {
-  display: inline-block;
-  padding: 0.55rem 0.95rem;
-  border: 1px solid var(--kl-border);
-  border-radius: 4px;
-  background-color: #edf0f3;
-  color: var(--kl-text-muted);
-  font-weight: 600;
-  font-family: inherit;
-  font-size: inherit;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-#home-job-action-button--blocked,
-.home-job-action-button--blocked {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-#view-job-details {
-  margin-top: 0.5rem;
-}
-
-#view-job-details > h2 {
-  margin: 0 0 0.75rem;
-  color: var(--kl-header-soft);
-}
-
-.view-job-section-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border-top: 1px solid #808080;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-#view-job-notes-row {
-  margin-top: 1rem;
-}
-
-.view-job-section-column {
-  padding: 0 0.75rem 0.75rem;
-  box-sizing: border-box;
-  min-width: 0;
-}
-
-.view-job-section-column:first-child {
-  border-right: 1px solid #F8F9FA;
-}
-
-.view-job-section-column > h3 {
-  text-align: center;
-  background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
-  color: var(--kl-accent-contrast);
-  margin: 0 -0.75rem 0.75rem;
-  padding: 0.5rem 0.75rem;
-}
-
-#view-job-details-list,
-#view-job-location-list,
-#view-job-notes-list {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.9rem;
-  padding: 0.25rem 0;
-}
-
-#view-job-notes-list {
-  grid-template-columns: 1fr;
-}
-
-#view-job-services-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.view-job-detail-item {
-  padding: 0;
-}
-
-.view-job-detail-item h4 {
-  margin: 0 0 0.2rem;
-  color: #1B263B;
+.sub-properties-hvac-type {
   font-size: 1rem;
-  font-weight: 700;
-}
-
-.view-job-detail-item p {
-  margin: 0;
-  color: #1B263B;
-  font-size: 1.25rem;
-}
-
-#view-service-panel {
-  width: 100%;
-  padding: 0 0.75rem 0.75rem;
-  box-sizing: border-box;
-}
-
-#view-service-panel h1 {
-  margin: 0 -0.75rem 1rem;
-  padding: 0.5rem 0.75rem;
-  text-align: center;
-  background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
-  color: var(--kl-accent-contrast);
-  font-family: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
-  font-size: 2rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  margin: 0.25rem 0;
 }
 
-#view-service-actions {
-  border: 1px solid #C5C7CB;
-  background-color: #FFFFFF;
+.sub-properties-hvac-note {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Sub-property generated rows */
+
+.sub-property-row {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
   margin-bottom: 1rem;
+  background: #f9fafb;
 }
 
-#view-service-actions-header {
-  margin: 0;
-  padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid #C5C7CB;
-  background-color: var(--kl-accent-soft);
-  color: var(--kl-text);
-  font-size: 1.05rem;
-  font-weight: 700;
+.sub-property-row-header {
+  margin-bottom: 0.75rem;
 }
 
-#view-service-actions-row {
+.sub-property-unit-label {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #111827;
+}
+
+/* Default HVAC form actions row */
+
+.default-hvac-form-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  padding: 0.75rem;
-}
-
-#view-service-actions-row a {
-  display: inline-block;
-  padding: 0.55rem 0.95rem;
-  border: 1px solid #1B263B;
-  border-radius: 4px;
-  background-color: #1B263B;
-  color: #F8F9FA;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-#view-service-actions-row a:hover {
-  background-color: #27364F;
-  border-color: #27364F;
-}
-
-#view-service-actions-row form {
-  margin: 0;
-}
-
-#view-service-actions-row button {
-  display: inline-block;
-  padding: 0.55rem 0.95rem;
-  border: 1px solid #1B263B;
-  border-radius: 4px;
-  background-color: #1B263B;
-  color: #F8F9FA;
-  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-#view-service-actions-row button:hover {
-  background-color: #27364F;
-  border-color: #27364F;
-}
-
-#view-service-details {
-  margin-top: 0.5rem;
-}
-
-#view-service-parts {
-  margin-top: 1.25rem;
-}
-
-#view-service-parts > h2 {
-  margin: 0 0 0.75rem;
-  color: var(--kl-header-soft);
-}
-
-#view-service-parts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1rem;
-}
-
-#view-service-details > h2 {
-  margin: 0 0 0.75rem;
-  color: var(--kl-header-soft);
-}
-
-#view-service-details-content {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
-  padding: 1rem;
-  border: 1px solid #C5C7CB;
-  background-color: #FFFFFF;
-}
-
-.view-service-detail-item {
-  padding: 0;
-  min-width: 0;
-}
-
-.view-service-detail-item h4 {
-  margin: 0 0 0.2rem;
-  color: #1B263B;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.view-service-detail-item p {
-  margin: 0;
-  color: #1B263B;
-  font-size: 1.25rem;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.view-service-detail-item a {
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-@media (max-width: 768px) {
-  .view-customer-section-row {
-    grid-template-columns: 1fr;
-  }
-
-  #view-customer-estimates-columns .view-customer-section-column {
-    border-right: 0;
-    border-bottom: 1px solid #F8F9FA;
-  }
-
-  #view-customer-estimates-columns .view-customer-section-column:last-child {
-    border-bottom: 0;
-  }
-
-  #view-customer-details-list {
-    grid-template-columns: 1fr;
-  }
-
-  .view-customer-section-column:first-child {
-    border-right: 0;
-    border-bottom: 1px solid #F8F9FA;
-  }
-
-  .view-job-section-row {
-    grid-template-columns: 1fr;
-  }
-
-  #view-job-details-list {
-    grid-template-columns: 1fr;
-  }
-
-  #view-job-location-list {
-    grid-template-columns: 1fr;
-  }
-
-  #view-job-services-list {
-    flex-direction: column;
-  }
-
-  #view-job-notes-list {
-    grid-template-columns: 1fr;
-  }
-
-  .view-job-section-column:first-child {
-    border-right: 0;
-    border-bottom: 1px solid #F8F9FA;
-  }
-
-  #view-service-details-content {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Footer styles */
-#footer-bg {
-  width: 100vw;
-  background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
-  margin-left: calc(-50vw + 50%);
-  margin-top: 2rem;
-}
-
-#footer {
-  width: 100vw;
-  background: none;
-  color: var(--kl-accent-contrast);
-  padding: 0;
-  margin-left: calc(-50vw + 50%);
-}
-
-#footer-container {
-  width: 60vw;
-  margin: 0 auto;
-  text-align: left;
-  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 1rem;
-  padding: 1rem 0;
-}
-
-@media (max-width: 1600px) {
-  #header-container {
-    width: 80vw;
-  }
-
-  #main-container {
-    width: 80vw;
-  }
-
-  #footer-container {
-    width: 80vw;
-  }
-}
-
-@media (max-width: 1024px) {
-  #header-container {
-    width: 90vw;
-    grid-template-columns: 1fr auto auto;
-    grid-template-areas:
-      "brand toggle login"
-      "nav nav nav";
-    column-gap: 0.75rem;
-    justify-content: normal;
-    padding: 0.75rem 0;
-  }
-
-  #header-container h1 {
-    grid-area: brand;
-  }
-
-  #mobile-nav-toggle {
-    display: inline-block;
-    grid-area: toggle;
-    justify-self: end;
-  }
-
-  #login-button {
-    grid-area: login;
-    justify-self: end;
-    margin-left: 0.5rem;
-  }
-
-  #employee-greeting-link {
-    grid-area: login;
-    justify-self: end;
-    margin-left: 0.5rem;
-  }
-
-  #header-navigation {
-    display: none;
-    grid-area: nav;
-    justify-self: stretch;
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid rgba(248, 249, 250, 0.2);
-  }
-
-  #header-navigation.is-open {
-    display: block;
-  }
-
-  #header-nav {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-
-  #header-nav li:not(:last-child)::after {
-    content: none;
-  }
-
-  #header-nav a {
-    display: block;
-    padding: 0.2rem 0;
-  }
-
-  .home-scheduling-row {
-    grid-template-columns: 1fr;
-  }
-
-  #home-latest-row {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  }
-
-  #customers-controls-row {
-    grid-template-columns: 1fr;
-    align-items: start;
-  }
-
-  #jobs-controls-row {
-    grid-template-columns: 1fr;
-  }
-
-  .jobs-controls-right-top {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .jobs-controls-right-actions {
-    width: 100%;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .jobs-controls-right-actions select {
-    min-width: 0;
-    width: 100%;
-    max-width: 340px;
-  }
-
-  .customers-controls-right {
-    justify-content: flex-start;
-  }
-
-  .add-customer-form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .add-customer-form-row--single {
-    max-width: none;
-  }
-
-  #add-customer-form-actions,
-  #create-job-form-actions,
-  #create-service-form-actions {
-    justify-content: flex-start;
-  }
-}
-
-@media (max-width: 768px) {
-  #header-container,
-  #main-container,
-  #footer-container {
-    width: 95%;
-    box-sizing: border-box;
-  }
-
-  #home-jobs-pages,
-  #home-estimates-pages,
-  #home-payments-pages,
-  .list-pages {
-    gap: 0.10rem;
-  }
-
-  #home-jobs-pages a,
-  #home-estimates-pages a,
-  #home-payments-pages a,
-  .list-pages a {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 1.85rem;
-    padding: 0.2rem 0.35rem;
-    font-size: 1.05rem;
-    border-radius: 4px;
-  }
-
-}
-
-/* Unified button language across app resources */
-#login-button,
-#customers-search-form button,
-.jobs-controls-right-actions button,
-.jobs-controls-right-actions a,
-#add-customer-form-actions button,
-#create-job-form-actions button,
-#create-service-form-actions button,
-#view-customer-actions-row a,
-#view-customer-actions-row button,
-#view-job-actions-row a,
-#view-job-actions-row button,
-#view-service-actions-row a,
-#view-service-actions-row button,
-.customers-add-button,
-.customers-controls-right a,
-#add-job-service-button,
-#add-job-part-button,
-#add-job-labor-button,
-#add-job-material-button,
-#add-job-equipment-button,
-#add-job-discount-button,
-#add-service-part-button,
-#add-service-material-button,
-#jobs-clear-date-filters,
-.home-latest-action-link,
-.home-call-mobile-button,
-.estimate-email-btn,
-.hvac-generate-report-button,
-.job-row-remove-button {
-  border-radius: 10px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  box-shadow: 0 3px 8px rgba(15, 32, 57, 0.08);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
-}
-
-#login-button:hover,
-#customers-search-form button:hover,
-.jobs-controls-right-actions button:hover,
-.jobs-controls-right-actions a:hover,
-#add-customer-form-actions button:hover,
-#create-job-form-actions button:hover,
-#create-service-form-actions button:hover,
-#view-customer-actions-row a:hover,
-#view-customer-actions-row button:hover,
-#view-job-actions-row a:hover,
-#view-job-actions-row button:hover,
-#view-service-actions-row a:hover,
-#view-service-actions-row button:hover,
-.customers-add-button:hover,
-.customers-controls-right a:hover,
-#add-job-service-button:hover,
-#add-job-part-button:hover,
-#add-job-labor-button:hover,
-#add-job-material-button:hover,
-#add-job-equipment-button:hover,
-#add-job-discount-button:hover,
-#add-service-part-button:hover,
-#add-service-material-button:hover,
-#jobs-clear-date-filters:hover,
-.home-latest-action-link:hover,
-.home-call-mobile-button:hover,
-.estimate-email-btn:hover,
-.hvac-generate-report-button:hover,
-.job-row-remove-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(15, 45, 77, 0.14);
-}
-
-#login-button:focus-visible,
-#customers-search-form button:focus-visible,
-.jobs-controls-right-actions button:focus-visible,
-.jobs-controls-right-actions a:focus-visible,
-#add-customer-form-actions button:focus-visible,
-#create-job-form-actions button:focus-visible,
-#create-service-form-actions button:focus-visible,
-#view-customer-actions-row a:focus-visible,
-#view-customer-actions-row button:focus-visible,
-#view-job-actions-row a:focus-visible,
-#view-job-actions-row button:focus-visible,
-#view-service-actions-row a:focus-visible,
-#view-service-actions-row button:focus-visible,
-.customers-add-button:focus-visible,
-.customers-controls-right a:focus-visible,
-#add-job-service-button:focus-visible,
-#add-job-part-button:focus-visible,
-#add-job-labor-button:focus-visible,
-#add-job-material-button:focus-visible,
-#add-job-equipment-button:focus-visible,
-#add-job-discount-button:focus-visible,
-#add-service-part-button:focus-visible,
-#add-service-material-button:focus-visible,
-#jobs-clear-date-filters:focus-visible,
-.home-latest-action-link:focus-visible,
-.home-call-mobile-button:focus-visible,
-.estimate-email-btn:focus-visible,
-.hvac-generate-report-button:focus-visible,
-.job-row-remove-button:focus-visible {
-  outline: 2px solid var(--kl-focus);
-  outline-offset: 2px;
-}
-
-#login-button,
-#customers-search-form button,
-.jobs-controls-right-actions button,
-.jobs-controls-right-actions a,
-#add-customer-form-actions button,
-#create-job-form-actions button,
-#create-service-form-actions button,
-#view-customer-actions-row a,
-#view-customer-actions-row button,
-#view-job-actions-row a,
-#view-job-actions-row button,
-#view-service-actions-row a,
-#view-service-actions-row button {
-  border-color: var(--kl-accent-strong);
-  background: linear-gradient(180deg, var(--kl-accent) 0%, var(--kl-accent-strong) 100%);
-  color: var(--kl-accent-contrast);
-}
-
-#login-button:hover,
-#customers-search-form button:hover,
-.jobs-controls-right-actions button:hover,
-.jobs-controls-right-actions a:hover,
-#add-customer-form-actions button:hover,
-#create-job-form-actions button:hover,
-#create-service-form-actions button:hover,
-#view-customer-actions-row a:hover,
-#view-customer-actions-row button:hover,
-#view-job-actions-row a:hover,
-#view-job-actions-row button:hover,
-#view-service-actions-row a:hover,
-#view-service-actions-row button:hover {
-  border-color: #276b45;
-  background: linear-gradient(180deg, #258a53 0%, #17643c 100%);
-}
-
-.customers-add-button,
-.customers-controls-right a,
-#add-job-service-button,
-#add-job-part-button,
-#add-job-labor-button,
-#add-job-material-button,
-#add-job-discount-button,
-#jobs-clear-date-filters,
-.home-latest-action-link {
-  border-color: var(--kl-border);
-  background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-surface-soft) 100%);
-  color: var(--kl-text);
-}
-
-.resource-subscription #view-customer-actions-row a.home-latest-action-link {
-  border-color: var(--kl-border);
-  background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-surface-soft) 100%);
-  color: var(--kl-text);
-}
-
-.customers-add-button:hover,
-.customers-controls-right a:hover,
-#add-job-service-button:hover,
-#add-job-part-button:hover,
-#add-job-labor-button:hover,
-#add-job-material-button:hover,
-#add-job-discount-button:hover,
-#jobs-clear-date-filters:hover,
-.home-latest-action-link:hover {
-  border-color: var(--kl-border-strong);
-  background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-surface-softer) 100%);
-  color: var(--kl-accent-strong);
-}
-
-.resource-subscription #view-customer-actions-row a.home-latest-action-link:hover {
-  border-color: var(--kl-border-strong);
-  background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-surface-softer) 100%);
-  color: var(--kl-accent-strong);
-}
-
-.home-call-mobile-button,
-.estimate-email-btn,
-.hvac-generate-report-button {
-  border-color: #227241;
-  background: linear-gradient(180deg, #F0FAF4 0%, #E0F4E8 100%);
-  color: #1C6238;
-}
-
-.home-call-mobile-button:hover,
-.estimate-email-btn:hover,
-.hvac-generate-report-button:hover {
-  border-color: #1F6B35;
-  background: linear-gradient(180deg, #E9F8EF 0%, #D7F0E0 100%);
-}
-
-.job-row-remove-button {
-  border-color: #C73737;
-  background: linear-gradient(180deg, #FFF4F4 0%, #FEEAEA 100%);
-  color: #9B1D1D;
-}
-
-.job-row-remove-button:hover {
-  border-color: #B91C1C;
-  background: linear-gradient(180deg, #FEEEEE 0%, #FDE2E2 100%);
-  color: #8E1A1A;
-}
-
-#view-customer-actions-row .view-customer-action-link.is-disabled,
-#view-customer-actions-row .view-customer-action-link.is-disabled:hover {
-  box-shadow: none;
-  transform: none;
-}
-
-@media (max-width: 768px) {
-  #view-customer-actions-row,
-  #view-job-actions-row,
-  #view-service-actions-row {
-    gap: 0.5rem;
-  }
-
-  #view-customer-actions-row form,
-  #view-job-actions-row form,
-  #view-service-actions-row form {
-    display: block;
-    flex: 1 1 calc(50% - 0.5rem);
-    min-width: 0;
-  }
-
-  #view-customer-actions-row a,
-  #view-customer-actions-row button,
-  #view-job-actions-row a,
-  #view-job-actions-row button,
-  #view-service-actions-row a,
-  #view-service-actions-row button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-height: 2.55rem;
-    padding: 0.55rem 0.75rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  #customers-search-form button,
-  .jobs-controls-right-actions button,
-  .jobs-controls-right-actions a,
-  .customers-controls-right a {
-    min-height: 2.5rem;
-    white-space: nowrap;
-  }
-}
-
-@media (max-width: 540px) {
-  #breadcrumb {
-    font-size: 0.84rem;
-    line-height: 1.25;
-  }
-
-  #breadcrumb ol {
-    flex-wrap: wrap;
-    align-items: center;
-    row-gap: 0.3rem;
-  }
-
-  #breadcrumb li {
-    display: inline-flex;
-    align-items: center;
-    white-space: nowrap;
-    min-width: 0;
-  }
-
-  #breadcrumb li + li::before {
-    margin: 0 0.35rem;
-    line-height: 1;
-  }
-
-  #breadcrumb a,
-  #breadcrumb li[aria-current="page"] {
-    display: inline-block;
-    line-height: 1.2;
-  }
-
-  #view-customer-actions-row form,
-  #view-job-actions-row form,
-  #view-service-actions-row form {
-    flex-basis: 100%;
-  }
-
-  .customers-controls-right,
-  .jobs-controls-right-actions {
-    width: 100%;
-    gap: 0.5rem;
-  }
-
-  #customers-search-form button,
-  .jobs-controls-right-actions button,
-  .jobs-controls-right-actions a,
-  .customers-controls-right a {
-    width: 100%;
-  }
-}
-
-#business-logo-section {
-  margin-top: 1.25rem;
-}
-
-#business-tax-config-section {
-  margin-top: 1.25rem;
-}
-
-#business-tax-config-section > h3 {
-  text-align: center;
-  background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
-  color: var(--kl-accent-contrast);
-  margin: 0 -0.75rem 0.75rem;
-  padding: 0.5rem 0.75rem;
-}
-
-.business-tax-config-list {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.9rem;
-  padding: 0.25rem 0;
-}
-
-@media (max-width: 1200px) {
-  .business-tax-config-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 900px) {
-  .business-tax-config-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .business-tax-config-list {
-    grid-template-columns: 1fr;
-  }
-}
-
-.business-logo-status {
-  margin: 0.5rem 0;
-  padding: 0.6rem 0.8rem;
-  border-radius: 8px;
-  font-weight: 600;
-}
-
-.business-logo-status.is-success {
-  color: #1f6b35;
-  background-color: #eaf6ee;
-  border: 1px solid #b9debf;
-}
-
-.business-logo-status.is-error {
-  color: #9f1239;
-  background-color: #fff1f2;
-  border: 1px solid #fecdd3;
-}
-
-.business-logo-placeholder {
-  margin: 0;
-  padding: 1rem 1.1rem;
-  display: flex;
+  justify-content: flex-end;
   align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  text-align: center;
-  color: #5b6473;
-  border: 2px dashed #b8c1cc;
-  border-radius: 12px;
-  background: #eef1f4;
-  box-shadow: none;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
 }
 
-.business-logo-placeholder-icon {
-  color: #7b8696;
-  font-size: 1rem;
-}
-
-.business-logo-note {
-  margin: 0.55rem 0 0;
-  color: #56657a;
-  font-size: 0.9rem;
-}
-
-.business-logo-preview-shell {
-  margin: 0;
-  padding: 0.85rem;
-  border: 1px solid #d8e0ea;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #f7fafc 100%);
-  box-shadow: 0 4px 12px rgba(16, 33, 55, 0.06);
-  text-align: center;
-}
-
-.business-logo-preview-image {
-  max-width: 100%;
-  max-height: 140px;
-  width: auto;
-  height: auto;
-}
-
-.business-logo-upload-form {
-  margin-top: 0.85rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-  align-items: stretch;
-}
-
-.business-logo-upload-input {
-  flex: 1 1 320px;
-  min-height: 44px;
-  padding: 0.35rem;
-  border: 1px solid #c7cfda;
-  border-radius: 10px;
-  background-color: #ffffff;
-  color: #1f2937;
-  box-sizing: border-box;
-}
-
-.business-logo-upload-input::file-selector-button {
-  margin-right: 0.65rem;
-  padding: 0.52rem 0.9rem 0.52rem 2.05rem;
-  border: 1px solid var(--kl-accent-strong);
-  border-radius: 8px;
-  background-color: var(--kl-accent-strong);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23f8f9fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3Cpath d='M20 16.5a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 16.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: 0.72rem center;
-  color: #f8f9fa;
-  font-weight: 600;
+.default-hvac-form-actions .btn-secondary {
+  display: inline-block;
+  padding: 0.5rem 1.2rem;
+  background: transparent;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.business-logo-upload-input::-webkit-file-upload-button {
-  margin-right: 0.65rem;
-  padding: 0.52rem 0.9rem 0.52rem 2.05rem;
-  border: 1px solid var(--kl-accent-strong);
-  border-radius: 8px;
-  background-color: var(--kl-accent-strong);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23f8f9fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3Cpath d='M20 16.5a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 16.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: 0.72rem center;
-  color: #f8f9fa;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+.default-hvac-form-actions .btn-secondary:hover {
+  background: #f3f4f6;
 }
 
-.business-logo-upload-input:hover::file-selector-button,
-.business-logo-upload-input:hover::-webkit-file-upload-button {
-  background-color: var(--kl-accent);
-  border-color: var(--kl-accent);
-}
-
-.business-logo-upload-button {
-  flex: 0 0 auto;
-  min-height: 44px;
-  padding: 0.55rem 1rem 0.55rem 2.1rem;
-  border: 1px solid var(--kl-accent-strong);
-  border-radius: 8px;
-  background-color: var(--kl-accent-strong);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23f8f9fa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 16V4'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3Cpath d='M20 16.5a4.5 4.5 0 0 1-4.5 4.5h-7A4.5 4.5 0 0 1 4 16.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: 0.72rem center;
-  color: #f8f9fa;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.business-logo-upload-button:hover {
-  background-color: var(--kl-accent);
-  border-color: var(--kl-accent);
-}
-
-@media (max-width: 640px) {
-  .business-logo-upload-form {
-    flex-direction: column;
-    align-items: stretch;
+@media (max-width: 768px) {
+  .sub-properties-tools-row {
+    grid-template-columns: 1fr;
   }
 
-  .business-logo-upload-input,
-  .business-logo-upload-button {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .business-logo-upload-input::file-selector-button,
-  .business-logo-upload-input::-webkit-file-upload-button {
-    width: 100%;
-    margin-right: 0;
-    margin-bottom: 0.45rem;
+  .sub-properties-same-address-field {
+    margin-top: 0;
   }
 }
-
-
-
-

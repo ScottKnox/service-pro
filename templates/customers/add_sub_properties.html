@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Add Sub-Properties | Klovent{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="add-customer-panel">
+      <h1>Add Sub-Properties</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li><a href="{{ url_for('customers.view_property', customerId=customerId, propertyId=propertyId) }}">View Property</a></li>
+          <li aria-current="page">Add Sub-Properties</li>
+        </ol>
+      </nav>
+
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
+      <form
+        id="add-sub-properties-form"
+        action="{{ url_for('customers.add_sub_properties', customerId=customerId, propertyId=propertyId) }}"
+        method="post"
+        data-parent-address-line-1="{{ property.address_line_1|default('', true) }}"
+        data-parent-address-line-2="{{ property.address_line_2|default('', true) }}"
+        data-parent-city="{{ property.city|default('', true) }}"
+        data-parent-state="{{ property.state|default('', true) }}"
+        data-parent-zip-code="{{ property.zip_code|default('', true) }}"
+        data-existing-sub-properties='{{ existing_sub_properties_json|default("[]", true) }}'
+      >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="default_hvac_data" id="default-hvac-data" value="{{ default_hvac_data_json|default('', true) }}">
+
+        <!-- Sub-Property Tools -->
+        <section class="add-customer-panel sub-properties-tools-section">
+          <h2>Sub-Property Tools</h2>
+
+          <div class="add-customer-form-row sub-properties-tools-row">
+            <div class="add-customer-form-field">
+              <label for="num-sub-properties">Number of Sub-Properties</label>
+              <input
+                id="num-sub-properties"
+                name="num_sub_properties"
+                type="number"
+                min="1"
+                max="200"
+                step="1"
+                placeholder="e.g. 10"
+                value="{{ form_data.num_sub_properties|default('', true) }}"
+              />
+            </div>
+
+            <div class="add-customer-form-field">
+              <label for="unit-prefix">Unit Prefix</label>
+              <input
+                id="unit-prefix"
+                name="unit_prefix"
+                type="text"
+                placeholder="e.g. 'Unit 1A' will generate 'Unit 1A, Unit 2A, etc.'"
+                value="{{ form_data.unit_prefix|default('', true) }}"
+              />
+            </div>
+
+
+          </div>
+
+          <hr class="sub-properties-actions-divider" />
+
+          <div class="sub-properties-tools-footer">
+            <button id="generate-btn" type="button" class="sub-properties-primary-btn">Generate Sub-Properties</button>
+            <button id="add-to-sub-properties-btn" type="button" class="sub-properties-primary-btn">Add To Sub-Properties</button>
+          </div>
+        </section>
+
+        <!-- Action buttons -->
+        <div class="sub-properties-action-row">
+          <a
+            id="add-default-hvac-btn"
+            href="{{ url_for('customers.add_default_hvac', customerId=customerId, propertyId=propertyId) }}"
+            class="sub-properties-action-link sub-properties-action-link--secondary"
+          >Add Default HVAC System</a>
+          <button type="submit" class="sub-properties-primary-btn">Save Sub-Properties</button>
+        </div>
+
+        {% if default_hvac %}
+          <section class="add-customer-panel sub-properties-hvac-preview">
+            <h2 class="sub-properties-section-title">Default HVAC System</h2>
+            <p class="sub-properties-hvac-type">{{ default_hvac.system_type }}</p>
+            <p class="sub-properties-hvac-note">This HVAC system will be applied to every sub-property when saved.</p>
+          </section>
+        {% endif %}
+
+        <!-- Generated sub-property rows -->
+        <h2 id="sub-properties-list-title" class="sub-properties-section-title" hidden>Sub-Properties</h2>
+        <div id="sub-property-rows-container"></div>
+
+      </form>
+
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='js/add_sub_properties.js') }}" defer></script>
+{% endblock %}

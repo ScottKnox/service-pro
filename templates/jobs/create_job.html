@@ -14,7 +14,7 @@
         </ol>
       </nav>
 
-      <form id="create-job-form" action="{{ url_for('jobs.create_job', customerId=customerId) }}" method="post" data-services-catalog='{{ services_catalog|tojson }}' data-parts-catalog='{{ parts_catalog|tojson }}' data-labors-catalog='{{ labors_catalog|tojson }}' data-materials-catalog='{{ materials_catalog|tojson }}' data-equipments-catalog='{{ equipments_catalog|tojson }}' data-discounts-catalog='{{ discounts_catalog|tojson }}' data-parts-by-id='{{ parts_by_id|tojson }}' data-materials-by-id='{{ materials_by_id|tojson }}' data-customer-properties='{{ customer_properties|tojson }}' data-schedule-required="false">
+      <form id="create-job-form" action="{{ url_for('jobs.create_job', customerId=customerId) }}" method="post" data-services-catalog='{{ services_catalog|tojson }}' data-parts-catalog='{{ parts_catalog|tojson }}' data-labors-catalog='{{ labors_catalog|tojson }}' data-materials-catalog='{{ materials_catalog|tojson }}' data-equipments-catalog='{{ equipments_catalog|tojson }}' data-discounts-catalog='{{ discounts_catalog|tojson }}' data-parts-by-id='{{ parts_by_id|tojson }}' data-materials-by-id='{{ materials_by_id|tojson }}' data-customer-properties='{{ customer_properties|tojson }}' data-initial-hvac-systems='{{ initial_hvac_systems|tojson }}' data-customer-id='{{ customerId }}' data-schedule-required="false">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="customer_id" value="{{ customerId }}" />
 

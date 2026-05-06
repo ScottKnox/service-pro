@@ -39,18 +39,22 @@
             <h2>All Customers</h2>
 
             <div class="customers-controls-right-actions">
-              <form id="customers-search-form" action="#" method="get">
-                <input
-                  id="customers-search-input"
-                  name="q"
-                  type="search"
-                  placeholder="Search by customer name"
-                  aria-label="Search customers"
-                />
-              </form>
               <a href="{{ url_for('customers.add_customer') }}">Add Customer</a>
               <a href="{{ url_for('customers.export_customers_csv') }}">Export CSV</a>
             </div>
+          </div>
+
+          <div class="customers-results-search">
+            <form id="customers-search-form" action="#" method="get" class="catalog-search-form">
+              <label class="catalog-search-form-label" for="customers-search-input">Search Customers:</label>
+              <input
+                id="customers-search-input"
+                name="q"
+                type="search"
+                placeholder="Search by customer name"
+                aria-label="Search customers"
+              />
+            </form>
           </div>
 
           <div id="customers-list-grid" class="customers-compact-list">

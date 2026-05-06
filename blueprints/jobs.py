@@ -897,6 +897,104 @@ def _resolve_selected_property(customer, property_id):
     return None
 
 
+def _query_hvac_systems_for_property(db, customer_id, property_id):
+    """Return a list of {id, title, system_type} dicts for HVAC systems on a property."""
+    normalized_property_id = str(property_id or "").strip()
+    if not customer_id or not normalized_property_id:
+        return []
+    query = {
+        "$and": [
+            build_reference_filter("customer_id", customer_id),
+            build_reference_filter("property_id", normalized_property_id),
+        ]
+    }
+    hvac_docs = list(db.hvacSystems.find(query).sort([("_id", -1)]))
+    result = []
+    for doc in hvac_docs:
+        system_type = str(doc.get("system_type") or "").strip() or "HVAC System"
+        result.append({
+            "id": str(doc.get("_id")),
+            "title": system_type,
+            "system_type": system_type,
+        })
+    return result
+
+
+def _apply_hvac_ids_to_components(components, form_field_values):
+    """Patch hvac_system_ids onto each component dict from comma-separated form values."""
+    for i, component in enumerate(components):
+        raw = form_field_values[i] if i < len(form_field_values) else ""
+        ids = [x.strip() for x in str(raw or "").split(",") if x.strip()]
+        component["hvac_system_ids"] = ids
+    return components
+
+
+def _create_maintenance_records(db, job_id, job_doc, business_id):
+    """Create one maintenanceRecord per HVAC system touched in a completed job."""
+    property_id = str(job_doc.get("property_id") or "").strip()
+    customer_id = job_doc.get("customer_id")
+    completed_at = datetime.utcnow()
+    date_completed = datetime.now().strftime("%m/%d/%Y")
+
+    component_types = ["services", "parts", "labors", "materials", "equipments"]
+
+    # Collect all referenced HVAC system IDs
+    all_hvac_ids = set()
+    for comp_type in component_types:
+        for comp in (job_doc.get(comp_type) or []):
+            for hvac_id in (comp.get("hvac_system_ids") or []):
+                if hvac_id and str(hvac_id).strip():
+                    all_hvac_ids.add(str(hvac_id).strip())
+
+    if not all_hvac_ids:
+        return
+
+    records = []
+    for hvac_system_id in all_hvac_ids:
+        related_components = []
+        for comp_type in component_types:
+            for comp in (job_doc.get(comp_type) or []):
+                if hvac_system_id in [str(x) for x in (comp.get("hvac_system_ids") or [])]:
+                    related_components.append({
+                        "component_type": comp_type,
+                        "component": dict(comp),
+                    })
+
+        records.append({
+            "job_id": str(job_id),
+            "hvac_system_id": hvac_system_id,
+            "property_id": property_id,
+            "customer_id": customer_id,
+            "business_id": business_id,
+            "assigned_employee": str(job_doc.get("assigned_employee") or "").strip(),
+            "date_completed": date_completed,
+            "completed_at": completed_at,
+            "scheduled_date": str(job_doc.get("scheduled_date") or "").strip(),
+            "components": related_components,
+            "total_amount": float(job_doc.get("total_amount") or 0.0),
+            "address_line_1": str(job_doc.get("address_line_1") or "").strip(),
+            "address_line_2": str(job_doc.get("address_line_2") or "").strip(),
+            "city": str(job_doc.get("city") or "").strip(),
+            "state": str(job_doc.get("state") or "").strip(),
+            "zip_code": str(job_doc.get("zip_code") or "").strip(),
+            "created_at": completed_at,
+        })
+
+    if records:
+        db.maintenanceRecords.insert_many(records)
+
+
+@bp.route("/api/hvac-systems-for-property")
+def api_hvac_systems_for_property():
+    if not _is_authenticated_employee():
+        return jsonify({"error": "Unauthorized"}), 401
+    db = ensure_connection_or_500()
+    customer_id = request.args.get("customer_id", "").strip()
+    property_id = request.args.get("property_id", "").strip()
+    systems = _query_hvac_systems_for_property(db, customer_id, property_id)
+    return jsonify({"hvac_systems": systems})
+
+
 @bp.route("/jobs")
 def jobs():
     db = ensure_connection_or_500()
@@ -1066,6 +1164,11 @@ def create_job(customerId):
             entered_discount_amounts,
             discount_catalog,
         )
+        _apply_hvac_ids_to_components(services, request.form.getlist("service_hvac_system_ids[]"))
+        _apply_hvac_ids_to_components(parts, request.form.getlist("part_hvac_system_ids[]"))
+        _apply_hvac_ids_to_components(labors, request.form.getlist("labor_hvac_system_ids[]"))
+        _apply_hvac_ids_to_components(materials, request.form.getlist("material_hvac_system_ids[]"))
+        _apply_hvac_ids_to_components(equipments, request.form.getlist("equipment_hvac_system_ids[]"))
         total = services_total + parts_total + labor_total + materials_total + equipment_total - discounts_total
 
         primary_service = services[0]["type"] if services else "No services added."
@@ -1182,6 +1285,7 @@ def create_job(customerId):
     initial_city = (default_property or {}).get("city") or customer.get("city", "")
     initial_state = (default_property or {}).get("state") or customer.get("state", "")
     initial_zip_code = (default_property or {}).get("zip_code") or customer.get("zip_code", "")
+    initial_hvac_systems = _query_hvac_systems_for_property(db, customerId, selected_property_id)
 
     return render_template(
         "jobs/create_job.html",
@@ -1194,6 +1298,7 @@ def create_job(customerId):
         initial_city=initial_city,
         initial_state=initial_state,
         initial_zip_code=initial_zip_code,
+        initial_hvac_systems=initial_hvac_systems,
         services=services,
         parts=parts,
         labors=labors,
@@ -2347,6 +2452,11 @@ def complete_job(jobId):
         },
     )
 
+    try:
+        _create_maintenance_records(db, jobId, job, business_id)
+    except Exception as _maint_exc:
+        current_app.logger.error("Maintenance records failed: job_id=%s error=%s", jobId, _maint_exc)
+
     if str(job.get("job_kind") or "").strip() == "recurring_occurrence" and job.get("series_id"):
         series_doc = db.recurring_job_series.find_one({"_id": coerce_object_id(job.get("series_id"))})
         occurrence_index = int(job.get("occurrence_index") or 0)
@@ -2527,6 +2637,11 @@ def update_job(jobId):
             entered_discount_amounts,
             discount_catalog,
         )
+        _apply_hvac_ids_to_components(services, request.form.getlist("service_hvac_system_ids[]"))
+        _apply_hvac_ids_to_components(parts, request.form.getlist("part_hvac_system_ids[]"))
+        _apply_hvac_ids_to_components(labors, request.form.getlist("labor_hvac_system_ids[]"))
+        _apply_hvac_ids_to_components(materials, request.form.getlist("material_hvac_system_ids[]"))
+        _apply_hvac_ids_to_components(equipments, request.form.getlist("equipment_hvac_system_ids[]"))
         total = services_total + parts_total + labor_total + materials_total + equipment_total - discounts_total
 
         primary_service = services[0]["type"] if services else "No services added."
@@ -2729,15 +2844,29 @@ def update_job(jobId):
         default_property = _resolve_default_property(customer)
         selected_property_id = str((default_property or {}).get("property_id") or "").strip()
 
+    job_doc = serialize_doc(job)
+    initial_hvac_systems = _query_hvac_systems_for_property(db, reference_value(job.get("customer_id")), selected_property_id)
+    job_services_hvac = [s.get("hvac_system_ids") or [] for s in (job_doc.get("services") or [])]
+    job_parts_hvac = [p.get("hvac_system_ids") or [] for p in (job_doc.get("parts") or [])]
+    job_labors_hvac = [l.get("hvac_system_ids") or [] for l in (job_doc.get("labors") or [])]
+    job_materials_hvac = [m.get("hvac_system_ids") or [] for m in (job_doc.get("materials") or [])]
+    job_equipments_hvac = [e.get("hvac_system_ids") or [] for e in (job_doc.get("equipments") or [])]
+
     return render_template(
         "jobs/update_job.html",
         jobId=jobId,
-        job=serialize_doc(job),
+        job=job_doc,
         recurrence_state=_build_recurrence_form_state(job=job, series=existing_series),
         recurrence_locked=recurrence_locked,
         customer=customer,
         customer_properties=_get_customer_properties(customer),
         selected_property_id=selected_property_id,
+        initial_hvac_systems=initial_hvac_systems,
+        job_services_hvac=job_services_hvac,
+        job_parts_hvac=job_parts_hvac,
+        job_labors_hvac=job_labors_hvac,
+        job_materials_hvac=job_materials_hvac,
+        job_equipments_hvac=job_equipments_hvac,
         services=services,
         parts=parts,
         labors=labors,

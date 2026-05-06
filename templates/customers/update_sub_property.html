@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Update Sub-Property | Klovent{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="add-customer-panel">
+      <h1>Update Sub-Property</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
+          <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+          <li><a href="{{ url_for('customers.view_property', customerId=customerId, propertyId=propertyId) }}">View Property</a></li>
+          <li><a href="{{ url_for('customers.view_sub_property', customerId=customerId, propertyId=propertyId, subPropertyId=subPropertyId) }}">View Sub-Property</a></li>
+          <li aria-current="page">Update Sub-Property</li>
+        </ol>
+      </nav>
+
+      {% if error %}
+        <p class="form-field-error">{{ error }}</p>
+      {% endif %}
+
+      <form id="add-customer-form" action="{{ url_for('customers.update_sub_property', customerId=customerId, propertyId=propertyId, subPropertyId=subPropertyId) }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="add-customer-form-row add-customer-form-row--top-aligned">
+          <div class="add-customer-form-field">
+            <label for="unit-label">Unit Label</label>
+            <input id="unit-label" name="unit_label" type="text" value="{{ form_data.get('unit_label', '') }}" required />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="sub-property-address-line-1">Address Line 1</label>
+            <input id="sub-property-address-line-1" name="address_line_1" type="text" value="{{ form_data.get('address_line_1', '') }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="sub-property-address-line-2">Address Line 2</label>
+            <input id="sub-property-address-line-2" name="address_line_2" type="text" value="{{ form_data.get('address_line_2', '') }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="sub-property-city">City</label>
+            <input id="sub-property-city" name="city" type="text" value="{{ form_data.get('city', '') }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="sub-property-state">State</label>
+            <input id="sub-property-state" name="state" type="text" maxlength="2" value="{{ form_data.get('state', '') }}" required />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row add-customer-form-row--single">
+          <div class="add-customer-form-field">
+            <label for="sub-property-zip-code">Zip Code</label>
+            <input id="sub-property-zip-code" name="zip_code" type="text" value="{{ form_data.get('zip_code', '') }}" required />
+          </div>
+        </div>
+
+        <div id="add-customer-form-actions">
+          <button type="submit">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

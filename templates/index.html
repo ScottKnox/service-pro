@@ -50,7 +50,7 @@
 								</div>
 								<div class="home-job-time-tech-line">
 									<span class="home-job-time-display" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}">
-										{{ job.scheduled_time|default('N/A', true) }}
+										{% if job.scheduled_date %}{{ job.scheduled_time|default('N/A', true) }}{% else %}Unscheduled{% endif %}
 									</span>
 									<span class="home-job-dot" aria-hidden="true">&bull;</span>
 									<span class="home-job-tech-name">{{ job.assigned_employee|default('Unassigned', true) }}</span>

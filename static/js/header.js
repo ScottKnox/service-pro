@@ -29,14 +29,14 @@
 
   navigation.querySelectorAll("a").forEach((link) => {
     link.addEventListener("click", () => {
-      if (window.innerWidth <= 1024) {
+      if (window.innerWidth <= 900) {
         closeMenu();
       }
     });
   });
 
   window.addEventListener("resize", () => {
-    if (window.innerWidth > 1024) {
+    if (window.innerWidth > 900) {
       closeMenu();
     }
   });

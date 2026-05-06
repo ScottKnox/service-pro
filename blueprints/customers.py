@@ -153,6 +153,28 @@ def _get_customer_properties(customer):
         property_id = str(prop.get("property_id") or "").strip() or str(ObjectId())
         property_type = str(prop.get("property_type") or "").strip()
         is_default = bool(prop.get("is_default"))
+        raw_sub_properties = prop.get("sub_properties")
+        if not isinstance(raw_sub_properties, list):
+            raw_sub_properties = prop.get("subProperties")
+        if not isinstance(raw_sub_properties, list):
+            raw_sub_properties = []
+
+        normalized_sub_properties = []
+        for sub_property in raw_sub_properties:
+            if not isinstance(sub_property, dict):
+                continue
+            normalized_sub_properties.append(
+                {
+                    "sub_property_id": str(sub_property.get("sub_property_id") or sub_property.get("subPropertyId") or "").strip(),
+                    "unit_label": str(sub_property.get("unit_label") or sub_property.get("unitLabel") or "").strip(),
+                    "address_line_1": str(sub_property.get("address_line_1") or sub_property.get("addressLine1") or "").strip(),
+                    "address_line_2": str(sub_property.get("address_line_2") or sub_property.get("addressLine2") or "").strip(),
+                    "city": str(sub_property.get("city") or "").strip(),
+                    "state": str(sub_property.get("state") or "").strip().upper(),
+                    "zip_code": str(sub_property.get("zip_code") or sub_property.get("zipCode") or "").strip(),
+                }
+            )
+
         normalized_properties.append(
             {
                 "property_id": property_id,
@@ -167,6 +189,7 @@ def _get_customer_properties(customer):
                 "zip_code": str(prop.get("zip_code") or "").strip(),
                 "is_default": is_default,
                 "is_seed_primary_address": bool(prop.get("is_seed_primary_address")),
+                "sub_properties": normalized_sub_properties,
             }
         )
 
@@ -672,6 +695,47 @@ def _build_hvac_component(form_data, prefix):
         component["refrigerant_type"] = form_data.get("refrigerant_type", "").strip()
 
     return component
+
+
+def _build_hvac_form_data_from_system(hvac_system):
+    form_data = _build_empty_hvac_form_data()
+    if not isinstance(hvac_system, dict):
+        return form_data
+
+    form_data["system_type"] = str(hvac_system.get("system_type") or "").strip()
+    form_data["system_tonnage"] = str(hvac_system.get("system_tonnage") or "").strip()
+    form_data["cooling_capacity"] = str(hvac_system.get("cooling_capacity") or "").strip()
+    form_data["heating_capacity"] = str(hvac_system.get("heating_capacity") or "").strip()
+
+    components = hvac_system.get("components") if isinstance(hvac_system.get("components"), dict) else {}
+    for collection_name, prefix in HVAC_FORM_PREFIX_BY_COLLECTION.items():
+        component = components.get(collection_name)
+        if not isinstance(component, dict):
+            continue
+
+        form_data[f"{prefix}_serial_number"] = str(component.get("serial_number") or "").strip()
+        form_data[f"{prefix}_model_number"] = str(component.get("model_number") or "").strip()
+        form_data[f"{prefix}_manufacturer"] = str(component.get("manufacturer") or "").strip()
+        form_data[f"{prefix}_manufacturer_other"] = str(component.get("manufacturer_other") or "").strip()
+        form_data[f"{prefix}_install_year"] = str(component.get("install_year") or "").strip()
+        form_data[f"{prefix}_nickname"] = str(component.get("nickname") or "").strip()
+
+        if prefix == "unit":
+            form_data["unit_type"] = str(component.get("unit_type") or "").strip()
+        if prefix == "thermostat":
+            form_data["thermostat_type"] = str(component.get("thermostat_type") or "").strip()
+        if prefix == "refrigerant":
+            form_data["refrigerant_type"] = str(component.get("refrigerant_type") or "").strip()
+
+    ductwork = _extract_hvac_ductwork(hvac_system)
+    if ductwork:
+        form_data["ductwork_type"] = str(ductwork.get("type") or "").strip()
+        form_data["ductwork_insulated"] = str(ductwork.get("insulated") or "").strip()
+        form_data["ductwork_supply_branches"] = str(ductwork.get("supply_branches") or "").strip()
+        form_data["ductwork_returns"] = str(ductwork.get("returns") or "").strip()
+        form_data["ductwork_notes"] = str(ductwork.get("ductwork_notes") or "").strip()
+
+    return form_data
 
 
 def _build_hvac_ductwork(form_data):
@@ -1805,6 +1869,26 @@ def view_property(customerId, propertyId):
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
     hvac_systems = _build_hvac_system_cards(db, customerId, propertyId)
+    sub_properties = customer_property.get("sub_properties") or []
+
+    sub_properties_page_raw = request.args.get("sub_properties_page", "1")
+    try:
+        sub_properties_page = max(1, int(sub_properties_page_raw))
+    except (TypeError, ValueError):
+        sub_properties_page = 1
+
+    sub_properties_page_size = 10
+    sub_properties_total = len(sub_properties)
+    sub_properties_total_pages = (sub_properties_total + sub_properties_page_size - 1) // sub_properties_page_size
+
+    if sub_properties_total_pages == 0:
+        sub_properties_page = 1
+    elif sub_properties_page > sub_properties_total_pages:
+        sub_properties_page = sub_properties_total_pages
+
+    sub_properties_start = (sub_properties_page - 1) * sub_properties_page_size
+    sub_properties_end = sub_properties_start + sub_properties_page_size
+    paginated_sub_properties = sub_properties[sub_properties_start:sub_properties_end]
 
     return render_template(
         "customers/view_property.html",
@@ -1813,7 +1897,201 @@ def view_property(customerId, propertyId):
         property=customer_property,
         propertyId=propertyId,
         hvac_systems=hvac_systems,
+        sub_properties=paginated_sub_properties,
+        sub_properties_page=sub_properties_page,
+        sub_properties_total_pages=sub_properties_total_pages,
     )
+
+
+@bp.route("/customers/<customerId>/properties/<propertyId>/sub-properties/<subPropertyId>")
+def view_sub_property(customerId, propertyId, subPropertyId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers.customers"))
+
+    customer_property = _find_customer_property(customer, propertyId)
+    if not customer_property:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    sub_properties = customer_property.get("sub_properties") or []
+    sub_property = None
+    for entry in sub_properties:
+        if str(entry.get("sub_property_id") or "").strip() == str(subPropertyId or "").strip():
+            sub_property = entry
+            break
+
+    if not sub_property:
+        return redirect(url_for("customers.view_property", customerId=customerId, propertyId=propertyId))
+
+    hvac_systems = _build_hvac_system_cards(db, customerId, subPropertyId)
+
+    return render_template(
+        "customers/view_sub_property.html",
+        customerId=customerId,
+        propertyId=propertyId,
+        subPropertyId=subPropertyId,
+        customer=serialize_doc(customer),
+        property=customer_property,
+        sub_property=sub_property,
+        hvac_systems=hvac_systems,
+    )
+
+
+@bp.route("/customers/<customerId>/properties/<propertyId>/sub-properties/<subPropertyId>/update", methods=["GET", "POST"])
+def update_sub_property(customerId, propertyId, subPropertyId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers.customers"))
+
+    customer_property = _find_customer_property(customer, propertyId)
+    if not customer_property:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    sub_properties = customer_property.get("sub_properties") or []
+    existing_sub_property = None
+    for entry in sub_properties:
+        if str(entry.get("sub_property_id") or "").strip() == str(subPropertyId or "").strip():
+            existing_sub_property = dict(entry)
+            break
+
+    if not existing_sub_property:
+        return redirect(url_for("customers.view_property", customerId=customerId, propertyId=propertyId))
+
+    error = ""
+    form_data = {
+        "unit_label": str(existing_sub_property.get("unit_label") or "").strip(),
+        "address_line_1": str(existing_sub_property.get("address_line_1") or "").strip(),
+        "address_line_2": str(existing_sub_property.get("address_line_2") or "").strip(),
+        "city": str(existing_sub_property.get("city") or "").strip(),
+        "state": str(existing_sub_property.get("state") or "").strip(),
+        "zip_code": str(existing_sub_property.get("zip_code") or "").strip(),
+    }
+
+    if request.method == "POST":
+        form_data = {
+            "unit_label": str(request.form.get("unit_label") or "").strip(),
+            "address_line_1": str(request.form.get("address_line_1") or "").strip(),
+            "address_line_2": str(request.form.get("address_line_2") or "").strip(),
+            "city": str(request.form.get("city") or "").strip(),
+            "state": str(request.form.get("state") or "").strip().upper(),
+            "zip_code": str(request.form.get("zip_code") or "").strip(),
+        }
+
+        if not all((form_data["unit_label"], form_data["address_line_1"], form_data["city"], form_data["state"], form_data["zip_code"])):
+            error = "Unit label, address line 1, city, state, and zip code are required."
+        else:
+            customer_properties = _get_customer_properties(customer)
+            for prop in customer_properties:
+                if prop.get("property_id") != propertyId:
+                    continue
+                normalized_sub_properties = []
+                for entry in prop.get("sub_properties") or []:
+                    entry_id = str(entry.get("sub_property_id") or "").strip()
+                    if entry_id == str(subPropertyId or "").strip():
+                        normalized_sub_properties.append(
+                            {
+                                "sub_property_id": entry_id,
+                                "unit_label": form_data["unit_label"],
+                                "address_line_1": form_data["address_line_1"],
+                                "address_line_2": form_data["address_line_2"],
+                                "city": form_data["city"],
+                                "state": form_data["state"],
+                                "zip_code": form_data["zip_code"],
+                            }
+                        )
+                    else:
+                        normalized_sub_properties.append(entry)
+                prop["sub_properties"] = normalized_sub_properties
+
+            db.customers.update_one(
+                {"_id": object_id_or_404(customerId)},
+                {"$set": {"properties": customer_properties}},
+            )
+            return redirect(url_for("customers.view_sub_property", customerId=customerId, propertyId=propertyId, subPropertyId=subPropertyId))
+
+    return render_template(
+        "customers/update_sub_property.html",
+        customerId=customerId,
+        propertyId=propertyId,
+        subPropertyId=subPropertyId,
+        customer=serialize_doc(customer),
+        property=customer_property,
+        form_data=form_data,
+        error=error,
+    )
+
+
+@bp.route("/customers/<customerId>/properties/<propertyId>/sub-properties/<subPropertyId>/delete", methods=["POST"])
+def delete_sub_property(customerId, propertyId, subPropertyId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers.customers"))
+
+    customer_property = _find_customer_property(customer, propertyId)
+    if not customer_property:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    customer_properties = _get_customer_properties(customer)
+    for prop in customer_properties:
+        if prop.get("property_id") != propertyId:
+            continue
+        prop["sub_properties"] = [
+            entry
+            for entry in (prop.get("sub_properties") or [])
+            if str(entry.get("sub_property_id") or "").strip() != str(subPropertyId or "").strip()
+        ]
+
+    db.customers.update_one(
+        {"_id": object_id_or_404(customerId)},
+        {"$set": {"properties": customer_properties}},
+    )
+
+    return redirect(url_for("customers.view_property", customerId=customerId, propertyId=propertyId))
+
+
+@bp.route("/customers/<customerId>/properties/<propertyId>/sub-properties/delete-all", methods=["POST"])
+def delete_all_sub_properties(customerId, propertyId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers.customers"))
+
+    customer_property = _find_customer_property(customer, propertyId)
+    if not customer_property:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    sub_properties = customer_property.get("sub_properties") or []
+    sub_property_ids = [
+        str(entry.get("sub_property_id") or "").strip()
+        for entry in sub_properties
+        if str(entry.get("sub_property_id") or "").strip()
+    ]
+
+    customer_properties = _get_customer_properties(customer)
+    for prop in customer_properties:
+        if prop.get("property_id") != propertyId:
+            continue
+        prop["sub_properties"] = []
+
+    db.customers.update_one(
+        {"_id": object_id_or_404(customerId)},
+        {"$set": {"properties": customer_properties}},
+    )
+
+    if sub_property_ids:
+        db.hvacSystems.delete_many(
+            {
+                "$and": [
+                    build_reference_filter("customer_id", customerId),
+                    {"$or": [build_reference_filter("property_id", sub_property_id) for sub_property_id in sub_property_ids]},
+                ]
+            }
+        )
+
+    return redirect(url_for("customers.view_property", customerId=customerId, propertyId=propertyId))
 
 
 @bp.route("/customers/<customerId>/properties/<propertyId>/update", methods=["GET", "POST"])
@@ -1845,6 +2123,7 @@ def update_property(customerId, propertyId):
         form_data = _normalize_property_payload(submitted, customer_type)
         form_data["is_default"] = bool(existing_property.get("is_default"))
         form_data["is_seed_primary_address"] = bool(existing_property.get("is_seed_primary_address"))
+        form_data["sub_properties"] = existing_property.get("sub_properties") or []
 
         if not _property_payload_is_valid(form_data):
             error = "Property name, property type, address line 1, city, state, and zip code are required."
@@ -2998,6 +3277,201 @@ def delete_hvac_photo(customerId, reference_type, reference_id):
         )
 
     return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+
+
+@bp.route("/customers/<customerId>/properties/<propertyId>/sub-properties", methods=["GET", "POST"])
+def add_sub_properties(customerId, propertyId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers.customers"))
+
+    customer_property = _find_customer_property(customer, propertyId)
+    if not customer_property:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    session_key = f"default_hvac_{propertyId}"
+    default_hvac = session.get(session_key)
+
+    if not default_hvac:
+        sub_properties = customer_property.get("sub_properties") or []
+        if sub_properties:
+            first_sub_property = sub_properties[0] if isinstance(sub_properties[0], dict) else {}
+            first_sub_property_id = str(first_sub_property.get("sub_property_id") or "").strip()
+            if first_sub_property_id:
+                existing_default_system = db.hvacSystems.find_one(
+                    {
+                        "$and": [
+                            build_reference_filter("customer_id", customerId),
+                            build_reference_filter("property_id", first_sub_property_id),
+                        ]
+                    },
+                    sort=[("_id", -1)],
+                )
+                if existing_default_system:
+                    serialized_default_system = serialize_doc(existing_default_system)
+                    default_hvac_form_data = _build_hvac_form_data_from_system(serialized_default_system)
+                    default_hvac_form_data["property_id"] = propertyId
+                    default_hvac = {
+                        "system_type": str(serialized_default_system.get("system_type") or "").strip(),
+                        "form_data": default_hvac_form_data,
+                    }
+
+    error = ""
+
+    if request.method == "POST":
+        sub_properties_json = request.form.get("sub_properties_json", "").strip()
+        if not sub_properties_json:
+            error = "No sub-properties to save."
+        else:
+            import json as _json
+            try:
+                sub_properties = _json.loads(sub_properties_json)
+            except Exception:
+                sub_properties = []
+                error = "Invalid sub-property data."
+
+            if not error:
+                from bson import ObjectId as _ObjectId
+                records = []
+                new_record_ids = set()
+                for sp in sub_properties:
+                    existing_id = str(sp.get("sub_property_id", "")).strip()
+                    is_new = not existing_id
+                    new_id = existing_id if existing_id else str(_ObjectId())
+                    record = {
+                        "sub_property_id": new_id,
+                        "unit_label": str(sp.get("unit_label", "")).strip(),
+                        "address_line_1": str(sp.get("address_line_1", "")).strip(),
+                        "address_line_2": str(sp.get("address_line_2", "")).strip(),
+                        "city": str(sp.get("city", "")).strip(),
+                        "state": str(sp.get("state", "")).strip(),
+                        "zip_code": str(sp.get("zip_code", "")).strip(),
+                    }
+                    records.append(record)
+                    if is_new:
+                        new_record_ids.add(new_id)
+
+                db.customers.update_one(
+                    {"_id": object_id_or_404(customerId), "properties.property_id": propertyId},
+                    {"$set": {"properties.$.sub_properties": records}},
+                )
+
+                if default_hvac:
+                    hvac_form_data = default_hvac.get("form_data", {})
+                    hvac_form_data["property_id"] = propertyId
+                    system_type = default_hvac.get("system_type", "")
+                    if system_type and system_type in SYSTEM_TYPE_OPTIONS:
+                        for record in records:
+                            sub_prop_id = record["sub_property_id"]
+                            if sub_prop_id not in new_record_ids:
+                                continue  # skip existing sub-properties that already have HVAC
+                            hvac_form_data["property_id"] = sub_prop_id
+                            hvac_doc = _build_hvac_system_document(customerId, system_type, hvac_form_data)
+                            inserted = db.hvacSystems.insert_one(hvac_doc)
+                            hvac_system_id = str(inserted.inserted_id)
+                            component_base = {**hvac_doc, "hvac_system_id": hvac_system_id}
+                            component_snapshots = {}
+                            for collection_name, _label in HVAC_COLLECTION_CONFIG.get(system_type, ()):
+                                component_doc = _build_hvac_component_document(hvac_form_data, component_base, collection_name)
+                                component_snapshots[collection_name] = component_doc
+                            update_payload = {"components": component_snapshots}
+                            if system_type in DUCTWORK_SYSTEM_TYPES:
+                                ductwork = _build_hvac_ductwork(hvac_form_data)
+                                if ductwork:
+                                    update_payload["ductwork"] = ductwork
+                            db.hvacSystems.update_one(
+                                {"_id": inserted.inserted_id},
+                                {"$set": update_payload},
+                            )
+
+                session.pop(session_key, None)
+                return redirect(url_for("customers.view_property", customerId=customerId, propertyId=propertyId))
+
+    import json as _json
+    default_hvac_data_json = _json.dumps(default_hvac) if default_hvac else ""
+    existing_sub_properties = customer_property.get("sub_properties") or []
+    existing_sub_properties_json = _json.dumps(existing_sub_properties)
+
+    return render_template(
+        "customers/add_sub_properties.html",
+        customerId=customerId,
+        propertyId=propertyId,
+        customer=serialize_doc(customer),
+        property=serialize_doc(customer_property),
+        default_hvac=default_hvac,
+        default_hvac_data_json=default_hvac_data_json,
+        existing_sub_properties_json=existing_sub_properties_json,
+        error=error,
+        form_data={},
+    )
+
+
+@bp.route("/customers/<customerId>/properties/<propertyId>/default-hvac", methods=["GET", "POST"])
+def add_default_hvac(customerId, propertyId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers.customers"))
+
+    customer_property = _find_customer_property(customer, propertyId)
+    if not customer_property:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    error = ""
+    ductwork_error_fields = []
+    form_data = _build_empty_hvac_form_data()
+    form_data["property_id"] = propertyId
+
+    if request.method == "POST":
+        for field_name in form_data:
+            form_data[field_name] = request.form.get(field_name, "").strip()
+
+        system_type = form_data["system_type"]
+
+        if not system_type:
+            error = "System type is required."
+        elif system_type not in SYSTEM_TYPE_OPTIONS:
+            error = "Please select a valid system type."
+        else:
+            ductwork_data = {
+                "type": form_data.get("ductwork_type", ""),
+                "insulated": form_data.get("ductwork_insulated", ""),
+                "supply_branches": form_data.get("ductwork_supply_branches", ""),
+                "returns": form_data.get("ductwork_returns", ""),
+                "ductwork_notes": form_data.get("ductwork_notes", ""),
+            }
+            if system_type in DUCTWORK_SYSTEM_TYPES:
+                error = _validate_ductwork_data(ductwork_data)
+                ductwork_error_fields = _get_missing_ductwork_fields(ductwork_data)
+
+        if not error:
+            session_key = f"default_hvac_{propertyId}"
+            session[session_key] = {
+                "system_type": system_type,
+                "form_data": dict(form_data),
+            }
+            return redirect(url_for("customers.add_sub_properties", customerId=customerId, propertyId=propertyId))
+
+    return render_template(
+        "equipment/add_default_hvac.html",
+        customerId=customerId,
+        propertyId=propertyId,
+        customer=serialize_doc(customer),
+        error=error,
+        form_data=form_data,
+        ductwork_error_fields=ductwork_error_fields,
+        system_type_options=SYSTEM_TYPE_OPTIONS,
+        tonnage_options=TONNAGE_OPTIONS,
+        ductwork_type_options=DUCTWORK_TYPE_OPTIONS,
+        insulated_options=INSULATED_OPTIONS,
+        manufacturer_options=MANUFACTURER_OPTIONS,
+        mini_split_manufacturer_options=MINI_SPLIT_MANUFACTURER_OPTIONS,
+        thermostat_type_options=THERMOSTAT_TYPE_OPTIONS,
+        thermostat_manufacturer_options=THERMOSTAT_MANUFACTURER_OPTIONS,
+        package_unit_type_options=PACKAGE_UNIT_TYPE_OPTIONS,
+        refrigerant_type_options=REFRIGERANT_TYPE_OPTIONS,
+    )
 
 
 @bp.route("/customers/<customerId>/equipment/add", methods=["GET", "POST"])

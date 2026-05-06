@@ -12,6 +12,14 @@
   const partsById = form && form.dataset.partsById ? JSON.parse(form.dataset.partsById) : {};
   const materialsById = form && form.dataset.materialsById ? JSON.parse(form.dataset.materialsById) : {};
   const customerProperties = form && form.dataset.customerProperties ? JSON.parse(form.dataset.customerProperties) : [];
+  const initialHvacSystems = form && form.dataset.initialHvacSystems ? JSON.parse(form.dataset.initialHvacSystems) : [];
+  const formCustomerId = form && form.dataset.customerId ? form.dataset.customerId : '';
+  const jobServicesHvac = form && form.dataset.jobServicesHvac ? JSON.parse(form.dataset.jobServicesHvac) : [];
+  const jobPartsHvac = form && form.dataset.jobPartsHvac ? JSON.parse(form.dataset.jobPartsHvac) : [];
+  const jobLaborsHvac = form && form.dataset.jobLaborsHvac ? JSON.parse(form.dataset.jobLaborsHvac) : [];
+  const jobMaterialsHvac = form && form.dataset.jobMaterialsHvac ? JSON.parse(form.dataset.jobMaterialsHvac) : [];
+  const jobEquipmentsHvac = form && form.dataset.jobEquipmentsHvac ? JSON.parse(form.dataset.jobEquipmentsHvac) : [];
+  var currentHvacSystems = initialHvacSystems.slice();
 
   const propertySelect = document.querySelector('[data-job-property-select]');
   const propertyAddressPreview = document.querySelector('[data-job-property-address]');
@@ -97,6 +105,16 @@
     propertySelect.addEventListener('change', function () {
       applyPropertyAddress(this.value);
       validateForm();
+      var newPropertyId = this.value;
+      if (newPropertyId && formCustomerId) {
+        fetchHvacSystemsForProperty(newPropertyId, function(systems) {
+          currentHvacSystems = systems;
+          resetAllHvacPickersForNewProperty();
+        });
+      } else {
+        currentHvacSystems = [];
+        resetAllHvacPickersForNewProperty();
+      }
     });
 
     if (propertySelect.value) {
@@ -708,6 +726,7 @@
 
     attachRowRemoveButton(row, 'service');
     updateRemoveButtonVisibility(row, 'service');
+    addHvacPickerToRow(row, 'service', []);
     return row;
   }
 
@@ -739,6 +758,7 @@
 
     attachRowRemoveButton(row, 'part');
     updateRemoveButtonVisibility(row, 'part');
+    addHvacPickerToRow(row, 'part', []);
     return row;
   }
 
@@ -774,6 +794,7 @@
 
     attachRowRemoveButton(row, 'labor');
     updateRemoveButtonVisibility(row, 'labor');
+    addHvacPickerToRow(row, 'labor', []);
     return row;
   }
 
@@ -816,6 +837,7 @@
 
     attachRowRemoveButton(row, 'material');
     updateRemoveButtonVisibility(row, 'material');
+    addHvacPickerToRow(row, 'material', []);
     return row;
   }
 
@@ -886,6 +908,7 @@
 
     attachRowRemoveButton(row, 'equipment');
     updateRemoveButtonVisibility(row, 'equipment');
+    addHvacPickerToRow(row, 'equipment', []);
     return row;
   }
 
@@ -1548,6 +1571,126 @@
      });
    }
    
+  // HVAC picker functions
+  function getHiddenInputNameForRowType(rowType) {
+    switch (rowType) {
+      case 'service': return 'service_hvac_system_ids[]';
+      case 'part': return 'part_hvac_system_ids[]';
+      case 'labor': return 'labor_hvac_system_ids[]';
+      case 'material': return 'material_hvac_system_ids[]';
+      case 'equipment': return 'equipment_hvac_system_ids[]';
+      default: return null;
+    }
+  }
+
+  function buildHvacPickerField(rowElement, hiddenInputName, selectedIds) {
+    if (!rowElement) return;
+    var existing = rowElement.querySelector('.job-hvac-picker');
+    if (existing) existing.remove();
+
+    var field = document.createElement('div');
+    field.className = 'add-customer-form-field job-hvac-picker';
+
+    var label = document.createElement('label');
+    label.textContent = 'HVAC Systems';
+    field.appendChild(label);
+
+    var hiddenInput = document.createElement('input');
+    hiddenInput.type = 'hidden';
+    hiddenInput.name = hiddenInputName;
+    hiddenInput.className = 'job-hvac-picker-input';
+    hiddenInput.value = (selectedIds || []).join(',');
+    field.appendChild(hiddenInput);
+
+    var chipsContainer = document.createElement('div');
+    chipsContainer.className = 'job-hvac-picker-chips';
+
+    if (!currentHvacSystems || currentHvacSystems.length === 0) {
+      var emptyMsg = document.createElement('p');
+      emptyMsg.className = 'job-hvac-picker-empty';
+      emptyMsg.textContent = 'No HVAC systems on this property.';
+      chipsContainer.appendChild(emptyMsg);
+    } else {
+      var selectedSet = new Set((selectedIds || []).map(String));
+      currentHvacSystems.forEach(function (system) {
+        var chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'job-hvac-chip' + (selectedSet.has(String(system.id)) ? ' is-selected' : '');
+        chip.dataset.hvacId = String(system.id);
+        chip.textContent = system.title || system.system_type || 'HVAC System';
+        chip.addEventListener('click', function () {
+          this.classList.toggle('is-selected');
+          var ids = [];
+          chipsContainer.querySelectorAll('.job-hvac-chip.is-selected').forEach(function (c) {
+            ids.push(c.dataset.hvacId);
+          });
+          hiddenInput.value = ids.join(',');
+        });
+        chipsContainer.appendChild(chip);
+      });
+    }
+
+    field.appendChild(chipsContainer);
+    var removeWrap = rowElement.querySelector('.job-row-remove-wrap');
+    if (removeWrap) {
+      rowElement.insertBefore(field, removeWrap);
+    } else {
+      rowElement.appendChild(field);
+    }
+  }
+
+  function addHvacPickerToRow(rowElement, rowType, selectedIds) {
+    var inputName = getHiddenInputNameForRowType(rowType);
+    if (!inputName) return;
+    buildHvacPickerField(rowElement, inputName, selectedIds || []);
+  }
+
+  function resetAllHvacPickersForNewProperty() {
+    var lists = [
+      { list: servicesList, sel: '.job-service-row', type: 'service' },
+      { list: partsList, sel: '.job-part-row', type: 'part' },
+      { list: laborsList, sel: '.job-labor-row', type: 'labor' },
+      { list: materialsList, sel: '.job-material-row', type: 'material' },
+      { list: equipmentsList, sel: '.job-equipment-row', type: 'equipment' },
+    ];
+    lists.forEach(function (entry) {
+      if (entry.list) {
+        entry.list.querySelectorAll(entry.sel).forEach(function (row) {
+          addHvacPickerToRow(row, entry.type, []);
+        });
+      }
+    });
+  }
+
+  function fetchHvacSystemsForProperty(propertyId, callback) {
+    if (!propertyId || !formCustomerId) { callback([]); return; }
+    var url = '/api/hvac-systems-for-property?customer_id=' + encodeURIComponent(formCustomerId) + '&property_id=' + encodeURIComponent(propertyId);
+    fetch(url, { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) { callback(data.hvac_systems || []); })
+      .catch(function () { callback([]); });
+  }
+
+  function initializeHvacPickersForExistingRows() {
+    var configs = [
+      { list: servicesList, sel: '.job-service-row', type: 'service', hvacData: jobServicesHvac },
+      { list: partsList, sel: '.job-part-row', type: 'part', hvacData: jobPartsHvac },
+      { list: laborsList, sel: '.job-labor-row', type: 'labor', hvacData: jobLaborsHvac },
+      { list: materialsList, sel: '.job-material-row', type: 'material', hvacData: jobMaterialsHvac },
+      { list: equipmentsList, sel: '.job-equipment-row', type: 'equipment', hvacData: jobEquipmentsHvac },
+    ];
+    configs.forEach(function (cfg) {
+      if (cfg.list) {
+        cfg.list.querySelectorAll(cfg.sel).forEach(function (row, i) {
+          var selectedIds = (cfg.hvacData[i] || []).map(String);
+          addHvacPickerToRow(row, cfg.type, selectedIds);
+        });
+      }
+    });
+  }
+
+  initializeHvacPickersForExistingRows();
+
    // Initial validation
   syncRecurringSettingsVisibility();
    validateForm();
