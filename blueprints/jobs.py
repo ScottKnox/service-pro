@@ -897,6 +897,23 @@ def _configure_stripe_client():
     return secret_key
 
 
+def _stripe_obj_value(obj, key, default=None):
+    if obj is None:
+        return default
+    try:
+        value = getattr(obj, key)
+        if value is not None:
+            return value
+    except Exception:
+        pass
+    try:
+        if isinstance(obj, dict):
+            return obj.get(key, default)
+        return obj[key]
+    except Exception:
+        return default
+
+
 def _build_invoice_payment_label(job_doc, invoice_entry):
     invoice_number = str((invoice_entry or {}).get("invoice_number") or "").strip()
     customer_name = str((job_doc or {}).get("customer_name") or "").strip()
@@ -2369,13 +2386,15 @@ def view_invoice(jobId, invoiceRef):
     returned_session_id = str(request.args.get("session_id") or "").strip()
     is_staff_view = _is_authenticated_employee()
     has_customer_token = _verify_invoice_access_token(invoice, token_value)
-    if not is_staff_view and not has_customer_token:
+    session_access_key = f"invoice_access_{jobId}_{invoiceRef}"
+    has_customer_session_access = bool(session.get(session_access_key))
+    if not is_staff_view and not (has_customer_token or has_customer_session_access):
         return redirect(url_for("auth.login"))
 
     # Persist short-lived access for the specific invoice view so follow-up actions
     # (like starting checkout) can succeed even if query token forwarding is brittle.
     if not is_staff_view and has_customer_token:
-        session[f"invoice_access_{jobId}_{invoiceRef}"] = True
+        session[session_access_key] = True
 
     invoice_status = str((invoice or {}).get("payment_status") or "").strip().lower()
     job_status = str((job_doc or {}).get("status") or "").strip().lower()
