@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}View Invoice | Klovent{% endblock %}
+
+{% block content %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/view_job.css') }}" />
+  <div id="main-container">
+    <div id="view-job-panel">
+      <h1>Invoice {{ invoice.invoice_number|default('', true) }}</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          {% if is_staff_view %}
+            <li><a href="{{ url_for('jobs.jobs') }}">Jobs</a></li>
+            <li><a href="{{ url_for('jobs.view_job', jobId=jobId) }}">View Job</a></li>
+          {% else %}
+            <li>Customer Invoice</li>
+          {% endif %}
+          <li aria-current="page">View Invoice</li>
+        </ol>
+      </nav>
+
+      {% if is_staff_view %}
+      <section id="view-job-actions" aria-labelledby="view-job-actions-header">
+        <h2 id="view-job-actions-header">Actions</h2>
+        <div id="view-job-actions-row">
+          <a href="{{ url_for('jobs.view_job', jobId=jobId) }}">Back To Job</a>
+          <button
+            type="button"
+            class="estimate-email-btn"
+            data-estimate-title="{{ invoice.invoice_number|default('Invoice', true) }}"
+            data-estimate-file="{{ invoice.file_path|default('', true) }}"
+            data-customer-email="{{ customer.email|default('') }}"
+            data-customer-name="{{ customer.first_name|default('') }} {{ customer.last_name|default('') }}"
+            data-email-type="invoice"
+          >
+            Email Invoice
+          </button>
+          {% if invoice.file_path %}
+            <a href="{{ invoice.file_path }}" target="_blank" rel="noopener noreferrer">Open Invoice PDF</a>
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+
+      <section id="view-job-details" class="estimate-stacked-view" aria-label="Invoice details">
+        <h2>Invoice Details</h2>
+
+        <div class="estimate-stack-block">
+          <h3>Invoice Summary</h3>
+          <div class="estimate-summary-grid">
+            <div class="view-job-detail-item">
+              <h4>Status</h4>
+              <p>
+                <span class="jobs-status-chip{% if job.status|default('', true)|lower == 'paid' %} is-paid{% elif job.status|default('', true)|lower == 'completed' %} is-started{% else %} is-scheduled{% endif %}">
+                  {{ job.status|default('Completed', true) }}
+                </span>
+              </p>
+            </div>
+            <div class="view-job-detail-item">
+              <h4>Invoice Number</h4>
+              <p>{{ invoice.invoice_number|default('N/A', true) }}</p>
+            </div>
+            <div class="view-job-detail-item">
+              <h4>Customer</h4>
+              <p>{{ job.customer_name|default('N/A', true) }}</p>
+            </div>
+            <div class="view-job-detail-item">
+              <h4>Assigned Employee</h4>
+              <p>{{ job.assigned_employee|default('N/A', true) }}</p>
+            </div>
+            <div class="view-job-detail-item">
+              <h4>Date Completed</h4>
+              <p>{{ job.dateCompleted|default('N/A', true) }}</p>
+            </div>
+            <div class="view-job-detail-item">
+              <h4>Payment Terms</h4>
+              <p>Net {{ payment_due_days }}</p>
+            </div>
+            <div class="view-job-detail-item">
+              <h4>Due Date</h4>
+              <p>{{ due_date|default('N/A', true) }}</p>
+            </div>
+            <div class="view-job-detail-item">
+              <h4>Location</h4>
+              <p>
+                {{ job.address_line_1|default('N/A', true) }}<br />
+                {% if job.address_line_2 %}{{ job.address_line_2 }}<br />{% endif %}
+                {{ job.city|default('N/A', true) }}, {{ job.state|default('N/A', true) }} {{ job.zip_code|default('', true) }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {% if job.services %}
+          <div class="estimate-stack-block">
+            <h3>Services</h3>
+            <div class="estimate-line-items">
+              {% for service in job.services %}
+                <div class="estimate-line-item-row">
+                  <div class="estimate-line-item-main">
+                    <div class="estimate-line-item-title">{{ service.name|default(service.type, true)|default(service.service_code, true)|default('N/A', true) }}</div>
+                    <div class="estimate-line-item-meta">{{ service.estimated_hours|default(service.duration, true)|default('', true) }}</div>
+                  </div>
+                  <div class="estimate-line-item-amount">{{ service.standard_price|default(service.price, true)|default('$0.00', true) }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if job.parts %}
+          <div class="estimate-stack-block">
+            <h3>Parts</h3>
+            <div class="estimate-line-items">
+              {% for part in job.parts %}
+                <div class="estimate-line-item-row">
+                  <div class="estimate-line-item-main">
+                    <div class="estimate-line-item-title">{{ part.name|default(part.part_code, true)|default('N/A', true) }}</div>
+                  </div>
+                  <div class="estimate-line-item-amount">{{ part.unit_cost|default(part.price, true)|default('$0.00', true) }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if job.labors %}
+          <div class="estimate-stack-block">
+            <h3>Labor</h3>
+            <div class="estimate-line-items">
+              {% for labor in job.labors %}
+                <div class="estimate-line-item-row">
+                  <div class="estimate-line-item-main">
+                    <div class="estimate-line-item-title">{{ labor.description|default('N/A', true) }}</div>
+                    <div class="estimate-line-item-meta">Hours: {{ labor.hours|default('0', true) }} | Rate: {{ labor.hourly_rate|default('$0.00', true) }}</div>
+                  </div>
+                  <div class="estimate-line-item-amount">{{ labor.line_total|default('$0.00', true) }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if job.materials %}
+          <div class="estimate-stack-block">
+            <h3>Materials</h3>
+            <div class="estimate-line-items">
+              {% for material in job.materials %}
+                <div class="estimate-line-item-row">
+                  <div class="estimate-line-item-main">
+                    <div class="estimate-line-item-title">{{ material.material_name|default('N/A', true) }}</div>
+                    <div class="estimate-line-item-meta">Qty: {{ material.quantity_used|default('0', true) }} | Price: {{ material.price|default('$0.00', true) }}</div>
+                  </div>
+                  <div class="estimate-line-item-amount">{{ material.line_total|default('$0.00', true) }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if job.equipments %}
+          <div class="estimate-stack-block">
+            <h3>Equipment</h3>
+            <div class="estimate-line-items">
+              {% for equipment in job.equipments %}
+                <div class="estimate-line-item-row">
+                  <div class="estimate-line-item-main">
+                    <div class="estimate-line-item-title">{{ equipment.equipment_name|default('N/A', true) }}</div>
+                    <div class="estimate-line-item-meta">Qty: {{ equipment.quantity_installed|default('0', true) }} | Price: {{ equipment.price|default('$0.00', true) }}</div>
+                  </div>
+                  <div class="estimate-line-item-amount">{{ equipment.line_total|default('$0.00', true) }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="estimate-stack-block estimate-pricing-summary">
+          <h3>Pricing Summary</h3>
+          <div class="estimate-pricing-row"><span>Subtotal</span><span>{{ pricing_summary.subtotal_display }}</span></div>
+          {% if pricing_summary.tax_total > 0 %}
+            <div class="estimate-pricing-row"><span>Tax</span><span>{{ pricing_summary.tax_total_display }}</span></div>
+          {% endif %}
+          {% if pricing_summary.discounts_total > 0 %}
+            <div class="estimate-pricing-row"><span>Discounts</span><span>-{{ pricing_summary.discounts_total_display }}</span></div>
+          {% endif %}
+          <div class="estimate-pricing-row estimate-pricing-total"><span>Total Due</span><span>{{ pricing_summary.total_due_display }}</span></div>
+        </div>
+
+        {% if job.invoice_notes %}
+          <div class="estimate-stack-block">
+            <h3>Invoice Notes</h3>
+            <div class="note-card">
+              <div class="note-card-text">{{ job.invoice_notes }}</div>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if not is_staff_view %}
+          <div class="estimate-stack-block estimate-customer-actions-block">
+            <h3>Make A Payment</h3>
+            <p class="estimate-customer-status-text">Online payment is coming soon. You can still call our office to pay this invoice today.</p>
+            <div class="estimate-customer-actions">
+              <button type="button" class="estimate-customer-action-btn estimate-customer-action-btn-accept" disabled>Pay By Card (Coming Soon)</button>
+              <button type="button" class="estimate-customer-action-btn estimate-customer-action-btn-decline" disabled>Pay By ACH (Coming Soon)</button>
+            </div>
+          </div>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+
+  {% if is_staff_view %}
+  <div id="email-estimate-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Email Invoice</h2>
+        <button class="modal-close-btn" id="modal-close-btn">&times;</button>
+      </div>
+      <form
+        id="email-estimate-form"
+        method="POST"
+        data-send-url="{{ url_for('jobs.send_estimate_email', jobId=jobId) }}"
+        data-quote-template=""
+        data-invoice-template="{{ invoice_email_template|default('', true)|e }}"
+      >
+        <div class="form-group">
+          <label for="email-recipient">Recipient Email:</label>
+          <input type="email" id="email-recipient" name="recipient_email" required readonly class="email-readonly-input">
+        </div>
+        <div class="form-group">
+          <label for="email-subject">Subject:</label>
+          <input type="text" id="email-subject" name="subject" required>
+        </div>
+        <div class="form-group">
+          <label for="email-body">Message:</label>
+          <textarea id="email-body" name="body" rows="8" required></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="submit" class="modal-send-btn">Send Email</button>
+          <button type="button" class="modal-cancel-btn" id="modal-cancel-btn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  {% if is_staff_view %}
+    <script src="{{ url_for('static', filename='js/view_job.js') }}" defer></script>
+  {% endif %}
+{% endblock %}

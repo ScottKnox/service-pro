@@ -53,5 +53,5 @@ htmlcov/
 *.log
 
 userstories
-invoices
 static/uploads/
+/invoices
