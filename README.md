@@ -79,3 +79,57 @@ Notes:
 - Keep Stripe Dashboard in Test mode while validating.
 - Never place `sk_live_...` or `pk_live_...` keys in local `.env`.
 - For Stripe Connect destination charges, include `--forward-connect-to` in the Stripe CLI command so connected account events reach your webhook.
+
+## Stripe production cutover checklist
+
+Use this checklist when moving from test mode to live processing.
+
+1. Confirm your platform Stripe account is activated for live payments.
+
+2. Confirm Stripe Connect onboarding is working for at least one HVAC business in live mode.
+
+3. Create a live webhook endpoint in Stripe Dashboard:
+	Endpoint URL: https://your-domain.com/payments/stripe/webhook
+	Events:
+	- checkout.session.completed
+	- checkout.session.async_payment_succeeded
+
+4. Update production environment variables:
+	STRIPE_SECRET_KEY=sk_live_your_secret_key
+	STRIPE_PUBLISHABLE_KEY=pk_live_your_publishable_key
+	STRIPE_WEBHOOK_SECRET=whsec_from_live_webhook_endpoint
+	STRIPE_CURRENCY=usd
+	STRIPE_COUNTRY=US
+	STRIPE_PLATFORM_FEE_PERCENT=0
+
+5. Restart/redeploy the service so new environment values are loaded.
+
+6. Verify production data safety:
+	- Back up production database.
+	- Confirm no test Stripe keys remain in production environment.
+	- Confirm logging does not expose secrets.
+
+7. Run a small live payment smoke test with a low-value invoice.
+
+## Stripe post-launch verification checklist
+
+After live cutover, verify this flow end-to-end:
+
+1. Business has Stripe Connect Ready = Yes in Business Profile.
+
+2. Customer can open tokenized invoice and start card checkout.
+
+3. Payment succeeds in Stripe live dashboard.
+
+4. Webhook deliveries for checkout events return 2xx.
+
+5. Klovent updates correctly:
+	- invoice shows paid state
+	- job status is Paid
+	- customer balance is reduced
+
+6. Platform fee behavior is correct for your configured `STRIPE_PLATFORM_FEE_PERCENT`.
+
+7. Email links and paid state are correct on both staff and customer invoice views.
+
+If any step fails, check webhook delivery logs in Stripe first, then application logs for webhook signature or session retrieval errors.

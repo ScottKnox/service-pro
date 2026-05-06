@@ -982,15 +982,22 @@ def _finalize_invoice_payment(db, job_id, invoice_ref, stripe_session_id="", pay
 
 
 def process_stripe_checkout_completed(db, checkout_session):
-    metadata = dict((checkout_session or {}).get("metadata") or {})
+    metadata_raw = _stripe_obj_value(checkout_session, "metadata", {}) or {}
+    metadata = dict(metadata_raw) if isinstance(metadata_raw, dict) else {}
     job_id = str(metadata.get("job_id") or "").strip()
     invoice_ref = str(metadata.get("invoice_ref") or "").strip()
     if not job_id or not invoice_ref or not ObjectId.is_valid(job_id):
+        current_app.logger.warning(
+            "Stripe checkout completion ignored due to missing metadata: session_id=%s job_id=%s invoice_ref=%s",
+            str(_stripe_obj_value(checkout_session, "id", "") or ""),
+            job_id,
+            invoice_ref,
+        )
         return False
 
-    amount_total = float((checkout_session or {}).get("amount_total") or 0) / 100.0
-    payment_intent_id = str((checkout_session or {}).get("payment_intent") or "").strip()
-    stripe_session_id = str((checkout_session or {}).get("id") or "").strip()
+    amount_total = float(_stripe_obj_value(checkout_session, "amount_total", 0) or 0) / 100.0
+    payment_intent_id = str(_stripe_obj_value(checkout_session, "payment_intent", "") or "").strip()
+    stripe_session_id = str(_stripe_obj_value(checkout_session, "id", "") or "").strip()
     return _finalize_invoice_payment(
         db,
         job_id,
@@ -2365,6 +2372,11 @@ def view_invoice(jobId, invoiceRef):
     if not is_staff_view and not has_customer_token:
         return redirect(url_for("auth.login"))
 
+    # Persist short-lived access for the specific invoice view so follow-up actions
+    # (like starting checkout) can succeed even if query token forwarding is brittle.
+    if not is_staff_view and has_customer_token:
+        session[f"invoice_access_{jobId}_{invoiceRef}"] = True
+
     invoice_status = str((invoice or {}).get("payment_status") or "").strip().lower()
     job_status = str((job_doc or {}).get("status") or "").strip().lower()
     invoice_is_paid = invoice_status == "paid" or job_status == "paid"
@@ -2379,7 +2391,14 @@ def view_invoice(jobId, invoiceRef):
     ):
         try:
             checkout_session = stripe.checkout.Session.retrieve(returned_session_id)
-            process_stripe_checkout_completed(db, checkout_session)
+            finalized = process_stripe_checkout_completed(db, checkout_session)
+            if not finalized:
+                current_app.logger.warning(
+                    "Invoice success-return fallback could not finalize payment: job_id=%s invoice_ref=%s session_id=%s",
+                    jobId,
+                    invoiceRef,
+                    returned_session_id,
+                )
 
             refreshed_job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
             if refreshed_job:
@@ -2477,7 +2496,9 @@ def create_invoice_checkout_session(jobId, invoiceRef):
     request_data = request.get_json(silent=True) or {}
     token_value = str(request_data.get("access_token") or request.form.get("access_token") or request.args.get("token") or "").strip()
     is_staff_view = _is_authenticated_employee()
-    if not is_staff_view and not _verify_invoice_access_token(invoice, token_value):
+    session_access_key = f"invoice_access_{jobId}_{invoiceRef}"
+    has_customer_session_access = bool(session.get(session_access_key))
+    if not is_staff_view and not (_verify_invoice_access_token(invoice, token_value) or has_customer_session_access):
         return jsonify({"success": False, "error": "Unauthorized"}), 403
 
     secret_key = _configure_stripe_client()
