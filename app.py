@@ -63,6 +63,7 @@ def require_login():
         "home",
         "error_page",
         "jobs.view_estimate",
+        "jobs.view_invoice",
         "jobs.accept_estimate",
         "jobs.decline_estimate",
     }
