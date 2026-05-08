@@ -614,20 +614,8 @@ def _get_subscription_document(db, employee):
 
 def _build_subscription_view_model(db, employee, subscription_doc):
     subscription_id = (subscription_doc.get("subscription_id") or employee.get("subscription_id") or "").strip()
-    add_ons = []
-    for addon in subscription_doc.get("add_ons") or []:
-        add_ons.append(
-            {
-                "id": (addon.get("add_on_id") or "").strip(),
-                "name": addon.get("name") or "Add-On",
-                "description": addon.get("description") or "",
-                "price": _coerce_float(addon.get("price")),
-            }
-        )
-
     plan_price = _coerce_float(subscription_doc.get("price"))
-    monthly_total = plan_price + sum(addon["price"] for addon in add_ons)
-    active_employee_count = db.employees.count_documents({"subscription_id": subscription_id})
+    monthly_total = plan_price
 
     is_cancelled = (subscription_doc.get("status") or "").lower() == "cancelled"
     next_billing_date = "-" if is_cancelled else _build_next_billing_date(subscription_doc.get("start_date"))
@@ -644,10 +632,8 @@ def _build_subscription_view_model(db, employee, subscription_doc):
         "started_on": _format_date(subscription_doc.get("start_date")),
         "next_billing_date": next_billing_date,
         "renews_on": next_billing_date,
-        "active_employees": active_employee_count,
-        "current_users": subscription_doc.get("current_users", active_employee_count),
+        "current_users": subscription_doc.get("current_users") or 0,
         "max_active_employees": subscription_doc.get("max_users") or 0,
-        "add_ons": add_ons,
         "is_cancelled": is_cancelled,
         "ended_on": ended_on,
     }
@@ -916,6 +902,11 @@ def admin():
     return render_template("admin/admin.html")
 
 
+@bp.route("/admin/reference")
+def reference():
+    return render_template("admin/reference.html")
+
+
 @bp.route("/reporting")
 def reporting():
     db = ensure_connection_or_500()
@@ -1043,7 +1034,7 @@ def subscription():
     )
 
 
-@bp.route("/admin/subscription/manage", methods=["GET", "POST"])
+@bp.route("/admin/subscription/manage")
 def manage_subscription():
     db = ensure_connection_or_500()
     employee = _get_current_employee(db)
@@ -1056,24 +1047,13 @@ def manage_subscription():
             "admin/manage_subscription.html",
             subscription=None,
             subscription_issue=True,
-            updated=False,
         )
-
-    if request.method == "POST":
-        addon_id = request.form.get("addon_id", "").strip()
-        if addon_id:
-            db.subscriptions.update_one(
-                {"subscription_id": subscription_doc.get("subscription_id")},
-                {"$pull": {"add_ons": {"add_on_id": addon_id}}},
-            )
-        return redirect(url_for("admin_bp.manage_subscription", updated="1"))
 
     subscription_data = _build_subscription_view_model(db, employee, subscription_doc)
     return render_template(
         "admin/manage_subscription.html",
         subscription=subscription_data,
         subscription_issue=False,
-        updated=(request.args.get("updated") == "1"),
     )
 
 

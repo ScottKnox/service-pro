@@ -34,6 +34,11 @@
           <p>Manage services, parts, and materials your company offers.</p>
         </a>
 
+        <a class="admin-link-card" href="{{ url_for('admin_bp.reference') }}">
+          <h3>Reference</h3>
+          <p>Field guide for common diagnoses, replacement workflow, and standard test procedures.</p>
+        </a>
+
         {% if session.get('employee_position', '').lower() == 'owner' %}
         <a class="admin-link-card" href="{{ url_for('admin_bp.subscription') }}">
           <h3>Subscription</h3>

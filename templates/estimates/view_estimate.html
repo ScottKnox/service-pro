@@ -222,6 +222,9 @@
                 <div class="estimate-line-item-row">
                   <div class="estimate-line-item-main">
                     <div class="estimate-line-item-title">{{ service.name|default(service.type, true)|default(service.service_code, true)|default('N/A', true) }}</div>
+                    {% if service.description %}
+                      <div class="estimate-line-item-meta">{{ service.description }}</div>
+                    {% endif %}
                     <div class="estimate-line-item-meta">
                       {% if service.estimated_hours or service.duration %}Hours: {{ service.estimated_hours|default(service.duration, true) }}{% endif %}
                     </div>

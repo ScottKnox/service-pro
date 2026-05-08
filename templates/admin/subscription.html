@@ -41,12 +41,12 @@
             <p class="subscription-summary-kicker">Current Plan</p>
             <h3>{{ subscription.plan_name }}</h3>
             <p class="subscription-summary-amount">${{ '%.2f'|format(subscription.monthly_total) }} / month</p>
-            <p class="subscription-summary-note">Base plan ${{ '%.2f'|format(subscription.plan_price) }} + add-ons</p>
+            <p class="subscription-summary-note">Base plan ${{ '%.2f'|format(subscription.plan_price) }}</p>
           </article>
 
           <article class="subscription-summary-card">
             <p class="subscription-summary-kicker">Usage</p>
-            <h3>{{ subscription.active_employees }} Active Users</h3>
+            <h3>{{ subscription.current_users }} Active Users</h3>
             <p class="subscription-summary-amount">{{ subscription.max_active_employees }} Max Allowed</p>
           </article>
 
@@ -86,24 +86,6 @@
               <span>Next Billing Date</span>
               <strong>{{ subscription.next_billing_date }}</strong>
             </div>
-          </article>
-
-          <article class="subscription-panel-card">
-            <h3>Add-Ons</h3>
-            {% if subscription.add_ons %}
-              {% for addon in subscription.add_ons %}
-                <div class="subscription-addon-card">
-                  <p class="subscription-addon-name">{{ addon.name }}</p>
-                  <p class="subscription-addon-description">{{ addon.description }}</p>
-                  <div class="subscription-detail-row">
-                    <span>Monthly Cost</span>
-                    <strong>${{ '%.2f'|format(addon.price) }}</strong>
-                  </div>
-                </div>
-              {% endfor %}
-            {% else %}
-              <p class="subscription-empty">No active add-ons.</p>
-            {% endif %}
           </article>
         </div>
       {% endif %}

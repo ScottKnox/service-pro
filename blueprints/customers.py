@@ -1139,6 +1139,20 @@ def _summarize_ductwork(component):
     return " | ".join(summary_parts)
 
 
+def _build_manufactured_year_age_label(manufactured_year):
+    raw_year = str(manufactured_year or "").strip()
+    if not re.fullmatch(r"\d{4}", raw_year):
+        return ""
+
+    year_value = int(raw_year)
+    current_year = datetime.now(UTC).year
+    if year_value < 1900 or year_value > current_year + 1:
+        return ""
+
+    years_old = max(0, current_year - year_value)
+    return f"({years_old} Years Old)"
+
+
 def _format_hvac_component_detail(component):
     manufacturer = str(component.get("manufacturer", "")).strip()
     manufacturer_other = str(component.get("manufacturer_other", "")).strip()
@@ -1147,11 +1161,14 @@ def _format_hvac_component_detail(component):
     else:
         display_manufacturer = manufacturer
 
+    manufactured_year = str(component.get("manufactured_year", "")).strip()
+
     return {
         "model_number": str(component.get("model_number", "")).strip() or "-",
         "serial_number": str(component.get("serial_number", "")).strip() or "-",
         "manufacturer": display_manufacturer or "-",
-        "manufactured_year": str(component.get("manufactured_year", "")).strip() or "-",
+        "manufactured_year": manufactured_year or "-",
+        "manufactured_year_age": _build_manufactured_year_age_label(manufactured_year),
         "seer_rating": str(component.get("seer_rating", "")).strip() or "-",
         "afue_rating": str(component.get("afue_rating", "")).strip() or "-",
         "blower_motor_type": str(component.get("blower_motor_type", "")).strip() or "-",

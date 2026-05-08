@@ -1974,6 +1974,168 @@ p {
   border-color: #A3B4C9;
 }
 
+.admin-reference-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-reference-anchor-grid,
+.admin-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.admin-reference-section {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 0.3rem;
+}
+
+.admin-reference-section h2 {
+  margin: 0;
+  color: #11243A;
+  letter-spacing: 0.01em;
+}
+
+.admin-reference-card {
+  border: 1px solid #D8E0EA;
+  border-top: 3px solid #334155;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F4F7FB 100%);
+  box-shadow: 0 4px 12px rgba(16, 33, 55, 0.06);
+  padding: 1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.admin-reference-card h3 {
+  margin: 0;
+  color: #122238;
+  font-size: 1.05rem;
+}
+
+.admin-reference-card ol,
+.admin-reference-card ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #22364F;
+  line-height: 1.5;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-reference-note {
+  margin: 0;
+  color: #41536A;
+  font-size: 0.9rem;
+  border-top: 1px solid #DCE4EE;
+  padding-top: 0.6rem;
+}
+
+.admin-reference-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.admin-reference-print-btn {
+  border: 1px solid #334155;
+  background: #11243A;
+  color: #FFFFFF;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.55rem 0.95rem;
+  cursor: pointer;
+}
+
+.admin-reference-print-btn:hover {
+  background: #1C3654;
+}
+
+@media (max-width: 768px) {
+  .admin-reference-anchor-grid,
+  .admin-reference-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  header,
+  footer,
+  #breadcrumb,
+  .jobs-controls-right-top,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #FFFFFF !important;
+    color: #000000;
+    font-size: 11pt;
+  }
+
+  main,
+  #main-container,
+  #manage-jobs-header,
+  .admin-reference-page {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .admin-reference-page {
+    display: block;
+  }
+
+  .admin-reference-page h1 {
+    margin: 0 0 0.35rem;
+    font-size: 20pt;
+  }
+
+  .admin-reference-section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-top: 0.55rem;
+  }
+
+  .admin-reference-section h2 {
+    font-size: 14pt;
+    margin-bottom: 0.3rem;
+  }
+
+  .admin-reference-grid {
+    display: block;
+  }
+
+  .admin-reference-card {
+    border: 1px solid #BFC8D4;
+    box-shadow: none;
+    background: #FFFFFF;
+    margin-bottom: 0.45rem;
+    padding: 0.55rem 0.6rem;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .admin-reference-card h3 {
+    font-size: 12pt;
+    margin-bottom: 0.2rem;
+  }
+
+  .admin-reference-card ol,
+  .admin-reference-card ul {
+    gap: 0.15rem;
+    line-height: 1.35;
+  }
+
+  .admin-reference-note {
+    font-size: 10pt;
+    color: #222222;
+  }
+}
+
 .reporting-layout {
   display: grid;
   grid-template-columns: minmax(210px, 240px) minmax(0, 1fr);
@@ -3433,34 +3595,6 @@ p {
 
   .subscription-detail-row strong {
     color: #102237;
-  }
-
-  .subscription-addon-card {
-    border: 1px solid #D8E0EA;
-    border-radius: 10px;
-    background-color: #FFFFFF;
-    padding: 0.85rem;
-    margin-top: 0.75rem;
-  }
-
-  .subscription-addon-name {
-    margin: 0;
-    font-weight: 700;
-    color: #102237;
-  }
-
-  .subscription-addon-description {
-    margin: 0.35rem 0 0.45rem;
-    color: #4B5563;
-  }
-
-  .subscription-addon-form {
-    margin-top: 0.75rem;
-  }
-
-  .subscription-empty {
-    margin: 0.5rem 0 0;
-    color: #4B5563;
   }
 
   @media (max-width: 900px) {

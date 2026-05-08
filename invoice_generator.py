@@ -5,6 +5,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib import colors
 from datetime import datetime, timedelta
 import os
+from xml.sax.saxutils import escape as xml_escape
 
 from PIL import Image as PILImage
 
@@ -70,6 +71,25 @@ def _format_time_to_am_pm(time_string):
     period = "PM" if hours24 >= 12 else "AM"
     hours12 = hours24 % 12 or 12
     return f"{hours12}:{minutes:02d} {period}"
+
+
+def _build_service_line_item_cell(name, description):
+    title_text = str(name or "").strip() or "Service"
+    description_text = str(description or "").strip()
+    if not description_text:
+        return title_text
+
+    line_item_style = ParagraphStyle(
+        "ServiceLineItemCell",
+        fontName="Helvetica",
+        fontSize=9,
+        leading=11,
+        textColor=colors.HexColor("#1B263B"),
+    )
+    escaped_title = xml_escape(title_text)
+    escaped_description = xml_escape(description_text).replace("\n", "<br/>")
+    markup = f"{escaped_title}<br/><font size='8' color='#5A6B82'>{escaped_description}</font>"
+    return Paragraph(markup, line_item_style)
 
 
 def _parse_mmddyyyy_date(date_string):
@@ -516,7 +536,8 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
             continue
         name = service.get("name") or service.get("type") or service.get("code") or "Service"
         price = service.get("standard_price") or service.get("price") or "$0.00"
-        service_rows.append([str(name), str(price)])
+        description = service.get("description") or ""
+        service_rows.append([_build_service_line_item_cell(name, description), str(price)])
 
     parts_rows = []
     for part in job.get("parts", []) or []:
@@ -1085,8 +1106,17 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
     services_data = [["Service", "Price", "Duration"]]
     if job.get('services'):
         for service in job.get('services', []):
-            if isinstance(service, dict) and 'type' in service and 'price' in service:
-                services_data.append([service['type'], service['price'], service.get('duration', '')])
+            if not isinstance(service, dict):
+                continue
+            name = service.get("name") or service.get("type") or service.get("service_code") or service.get("code") or "Service"
+            price = service.get("standard_price") or service.get("price") or "$0.00"
+            duration = service.get("estimated_hours") or service.get("duration") or ""
+            description = service.get("description") or ""
+            services_data.append([
+                _build_service_line_item_cell(name, description),
+                str(price),
+                str(duration),
+            ])
     
     services_breakdown_table = Table(services_data, colWidths=[2.8 * inch, 1.2 * inch, 1.5 * inch])
     services_breakdown_table.setStyle(

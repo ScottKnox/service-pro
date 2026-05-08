@@ -136,7 +136,7 @@
                     </div>
                     <div class="hvac-component-row">
                       <span>Manufactured Year</span>
-                      <strong>{{ component.details.manufactured_year }}</strong>
+                      <strong>{{ component.details.manufactured_year }}{% if component.details.manufactured_year_age %} <span class="manufactured-year-age">{{ component.details.manufactured_year_age }}</span>{% endif %}</strong>
                     </div>
                     {% if component.component_key == 'furnaces' %}
                       <div class="hvac-component-row">
