@@ -3795,6 +3795,7 @@ def add_equipment(customerId):
         thermostat_type_options=THERMOSTAT_TYPE_OPTIONS,
         thermostat_manufacturer_options=THERMOSTAT_MANUFACTURER_OPTIONS,
         package_unit_type_options=PACKAGE_UNIT_TYPE_OPTIONS,
+        metering_device_options=METERING_DEVICE_OPTIONS,
         refrigerant_type_options=REFRIGERANT_TYPE_OPTIONS,
         ductwork_error_fields=ductwork_error_fields,
         property_id=property_id,
