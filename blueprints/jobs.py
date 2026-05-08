@@ -2667,6 +2667,11 @@ def view_invoice(jobId, invoiceRef):
     stripe_connect_reason = ""
     business_id = str(job_doc.get("business_id") or "").strip()
     if not business_id:
+        # Fallback for older jobs saved before business_id was persisted.
+        sole_business = db.businesses.find_one({}, {"_id": 1})
+        if sole_business:
+            business_id = str(sole_business["_id"])
+    if not business_id:
         stripe_connect_reason = "Missing business context on this invoice."
     else:
         business = db.businesses.find_one(build_reference_filter("_id", business_id)) or {}
@@ -2730,6 +2735,10 @@ def create_invoice_checkout_session(jobId, invoiceRef):
         return jsonify({"success": False, "error": "Invoice total must be greater than zero"}), 400
 
     business_id = str(job_doc.get("business_id") or "").strip()
+    if not business_id:
+        sole_business = db.businesses.find_one({}, {"_id": 1})
+        if sole_business:
+            business_id = str(sole_business["_id"])
     if not business_id:
         return jsonify({"success": False, "error": "Missing business context for this invoice"}), 400
 
