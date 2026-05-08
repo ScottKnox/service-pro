@@ -16,6 +16,7 @@ MIN_LOGO_HEIGHT = 100
 MAX_LOGO_WIDTH = 2400
 MAX_LOGO_HEIGHT = 1400
 LOGO_UPLOAD_SUBDIR = os.path.join("uploads", "logos")
+LOGO_UPLOAD_URL_SUBDIR = "uploads/logos"
 
 
 def _configure_stripe_client():
@@ -131,7 +132,7 @@ def business_profile():
     )
     logo_url = ""
     if custom_logo and os.path.exists(logo_path):
-        logo_url = url_for("static", filename=f"{LOGO_UPLOAD_SUBDIR}/{custom_logo}")
+        logo_url = url_for("static", filename=f"{LOGO_UPLOAD_URL_SUBDIR}/{custom_logo}")
 
     logo_status_kind, logo_status_message = _logo_status_payload(request.args.get("logo_status", ""))
     stripe_status_kind, stripe_status_message = _stripe_status_payload(request.args.get("stripe_status", ""))

@@ -535,6 +535,91 @@ def serialize_estimate_for_pdf(estimate):
     return serialized
 
 
+def _hydrate_service_descriptions_for_pdf(db, payload, business_id=None):
+    hydrated_payload = dict(payload or {})
+    service_rows = hydrated_payload.get("services") or []
+    if not service_rows:
+        return hydrated_payload
+
+    service_codes = set()
+    service_names = set()
+    for service in service_rows:
+        if not isinstance(service, dict):
+            continue
+        if str(service.get("description") or service.get("service_description") or "").strip():
+            continue
+
+        service_code = str(service.get("code") or service.get("service_code") or "").strip()
+        if service_code:
+            service_codes.add(service_code)
+            continue
+
+        service_name = str(
+            service.get("service_name")
+            or service.get("name")
+            or service.get("type")
+            or ""
+        ).strip()
+        if service_name:
+            service_names.add(service_name)
+
+    if not service_codes and not service_names:
+        return hydrated_payload
+
+    query = {}
+    if business_id:
+        query["business_id"] = business_id
+
+    or_filters = []
+    if service_codes:
+        or_filters.append({"service_code": {"$in": sorted(service_codes)}})
+    if service_names:
+        or_filters.append({"service_name": {"$in": sorted(service_names)}})
+    if not or_filters:
+        return hydrated_payload
+    query["$or"] = or_filters
+
+    description_by_code = {}
+    description_by_name = {}
+    for service_doc in db.services.find(query, {"service_code": 1, "service_name": 1, "description": 1}):
+        description = str(service_doc.get("description") or "").strip()
+        if not description:
+            continue
+        service_code = str(service_doc.get("service_code") or "").strip()
+        service_name = str(service_doc.get("service_name") or "").strip()
+        if service_code:
+            description_by_code[service_code] = description
+        if service_name:
+            description_by_name[service_name] = description
+
+    hydrated_services = []
+    for service in service_rows:
+        if not isinstance(service, dict):
+            hydrated_services.append(service)
+            continue
+
+        hydrated_service = dict(service)
+        existing_description = str(hydrated_service.get("description") or hydrated_service.get("service_description") or "").strip()
+        if not existing_description:
+            service_code = str(hydrated_service.get("code") or hydrated_service.get("service_code") or "").strip()
+            service_name = str(
+                hydrated_service.get("service_name")
+                or hydrated_service.get("name")
+                or hydrated_service.get("type")
+                or ""
+            ).strip()
+            hydrated_service["description"] = (
+                description_by_code.get(service_code)
+                or description_by_name.get(service_name)
+                or ""
+            )
+
+        hydrated_services.append(hydrated_service)
+
+    hydrated_payload["services"] = hydrated_services
+    return hydrated_payload
+
+
 def _build_estimate_recurrence_form_state(estimate=None):
     source = estimate or {}
     schedule_type = "recurring" if str(source.get("job_schedule_type") or "").strip() == "recurring" else "one_time"
@@ -616,6 +701,11 @@ def _create_job_from_accepted_estimate(db, estimate_id):
     primary_service = services[0].get("type") if services else "No services added."
     payment_due_days = _resolve_default_payment_due_days(db)
     business_id = estimate.get("business_id") or resolve_current_business_id(db)
+    if not business_id:
+        # Fallback for customer-initiated acceptance (no staff session): find the sole business.
+        sole_business = db.businesses.find_one({}, {"_id": 1})
+        if sole_business:
+            business_id = sole_business["_id"]
 
     new_job = {
         "customer_id": customer_id_ref,
@@ -1837,6 +1927,7 @@ def create_estimate(customerId):
             "estimate_expiration_days": estimate_expiration_days,
             "file_path": [],
             "latest_file_path": "",
+            "business_id": business_id,
             "created_at": datetime.now(UTC),
         }
 
@@ -1868,9 +1959,14 @@ def create_estimate(customerId):
                 )
                 if business_doc:
                     business_payload = serialize_doc(business_doc)
+            estimate_pdf_payload = _hydrate_service_descriptions_for_pdf(
+                db,
+                serialize_estimate_for_pdf(new_estimate),
+                business_id=business_id,
+            )
             estimate_pdf_path = generate_estimate(
                 estimate_id,
-                serialize_estimate_for_pdf(new_estimate),
+                estimate_pdf_payload,
                 serialize_doc(customer),
                 business_logo_path=business_logo_path,
                 business=business_payload,
@@ -2166,6 +2262,8 @@ def update_estimate(estimateId):
             "time_updated": datetime.now().strftime("%H:%M:%S"),
             "updated_at": datetime.now(UTC),
         }
+        if business_id and not estimate.get("business_id"):
+            updated_data["business_id"] = business_id
 
         estimate_for_pdf = dict(estimate)
         estimate_for_pdf.update(updated_data)
@@ -2201,9 +2299,14 @@ def update_estimate(estimateId):
             if business_doc:
                 business_payload = serialize_doc(business_doc)
         previous_file_path = resolve_estimate_file_path(estimate)
+        estimate_pdf_payload = _hydrate_service_descriptions_for_pdf(
+            db,
+            serialize_estimate_for_pdf(estimate_for_pdf),
+            business_id=business_id,
+        )
         estimate_pdf_path = generate_estimate(
             estimateId,
-            serialize_estimate_for_pdf(estimate_for_pdf),
+            estimate_pdf_payload,
             customer,
             business_logo_path=business_logo_path,
             business=business_payload,
@@ -3032,7 +3135,12 @@ def complete_job(jobId):
             business = serialize_doc(business_doc)
 
     business_logo_path = resolve_current_business_logo_path(db)
-    invoice_path = generate_invoice(jobId, job, customer, business_logo_path=business_logo_path, business=business)
+    invoice_pdf_payload = _hydrate_service_descriptions_for_pdf(
+        db,
+        job,
+        business_id=job.get("business_id") or resolve_current_business_id(db),
+    )
+    invoice_path = generate_invoice(jobId, invoice_pdf_payload, customer, business_logo_path=business_logo_path, business=business)
     filename = os.path.basename(invoice_path)
 
     current_timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")

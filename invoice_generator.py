@@ -50,6 +50,20 @@ def _format_display_hours(value):
     return str(int(numeric)) if numeric.is_integer() else f"{numeric:g}"
 
 
+def _format_duration_with_unit(value):
+    duration = _format_display_hours(value)
+    if not duration:
+        return ""
+
+    try:
+        numeric = float(duration)
+    except ValueError:
+        return duration
+
+    unit = "hour" if numeric == 1 else "hours"
+    return f"{duration} {unit}"
+
+
 def _format_time_to_am_pm(time_string):
     text = str(time_string or "").strip()
     if not text:
@@ -360,8 +374,9 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
     if not left_contact_rows and not right_contact_rows:
         left_contact_rows.append([Paragraph(company_name, info_value_style)])
 
-    left_contact_table = Table(left_contact_rows or [[Paragraph("", info_value_style)]], colWidths=[1.55 * inch])
-    right_contact_table = Table(right_contact_rows or [[Paragraph("", info_value_style)]], colWidths=[1.55 * inch])
+    contact_column_widths = [1.7 * inch, 2.15 * inch]
+    left_contact_table = Table(left_contact_rows or [[Paragraph("", info_value_style)]], colWidths=[contact_column_widths[0]])
+    right_contact_table = Table(right_contact_rows or [[Paragraph("", info_value_style)]], colWidths=[contact_column_widths[1]])
     for contact_table in (left_contact_table, right_contact_table):
         contact_table.setStyle(
             TableStyle(
@@ -375,9 +390,21 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
             )
         )
 
-    business_contact_rows.append([Table([[left_contact_table, right_contact_table]], colWidths=[1.58 * inch, 1.58 * inch])])
+    business_contact_table = Table([[left_contact_table, right_contact_table]], colWidths=contact_column_widths)
+    business_contact_table.setStyle(
+        TableStyle(
+            [
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]
+        )
+    )
+    business_contact_rows.append([business_contact_table])
 
-    left_header_block = Table(business_contact_rows, colWidths=[3.2 * inch])
+    left_header_block = Table(business_contact_rows, colWidths=[3.9 * inch])
     left_header_block.setStyle(
         TableStyle(
             [
@@ -427,7 +454,7 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
 
     right_header_block = Table(
         [[Paragraph("INVOICE", invoice_heading_style)], [Spacer(1, 0.08 * inch)], [invoice_info_table]],
-        colWidths=[3.2 * inch],
+        colWidths=[2.7 * inch],
     )
     right_header_block.setStyle(
         TableStyle(
@@ -443,7 +470,7 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
 
     header_table = Table(
         [[left_header_block, right_header_block]],
-        colWidths=[3.4 * inch, 3.2 * inch],
+        colWidths=[3.9 * inch, 2.7 * inch],
     )
     header_table.setStyle(
         TableStyle(
@@ -926,8 +953,9 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
     if not left_contact_rows and not right_contact_rows:
         left_contact_rows.append([Paragraph(company_name, info_value_style)])
 
-    left_contact_table = Table(left_contact_rows or [[Paragraph("", info_value_style)]], colWidths=[1.55 * inch])
-    right_contact_table = Table(right_contact_rows or [[Paragraph("", info_value_style)]], colWidths=[1.55 * inch])
+    contact_column_widths = [1.7 * inch, 2.15 * inch]
+    left_contact_table = Table(left_contact_rows or [[Paragraph("", info_value_style)]], colWidths=[contact_column_widths[0]])
+    right_contact_table = Table(right_contact_rows or [[Paragraph("", info_value_style)]], colWidths=[contact_column_widths[1]])
     for contact_table in (left_contact_table, right_contact_table):
         contact_table.setStyle(
             TableStyle(
@@ -941,9 +969,21 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
             )
         )
 
-    business_contact_rows.append([Table([[left_contact_table, right_contact_table]], colWidths=[1.58 * inch, 1.58 * inch])])
+    business_contact_table = Table([[left_contact_table, right_contact_table]], colWidths=contact_column_widths)
+    business_contact_table.setStyle(
+        TableStyle(
+            [
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]
+        )
+    )
+    business_contact_rows.append([business_contact_table])
 
-    left_header_block = Table(business_contact_rows, colWidths=[3.2 * inch])
+    left_header_block = Table(business_contact_rows, colWidths=[3.9 * inch])
     left_header_block.setStyle(
         TableStyle(
             [
@@ -985,8 +1025,8 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
     )
 
     right_header_block = Table(
-        [[Paragraph("ESTIMATE / QUOTE", quote_heading_style)], [Spacer(1, 0.08 * inch)], [quote_table]],
-        colWidths=[3.2 * inch],
+        [[Paragraph("ESTIMATE", quote_heading_style)], [Spacer(1, 0.08 * inch)], [quote_table]],
+        colWidths=[2.7 * inch],
     )
     right_header_block.setStyle(
         TableStyle(
@@ -1000,7 +1040,7 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
         )
     )
 
-    header_table = Table([[left_header_block, right_header_block]], colWidths=[3.4 * inch, 3.2 * inch])
+    header_table = Table([[left_header_block, right_header_block]], colWidths=[3.9 * inch, 2.7 * inch])
     header_table.setStyle(
         TableStyle(
             [
@@ -1108,10 +1148,17 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
         for service in job.get('services', []):
             if not isinstance(service, dict):
                 continue
-            name = service.get("name") or service.get("type") or service.get("service_code") or service.get("code") or "Service"
+            name = (
+                service.get("name")
+                or service.get("service_name")
+                or service.get("type")
+                or service.get("service_code")
+                or service.get("code")
+                or "Service"
+            )
             price = service.get("standard_price") or service.get("price") or "$0.00"
-            duration = service.get("estimated_hours") or service.get("duration") or ""
-            description = service.get("description") or ""
+            duration = _format_duration_with_unit(service.get("estimated_hours") or service.get("duration") or "")
+            description = service.get("description") or service.get("service_description") or ""
             services_data.append([
                 _build_service_line_item_cell(name, description),
                 str(price),
@@ -1226,7 +1273,7 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
     if estimate_note_text:
         notes_rows = [[Paragraph("Estimate Notes", section_panel_heading_style)]]
         notes_rows.append([Paragraph(estimate_note_text, normal_style)])
-        notes_panel = Table(notes_rows, colWidths=[3.3 * inch])
+        notes_panel = Table(notes_rows, colWidths=[2.8 * inch])
         notes_panel.setStyle(
             TableStyle(
                 [
@@ -1252,7 +1299,7 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
         if len(warranty_rows) == 1:
             warranty_rows.append([Paragraph(warranty_info, normal_style)])
 
-        warranty_panel = Table(warranty_rows, colWidths=[3.3 * inch])
+        warranty_panel = Table(warranty_rows, colWidths=[3.8 * inch])
         warranty_panel.setStyle(
             TableStyle(
                 [
@@ -1269,7 +1316,7 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
     if notes_panel or warranty_panel:
         notes_warranty_row = Table(
             [[notes_panel or Spacer(1, 0.01 * inch), warranty_panel or Spacer(1, 0.01 * inch)]],
-            colWidths=[3.3 * inch, 3.3 * inch],
+            colWidths=[2.8 * inch, 3.8 * inch],
         )
         notes_warranty_row.setStyle(
             TableStyle(

@@ -59,7 +59,7 @@
           </form>
             {% endif %}
           {% endif %}
-          {% if job_status_normalized == "en route" or job_status_normalized == "started" %}
+          {% if job_status_normalized == "started" %}
           <form method="POST" action="{{ url_for('jobs.complete_job', jobId=jobId) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit">Mark Completed</button>

@@ -215,6 +215,7 @@ def build_job_services_from_form(service_codes, service_prices, service_duration
                 "type": service_name,
                 "service_type": service_type,
                 "code": service_code,
+                "description": str(catalog_entry.get("description") or "").strip(),
                 "price": normalized_price,
                 "estimated_hours": normalized_duration,
                 "emergency_call": emergency_call,
