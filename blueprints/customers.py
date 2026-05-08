@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 import json
 import os
 import re
@@ -281,6 +281,38 @@ HVAC_COLLECTION_CONFIG = {
     ),
 }
 
+PACKAGE_UNIT_FURNACE_TYPES = {
+    "gas electric",
+    "dual fuel",
+}
+
+
+def _package_unit_has_furnace(source):
+    if not isinstance(source, dict):
+        return False
+
+    direct_unit_type = str(source.get("unit_type") or "").strip().lower()
+    if direct_unit_type in PACKAGE_UNIT_FURNACE_TYPES:
+        return True
+
+    components = source.get("components")
+    if isinstance(components, dict):
+        package_unit = components.get("packageUnits")
+        if isinstance(package_unit, dict):
+            component_unit_type = str(package_unit.get("unit_type") or "").strip().lower()
+            if component_unit_type in PACKAGE_UNIT_FURNACE_TYPES:
+                return True
+
+    return False
+
+
+def _get_expected_hvac_components(system_type, source=None):
+    expected_components = list(HVAC_COLLECTION_CONFIG.get(system_type, ()))
+    if system_type == "Package Unit" and _package_unit_has_furnace(source or {}):
+        if not any(collection_name == "furnaces" for collection_name, _ in expected_components):
+            expected_components.append(("furnaces", "Furnace"))
+    return tuple(expected_components)
+
 HVAC_COMPONENT_LABELS = {
     "airHandlers": "Air Handler",
     "condensers": "Condenser",
@@ -390,6 +422,15 @@ MANUFACTURER_OPTIONS = (
     "Mitsubishi",
     "Bryant",
     "Payne",
+    "Ruud",
+    "Heil",
+    "Tempstar",
+    "Comfortmaker",
+    "Arcoaire",
+    "Day & Night",
+    "Coleman",
+    "Luxaire",
+    "Bosch",
 )
 
 MINI_SPLIT_MANUFACTURER_OPTIONS = (
@@ -398,6 +439,10 @@ MINI_SPLIT_MANUFACTURER_OPTIONS = (
     "LG",
     "Fujitsu",
     "Gree",
+    "Samsung",
+    "Midea",
+    "Tosot",
+    "Hitachi",
     "Pioneer",
     "Other",
 )
@@ -422,6 +467,13 @@ PACKAGE_UNIT_TYPE_OPTIONS = (
     "Heat Pump",
     "Dual Fuel",
     "Electric Only",
+)
+
+METERING_DEVICE_OPTIONS = (
+    "TXV",
+    "Fixed-Orifice",
+    "EEV",
+    "Capillary Tube",
 )
 
 HVAC_DIAGNOSTIC_SECTIONS = (
@@ -675,18 +727,140 @@ def _email_is_valid(email):
     return bool(EMAIL_PATTERN.match(email))
 
 
+def _expand_two_digit_year(two_digit_year):
+    try:
+        year_suffix = int(str(two_digit_year or "").strip())
+    except (TypeError, ValueError):
+        return ""
+
+    current_year = datetime.now(UTC).year
+    current_suffix = current_year % 100
+    year_value = 2000 + year_suffix if year_suffix <= current_suffix else 1900 + year_suffix
+    if 1980 <= year_value <= current_year + 1:
+        return str(year_value)
+    return ""
+
+
+def _infer_manufactured_year(manufacturer, serial_number):
+    normalized_manufacturer = re.sub(r"[^a-z0-9]", "", str(manufacturer or "").strip().lower())
+    normalized_serial = re.sub(r"[^a-zA-Z0-9]", "", str(serial_number or "").strip().upper())
+    if not normalized_manufacturer or not normalized_serial:
+        return ""
+
+    wwyy_brands = {
+        "carrier",
+        "bryant",
+        "payne",
+        "heil",
+        "tempstar",
+        "comfortmaker",
+        "arcoaire",
+        "daynight",
+        "rheem",
+        "ruud",
+    }
+    yyww_brands = {
+        "trane",
+        "americanstandard",
+        "lennox",
+        "goodman",
+        "amana",
+        "daikin",
+        "york",
+        "coleman",
+        "luxaire",
+        "bosch",
+        "mitsubishi",
+        "lg",
+        "fujitsu",
+        "gree",
+        "pioneer",
+        "samsung",
+        "midea",
+        "tosot",
+        "hitachi",
+    }
+
+    serial_window = normalized_serial[:12]
+
+    if normalized_manufacturer in wwyy_brands:
+        for match in re.finditer(r"(\d{2})(\d{2})", serial_window):
+            week = int(match.group(1))
+            if not 1 <= week <= 53:
+                continue
+            inferred = _expand_two_digit_year(match.group(2))
+            if inferred:
+                return inferred
+
+    if normalized_manufacturer in yyww_brands:
+        for match in re.finditer(r"(\d{2})(\d{2})", serial_window):
+            week = int(match.group(2))
+            if not 1 <= week <= 53:
+                continue
+            inferred = _expand_two_digit_year(match.group(1))
+            if inferred:
+                return inferred
+
+    current_year = datetime.now(UTC).year
+    for match in re.finditer(r"(19\d{2}|20\d{2})", normalized_serial):
+        year_value = int(match.group(1))
+        if 1980 <= year_value <= current_year + 1:
+            return str(year_value)
+
+    return ""
+
+
 def _build_hvac_component(form_data, prefix):
+    manufacturer = form_data.get(f"{prefix}_manufacturer", "").strip()
+    serial_number = form_data.get(f"{prefix}_serial_number", "").strip()
+    manufactured_year = form_data.get(f"{prefix}_manufactured_year", "").strip()
+    if not manufactured_year:
+        manufactured_year = _infer_manufactured_year(manufacturer, serial_number)
+
     component = {
-        "serial_number": form_data.get(f"{prefix}_serial_number", "").strip(),
+        "serial_number": serial_number,
         "model_number": form_data.get(f"{prefix}_model_number", "").strip(),
-        "manufacturer": form_data.get(f"{prefix}_manufacturer", "").strip(),
+        "manufacturer": manufacturer,
         "manufacturer_other": form_data.get(f"{prefix}_manufacturer_other", "").strip(),
-        "install_year": form_data.get(f"{prefix}_install_year", "").strip(),
-        "nickname": form_data.get(f"{prefix}_nickname", "").strip(),
+        "manufactured_year": manufactured_year,
     }
 
     if prefix == "unit":
         component["unit_type"] = form_data.get("unit_type", "").strip()
+
+    if prefix in {"condenser", "unit"}:
+        component["seer_rating"] = form_data.get(f"{prefix}_seer_rating", "").strip()
+
+    if prefix in {"air_handler", "furnace"}:
+        component["blower_motor_type"] = form_data.get(f"{prefix}_blower_motor_type", "").strip()
+        if prefix == "furnace" and not component["blower_motor_type"]:
+            component["blower_motor_type"] = form_data.get("package_unit_furnace_blower_motor_type", "").strip()
+
+    if prefix == "furnace":
+        component["afue_rating"] = (
+            form_data.get("furnace_afue_rating", "").strip()
+            or form_data.get("package_unit_furnace_afue_rating", "").strip()
+        )
+        component["btu_input"] = (
+            form_data.get("furnace_btu_input", "").strip()
+            or form_data.get("package_unit_furnace_btu_input", "").strip()
+        )
+        component["btu_output"] = (
+            form_data.get("furnace_btu_output", "").strip()
+            or form_data.get("package_unit_furnace_btu_output", "").strip()
+        )
+        component["temperature_rise_min"] = (
+            form_data.get("furnace_temperature_rise_min", "").strip()
+            or form_data.get("package_unit_furnace_temperature_rise_min", "").strip()
+        )
+        component["temperature_rise_max"] = (
+            form_data.get("furnace_temperature_rise_max", "").strip()
+            or form_data.get("package_unit_furnace_temperature_rise_max", "").strip()
+        )
+        component["number_of_stages"] = (
+            form_data.get("furnace_number_of_stages", "").strip()
+            or form_data.get("package_unit_furnace_number_of_stages", "").strip()
+        )
 
     if prefix == "thermostat":
         component["thermostat_type"] = form_data.get("thermostat_type", "").strip()
@@ -705,7 +879,7 @@ def _build_hvac_form_data_from_system(hvac_system):
     form_data["system_type"] = str(hvac_system.get("system_type") or "").strip()
     form_data["system_tonnage"] = str(hvac_system.get("system_tonnage") or "").strip()
     form_data["cooling_capacity"] = str(hvac_system.get("cooling_capacity") or "").strip()
-    form_data["heating_capacity"] = str(hvac_system.get("heating_capacity") or "").strip()
+    form_data["metering_device"] = str(hvac_system.get("metering_device") or "").strip()
 
     components = hvac_system.get("components") if isinstance(hvac_system.get("components"), dict) else {}
     for collection_name, prefix in HVAC_FORM_PREFIX_BY_COLLECTION.items():
@@ -717,9 +891,25 @@ def _build_hvac_form_data_from_system(hvac_system):
         form_data[f"{prefix}_model_number"] = str(component.get("model_number") or "").strip()
         form_data[f"{prefix}_manufacturer"] = str(component.get("manufacturer") or "").strip()
         form_data[f"{prefix}_manufacturer_other"] = str(component.get("manufacturer_other") or "").strip()
-        form_data[f"{prefix}_install_year"] = str(component.get("install_year") or "").strip()
-        form_data[f"{prefix}_nickname"] = str(component.get("nickname") or "").strip()
-
+        form_data[f"{prefix}_manufactured_year"] = str(component.get("manufactured_year") or "").strip()
+        if prefix in {"condenser", "unit"}:
+            form_data[f"{prefix}_seer_rating"] = str(component.get("seer_rating") or "").strip()
+        if prefix in {"air_handler", "furnace"}:
+            form_data[f"{prefix}_blower_motor_type"] = str(component.get("blower_motor_type") or "").strip()
+        if prefix == "furnace":
+            form_data["furnace_afue_rating"] = str(component.get("afue_rating") or "").strip()
+            form_data["furnace_btu_input"] = str(component.get("btu_input") or "").strip()
+            form_data["furnace_btu_output"] = str(component.get("btu_output") or "").strip()
+            form_data["furnace_temperature_rise_min"] = str(component.get("temperature_rise_min") or "").strip()
+            form_data["furnace_temperature_rise_max"] = str(component.get("temperature_rise_max") or "").strip()
+            form_data["furnace_number_of_stages"] = str(component.get("number_of_stages") or "").strip()
+            form_data["package_unit_furnace_afue_rating"] = form_data["furnace_afue_rating"]
+            form_data["package_unit_furnace_btu_input"] = form_data["furnace_btu_input"]
+            form_data["package_unit_furnace_btu_output"] = form_data["furnace_btu_output"]
+            form_data["package_unit_furnace_temperature_rise_min"] = form_data["furnace_temperature_rise_min"]
+            form_data["package_unit_furnace_temperature_rise_max"] = form_data["furnace_temperature_rise_max"]
+            form_data["package_unit_furnace_number_of_stages"] = form_data["furnace_number_of_stages"]
+            form_data["package_unit_furnace_blower_motor_type"] = str(component.get("blower_motor_type") or "").strip()
         if prefix == "unit":
             form_data["unit_type"] = str(component.get("unit_type") or "").strip()
         if prefix == "thermostat":
@@ -783,16 +973,17 @@ def _build_hvac_system_document(customer_id, system_type, form_data):
             document["system_tonnage"] = system_tonnage
     else:
         cooling_capacity = str(form_data.get("cooling_capacity", "")).strip()
-        heating_capacity = str(form_data.get("heating_capacity", "")).strip()
         if cooling_capacity:
             document["cooling_capacity"] = cooling_capacity
-        if heating_capacity:
-            document["heating_capacity"] = heating_capacity
 
     if system_type in DUCTWORK_SYSTEM_TYPES:
         ductwork = _build_hvac_ductwork(form_data)
         if ductwork:
             document["ductwork"] = ductwork
+
+    metering_device = str(form_data.get("metering_device", "")).strip()
+    if metering_device:
+        document["metering_device"] = metering_device
 
     return document
 
@@ -839,36 +1030,48 @@ def _build_empty_hvac_form_data():
         "system_type": "",
         "system_tonnage": "",
         "cooling_capacity": "",
-        "heating_capacity": "",
+        "metering_device": "",
         "air_handler_model_number": "",
         "air_handler_serial_number": "",
         "air_handler_manufacturer": "",
         "air_handler_manufacturer_other": "",
-        "air_handler_install_year": "",
-        "air_handler_nickname": "",
+        "air_handler_manufactured_year": "",
+        "air_handler_blower_motor_type": "",
         "condenser_model_number": "",
         "condenser_serial_number": "",
         "condenser_manufacturer": "",
         "condenser_manufacturer_other": "",
-        "condenser_install_year": "",
-        "condenser_nickname": "",
+        "condenser_manufactured_year": "",
+        "condenser_seer_rating": "",
         "furnace_model_number": "",
         "furnace_serial_number": "",
         "furnace_manufacturer": "",
         "furnace_manufacturer_other": "",
-        "furnace_install_year": "",
-        "furnace_nickname": "",
+        "furnace_manufactured_year": "",
+        "furnace_blower_motor_type": "",
+        "furnace_afue_rating": "",
+        "furnace_btu_input": "",
+        "furnace_btu_output": "",
+        "furnace_temperature_rise_min": "",
+        "furnace_temperature_rise_max": "",
+        "furnace_number_of_stages": "",
+        "package_unit_furnace_afue_rating": "",
+        "package_unit_furnace_btu_input": "",
+        "package_unit_furnace_btu_output": "",
+        "package_unit_furnace_temperature_rise_min": "",
+        "package_unit_furnace_temperature_rise_max": "",
+        "package_unit_furnace_number_of_stages": "",
+        "package_unit_furnace_blower_motor_type": "",
         "unit_model_number": "",
         "unit_serial_number": "",
         "unit_manufacturer": "",
         "unit_manufacturer_other": "",
-        "unit_install_year": "",
-        "unit_nickname": "",
+        "unit_manufactured_year": "",
+        "unit_seer_rating": "",
         "unit_type": "",
         "thermostat_type": "",
         "thermostat_manufacturer": "",
         "thermostat_manufacturer_other": "",
-        "thermostat_nickname": "",
         "refrigerant_type": "",
         "ductwork_type": "",
         "ductwork_insulated": "",
@@ -895,7 +1098,6 @@ def _build_hvac_component_document(form_data, component_base_document, collectio
 
 def _summarize_hvac_component(component):
     summary_parts = []
-    nickname = str(component.get("nickname", "")).strip()
     manufacturer = str(component.get("manufacturer", "")).strip()
     manufacturer_other = str(component.get("manufacturer_other", "")).strip()
     model_number = str(component.get("model_number", "")).strip()
@@ -905,9 +1107,6 @@ def _summarize_hvac_component(component):
 
     if manufacturer.lower() == "other" and manufacturer_other:
         manufacturer = manufacturer_other
-
-    if nickname:
-        summary_parts.append(nickname)
 
     if manufacturer:
         summary_parts.append(manufacturer)
@@ -952,8 +1151,15 @@ def _format_hvac_component_detail(component):
         "model_number": str(component.get("model_number", "")).strip() or "-",
         "serial_number": str(component.get("serial_number", "")).strip() or "-",
         "manufacturer": display_manufacturer or "-",
-        "install_year": str(component.get("install_year", "")).strip() or "-",
-        "nickname": str(component.get("nickname", "")).strip() or "-",
+        "manufactured_year": str(component.get("manufactured_year", "")).strip() or "-",
+        "seer_rating": str(component.get("seer_rating", "")).strip() or "-",
+        "afue_rating": str(component.get("afue_rating", "")).strip() or "-",
+        "blower_motor_type": str(component.get("blower_motor_type", "")).strip() or "-",
+        "btu_input": str(component.get("btu_input", "")).strip() or "-",
+        "btu_output": str(component.get("btu_output", "")).strip() or "-",
+        "temperature_rise_min": str(component.get("temperature_rise_min", "")).strip() or "-",
+        "temperature_rise_max": str(component.get("temperature_rise_max", "")).strip() or "-",
+        "number_of_stages": str(component.get("number_of_stages", "")).strip() or "-",
         "thermostat_type": str(component.get("thermostat_type", "")).strip() or "-",
         "refrigerant_type": str(component.get("refrigerant_type", "")).strip() or "-",
         "unit_type": str(component.get("unit_type", "")).strip() or "-",
@@ -1422,7 +1628,7 @@ def _build_hvac_component_view_payload(db, customer_id, reference_type, referenc
 
     serialized_system = serialize_doc(hvac_system)
     system_type = str(serialized_system.get("system_type", "")).strip()
-    allowed_component_keys = _get_allowed_component_keys(system_type)
+    allowed_component_keys = _get_allowed_component_keys(system_type, serialized_system)
     if component_key not in allowed_component_keys:
         return None
 
@@ -1456,10 +1662,10 @@ def _build_hvac_component_view_payload(db, customer_id, reference_type, referenc
     }
 
 
-def _get_allowed_component_keys(system_type):
+def _get_allowed_component_keys(system_type, source=None):
     component_keys = [
         collection_name
-        for collection_name, _label in HVAC_COLLECTION_CONFIG.get(system_type, ())
+        for collection_name, _label in _get_expected_hvac_components(system_type, source)
     ]
     if system_type in DUCTWORK_SYSTEM_TYPES:
         component_keys.append("ductwork")
@@ -1468,7 +1674,7 @@ def _get_allowed_component_keys(system_type):
 
 def _load_hvac_components_for_system(db, customer_id, hvac_system):
     system_type = str(hvac_system.get("system_type", "")).strip()
-    expected_components = HVAC_COLLECTION_CONFIG.get(system_type, ())
+    expected_components = _get_expected_hvac_components(system_type, hvac_system)
     components = []
     component_snapshots = hvac_system.get("components", {}) if isinstance(hvac_system.get("components"), dict) else {}
 
@@ -1521,7 +1727,7 @@ def _build_hvac_detail_payload(db, customer_id, reference_type, reference_id):
         "system_type": serialized_system.get("system_type", "HVAC System"),
         "system_tonnage": str(serialized_system.get("system_tonnage", "")).strip() or "-",
         "cooling_capacity": str(serialized_system.get("cooling_capacity", "")).strip() or "-",
-        "heating_capacity": str(serialized_system.get("heating_capacity", "")).strip() or "-",
+        "metering_device": str(serialized_system.get("metering_device", "")).strip() or "-",
         "property_id": str(serialized_system.get("property_id", "")).strip() or "-",
         "components": components,
         "diagnostics": diagnostics,
@@ -1567,7 +1773,7 @@ def _build_hvac_system_cards(db, customer_id, property_id=None):
                 "system_type": system_type or "HVAC System",
                 "system_tonnage": str(base_system.get("system_tonnage", "")).strip() or "-",
                 "cooling_capacity": str(base_system.get("cooling_capacity", "")).strip() or "-",
-                "heating_capacity": str(base_system.get("heating_capacity", "")).strip() or "-",
+                "metering_device": str(base_system.get("metering_device", "")).strip() or "-",
                 "ductwork_summary": card_ductwork_summary,
                 "components": [
                     {
@@ -1692,7 +1898,7 @@ def add_customer():
             "referral_source": referral_source,
             "customer_status": customer_status,
             "date_added": datetime.now().strftime("%m/%d/%Y"),
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(UTC),
             "account_number": f"ACC-{customer_count:05d}",
             "account_type": "Residential",
             "balance_due": "$0.00",
@@ -2571,7 +2777,7 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
                 "customer_id": reference_value(customerId),
                 "property_id": reference_value(property_id) if property_id else None,
                 "section_photos": section_photos,
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(UTC),
             }
         )
 
@@ -2657,7 +2863,7 @@ def update_hvac_diagnostic_photo_caption(customerId, reference_type, reference_i
             {
                 "$set": {
                     "section_photos": section_photos,
-                    "updated_at": datetime.utcnow(),
+                    "updated_at": datetime.now(UTC),
                 }
             },
         )
@@ -2735,7 +2941,7 @@ def delete_hvac_diagnostic_photo(customerId, reference_type, reference_id, diagn
             {
                 "$set": {
                     "section_photos": section_photos,
-                    "updated_at": datetime.utcnow(),
+                    "updated_at": datetime.now(UTC),
                 }
             },
         )
@@ -2864,7 +3070,7 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
         {
             "$set": {
                 "reports": [report_item, *reports_history],
-                "updated_at": datetime.utcnow(),
+                "updated_at": datetime.now(UTC),
             }
         },
     )
@@ -2937,7 +3143,7 @@ def send_hvac_report_email(customerId, reference_type, reference_id, diagnostic_
             {"_id": object_id_or_404(str(selected_diagnostic.get("_id") or ""))},
             {
                 "$set": {
-                    "report_email_last_sent_at": datetime.utcnow(),
+                    "report_email_last_sent_at": datetime.now(UTC),
                     "report_email_last_recipient": recipient_email,
                 }
             },
@@ -2995,7 +3201,7 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
 
     serialized_system = serialize_doc(hvac_system)
     system_type = str(serialized_system.get("system_type", "")).strip()
-    allowed_component_keys = _get_allowed_component_keys(system_type)
+    allowed_component_keys = _get_allowed_component_keys(system_type, serialized_system)
     if component_key not in allowed_component_keys:
         return redirect(
             url_for(
@@ -3097,8 +3303,15 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
         "serial_number": str(serialized_component.get("serial_number", "")).strip(),
         "manufacturer": str(serialized_component.get("manufacturer", "")).strip(),
         "manufacturer_other": str(serialized_component.get("manufacturer_other", "")).strip(),
-        "install_year": str(serialized_component.get("install_year", "")).strip(),
-        "nickname": str(serialized_component.get("nickname", "")).strip(),
+        "manufactured_year": str(serialized_component.get("manufactured_year", "")).strip(),
+        "seer_rating": str(serialized_component.get("seer_rating", "")).strip(),
+        "afue_rating": str(serialized_component.get("afue_rating", "")).strip(),
+        "blower_motor_type": str(serialized_component.get("blower_motor_type", "")).strip(),
+        "btu_input": str(serialized_component.get("btu_input", "")).strip(),
+        "btu_output": str(serialized_component.get("btu_output", "")).strip(),
+        "temperature_rise_min": str(serialized_component.get("temperature_rise_min", "")).strip(),
+        "temperature_rise_max": str(serialized_component.get("temperature_rise_max", "")).strip(),
+        "number_of_stages": str(serialized_component.get("number_of_stages", "")).strip(),
         "thermostat_type": str(serialized_component.get("thermostat_type", "")).strip(),
         "refrigerant_type": str(serialized_component.get("refrigerant_type", "")).strip(),
         "unit_type": str(serialized_component.get("unit_type", "")).strip(),
@@ -3111,13 +3324,29 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
             "serial_number": request.form.get("serial_number", "").strip(),
             "manufacturer": request.form.get("manufacturer", "").strip(),
             "manufacturer_other": request.form.get("manufacturer_other", "").strip(),
-            "install_year": request.form.get("install_year", "").strip(),
-            "nickname": request.form.get("nickname", "").strip(),
+            "manufactured_year": request.form.get("manufactured_year", "").strip(),
+            "blower_motor_type": request.form.get("blower_motor_type", "").strip(),
             "thermostat_type": request.form.get("thermostat_type", "").strip(),
             "refrigerant_type": request.form.get("refrigerant_type", "").strip(),
             "unit_type": request.form.get("unit_type", "").strip(),
             "notes": request.form.get("notes", "").strip(),
         }
+        if component_key == "furnaces":
+            form_data["afue_rating"] = request.form.get("afue_rating", "").strip()
+            form_data["btu_input"] = request.form.get("btu_input", "").strip()
+            form_data["btu_output"] = request.form.get("btu_output", "").strip()
+            form_data["temperature_rise_min"] = request.form.get("temperature_rise_min", "").strip()
+            form_data["temperature_rise_max"] = request.form.get("temperature_rise_max", "").strip()
+            form_data["number_of_stages"] = request.form.get("number_of_stages", "").strip()
+        elif component_key in {"condensers", "packageUnits", "miniSplits"}:
+            form_data["seer_rating"] = request.form.get("seer_rating", "").strip()
+        elif component_key not in {"airHandlers"}:
+            form_data.pop("blower_motor_type", None)
+        if not form_data["manufactured_year"]:
+            form_data["manufactured_year"] = _infer_manufactured_year(
+                form_data.get("manufacturer", ""),
+                form_data.get("serial_number", ""),
+            )
         component_document = {
             "customer_id": reference_value(customerId),
             "system_type": system_type,
@@ -3157,7 +3386,9 @@ def update_hvac_component(customerId, reference_type, reference_id, component_ke
         thermostat_type_options=THERMOSTAT_TYPE_OPTIONS,
         thermostat_manufacturer_options=THERMOSTAT_MANUFACTURER_OPTIONS,
         package_unit_type_options=PACKAGE_UNIT_TYPE_OPTIONS,
+        metering_device_options=METERING_DEVICE_OPTIONS,
         refrigerant_type_options=REFRIGERANT_TYPE_OPTIONS,
+        tonnage_options=TONNAGE_OPTIONS,
         property_id=property_id,
     )
 
@@ -3372,7 +3603,7 @@ def add_sub_properties(customerId, propertyId):
                             hvac_system_id = str(inserted.inserted_id)
                             component_base = {**hvac_doc, "hvac_system_id": hvac_system_id}
                             component_snapshots = {}
-                            for collection_name, _label in HVAC_COLLECTION_CONFIG.get(system_type, ()):
+                            for collection_name, _label in _get_expected_hvac_components(system_type, hvac_form_data):
                                 component_doc = _build_hvac_component_document(hvac_form_data, component_base, collection_name)
                                 component_snapshots[collection_name] = component_doc
                             update_payload = {"components": component_snapshots}
@@ -3470,6 +3701,7 @@ def add_default_hvac(customerId, propertyId):
         thermostat_type_options=THERMOSTAT_TYPE_OPTIONS,
         thermostat_manufacturer_options=THERMOSTAT_MANUFACTURER_OPTIONS,
         package_unit_type_options=PACKAGE_UNIT_TYPE_OPTIONS,
+        metering_device_options=METERING_DEVICE_OPTIONS,
         refrigerant_type_options=REFRIGERANT_TYPE_OPTIONS,
     )
 
@@ -3525,7 +3757,7 @@ def add_equipment(customerId):
             }
             component_snapshots = {}
 
-            for collection_name, _label in HVAC_COLLECTION_CONFIG.get(system_type, ()):
+            for collection_name, _label in _get_expected_hvac_components(system_type, form_data):
                 component_doc = _build_hvac_component_document(form_data, component_base_document, collection_name)
                 component_snapshots[collection_name] = component_doc
 

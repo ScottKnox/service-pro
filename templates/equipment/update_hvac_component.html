@@ -103,10 +103,6 @@
                 <label for="manufacturer-other">Other Manufacturer</label>
                 <input id="manufacturer-other" name="manufacturer_other" type="text" value="{{ form_data.manufacturer_other|default('') }}" {% if form_data.manufacturer|default('') != 'Other' %}disabled{% endif %}>
               </div>
-              <div class="add-customer-form-field">
-                <label for="nickname">Nickname</label>
-                <input id="nickname" name="nickname" type="text" value="{{ form_data.nickname|default('') }}">
-              </div>
             </div>
             <div class="add-customer-form-row">
               <div class="add-customer-form-field">
@@ -174,14 +170,74 @@
             </div>
             <div class="add-customer-form-row">
               <div class="add-customer-form-field">
-                <label for="install-year">Install Year</label>
-                <input id="install-year" name="install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.install_year|default('') }}">
+                <label for="manufactured-year">Manufactured Year</label>
+                <input id="manufactured-year" name="manufactured_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.manufactured_year|default('') }}">
               </div>
-              <div class="add-customer-form-field">
-                <label for="nickname">Nickname</label>
-                <input id="nickname" name="nickname" type="text" value="{{ form_data.nickname|default('') }}">
-              </div>
+              {% if component_key == 'furnaces' %}
+                <div class="add-customer-form-field">
+                  <label for="afue-rating">AFUE Rating</label>
+                  <input id="afue-rating" name="afue_rating" type="text" value="{{ form_data.afue_rating|default('') }}">
+                </div>
+              {% elif component_key in ['condensers', 'packageUnits', 'miniSplits'] %}
+                <div class="add-customer-form-field">
+                  <label for="seer-rating">SEER / SEER 2 Rating</label>
+                  <input id="seer-rating" name="seer_rating" type="text" value="{{ form_data.seer_rating|default('') }}">
+                </div>
+              {% endif %}
             </div>
+            {% if component_key in ['airHandlers', 'furnaces'] %}
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="blower-motor-type">Blower Motor Type</label>
+                  <select id="blower-motor-type" name="blower_motor_type">
+                    <option value="">-- Select blower motor type --</option>
+                    <option value="Standard PSC Motor" {% if form_data.blower_motor_type|default('') == 'Standard PSC Motor' %}selected{% endif %}>Standard PSC Motor</option>
+                    <option value="ECM Motor" {% if form_data.blower_motor_type|default('') == 'ECM Motor' %}selected{% endif %}>ECM Motor</option>
+                  </select>
+                </div>
+              </div>
+            {% endif %}
+            {% if component_key == 'furnaces' %}
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="btu-input">BTU (Input)</label>
+                  <select id="btu-input" name="btu_input">
+                    <option value="">-- Select BTU input --</option>
+                    {% for option in tonnage_options|default([]) %}
+                      <option value="{{ option }}" {% if form_data.btu_input|default('') == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="add-customer-form-field">
+                  <label for="btu-output">BTU (Output)</label>
+                  <select id="btu-output" name="btu_output">
+                    <option value="">-- Select BTU output --</option>
+                    {% for option in tonnage_options|default([]) %}
+                      <option value="{{ option }}" {% if form_data.btu_output|default('') == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="temperature-rise-min">Temperature Rise Range</label>
+                  <div class="hvac-range-inputs">
+                    <input id="temperature-rise-min" name="temperature_rise_min" type="text" value="{{ form_data.temperature_rise_min|default('') }}" aria-label="Temperature rise minimum">
+                    <span class="hvac-range-separator">to</span>
+                    <input id="temperature-rise-max" name="temperature_rise_max" type="text" value="{{ form_data.temperature_rise_max|default('') }}" aria-label="Temperature rise maximum">
+                  </div>
+                </div>
+                <div class="add-customer-form-field">
+                  <label for="number-of-stages">Number of Stages</label>
+                  <select id="number-of-stages" name="number_of_stages">
+                    <option value="">-- Select number of stages --</option>
+                    <option value="Single" {% if form_data.number_of_stages|default('') == 'Single' %}selected{% endif %}>Single</option>
+                    <option value="Two" {% if form_data.number_of_stages|default('') == 'Two' %}selected{% endif %}>Two</option>
+                    <option value="Modulating" {% if form_data.number_of_stages|default('') == 'Modulating' %}selected{% endif %}>Modulating</option>
+                  </select>
+                </div>
+              </div>
+            {% endif %}
             <div class="add-customer-form-row">
               <div class="add-customer-form-field">
                 <label for="notes">Notes</label>

@@ -156,6 +156,16 @@
   color: #1F6B35;
 }
 
+/* Paid */
+.progress-step.step-paid.is-active .progress-step-circle,
+.progress-step.step-paid.is-done .progress-step-circle {
+  background-color: #1F6B35;
+}
+.progress-step.step-paid.is-active .progress-step-label,
+.progress-step.step-paid.is-done .progress-step-label {
+  color: #1F6B35;
+}
+
 /* Estimate: Created */
 .progress-step.step-created.is-active .progress-step-circle,
 .progress-step.step-created.is-done .progress-step-circle {

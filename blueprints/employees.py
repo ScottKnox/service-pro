@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 import re
 
 from bson import ObjectId
@@ -133,7 +133,7 @@ def add_employee():
             "bio": "",
             "status": "active",
             "date_added": datetime.now().strftime("%m/%d/%Y"),
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(UTC),
             "employee_id": f"EMP-{employee_count:05d}",
             "subscription_id": current_subscription_id,
             "business": reference_value(current_business_ref),

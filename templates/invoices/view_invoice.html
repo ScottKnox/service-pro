@@ -218,6 +218,19 @@
           <div class="estimate-pricing-row estimate-pricing-total"><span>Total Due</span><span>{{ pricing_summary.total_due_display }}</span></div>
         </div>
 
+        {% if payment_summary.show %}
+          <div class="estimate-stack-block estimate-pricing-summary">
+            <h3>Payment Summary</h3>
+            <div class="estimate-pricing-row"><span>Status</span><span>{{ payment_summary.status_label }}</span></div>
+            <div class="estimate-pricing-row"><span>Payment Method</span><span>{{ payment_summary.payment_channel_label }}</span></div>
+            <div class="estimate-pricing-row"><span>Amount Received</span><span>{{ payment_summary.amount_paid_display }}</span></div>
+            <div class="estimate-pricing-row"><span>Remaining Invoice Balance</span><span>{{ payment_summary.invoice_balance_display }}</span></div>
+            {% if payment_summary.payment_date %}
+              <div class="estimate-pricing-row"><span>Received On</span><span>{{ payment_summary.payment_date }}</span></div>
+            {% endif %}
+          </div>
+        {% endif %}
+
         {% if job.invoice_notes %}
           <div class="estimate-stack-block">
             <h3>Invoice Notes</h3>

@@ -1,5 +1,5 @@
 from calendar import monthrange
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 import math
 
 from bson import ObjectId
@@ -584,7 +584,7 @@ def _build_next_billing_date(start_date_value):
     if not start_date:
         return "-"
 
-    today = datetime.utcnow()
+    today = datetime.now(UTC)
     target_year = today.year
     target_month = today.month + 1
     if target_month == 13:
@@ -658,7 +658,7 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
     yoy_start_dt = start_dt.replace(year=start_dt.year - 1)
     yoy_end_dt = end_dt.replace(year=end_dt.year - 1)
 
-    today = datetime.utcnow().date()
+    today = datetime.now(UTC).date()
     cur_month_start = datetime(today.year, today.month, 1)
     if today.month == 1:
         prev_month_year, prev_month = today.year - 1, 12
@@ -730,7 +730,7 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
     contracts_yoy_pct = _pct(range_contracts, yoy_contracts)
 
     # MOM growth (always current month vs previous month, independent of filter range)
-    cur_month_total, _, _ = _sum_jobs_in_range(all_jobs, cur_month_start, datetime.utcnow())
+    cur_month_total, _, _ = _sum_jobs_in_range(all_jobs, cur_month_start, datetime.now(UTC))
     prev_month_total, _, _ = _sum_jobs_in_range(all_jobs, prev_month_start, prev_month_end)
     two_months_ago_total, _, _ = _sum_jobs_in_range(all_jobs, two_months_ago_start, two_months_ago_end)
     mom_pct = _pct(cur_month_total, prev_month_total)
@@ -1096,8 +1096,8 @@ def cancel_subscription():
                 "$set": {
                     "status": "cancelled",
                     "reason_cancelled": cancellation_reason,
-                    "end_date": datetime.utcnow(),
-                    "ended_at": datetime.utcnow(),
+                    "end_date": datetime.now(UTC),
+                    "ended_at": datetime.now(UTC),
                 }
             },
         )

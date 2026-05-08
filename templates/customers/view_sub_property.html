@@ -99,11 +99,11 @@
                       <span class="view-customer-hvac-card-label">Cooling Capacity</span>
                       <span class="view-customer-hvac-card-value">{{ hvac_system.cooling_capacity|default('-', true) }}</span>
                     </div>
-                    <div class="view-customer-hvac-card-row">
-                      <span class="view-customer-hvac-card-label">Heating Capacity</span>
-                      <span class="view-customer-hvac-card-value">{{ hvac_system.heating_capacity|default('-', true) }}</span>
-                    </div>
                     {% endif %}
+                    <div class="view-customer-hvac-card-row">
+                      <span class="view-customer-hvac-card-label">Metering Device</span>
+                      <span class="view-customer-hvac-card-value">{{ hvac_system.metering_device|default('-', true) }}</span>
+                    </div>
                     {% if hvac_system.components %}
                       {% for component in hvac_system.components %}
                         <div class="view-customer-hvac-card-row">

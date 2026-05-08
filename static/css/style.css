@@ -3658,6 +3658,20 @@ p {
     font-family: inherit;
   }
 
+  .hvac-range-inputs {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .hvac-range-separator {
+    color: #1B263B;
+    font-size: 0.95rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
   .job-client-inline {
     margin: 0;
     display: flex;

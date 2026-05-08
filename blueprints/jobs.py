@@ -1,5 +1,5 @@
 import calendar
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 import hashlib
 import hmac
 import json
@@ -335,7 +335,7 @@ def _build_recurring_series_document(customer, business_id, selected_property, s
         "invoice_notes": request_obj.form.get("invoice_notes", "").strip(),
         "payment_due_days_offset": recurring_due_offset,
         "business_id": business_id,
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(UTC),
     }
 
     if next_occurrence_text and not _series_allows_occurrence(series_doc, 2, next_occurrence_text):
@@ -401,7 +401,7 @@ def _create_occurrence_from_series(db, series_doc, scheduled_date, occurrence_in
         "payment_due_days": payment_due_days,
         "internal_notes": [],
         "date_created": datetime.now().strftime("%m/%d/%Y"),
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(UTC),
         "invoices": [],
         "business_id": series_doc.get("business_id"),
         "job_kind": "recurring_occurrence",
@@ -645,7 +645,7 @@ def _create_job_from_accepted_estimate(db, estimate_id):
         "payment_due_days": payment_due_days,
         "internal_notes": [],
         "date_created": datetime.now().strftime("%m/%d/%Y"),
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(UTC),
         "invoices": [],
         "business_id": business_id,
         "job_kind": "one_time",
@@ -667,7 +667,7 @@ def _create_job_from_accepted_estimate(db, estimate_id):
         {
             "$set": {
                 "created_job_id": created_job_id,
-                "job_created_from_estimate_at": datetime.utcnow(),
+                "job_created_from_estimate_at": datetime.now(UTC),
             }
         },
     )
@@ -779,7 +779,7 @@ def _issue_estimate_access_token(db, estimate_id, recipient_email=""):
         {
             "$set": {
                 "access_token_hash": token_hash,
-                "access_token_created_at": datetime.utcnow(),
+                "access_token_created_at": datetime.now(UTC),
                 "access_token_recipient": str(recipient_email or "").strip(),
             }
         },
@@ -843,7 +843,7 @@ def _issue_invoice_access_token(db, job_id, invoice_ref, recipient_email=""):
         if normalized_invoice_ref in {entry_invoice_id, entry_invoice_number}:
             updated = dict(entry)
             updated["access_token_hash"] = token_hash
-            updated["access_token_created_at"] = datetime.utcnow().isoformat()
+            updated["access_token_created_at"] = datetime.now(UTC).isoformat()
             updated["access_token_recipient"] = str(recipient_email or "").strip()
             updated_invoices.append(updated)
         else:
@@ -991,7 +991,7 @@ def _finalize_invoice_payment(db, job_id, invoice_ref, stripe_session_id="", pay
     if str(invoice_entry.get("payment_status") or "").strip().lower() == "paid":
         return True
 
-    paid_at_utc = datetime.utcnow()
+    paid_at_utc = datetime.now(UTC)
     paid_at_text = _build_job_paid_timestamp_text()
     normalized_invoice_ref = str(invoice_ref or "").strip()
 
@@ -1175,6 +1175,35 @@ def _build_invoice_pricing_summary(job_doc):
     }
 
 
+def _build_invoice_payment_summary(invoice_entry, pricing_summary, invoice_is_paid):
+    invoice_payload = invoice_entry or {}
+    summary_payload = pricing_summary or {}
+
+    total_due = float(summary_payload.get("total_due") or 0.0)
+    amount_paid_raw = invoice_payload.get("amount_paid")
+    try:
+        amount_paid = float(amount_paid_raw)
+    except (TypeError, ValueError):
+        amount_paid = total_due if invoice_is_paid else 0.0
+
+    if invoice_is_paid and amount_paid <= 0:
+        amount_paid = total_due
+
+    invoice_balance = max(0.0, round(total_due - amount_paid, 2))
+    payment_date = str(invoice_payload.get("paid_at") or "").strip()
+
+    return {
+        "show": invoice_is_paid or amount_paid > 0,
+        "status_label": "Paid in full" if invoice_is_paid else "Payment pending",
+        "amount_paid": amount_paid,
+        "amount_paid_display": normalize_currency(amount_paid),
+        "invoice_balance": invoice_balance,
+        "invoice_balance_display": normalize_currency(invoice_balance),
+        "payment_date": payment_date,
+        "payment_channel_label": "Online card payment" if amount_paid > 0 else "Pending",
+    }
+
+
 def _normalize_estimate_expiration_days(value, fallback=30):
     try:
         normalized = int(str(value or "").strip())
@@ -1275,7 +1304,7 @@ def _create_maintenance_records(db, job_id, job_doc, business_id):
     """Create one maintenanceRecord per HVAC system touched in a completed job."""
     property_id = str(job_doc.get("property_id") or "").strip()
     customer_id = job_doc.get("customer_id")
-    completed_at = datetime.utcnow()
+    completed_at = datetime.now(UTC)
     date_completed = datetime.now().strftime("%m/%d/%Y")
 
     component_types = ["services", "parts", "labors", "materials", "equipments"]
@@ -1584,7 +1613,7 @@ def create_job(customerId):
             "payment_due_days": payment_due_days,
             "internal_notes": [],
             "date_created": datetime.now().strftime("%m/%d/%Y"),
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(UTC),
             "invoices": [],
             "business_id": business_id,
             "job_kind": "one_time",
@@ -1808,7 +1837,7 @@ def create_estimate(customerId):
             "estimate_expiration_days": estimate_expiration_days,
             "file_path": [],
             "latest_file_path": "",
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(UTC),
         }
 
         inserted = db.estimates.insert_one(new_estimate)
@@ -2135,7 +2164,7 @@ def update_estimate(estimateId):
             "total_amount": float(total or 0.0),
             "date_updated": datetime.now().strftime("%m/%d/%Y"),
             "time_updated": datetime.now().strftime("%H:%M:%S"),
-            "updated_at": datetime.utcnow(),
+            "updated_at": datetime.now(UTC),
         }
 
         estimate_for_pdf = dict(estimate)
@@ -2360,7 +2389,7 @@ def accept_estimate(estimateId):
                 "accepted_signature_data_url": signature_data_url,
                 "accepted_signature_ip": _extract_client_ip(),
                 "accepted_signature_user_agent": str(request.headers.get("User-Agent") or "").strip(),
-                "accepted_signature_captured_at": datetime.utcnow(),
+                "accepted_signature_captured_at": datetime.now(UTC),
                 "accepted_signature_source": "public_estimate_link",
             }
         )
@@ -2546,6 +2575,7 @@ def view_invoice(jobId, invoiceRef):
             stripe_connect_reason = "Card payments are unavailable until this business connects Stripe and enables charges/payouts."
 
     pricing_summary = _build_invoice_pricing_summary(job_doc)
+    payment_summary = _build_invoice_payment_summary(invoice, pricing_summary, invoice_is_paid)
 
     return render_template(
         "invoices/view_invoice.html",
@@ -2555,6 +2585,7 @@ def view_invoice(jobId, invoiceRef):
         job=job_doc,
         customer=customer,
         pricing_summary=pricing_summary,
+        payment_summary=payment_summary,
         payment_due_days=payment_due_days,
         due_date=due_date,
         is_staff_view=is_staff_view,
@@ -2683,7 +2714,7 @@ def create_invoice_checkout_session(jobId, invoiceRef):
 
         db.jobs.update_one(
             {"_id": ObjectId(jobId)},
-            {"$set": {"invoices": updated_invoices, "updated_at": datetime.utcnow()}},
+            {"$set": {"invoices": updated_invoices, "updated_at": datetime.now(UTC)}},
         )
 
     return jsonify({"success": True, "checkout_url": checkout_session.url}), 200
@@ -2913,7 +2944,7 @@ def start_job(jobId):
         return redirect(url_for("jobs.view_job", jobId=jobId))
 
     current_timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
-    current_timestamp_utc = datetime.utcnow()
+    current_timestamp_utc = datetime.now(UTC)
 
     db.jobs.update_one(
         {"_id": ObjectId(jobId)},
@@ -2937,7 +2968,7 @@ def en_route_job(jobId):
         current_app.logger.warning("Blocked invalid en-route transition: job_id=%s status=%s has_schedule=%s", jobId, current_status, has_schedule)
         return redirect(url_for("jobs.view_job", jobId=jobId))
 
-    current_timestamp_utc = datetime.utcnow()
+    current_timestamp_utc = datetime.now(UTC)
 
     db.jobs.update_one(
         {"_id": ObjectId(jobId)},
@@ -3005,7 +3036,7 @@ def complete_job(jobId):
     filename = os.path.basename(invoice_path)
 
     current_timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
-    current_timestamp_utc = datetime.utcnow()
+    current_timestamp_utc = datetime.now(UTC)
     time_spent_str = ""
 
     date_started = job.get("dateStarted")

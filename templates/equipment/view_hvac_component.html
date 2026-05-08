@@ -62,7 +62,7 @@
                   {% if component.component_key == 'ductwork' %}
                     <h4>{{ component.component_label }}</h4>
                   {% else %}
-                    <h4>{{ component.details.nickname if component.details.nickname != '-' else component.component_label }}</h4>
+                    <h4>{{ component.component_label }}</h4>
                   {% endif %}
                 </div>
               </div>
@@ -98,10 +98,6 @@
                       <span>Manufacturer</span>
                       <strong>{{ component.details.manufacturer }}</strong>
                     </div>
-                    <div class="hvac-component-row">
-                      <span>Nickname</span>
-                      <strong>{{ component.details.nickname }}</strong>
-                    </div>
                     {% if component.details.notes and component.details.notes != '-' %}
                     <div class="hvac-component-row hvac-component-row--notes">
                       <span>Notes</span>
@@ -127,10 +123,6 @@
                       </div>
                     {% endif %}
                     <div class="hvac-component-row">
-                      <span>Nickname</span>
-                      <strong>{{ component.details.nickname }}</strong>
-                    </div>
-                    <div class="hvac-component-row">
                       <span>Manufacturer</span>
                       <strong>{{ component.details.manufacturer }}</strong>
                     </div>
@@ -143,9 +135,45 @@
                       <strong>{{ component.details.serial_number }}</strong>
                     </div>
                     <div class="hvac-component-row">
-                      <span>Install Year</span>
-                      <strong>{{ component.details.install_year }}</strong>
+                      <span>Manufactured Year</span>
+                      <strong>{{ component.details.manufactured_year }}</strong>
                     </div>
+                    {% if component.component_key == 'furnaces' %}
+                      <div class="hvac-component-row">
+                        <span>AFUE Rating</span>
+                        <strong>{{ component.details.afue_rating }}</strong>
+                      </div>
+                      <div class="hvac-component-row">
+                        <span>BTU (Input)</span>
+                        <strong>{{ component.details.btu_input }}</strong>
+                      </div>
+                      <div class="hvac-component-row">
+                        <span>BTU (Output)</span>
+                        <strong>{{ component.details.btu_output }}</strong>
+                      </div>
+                      <div class="hvac-component-row">
+                        <span>Temperature Rise Range</span>
+                        <strong>{{ component.details.temperature_rise_min }} to {{ component.details.temperature_rise_max }}</strong>
+                      </div>
+                      <div class="hvac-component-row">
+                        <span>Number of Stages</span>
+                        <strong>{{ component.details.number_of_stages }}</strong>
+                      </div>
+                      <div class="hvac-component-row">
+                        <span>Blower Motor Type</span>
+                        <strong>{{ component.details.blower_motor_type }}</strong>
+                      </div>
+                    {% elif component.component_key in ['condensers', 'packageUnits', 'miniSplits'] %}
+                      <div class="hvac-component-row">
+                        <span>SEER / SEER 2 Rating</span>
+                        <strong>{{ component.details.seer_rating }}</strong>
+                      </div>
+                    {% elif component.component_key == 'airHandlers' %}
+                      <div class="hvac-component-row">
+                        <span>Blower Motor Type</span>
+                        <strong>{{ component.details.blower_motor_type }}</strong>
+                      </div>
+                    {% endif %}
                     {% if component.details.notes and component.details.notes != '-' %}
                     <div class="hvac-component-row hvac-component-row--notes">
                       <span>Notes</span>

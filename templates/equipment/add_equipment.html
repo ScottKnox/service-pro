@@ -20,6 +20,19 @@
         #add-customer-form .hvac-other-field[hidden] {
           display: none !important;
         }
+
+        #add-customer-form .manufactured-year-hint {
+          margin-top: 0.15rem;
+          font-size: 0.82rem;
+          color: #1f6b35;
+          font-weight: 600;
+        }
+
+        #add-customer-form .manufactured-year-age {
+          color: #4b5563;
+          font-weight: 600;
+          font-size: 0.85em;
+        }
       </style>
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
@@ -60,12 +73,12 @@
               {% endfor %}
             </select>
           </div>
-          <div class="add-customer-form-field" id="heating-capacity-wrap">
-            <label for="heating-capacity">Heating Capacity</label>
-            <select id="heating-capacity" name="heating_capacity">
-              <option value="">-- Select heating capacity --</option>
-              {% for option in tonnage_options|default([]) %}
-                <option value="{{ option }}" {% if form_data.heating_capacity|default('') == option %}selected{% endif %}>{{ option }}</option>
+          <div class="add-customer-form-field">
+            <label for="metering-device">Metering Device</label>
+            <select id="metering-device" name="metering_device">
+              <option value="">-- Select metering device --</option>
+              {% for option in metering_device_options|default([]) %}
+                <option value="{{ option }}" {% if form_data.metering_device|default('') == option %}selected{% endif %}>{{ option }}</option>
               {% endfor %}
             </select>
           </div>
@@ -110,12 +123,12 @@
           </div>
           <div class="add-customer-form-row">
             <div class="add-customer-form-field">
-              <label for="condenser-install-year">Install Year</label>
-              <input id="condenser-install-year" name="condenser_install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.condenser_install_year|default('') }}">
+              <label for="condenser-manufactured-year">Manufactured Year <span id="condenser-manufactured-age" class="manufactured-year-age" hidden></span></label>
+              <input id="condenser-manufactured-year" name="condenser_manufactured_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.condenser_manufactured_year|default('') }}">
             </div>
             <div class="add-customer-form-field">
-              <label for="condenser-nickname">Nickname</label>
-              <input id="condenser-nickname" name="condenser_nickname" type="text" value="{{ form_data.condenser_nickname|default('') }}">
+              <label for="condenser-seer-rating">SEER / SEER 2 Rating</label>
+              <input id="condenser-seer-rating" name="condenser_seer_rating" type="text" value="{{ form_data.condenser_seer_rating|default('') }}">
             </div>
           </div>
         </section>
@@ -150,12 +163,16 @@
           </div>
           <div class="add-customer-form-row">
             <div class="add-customer-form-field">
-              <label for="air-handler-install-year">Install Year</label>
-              <input id="air-handler-install-year" name="air_handler_install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.air_handler_install_year|default('') }}">
+              <label for="air-handler-manufactured-year">Manufactured Year <span id="air-handler-manufactured-age" class="manufactured-year-age" hidden></span></label>
+              <input id="air-handler-manufactured-year" name="air_handler_manufactured_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.air_handler_manufactured_year|default('') }}">
             </div>
             <div class="add-customer-form-field">
-              <label for="air-handler-nickname">Nickname</label>
-              <input id="air-handler-nickname" name="air_handler_nickname" type="text" value="{{ form_data.air_handler_nickname|default('') }}">
+              <label for="air-handler-blower-motor-type">Blower Motor Type</label>
+              <select id="air-handler-blower-motor-type" name="air_handler_blower_motor_type">
+                <option value="">-- Select blower motor type --</option>
+                <option value="Standard PSC Motor" {% if form_data.air_handler_blower_motor_type|default('') == 'Standard PSC Motor' %}selected{% endif %}>Standard PSC Motor</option>
+                <option value="ECM Motor" {% if form_data.air_handler_blower_motor_type|default('') == 'ECM Motor' %}selected{% endif %}>ECM Motor</option>
+              </select>
             </div>
           </div>
         </section>
@@ -190,12 +207,61 @@
           </div>
           <div class="add-customer-form-row">
             <div class="add-customer-form-field">
-              <label for="furnace-install-year">Install Year</label>
-              <input id="furnace-install-year" name="furnace_install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.furnace_install_year|default('') }}">
+              <label for="furnace-manufactured-year">Manufactured Year <span id="furnace-manufactured-age" class="manufactured-year-age" hidden></span></label>
+              <input id="furnace-manufactured-year" name="furnace_manufactured_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.furnace_manufactured_year|default('') }}">
             </div>
             <div class="add-customer-form-field">
-              <label for="furnace-nickname">Nickname</label>
-              <input id="furnace-nickname" name="furnace_nickname" type="text" value="{{ form_data.furnace_nickname|default('') }}">
+              <label for="furnace-afue-rating">AFUE Rating</label>
+              <input id="furnace-afue-rating" name="furnace_afue_rating" type="text" value="{{ form_data.furnace_afue_rating|default('') }}">
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="furnace-btu-input">BTU (Input)</label>
+              <select id="furnace-btu-input" name="furnace_btu_input">
+                <option value="">-- Select BTU input --</option>
+                {% for option in tonnage_options|default([]) %}
+                  <option value="{{ option }}" {% if form_data.furnace_btu_input|default('') == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="add-customer-form-field">
+              <label for="furnace-btu-output">BTU (Output)</label>
+              <select id="furnace-btu-output" name="furnace_btu_output">
+                <option value="">-- Select BTU output --</option>
+                {% for option in tonnage_options|default([]) %}
+                  <option value="{{ option }}" {% if form_data.furnace_btu_output|default('') == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="furnace-temperature-rise-min">Temperature Rise Range</label>
+              <div class="hvac-range-inputs">
+                <input id="furnace-temperature-rise-min" name="furnace_temperature_rise_min" type="text" value="{{ form_data.furnace_temperature_rise_min|default('') }}" aria-label="Temperature rise minimum">
+                <span class="hvac-range-separator">to</span>
+                <input id="furnace-temperature-rise-max" name="furnace_temperature_rise_max" type="text" value="{{ form_data.furnace_temperature_rise_max|default('') }}" aria-label="Temperature rise maximum">
+              </div>
+            </div>
+            <div class="add-customer-form-field">
+              <label for="furnace-number-of-stages">Number of Stages</label>
+              <select id="furnace-number-of-stages" name="furnace_number_of_stages">
+                <option value="">-- Select number of stages --</option>
+                <option value="Single" {% if form_data.furnace_number_of_stages|default('') == 'Single' %}selected{% endif %}>Single</option>
+                <option value="Two" {% if form_data.furnace_number_of_stages|default('') == 'Two' %}selected{% endif %}>Two</option>
+                <option value="Modulating" {% if form_data.furnace_number_of_stages|default('') == 'Modulating' %}selected{% endif %}>Modulating</option>
+              </select>
+            </div>
+          </div>
+          <div class="add-customer-form-row">
+            <div class="add-customer-form-field">
+              <label for="furnace-blower-motor-type">Blower Motor Type</label>
+              <select id="furnace-blower-motor-type" name="furnace_blower_motor_type">
+                <option value="">-- Select blower motor type --</option>
+                <option value="Standard PSC Motor" {% if form_data.furnace_blower_motor_type|default('') == 'Standard PSC Motor' %}selected{% endif %}>Standard PSC Motor</option>
+                <option value="ECM Motor" {% if form_data.furnace_blower_motor_type|default('') == 'ECM Motor' %}selected{% endif %}>ECM Motor</option>
+              </select>
             </div>
           </div>
         </section>
@@ -239,14 +305,73 @@
               <input id="unit-model-number" name="unit_model_number" type="text" value="{{ form_data.unit_model_number|default('') }}">
             </div>
             <div class="add-customer-form-field">
-              <label for="unit-install-year">Install Year</label>
-              <input id="unit-install-year" name="unit_install_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.unit_install_year|default('') }}">
+              <label for="unit-manufactured-year">Manufactured Year <span id="unit-manufactured-age" class="manufactured-year-age" hidden></span></label>
+              <input id="unit-manufactured-year" name="unit_manufactured_year" type="number" inputmode="numeric" min="1900" max="2100" step="1" value="{{ form_data.unit_manufactured_year|default('') }}">
             </div>
           </div>
           <div class="add-customer-form-row">
             <div class="add-customer-form-field">
-              <label for="unit-nickname">Nickname</label>
-              <input id="unit-nickname" name="unit_nickname" type="text" value="{{ form_data.unit_nickname|default('') }}">
+              <label for="unit-seer-rating">SEER / SEER 2 Rating</label>
+              <input id="unit-seer-rating" name="unit_seer_rating" type="text" value="{{ form_data.unit_seer_rating|default('') }}">
+            </div>
+          </div>
+          {% set package_unit_furnace_enabled = form_data.system_type|default('') == 'Package Unit' and form_data.unit_type|default('') in ['Gas Electric', 'Dual Fuel'] %}
+          <div id="package-unit-furnace-addon" class="add-customer-panel" {% if not package_unit_furnace_enabled %}hidden style="display:none"{% endif %}>
+            <h3>Furnace</h3>
+            <div class="add-customer-form-row">
+              <div class="add-customer-form-field">
+                <label for="package-unit-furnace-afue-rating">AFUE Rating</label>
+                <input id="package-unit-furnace-afue-rating" name="package_unit_furnace_afue_rating" type="text" value="{{ form_data.package_unit_furnace_afue_rating|default('') }}">
+              </div>
+            </div>
+            <div class="add-customer-form-row">
+              <div class="add-customer-form-field">
+                <label for="package-unit-furnace-btu-input">BTU (Input)</label>
+                <select id="package-unit-furnace-btu-input" name="package_unit_furnace_btu_input">
+                  <option value="">-- Select BTU input --</option>
+                  {% for option in tonnage_options|default([]) %}
+                    <option value="{{ option }}" {% if form_data.package_unit_furnace_btu_input|default('') == option %}selected{% endif %}>{{ option }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="add-customer-form-field">
+                <label for="package-unit-furnace-btu-output">BTU (Output)</label>
+                <select id="package-unit-furnace-btu-output" name="package_unit_furnace_btu_output">
+                  <option value="">-- Select BTU output --</option>
+                  {% for option in tonnage_options|default([]) %}
+                    <option value="{{ option }}" {% if form_data.package_unit_furnace_btu_output|default('') == option %}selected{% endif %}>{{ option }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="add-customer-form-row">
+              <div class="add-customer-form-field">
+                <label for="package-unit-furnace-temperature-rise-min">Temperature Rise Range</label>
+                <div class="hvac-range-inputs">
+                  <input id="package-unit-furnace-temperature-rise-min" name="package_unit_furnace_temperature_rise_min" type="text" value="{{ form_data.package_unit_furnace_temperature_rise_min|default('') }}" aria-label="Temperature rise minimum">
+                  <span class="hvac-range-separator">to</span>
+                  <input id="package-unit-furnace-temperature-rise-max" name="package_unit_furnace_temperature_rise_max" type="text" value="{{ form_data.package_unit_furnace_temperature_rise_max|default('') }}" aria-label="Temperature rise maximum">
+                </div>
+              </div>
+              <div class="add-customer-form-field">
+                <label for="package-unit-furnace-number-of-stages">Number of Stages</label>
+                <select id="package-unit-furnace-number-of-stages" name="package_unit_furnace_number_of_stages">
+                  <option value="">-- Select number of stages --</option>
+                  <option value="Single" {% if form_data.package_unit_furnace_number_of_stages|default('') == 'Single' %}selected{% endif %}>Single</option>
+                  <option value="Two" {% if form_data.package_unit_furnace_number_of_stages|default('') == 'Two' %}selected{% endif %}>Two</option>
+                  <option value="Modulating" {% if form_data.package_unit_furnace_number_of_stages|default('') == 'Modulating' %}selected{% endif %}>Modulating</option>
+                </select>
+              </div>
+            </div>
+            <div class="add-customer-form-row">
+              <div class="add-customer-form-field">
+                <label for="package-unit-furnace-blower-motor-type">Blower Motor Type</label>
+                <select id="package-unit-furnace-blower-motor-type" name="package_unit_furnace_blower_motor_type">
+                  <option value="">-- Select blower motor type --</option>
+                  <option value="Standard PSC Motor" {% if form_data.package_unit_furnace_blower_motor_type|default('') == 'Standard PSC Motor' %}selected{% endif %}>Standard PSC Motor</option>
+                  <option value="ECM Motor" {% if form_data.package_unit_furnace_blower_motor_type|default('') == 'ECM Motor' %}selected{% endif %}>ECM Motor</option>
+                </select>
+              </div>
             </div>
           </div>
         </section>
@@ -323,10 +448,6 @@
                 {% endfor %}
               </select>
             </div>
-            <div class="add-customer-form-field">
-              <label for="thermostat-nickname">Nickname</label>
-              <input id="thermostat-nickname" name="thermostat_nickname" type="text" value="{{ form_data.thermostat_nickname|default('') }}">
-            </div>
           </div>
         </section>
 
@@ -361,15 +482,15 @@
       const systemTypeSelect = document.getElementById('system-type');
       const unitManufacturerSelect = document.getElementById('unit-manufacturer');
       const unitTypeWrap = document.getElementById('unit-type-wrap');
+      const unitTypeSelect = document.getElementById('unit-type');
+      const packageUnitFurnaceSection = document.getElementById('package-unit-furnace-addon');
       const ductworkTypeSelect = document.getElementById('ductwork-type');
       const submitButton = form ? form.querySelector('button[type="submit"]') : null;
 
       const SINGLE_TONNAGE_TYPES = new Set(['Split System Heat Pump with Air Handler', 'Mini Split System']);
       const coolingCapacityWrap = document.getElementById('cooling-capacity-wrap');
-      const heatingCapacityWrap = document.getElementById('heating-capacity-wrap');
       const systemTonnageWrap = document.getElementById('system-tonnage-wrap');
       const coolingCapacitySelect = document.getElementById('cooling-capacity');
-      const heatingCapacitySelect = document.getElementById('heating-capacity');
       const systemTonnageSelect = document.getElementById('system-tonnage');
 
       if (!form || !systemTypeSelect) {
@@ -396,6 +517,7 @@
 
       const standardManufacturers = {{ manufacturer_options|default([])|tojson }};
       const miniSplitManufacturers = {{ mini_split_manufacturer_options|default([])|tojson }};
+      const PACKAGE_UNIT_FURNACE_TYPES = new Set(['gas electric', 'dual fuel']);
 
       function rebuildUnitManufacturerOptions(selectedType) {
         if (!unitManufacturerSelect) {
@@ -468,16 +590,11 @@
           coolingCapacityWrap.hidden = isSingleTonnage;
           coolingCapacityWrap.style.display = isSingleTonnage ? 'none' : '';
         }
-        if (heatingCapacityWrap) {
-          heatingCapacityWrap.hidden = isSingleTonnage;
-          heatingCapacityWrap.style.display = isSingleTonnage ? 'none' : '';
-        }
         if (systemTonnageWrap) {
           systemTonnageWrap.hidden = !isSingleTonnage;
           systemTonnageWrap.style.display = isSingleTonnage ? '' : 'none';
         }
         if (coolingCapacitySelect) coolingCapacitySelect.disabled = isSingleTonnage;
-        if (heatingCapacitySelect) heatingCapacitySelect.disabled = isSingleTonnage;
         if (systemTonnageSelect) systemTonnageSelect.disabled = !isSingleTonnage;
       }
 
@@ -502,8 +619,29 @@
 
         rebuildUnitManufacturerOptions(selectedType);
         syncOtherManufacturerFields();
+        syncPackageUnitFurnaceSection();
         syncTonnageFields();
         syncSubmitState();
+      }
+
+      function syncPackageUnitFurnaceSection() {
+        if (!packageUnitFurnaceSection) {
+          return;
+        }
+
+        const isPackageUnit = (systemTypeSelect.value || '').trim() === 'Package Unit';
+        const unitTypeValue = (unitTypeSelect && unitTypeSelect.value ? unitTypeSelect.value : '').trim().toLowerCase();
+        const shouldShow = isPackageUnit && PACKAGE_UNIT_FURNACE_TYPES.has(unitTypeValue);
+
+        packageUnitFurnaceSection.hidden = !shouldShow;
+        packageUnitFurnaceSection.style.display = shouldShow ? '' : 'none';
+
+        packageUnitFurnaceSection.querySelectorAll('input, select, textarea').forEach(function (field) {
+          field.disabled = !shouldShow;
+          if (!shouldShow) {
+            field.value = '';
+          }
+        });
       }
 
       function syncSubmitState() {
@@ -529,7 +667,269 @@
         submitButton.disabled = !complete;
       }
 
+      function normalizeManufacturer(value) {
+        return (value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      }
+
+      function expandTwoDigitYear(twoDigitYear) {
+        const parsed = Number(twoDigitYear);
+        if (!Number.isInteger(parsed)) {
+          return '';
+        }
+
+        const now = new Date();
+        const currentYear = now.getUTCFullYear();
+        const currentSuffix = currentYear % 100;
+        const fullYear = parsed <= currentSuffix ? 2000 + parsed : 1900 + parsed;
+        if (fullYear < 1980 || fullYear > currentYear + 1) {
+          return '';
+        }
+        return String(fullYear);
+      }
+
+      function inferManufacturedYear(manufacturer, serialNumber) {
+        const normalizedManufacturer = normalizeManufacturer(manufacturer);
+        const cleanedSerial = (serialNumber || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (!normalizedManufacturer || !cleanedSerial) {
+          return '';
+        }
+
+        const serialWindow = cleanedSerial.slice(0, 12);
+
+        const wwyyBrands = new Set([
+          'carrier', 'bryant', 'payne', 'heil', 'tempstar', 'comfortmaker', 'arcoaire', 'daynight', 'rheem', 'ruud'
+        ]);
+        const yywwBrands = new Set([
+          'trane', 'americanstandard', 'lennox', 'goodman', 'amana', 'daikin', 'york', 'coleman', 'luxaire', 'bosch',
+          'mitsubishi', 'lg', 'fujitsu', 'gree', 'pioneer', 'samsung', 'midea', 'tosot', 'hitachi'
+        ]);
+
+        if (wwyyBrands.has(normalizedManufacturer)) {
+          for (let i = 0; i <= serialWindow.length - 4; i += 1) {
+            const pair = serialWindow.slice(i, i + 4);
+            if (!/^\d{4}$/.test(pair)) {
+              continue;
+            }
+
+            const week = Number(pair.slice(0, 2));
+            if (week < 1 || week > 53) {
+              continue;
+            }
+
+            const inferred = expandTwoDigitYear(Number(pair.slice(2)));
+            if (inferred) {
+              return inferred;
+            }
+          }
+        }
+
+        if (yywwBrands.has(normalizedManufacturer)) {
+          for (let i = 0; i <= serialWindow.length - 4; i += 1) {
+            const pair = serialWindow.slice(i, i + 4);
+            if (!/^\d{4}$/.test(pair)) {
+              continue;
+            }
+
+            const week = Number(pair.slice(2));
+            if (week < 1 || week > 53) {
+              continue;
+            }
+
+            const inferred = expandTwoDigitYear(Number(pair.slice(0, 2)));
+            if (inferred) {
+              return inferred;
+            }
+          }
+        }
+
+        const now = new Date();
+        const currentYear = now.getUTCFullYear();
+        const fullYearMatch = cleanedSerial.match(/(19\d{2}|20\d{2})/);
+        if (fullYearMatch) {
+          const fullYear = Number(fullYearMatch[1]);
+          if (fullYear >= 1980 && fullYear <= currentYear + 1) {
+            return String(fullYear);
+          }
+        }
+
+        return '';
+      }
+
+      function bindManufacturedYearAutoFill(config) {
+        const manufacturerField = document.getElementById(config.manufacturerId);
+        const otherManufacturerField = config.otherManufacturerId ? document.getElementById(config.otherManufacturerId) : null;
+        const serialField = document.getElementById(config.serialId);
+        const modelField = config.modelId ? document.getElementById(config.modelId) : null;
+        const yearField = document.getElementById(config.yearId);
+        const ageLabel = config.ageLabelId ? document.getElementById(config.ageLabelId) : null;
+        if (!manufacturerField || !serialField || !yearField) {
+          return;
+        }
+
+        function syncManufacturedAge() {
+          if (!ageLabel) {
+            return;
+          }
+
+          const rawYear = (yearField.value || '').trim();
+          if (!/^\d{4}$/.test(rawYear)) {
+            ageLabel.textContent = '';
+            ageLabel.hidden = true;
+            return;
+          }
+
+          const yearValue = Number(rawYear);
+          const currentYear = new Date().getFullYear();
+          if (!Number.isInteger(yearValue) || yearValue < 1900 || yearValue > currentYear + 1) {
+            ageLabel.textContent = '';
+            ageLabel.hidden = true;
+            return;
+          }
+
+          const yearsOld = Math.max(0, currentYear - yearValue);
+          ageLabel.textContent = `(${yearsOld} Years Old)`;
+          ageLabel.hidden = false;
+        }
+
+        function ensureHintElement() {
+          const fieldWrap = yearField.closest('.add-customer-form-field');
+          if (!fieldWrap) {
+            return null;
+          }
+
+          let hintEl = fieldWrap.querySelector('.manufactured-year-hint');
+          if (!hintEl) {
+            hintEl = document.createElement('div');
+            hintEl.className = 'manufactured-year-hint';
+            hintEl.hidden = true;
+            fieldWrap.appendChild(hintEl);
+          }
+          return hintEl;
+        }
+
+        function showAutoHint() {
+          const hintEl = ensureHintElement();
+          if (!hintEl) {
+            return;
+          }
+          hintEl.textContent = 'Parsed from serial number. Verify before saving.';
+          hintEl.hidden = false;
+        }
+
+        function hideAutoHint() {
+          const hintEl = ensureHintElement();
+          if (!hintEl) {
+            return;
+          }
+          hintEl.hidden = true;
+        }
+
+        function updateYear() {
+          const selectedManufacturer = (manufacturerField.value || '').trim();
+          const manufacturerValue = normalizeManufacturer(selectedManufacturer) === 'other'
+            ? (otherManufacturerField ? otherManufacturerField.value : '')
+            : selectedManufacturer;
+
+          const inferredYear = inferManufacturedYear(manufacturerValue, serialField.value);
+          const currentValue = (yearField.value || '').trim();
+          const autoFilled = yearField.dataset.autoFilled === 'true';
+
+          if (inferredYear) {
+            if (!currentValue || autoFilled) {
+              yearField.value = inferredYear;
+              yearField.dataset.autoFilled = 'true';
+              showAutoHint();
+              syncManufacturedAge();
+              return;
+            }
+            hideAutoHint();
+            syncManufacturedAge();
+            return;
+          }
+
+          if (autoFilled) {
+            yearField.value = '';
+            yearField.dataset.autoFilled = 'false';
+          }
+          hideAutoHint();
+          syncManufacturedAge();
+        }
+
+        let previousManufacturerValue = (manufacturerField.value || '').trim();
+
+        manufacturerField.addEventListener('change', function () {
+          const currentManufacturerValue = (manufacturerField.value || '').trim();
+          if (currentManufacturerValue !== previousManufacturerValue) {
+            serialField.value = '';
+            if (modelField) {
+              modelField.value = '';
+            }
+            yearField.value = '';
+            yearField.dataset.autoFilled = 'false';
+            hideAutoHint();
+            syncManufacturedAge();
+          }
+          previousManufacturerValue = currentManufacturerValue;
+          updateYear();
+        });
+        if (otherManufacturerField) {
+          otherManufacturerField.addEventListener('input', updateYear);
+          otherManufacturerField.addEventListener('blur', updateYear);
+        }
+        serialField.addEventListener('input', updateYear);
+        serialField.addEventListener('blur', updateYear);
+        yearField.addEventListener('input', function () {
+          yearField.dataset.autoFilled = 'false';
+          hideAutoHint();
+          syncManufacturedAge();
+        });
+        yearField.addEventListener('blur', syncManufacturedAge);
+        updateYear();
+        syncManufacturedAge();
+      }
+
+      [
+        {
+          manufacturerId: 'condenser-manufacturer',
+          otherManufacturerId: 'condenser-manufacturer-other',
+          serialId: 'condenser-serial-number',
+          modelId: 'condenser-model-number',
+          yearId: 'condenser-manufactured-year',
+          ageLabelId: 'condenser-manufactured-age'
+        },
+        {
+          manufacturerId: 'air-handler-manufacturer',
+          otherManufacturerId: 'air-handler-manufacturer-other',
+          serialId: 'air-handler-serial-number',
+          modelId: 'air-handler-model-number',
+          yearId: 'air-handler-manufactured-year',
+          ageLabelId: 'air-handler-manufactured-age'
+        },
+        {
+          manufacturerId: 'furnace-manufacturer',
+          otherManufacturerId: 'furnace-manufacturer-other',
+          serialId: 'furnace-serial-number',
+          modelId: 'furnace-model-number',
+          yearId: 'furnace-manufactured-year',
+          ageLabelId: 'furnace-manufactured-age'
+        },
+        {
+          manufacturerId: 'unit-manufacturer',
+          otherManufacturerId: 'unit-manufacturer-other',
+          serialId: 'unit-serial-number',
+          modelId: 'unit-model-number',
+          yearId: 'unit-manufactured-year',
+          ageLabelId: 'unit-manufactured-age'
+        },
+      ].forEach(bindManufacturedYearAutoFill);
+
       systemTypeSelect.addEventListener('change', syncSections);
+      if (unitTypeSelect) {
+        unitTypeSelect.addEventListener('change', function () {
+          syncPackageUnitFurnaceSection();
+          syncSubmitState();
+        });
+      }
       form.addEventListener('change', function (event) {
         if (event.target && event.target.matches('select[data-other-target]')) {
           syncOtherManufacturerFields();

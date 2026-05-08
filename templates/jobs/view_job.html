@@ -138,7 +138,7 @@
             {% set step_i = loop.index0 %}
             <div class="progress-step step-{{ step.key }}{% if step_i < current_idx %} is-done{% elif step_i == current_idx %} is-active{% endif %}">
               <div class="progress-step-circle">
-                {% if step_i < current_idx or (step_i == current_idx and step.key == 'completed') %}
+                {% if step_i < current_idx or (step_i == current_idx and step.key in ['completed', 'paid']) %}
                   <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                     <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="currentColor"/>
                   </svg>
