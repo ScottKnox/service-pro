@@ -73,9 +73,17 @@
             <input id="business-phone-number" name="phone_number" type="text" value="{{ business.get('phone_number', '') }}" />
           </div>
           <div class="add-customer-form-field">
+            <label for="business-twilio-phone-number">Twilio Phone Number</label>
+            <input id="business-twilio-phone-number" name="twilio_phone_number" type="text" value="{{ business.get('twilio_phone_number', '') }}" placeholder="+15551234567" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
             <label for="business-fax-number">Fax Number</label>
             <input id="business-fax-number" name="fax_number" type="text" value="{{ business.get('fax_number', '') }}" />
           </div>
+          <div class="add-customer-form-field"></div>
         </div>
 
         <div class="add-customer-form-row">

@@ -249,7 +249,7 @@
             {% if invoice_is_paid %}
               <p class="estimate-customer-status-text">This invoice has already been paid. Thank you.</p>
             {% else %}
-              <p class="estimate-customer-status-text">Choose a payment method to continue. Card and ACH checkout are coming soon.</p>
+              <p class="estimate-customer-status-text">Choose a payment method to continue.</p>
               {% if not stripe_connect_ready and stripe_connect_reason %}
                 <p class="estimate-customer-status-text" style="color: #b8860b;">{{ stripe_connect_reason }}</p>
               {% endif %}
@@ -312,24 +312,81 @@
         {% if invoice_is_paid %}
           <p class="estimate-customer-status-text" style="margin-bottom: 1rem;">This invoice is already paid.</p>
         {% else %}
-          <p class="estimate-customer-status-text" style="margin-bottom: 1rem;">
-            {% if is_staff_view %}
-              Choose how you want to collect this invoice payment.
-            {% else %}
-              Choose your preferred payment method.
+          <div id="payment-method-step">
+            <p class="estimate-customer-status-text" style="margin-bottom: 1rem;">
+              {% if is_staff_view %}
+                Choose how you want to collect this invoice payment.
+              {% else %}
+                Choose your preferred payment method.
+              {% endif %}
+            </p>
+            {% if not stripe_connect_ready and stripe_connect_reason %}
+              <p class="estimate-customer-status-text" style="margin-bottom: 1rem; color: #b8860b;">{{ stripe_connect_reason }}</p>
             {% endif %}
-          </p>
-          {% if not stripe_connect_ready and stripe_connect_reason %}
-            <p class="estimate-customer-status-text" style="margin-bottom: 1rem; color: #b8860b;">{{ stripe_connect_reason }}</p>
-          {% endif %}
+            <div class="estimate-customer-actions" style="flex-direction: column; align-items: stretch;">
+              <button type="button" id="start-stripe-card-checkout" class="estimate-customer-action-btn estimate-customer-action-btn-accept" {% if invoice_is_paid or not stripe_connect_ready %}disabled{% endif %}>Pay With Card</button>
+              {% if is_staff_view %}
+              <button type="button" id="open-cash-payment-form" class="estimate-customer-action-btn" {% if invoice_is_paid %}disabled{% endif %}>Pay With Cash</button>
+              <button type="button" id="open-check-payment-form" class="estimate-customer-action-btn" {% if invoice_is_paid %}disabled{% endif %}>Pay With Check</button>
+              {% endif %}
+            </div>
+          </div>
+
+          <div id="cash-payment-step" hidden>
+            <p class="estimate-customer-status-text" style="margin-bottom: 1rem;">Enter cash payment details.</p>
+            <form method="POST" id="cash-payment-form" action="{{ url_for('jobs.record_invoice_payment', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true)) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="payment_type" value="cash">
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="cash-amount-received">Amount Received</label>
+                  <input id="cash-amount-received" name="amount_received" type="number" min="0" step="0.01" required placeholder="0.00" />
+                </div>
+              </div>
+              <p class="estimate-customer-status-text" style="margin: 0.5rem 0 1rem 0;">Change Due: <strong id="cash-change-due">$0.00</strong></p>
+              <div class="add-customer-form-row payment-notes-row">
+                <div class="add-customer-form-field">
+                  <label for="cash-payment-notes">Notes</label>
+                  <textarea id="cash-payment-notes" name="payment_notes" rows="6" placeholder="Optional note"></textarea>
+                </div>
+              </div>
+              <div class="modal-actions" style="padding: 0; margin-top: 0.8rem;">
+                <button type="button" class="modal-cancel-btn" id="cash-payment-back-btn">Back</button>
+                <button type="submit" class="modal-send-btn">Submit Cash Payment</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="check-payment-step" hidden>
+            <p class="estimate-customer-status-text" style="margin-bottom: 1rem;">Enter check payment details.</p>
+            <form method="POST" id="check-payment-form" action="{{ url_for('jobs.record_invoice_payment', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true)) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="payment_type" value="check">
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="check-amount-received">Amount Received</label>
+                  <input id="check-amount-received" name="amount_received" type="number" min="0" step="0.01" required placeholder="0.00" />
+                </div>
+              </div>
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="check-number">Check Number</label>
+                  <input id="check-number" name="check_number" type="text" required placeholder="Enter check number" />
+                </div>
+              </div>
+              <div class="add-customer-form-row payment-notes-row">
+                <div class="add-customer-form-field">
+                  <label for="check-payment-notes">Notes</label>
+                  <textarea id="check-payment-notes" name="payment_notes" rows="6" placeholder="Optional note"></textarea>
+                </div>
+              </div>
+              <div class="modal-actions" style="padding: 0; margin-top: 0.8rem;">
+                <button type="button" class="modal-cancel-btn" id="check-payment-back-btn">Back</button>
+                <button type="submit" class="modal-send-btn">Submit Check Payment</button>
+              </div>
+            </form>
+          </div>
         {% endif %}
-        <div class="estimate-customer-actions" style="flex-direction: column; align-items: stretch;">
-          <button type="button" id="start-stripe-card-checkout" class="estimate-customer-action-btn estimate-customer-action-btn-accept" {% if invoice_is_paid or not stripe_connect_ready %}disabled{% endif %}>Pay By Card</button>
-          <button type="button" class="estimate-customer-action-btn estimate-customer-action-btn-accept" disabled>Pay By ACH (Coming Soon)</button>
-          <button type="button" class="estimate-customer-action-btn" {% if invoice_is_paid %}disabled{% endif %}>Pay By Check</button>
-          <button type="button" class="estimate-customer-action-btn" {% if invoice_is_paid %}disabled{% endif %}>Pay By Cash</button>
-          <button type="button" class="estimate-customer-action-btn" {% if invoice_is_paid %}disabled{% endif %}>Pay By Phone</button>
-        </div>
       </div>
       <div class="modal-actions">
         <button type="button" class="modal-cancel-btn" id="payment-modal-cancel-btn">Close</button>
@@ -349,14 +406,80 @@
       var closePaymentBtn = document.getElementById('payment-modal-close-btn');
       var cancelPaymentBtn = document.getElementById('payment-modal-cancel-btn');
       var stripeCheckoutBtn = document.getElementById('start-stripe-card-checkout');
+      var paymentMethodStep = document.getElementById('payment-method-step');
+      var cashPaymentStep = document.getElementById('cash-payment-step');
+      var checkPaymentStep = document.getElementById('check-payment-step');
+      var openCashPaymentFormBtn = document.getElementById('open-cash-payment-form');
+      var openCheckPaymentFormBtn = document.getElementById('open-check-payment-form');
+      var cashPaymentBackBtn = document.getElementById('cash-payment-back-btn');
+      var checkPaymentBackBtn = document.getElementById('check-payment-back-btn');
+      var cashAmountReceivedInput = document.getElementById('cash-amount-received');
+      var checkAmountReceivedInput = document.getElementById('check-amount-received');
+      var checkNumberInput = document.getElementById('check-number');
+      var cashChangeDueText = document.getElementById('cash-change-due');
+      var invoiceTotalDue = Number("{{ pricing_summary.total_due|default(0, true) }}") || 0;
 
       if (!paymentModal || !openPaymentButtons.length) {
         return;
       }
 
       function openPaymentModal() {
+        if (paymentMethodStep) {
+          paymentMethodStep.hidden = false;
+        }
+        if (cashPaymentStep) {
+          cashPaymentStep.hidden = true;
+        }
+        if (checkPaymentStep) {
+          checkPaymentStep.hidden = true;
+        }
         paymentModal.hidden = false;
         paymentModal.classList.add('is-open');
+      }
+
+      function showCashPaymentStep() {
+        if (paymentMethodStep) {
+          paymentMethodStep.hidden = true;
+        }
+        if (cashPaymentStep) {
+          cashPaymentStep.hidden = false;
+        }
+        if (checkPaymentStep) {
+          checkPaymentStep.hidden = true;
+        }
+      }
+
+      function showCheckPaymentStep() {
+        if (paymentMethodStep) {
+          paymentMethodStep.hidden = true;
+        }
+        if (cashPaymentStep) {
+          cashPaymentStep.hidden = true;
+        }
+        if (checkPaymentStep) {
+          checkPaymentStep.hidden = false;
+        }
+      }
+
+      function showPaymentMethodStep() {
+        if (paymentMethodStep) {
+          paymentMethodStep.hidden = false;
+        }
+        if (cashPaymentStep) {
+          cashPaymentStep.hidden = true;
+        }
+        if (checkPaymentStep) {
+          checkPaymentStep.hidden = true;
+        }
+      }
+
+      function updateCashChangeDue() {
+        if (!cashAmountReceivedInput || !cashChangeDueText) {
+          return;
+        }
+        var amountReceived = Number(cashAmountReceivedInput.value || 0);
+        var changeDue = amountReceived - invoiceTotalDue;
+        cashChangeDueText.textContent = '$' + changeDue.toFixed(2);
       }
 
       function closePaymentModal() {
@@ -376,6 +499,44 @@
       }
       if (cancelPaymentBtn) {
         cancelPaymentBtn.addEventListener('click', closePaymentModal);
+      }
+
+      if (openCashPaymentFormBtn) {
+        openCashPaymentFormBtn.addEventListener('click', function () {
+          showCashPaymentStep();
+          updateCashChangeDue();
+          if (cashAmountReceivedInput) {
+            cashAmountReceivedInput.focus();
+          }
+        });
+      }
+
+      if (openCheckPaymentFormBtn) {
+        openCheckPaymentFormBtn.addEventListener('click', function () {
+          showCheckPaymentStep();
+          if (checkAmountReceivedInput) {
+            checkAmountReceivedInput.value = invoiceTotalDue.toFixed(2);
+          }
+          if (checkNumberInput) {
+            checkNumberInput.focus();
+          }
+        });
+      }
+
+      if (cashPaymentBackBtn) {
+        cashPaymentBackBtn.addEventListener('click', function () {
+          showPaymentMethodStep();
+        });
+      }
+
+      if (checkPaymentBackBtn) {
+        checkPaymentBackBtn.addEventListener('click', function () {
+          showPaymentMethodStep();
+        });
+      }
+
+      if (cashAmountReceivedInput) {
+        cashAmountReceivedInput.addEventListener('input', updateCashChangeDue);
       }
 
       paymentModal.addEventListener('click', function (event) {

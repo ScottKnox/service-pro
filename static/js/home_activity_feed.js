@@ -31,8 +31,9 @@
     const action = event.action || "updated";
     const jobTitle = event.job_title || "service";
     const customer = event.customer_name || "Unknown customer";
+    const customerPreposition = event.customer_preposition || "for";
     const dateTime = event.event_display || "Unknown time";
-    return `${employee} ${action} job ${jobTitle} for ${customer} at ${dateTime}`;
+    return `${employee} ${action} job ${jobTitle} ${customerPreposition} ${customer} on ${dateTime}`;
   };
 
   window.homePageFilter.getSelectedActivityDateKey = function getSelectedActivityDateKey() {

@@ -209,6 +209,21 @@ def home():
         ]
         return ", ".join([part for part in parts if part])
 
+    def _parse_date_and_time(date_value, time_value=""):
+        raw_date = str(date_value or "").strip()
+        raw_time = str(time_value or "").strip()
+        if not raw_date:
+            return None
+
+        if raw_time:
+            for date_format in ("%m/%d/%Y %H:%M:%S", "%m/%d/%Y %H:%M"):
+                try:
+                    return datetime.strptime(f"{raw_date} {raw_time}", date_format)
+                except ValueError:
+                    continue
+
+        return _parse_event_datetime(raw_date)
+
     def _derive_activity_event(job_doc):
         status_key = str((job_doc or {}).get("status") or "").strip().lower()
         if not status_key:
@@ -234,7 +249,7 @@ def home():
             action_word = "completed"
             event_dt = _parse_event_datetime((job_doc or {}).get("completed_at")) or _parse_event_datetime((job_doc or {}).get("dateCompleted"))
         elif status_key == "paid":
-            action_word = "marked paid for"
+            action_word = "received payment for"
             event_dt = _parse_event_datetime((job_doc or {}).get("paid_at")) or _parse_event_datetime((job_doc or {}).get("completed_at")) or _parse_event_datetime((job_doc or {}).get("dateCompleted"))
         elif status_key == "pending":
             action_word = "created"
@@ -262,8 +277,46 @@ def home():
             "action": action_word,
             "job_title": job_title,
             "customer_name": customer_name,
+            "customer_preposition": "from" if status_key == "paid" else "for",
             "status": str((job_doc or {}).get("status") or "").strip(),
             "job_id": str((job_doc or {}).get("_id") or "").strip(),
+            "address": event_address,
+        }
+
+    def _derive_estimate_activity_event(estimate_doc):
+        status_key = str((estimate_doc or {}).get("status") or "").strip().lower()
+        if status_key != "accepted":
+            return None
+
+        assigned_employee = str((estimate_doc or {}).get("estimated_by_employee") or "").strip()
+        if not assigned_employee:
+            return None
+
+        event_dt = (
+            _parse_event_datetime((estimate_doc or {}).get("accepted_signature_captured_at"))
+            or _parse_date_and_time((estimate_doc or {}).get("date_accepted"), (estimate_doc or {}).get("time_accepted"))
+            or _parse_event_datetime((estimate_doc or {}).get("updated_at"))
+        )
+        if not event_dt:
+            return None
+
+        customer_name = str((estimate_doc or {}).get("customer_name") or "").strip() or "Unknown customer"
+        job_title = str(((estimate_doc or {}).get("services") or [{}])[0].get("type") or (estimate_doc or {}).get("property_name") or "estimate").strip() or "estimate"
+        event_address = _compose_address(estimate_doc)
+
+        return {
+            "event_iso": event_dt.isoformat(),
+            "event_display": event_dt.strftime("%b %d, %Y %I:%M %p"),
+            "event_date_key": event_dt.strftime("%Y-%m-%d"),
+            "employee": assigned_employee,
+            "employee_key": _normalize_employee_key(assigned_employee),
+            "action": "had estimate accepted for",
+            "job_title": job_title,
+            "customer_name": customer_name,
+            "customer_preposition": "from",
+            "status": str((estimate_doc or {}).get("status") or "").strip(),
+            "job_id": str((estimate_doc or {}).get("created_job_id") or "").strip(),
+            "estimate_id": str((estimate_doc or {}).get("_id") or "").strip(),
             "address": event_address,
         }
 
@@ -310,6 +363,10 @@ def home():
     activity_events = []
     for job in db.jobs.find(_biz_filter):
         event = _derive_activity_event(job)
+        if event:
+            activity_events.append(event)
+    for estimate in db.estimates.find(_biz_filter):
+        event = _derive_estimate_activity_event(estimate)
         if event:
             activity_events.append(event)
     activity_events.sort(key=lambda entry: entry.get("event_iso") or "", reverse=True)

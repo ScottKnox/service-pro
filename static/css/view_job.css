@@ -619,6 +619,31 @@ button[disabled] {
   box-shadow: 0 8px 16px rgba(10, 43, 28, 0.14);
 }
 
+#cash-payment-form .payment-notes-row,
+#check-payment-form .payment-notes-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#cash-payment-notes,
+#check-payment-notes {
+  width: 100%;
+  min-height: 140px;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #c5c7cb;
+  border-radius: 8px;
+  background-color: #ffffff;
+  font-size: 1rem;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+#cash-payment-notes:focus,
+#check-payment-notes:focus {
+  outline: 2px solid #5fa3d3;
+  outline-offset: 1px;
+  border-color: #5fa3d3;
+}
+
 .modal-send-btn:focus-visible,
 .modal-cancel-btn:focus-visible {
   outline: 2px solid var(--kl-focus);

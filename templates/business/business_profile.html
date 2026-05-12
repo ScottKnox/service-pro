@@ -32,6 +32,12 @@
         </p>
       {% endif %}
 
+      {% if twilio_status_message %}
+        <p class="business-logo-status {{ 'is-success' if twilio_status_kind == 'success' else 'is-error' }}" style="margin-top: 0.8rem; margin-bottom: 0.8rem;">
+          {{ twilio_status_message }}
+        </p>
+      {% endif %}
+
       <section id="view-customer-details" aria-label="Business details">
         <h2>Business Details</h2>
         <div class="view-customer-section-row" id="view-profile-details-columns">
@@ -71,6 +77,16 @@
               <div class="view-customer-detail-item">
                 <h4>Phone Number</h4>
                 <p>{{ business.get('phone_number', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Twilio Phone Number</h4>
+                <p>{{ business.get('twilio_phone_number', '') }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Twilio SMS Ready</h4>
+                <p>{{ 'Yes' if twilio_status_kind == 'success' else 'No' }}</p>
               </div>
 
               <div class="view-customer-detail-item">

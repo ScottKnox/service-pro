@@ -30,6 +30,7 @@ from utils.catalog import (
 from utils.currency import currency_to_float, normalize_currency
 from utils.csv_export import build_csv_export_response
 from utils.formatters import format_date
+from utils.notifications import normalize_phone_for_twilio, send_sms_via_twilio, sms_features_enabled
 
 bp = Blueprint("jobs", __name__)
 
@@ -99,6 +100,188 @@ def _normalize_payment_due_days(value, fallback=30):
     except (TypeError, ValueError):
         normalized = int(fallback)
     return max(1, normalized)
+
+
+def _resolve_business_doc_for_job(db, job_doc):
+    business_ref = (job_doc or {}).get("business_id")
+    business_query = build_reference_filter("_id", business_ref) if business_ref else None
+
+    business = db.businesses.find_one(business_query) if business_query else None
+    if business:
+        return business
+
+    fallback_business_id = resolve_current_business_id(db)
+    if fallback_business_id:
+        return db.businesses.find_one({"_id": fallback_business_id})
+
+    return None
+
+
+def _build_en_route_sms_message(job_doc, customer_doc, business_doc):
+    business_name = str((business_doc or {}).get("company_name") or (business_doc or {}).get("business_name") or "Your HVAC service provider").strip()
+    technician_name = str((job_doc or {}).get("assigned_employee") or "Your technician").strip()
+    schedule_date = str((job_doc or {}).get("scheduled_date") or "").strip()
+    schedule_time = str((job_doc or {}).get("scheduled_time") or "").strip()
+
+    message = f"{business_name}: {technician_name} is en route to your location."
+    if schedule_date and schedule_time:
+        message += f" Appointment time: {schedule_date} {schedule_time}."
+    message += " Reply STOP to unsubscribe."
+    return message
+
+
+def _build_sms_status_event(job_doc, customer_ref, business_doc, from_number, to_number, message_body, message_sid="", message_status="queued"):
+    now_utc = datetime.now(UTC)
+    return {
+        "event_type": "en_route_sms",
+        "message_sid": message_sid,
+        "message_status": message_status,
+        "delivery_status": message_status or "queued",
+        "from_number": from_number,
+        "to_number": to_number,
+        "message_body": message_body,
+        "customer_id": str(customer_ref or "").strip(),
+        "business_id": str((business_doc or {}).get("_id") or "").strip(),
+        "job_id": str((job_doc or {}).get("_id") or "").strip(),
+        "created_at": now_utc,
+        "updated_at": now_utc,
+    }
+
+
+def _store_sms_event(db, job_doc, sms_event):
+    job_id = str((job_doc or {}).get("_id") or "").strip()
+    if not job_id or not sms_event:
+        return
+
+    db.jobs.update_one(
+        {"_id": ObjectId(job_id)},
+        {"$push": {"sms_notifications": sms_event}},
+    )
+
+
+def _send_en_route_sms_notification(db, job_doc):
+    if not sms_features_enabled():
+        current_app.logger.info(
+            "En-route SMS skipped: SMS features are disabled by SMS_FEATURES_ENABLED for job_id=%s",
+            str((job_doc or {}).get("_id") or ""),
+        )
+        return
+
+    customer_ref = (job_doc or {}).get("customer_id")
+    if not customer_ref:
+        return
+
+    customer_doc = db.customers.find_one(build_reference_filter("_id", customer_ref)) or {}
+    business_doc = _resolve_business_doc_for_job(db, job_doc) or {}
+
+    customer_phone = normalize_phone_for_twilio(customer_doc.get("phone") or customer_doc.get("phone_number"))
+    twilio_from_phone = normalize_phone_for_twilio((business_doc or {}).get("twilio_phone_number"))
+    if not customer_phone:
+        current_app.logger.warning("En-route SMS skipped: missing customer phone for job_id=%s", str((job_doc or {}).get("_id") or ""))
+        return
+    if not twilio_from_phone:
+        current_app.logger.warning("En-route SMS skipped: missing business Twilio phone number for job_id=%s", str((job_doc or {}).get("_id") or ""))
+        return
+
+    message_body = _build_en_route_sms_message(job_doc, customer_doc, business_doc)
+    status_callback_url = url_for("jobs.twilio_sms_status_callback", jobId=str((job_doc or {}).get("_id") or ""), _external=True)
+    sent, detail = send_sms_via_twilio(
+        to_number=customer_phone,
+        from_number=twilio_from_phone,
+        message_body=message_body,
+        status_callback_url=status_callback_url,
+    )
+
+    if sent:
+        message_sid = str((detail or {}).get("sid") or "").strip()
+        message_status = str((detail or {}).get("status") or "queued").strip() or "queued"
+        _store_sms_event(
+            db,
+            job_doc,
+            _build_sms_status_event(
+                job_doc,
+                customer_ref,
+                business_doc,
+                twilio_from_phone,
+                customer_phone,
+                message_body,
+                message_sid=message_sid,
+                message_status=message_status,
+            ),
+        )
+        current_app.logger.info(
+            "En-route SMS sent: job_id=%s customer_id=%s twilio_sid=%s",
+            str((job_doc or {}).get("_id") or ""),
+            str(customer_ref or ""),
+            message_sid,
+        )
+        return
+
+    current_app.logger.error(
+        "En-route SMS failed: job_id=%s customer_id=%s error=%s",
+        str((job_doc or {}).get("_id") or ""),
+        str(customer_ref or ""),
+        detail,
+    )
+
+
+@bp.route("/twilio/sms/status/<jobId>", methods=["POST"])
+def twilio_sms_status_callback(jobId):
+    db = ensure_connection_or_500()
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)}, {"sms_notifications": 1})
+    if not job:
+        return "", 404
+
+    message_sid = str(request.form.get("MessageSid") or request.values.get("MessageSid") or "").strip()
+    message_status = str(request.form.get("MessageStatus") or request.values.get("MessageStatus") or "").strip().lower()
+    error_code = str(request.form.get("ErrorCode") or request.values.get("ErrorCode") or "").strip()
+    error_message = str(request.form.get("ErrorMessage") or request.values.get("ErrorMessage") or "").strip()
+
+    if not message_sid:
+        return "", 400
+
+    now_utc = datetime.now(UTC)
+    updated_notifications = []
+    matched = False
+    for entry in list(job.get("sms_notifications") or []):
+        if not isinstance(entry, dict):
+            updated_notifications.append(entry)
+            continue
+
+        updated_entry = dict(entry)
+        if str(updated_entry.get("message_sid") or "").strip() == message_sid:
+            matched = True
+            if message_status:
+                updated_entry["message_status"] = message_status
+                updated_entry["delivery_status"] = message_status
+            if error_code:
+                updated_entry["error_code"] = error_code
+            if error_message:
+                updated_entry["error_message"] = error_message
+            updated_entry["updated_at"] = now_utc
+            if message_status in {"delivered", "sent", "read"}:
+                updated_entry["delivered_at"] = now_utc
+        updated_notifications.append(updated_entry)
+
+    if matched:
+        db.jobs.update_one(
+            {"_id": ObjectId(jobId)},
+            {
+                "$set": {
+                    "sms_notifications": updated_notifications,
+                    "updated_at": now_utc,
+                }
+            },
+        )
+
+    current_app.logger.info(
+        "Twilio SMS status callback: job_id=%s message_sid=%s status=%s error_code=%s",
+        jobId,
+        message_sid,
+        message_status,
+        error_code,
+    )
+    return "", 204
 
 
 def _resolve_default_payment_due_days(db, fallback=30):
@@ -1068,7 +1251,17 @@ def _resolve_invoice_identifiers_from_session_id(db, stripe_session_id):
     return "", ""
 
 
-def _finalize_invoice_payment(db, job_id, invoice_ref, stripe_session_id="", payment_intent_id="", amount_paid=0.0):
+def _finalize_invoice_payment(
+    db,
+    job_id,
+    invoice_ref,
+    stripe_session_id="",
+    payment_intent_id="",
+    amount_paid=0.0,
+    payment_type="",
+    payment_notes="",
+    check_number="",
+):
     job = db.jobs.find_one({"_id": ObjectId(job_id)})
     if not job:
         return False
@@ -1103,6 +1296,15 @@ def _finalize_invoice_payment(db, job_id, invoice_ref, stripe_session_id="", pay
                 updated_entry["stripe_payment_intent_id"] = payment_intent_id
             if amount_paid:
                 updated_entry["amount_paid"] = round(float(amount_paid), 2)
+            normalized_payment_type = str(payment_type or "").strip().lower()
+            if normalized_payment_type:
+                updated_entry["payment_type"] = normalized_payment_type
+            normalized_payment_notes = str(payment_notes or "").strip()
+            if normalized_payment_notes:
+                updated_entry["payment_notes"] = normalized_payment_notes
+            normalized_check_number = str(check_number or "").strip()
+            if normalized_check_number:
+                updated_entry["check_number"] = normalized_check_number
         updated_invoices.append(updated_entry)
 
     db.jobs.update_one(
@@ -1179,7 +1381,63 @@ def process_stripe_checkout_completed(db, checkout_session):
         stripe_session_id=stripe_session_id,
         payment_intent_id=payment_intent_id,
         amount_paid=amount_total,
+        payment_type="card",
     )
+
+
+def _normalize_manual_payment_type(value):
+    normalized = str(value or "").strip().lower()
+    return normalized if normalized in {"cash", "check"} else ""
+
+
+@bp.route("/jobs/<jobId>/invoices/<invoiceRef>/record-payment", methods=["POST"])
+def record_invoice_payment(jobId, invoiceRef):
+    db = ensure_connection_or_500()
+    if not _is_authenticated_employee():
+        return redirect(url_for("auth.login"))
+
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    job_doc = serialize_doc(job)
+    invoice = _find_invoice_entry(job_doc, invoice_ref=invoiceRef)
+    if not invoice:
+        return redirect(url_for("jobs.view_job", jobId=jobId))
+
+    payment_type = _normalize_manual_payment_type(request.form.get("payment_type"))
+    if not payment_type:
+        return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="invalid"))
+
+    total_due = float(job_doc.get("total_amount") or 0.0)
+    amount_received = float(currency_to_float(request.form.get("amount_received", "")))
+    check_number = ""
+    if payment_type == "cash":
+        if amount_received <= 0:
+            return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="invalid"))
+        if amount_received < total_due:
+            return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="insufficient_cash"))
+    elif payment_type == "check":
+        check_number = str(request.form.get("check_number") or "").strip()
+        if not check_number:
+            return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="invalid"))
+        if amount_received <= 0:
+            amount_received = total_due
+
+    payment_notes = str(request.form.get("payment_notes") or "").strip()
+    finalized = _finalize_invoice_payment(
+        db,
+        jobId,
+        invoiceRef,
+        amount_paid=min(max(amount_received, 0.0), total_due if total_due > 0 else amount_received),
+        payment_type=payment_type,
+        payment_notes=payment_notes,
+        check_number=check_number,
+    )
+    if not finalized:
+        return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="failed"))
+
+    return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="success"))
 
 
 def _coerce_line_amount(value):
@@ -1281,6 +1539,13 @@ def _build_invoice_payment_summary(invoice_entry, pricing_summary, invoice_is_pa
 
     invoice_balance = max(0.0, round(total_due - amount_paid, 2))
     payment_date = str(invoice_payload.get("paid_at") or "").strip()
+    payment_type = str(invoice_payload.get("payment_type") or "").strip().lower()
+    payment_type_labels = {
+        "card": "Online card payment",
+        "cash": "Cash payment",
+        "check": "Check payment",
+        "phone": "Phone payment",
+    }
 
     return {
         "show": invoice_is_paid or amount_paid > 0,
@@ -1290,7 +1555,7 @@ def _build_invoice_payment_summary(invoice_entry, pricing_summary, invoice_is_pa
         "invoice_balance": invoice_balance,
         "invoice_balance_display": normalize_currency(invoice_balance),
         "payment_date": payment_date,
-        "payment_channel_label": "Online card payment" if amount_paid > 0 else "Pending",
+        "payment_channel_label": payment_type_labels.get(payment_type, "Online card payment") if amount_paid > 0 else "Pending",
     }
 
 
@@ -3086,6 +3351,11 @@ def en_route_job(jobId):
         {"_id": ObjectId(jobId)},
         {"$set": {"status": "En Route", "en_route_at": current_timestamp_utc, "updated_at": current_timestamp_utc}},
     )
+
+    try:
+        _send_en_route_sms_notification(db, job)
+    except Exception as exc:
+        current_app.logger.error("En-route SMS handler failed unexpectedly: job_id=%s error=%s", jobId, exc)
 
     next_url = request.form.get("next") or url_for("jobs.view_job", jobId=jobId)
     return redirect(next_url)

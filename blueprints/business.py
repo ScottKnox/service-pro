@@ -6,6 +6,7 @@ from flask import Blueprint, current_app, redirect, render_template, request, se
 import stripe
 
 from mongo import ensure_connection_or_500, serialize_doc
+from utils.notifications import sms_features_enabled
 
 bp = Blueprint("business", __name__)
 
@@ -107,6 +108,21 @@ def _logo_status_payload(status):
     return "", ""
 
 
+def _twilio_status_payload(business):
+    if not sms_features_enabled():
+        return "error", "Twilio SMS is currently disabled by SMS_FEATURES_ENABLED."
+
+    twilio_account_sid = str(os.getenv("TWILIO_ACCOUNT_SID") or "").strip()
+    twilio_auth_token = str(os.getenv("TWILIO_AUTH_TOKEN") or "").strip()
+    twilio_phone_number = str((business or {}).get("twilio_phone_number") or "").strip()
+
+    if not twilio_account_sid or not twilio_auth_token:
+        return "error", "Twilio SMS is not ready yet. Add TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN on the server."
+    if not twilio_phone_number:
+        return "error", "Twilio SMS is not ready yet. Add a Twilio Phone Number in Business Profile before sending En Route texts."
+    return "success", "Twilio SMS is configured for this business."
+
+
 @bp.route("/business")
 def business_profile():
     if not _is_authorized():
@@ -136,6 +152,7 @@ def business_profile():
 
     logo_status_kind, logo_status_message = _logo_status_payload(request.args.get("logo_status", ""))
     stripe_status_kind, stripe_status_message = _stripe_status_payload(request.args.get("stripe_status", ""))
+    twilio_status_kind, twilio_status_message = _twilio_status_payload(business)
 
     stripe_account_id = str(business.get("stripe_account_id") or "").strip()
     stripe_charges_enabled = bool(business.get("stripe_charges_enabled"))
@@ -154,6 +171,8 @@ def business_profile():
         stripe_charges_enabled=stripe_charges_enabled,
         stripe_payouts_enabled=stripe_payouts_enabled,
         stripe_connect_ready=stripe_connect_ready,
+        twilio_status_kind=twilio_status_kind,
+        twilio_status_message=twilio_status_message,
     )
 
 
@@ -365,6 +384,7 @@ def update_business():
         state = request.form.get("state", "").strip().upper()
         zip_code = request.form.get("zip_code", "").strip()
         phone_number = request.form.get("phone_number", "").strip()
+        twilio_phone_number = request.form.get("twilio_phone_number", "").strip()
         fax_number = request.form.get("fax_number", "").strip()
         email = request.form.get("email", "").strip()
         website = request.form.get("website", "").strip()
@@ -410,6 +430,7 @@ def update_business():
                     "state": state,
                     "zip_code": zip_code,
                     "phone_number": phone_number,
+                    "twilio_phone_number": twilio_phone_number,
                     "fax_number": fax_number,
                     "email": email,
                     "website": website,
@@ -457,6 +478,7 @@ def update_business():
     business["state"] = str(business.get("state") or "").strip().upper()
     business["zip_code"] = str(business.get("zip_code") or "").strip()
     business["phone_number"] = str(business.get("phone_number") or "").strip()
+    business["twilio_phone_number"] = str(business.get("twilio_phone_number") or "").strip()
     business["fax_number"] = str(business.get("fax_number") or "").strip()
     business["email"] = str(business.get("email") or "").strip()
     business["website"] = str(business.get("website") or "").strip()
