@@ -13,6 +13,22 @@
   const employeeDonutEl = document.getElementById("rev-employee-donut");
   const employeeLegendEl = document.getElementById("rev-employee-legend");
 
+  function showRevenueLoadError(message) {
+    const text = message || "Unable to load revenue data.";
+    if (serviceBarsEl) {
+      serviceBarsEl.innerHTML = '<div class="rev-placeholder">' + text + '</div>';
+    }
+    if (equipmentBarsEl) {
+      equipmentBarsEl.innerHTML = '<div class="rev-placeholder">' + text + '</div>';
+    }
+    if (newVsReturningBarsEl) {
+      newVsReturningBarsEl.innerHTML = '<div class="rev-placeholder">' + text + '</div>';
+    }
+    if (employeeLegendEl) {
+      employeeLegendEl.innerHTML = '<div class="rev-placeholder">' + text + '</div>';
+    }
+  }
+
   /* ── Helpers ────────────────────────────── */
   function isoDate(date) {
     return date.toISOString().slice(0, 10);
@@ -337,10 +353,16 @@
     const url = DATA_URL + "?start_date=" + encodeURIComponent(start) + "&end_date=" + encodeURIComponent(end);
 
     fetch(url, { credentials: "same-origin" })
-      .then(function (resp) { return resp.json(); })
+      .then(function (resp) {
+        if (!resp.ok) {
+          throw new Error("Revenue API request failed with status " + resp.status);
+        }
+        return resp.json();
+      })
       .then(function (data) {
         if (data.error) {
           console.error("Revenue report error:", data.error);
+          showRevenueLoadError(data.error);
           return;
         }
 
@@ -358,6 +380,7 @@
       })
       .catch(function (err) {
         console.error("Revenue report fetch failed:", err);
+        showRevenueLoadError("Unable to load revenue data.");
       });
   }
 

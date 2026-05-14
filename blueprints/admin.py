@@ -6,6 +6,7 @@ from bson import ObjectId
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
 
 from mongo import ensure_connection_or_500
+from utils.currency import currency_to_float
 from utils.invoices import collect_invoice_items
 
 bp = Blueprint("admin_bp", __name__)
@@ -48,6 +49,8 @@ def _parse_datetime(value):
         return None
 
     if isinstance(value, datetime):
+        if value.tzinfo is not None:
+            return value.astimezone(UTC).replace(tzinfo=None)
         return value
 
     text_value = str(value).strip()
@@ -56,7 +59,10 @@ def _parse_datetime(value):
 
     try:
         normalized = text_value.replace("Z", "+00:00")
-        return datetime.fromisoformat(normalized)
+        parsed = datetime.fromisoformat(normalized)
+        if parsed.tzinfo is not None:
+            return parsed.astimezone(UTC).replace(tzinfo=None)
+        return parsed
     except ValueError:
         return None
 
@@ -93,6 +99,20 @@ def _job_paid_datetime(job):
         return paid_at
 
     return None
+
+
+def _job_revenue_datetime(job):
+    status = str((job or {}).get("status") or "").strip().lower()
+    if status == "paid":
+        paid_at = _job_paid_datetime(job)
+        if paid_at:
+            return paid_at
+
+    completed_at = _job_completed_datetime(job)
+    if completed_at:
+        return completed_at
+
+    return _job_paid_datetime(job)
 
 
 def _customer_added_datetime(customer):
@@ -673,8 +693,13 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
         rev_filter,
         {
             "total_amount": 1,
+            "customer_id": 1,
+            "invoices": 1,
             "completed_at": 1,
             "dateCompleted": 1,
+            "paid_at": 1,
+            "datePaid": 1,
+            "status": 1,
             "services": 1,
             "equipments": 1,
             "assigned_employee": 1,
@@ -686,10 +711,10 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
         count = 0
         contract_count = 0
         for job in jobs:
-            completed_at = _job_completed_datetime(job)
-            if not completed_at:
+            revenue_at = _job_revenue_datetime(job)
+            if not revenue_at:
                 continue
-            if range_start <= completed_at <= range_end:
+            if range_start <= revenue_at <= range_end:
                 amount = _coerce_float(job.get("total_amount"))
                 total += amount
                 count += 1
@@ -716,7 +741,7 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
     contracts_yoy_pct = _pct(range_contracts, yoy_contracts)
 
     # MOM growth (always current month vs previous month, independent of filter range)
-    cur_month_total, _, _ = _sum_jobs_in_range(all_jobs, cur_month_start, datetime.now(UTC))
+    cur_month_total, _, _ = _sum_jobs_in_range(all_jobs, cur_month_start, datetime.now(UTC).replace(tzinfo=None))
     prev_month_total, _, _ = _sum_jobs_in_range(all_jobs, prev_month_start, prev_month_end)
     two_months_ago_total, _, _ = _sum_jobs_in_range(all_jobs, two_months_ago_start, two_months_ago_end)
     mom_pct = _pct(cur_month_total, prev_month_total)
@@ -735,8 +760,8 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
     # Revenue by service type
     service_type_totals = {}
     for job in all_jobs:
-        completed_at = _job_completed_datetime(job)
-        if not completed_at or not (start_dt <= completed_at <= end_dt):
+        revenue_at = _job_revenue_datetime(job)
+        if not revenue_at or not (start_dt <= revenue_at <= end_dt):
             continue
         job_amount = _coerce_float(job.get("total_amount"))
         services_list = job.get("services") or []
@@ -764,8 +789,8 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
     equipment_type_totals = {}
     employee_totals = {}
     for job in all_jobs:
-        completed_at = _job_completed_datetime(job)
-        if not completed_at or not (start_dt <= completed_at <= end_dt):
+        revenue_at = _job_revenue_datetime(job)
+        if not revenue_at or not (start_dt <= revenue_at <= end_dt):
             continue
 
         job_amount = _coerce_float(job.get("total_amount"))
@@ -827,14 +852,14 @@ def _build_revenue_report_data(db, start_dt, end_dt, business_id=None):
     returning_total = 0.0
     new_total = 0.0
     for job in all_jobs:
-        completed_at = _job_completed_datetime(job)
-        if not completed_at or not (start_dt <= completed_at <= end_dt):
+        revenue_at = _job_revenue_datetime(job)
+        if not revenue_at or not (start_dt <= revenue_at <= end_dt):
             continue
 
         amount = _coerce_float(job.get("total_amount"))
         customer_id = str(job.get("customer_id") or "").strip()
         added_at = customer_map.get(customer_id)
-        age_days = (completed_at - added_at).days if added_at else None
+        age_days = (revenue_at - added_at).days if added_at else None
         if age_days is not None and age_days > 30:
             returning_total += amount
         else:
