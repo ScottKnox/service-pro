@@ -907,6 +907,16 @@ def reference():
     return render_template("admin/reference.html")
 
 
+@bp.route("/admin/diagnostic-assistant")
+def diagnostic_assistant():
+    return render_template("admin/diagnostic_assistant.html")
+
+
+@bp.route("/admin/pt-charts")
+def pt_charts():
+    return render_template("admin/pt_charts.html")
+
+
 @bp.route("/reporting")
 def reporting():
     db = ensure_connection_or_500()

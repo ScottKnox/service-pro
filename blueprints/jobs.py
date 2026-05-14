@@ -2172,6 +2172,7 @@ def create_estimate(customerId):
             "time_accepted": "",
             "date_declined": "",
             "time_declined": "",
+            "date_customer_viewed": "",
             "address_line_1": request.form.get("job_address_line_1", "").strip(),
             "address_line_2": request.form.get("job_address_line_2", "").strip(),
             "city": request.form.get("job_city", "").strip(),
@@ -2331,6 +2332,16 @@ def view_estimate(estimateId):
     has_customer_token = _verify_estimate_access_token(estimate, token_value)
     if not is_staff_view and not has_customer_token:
         return redirect(url_for("auth.login"))
+
+    if not is_staff_view and has_customer_token:
+        existing_customer_view_date = str(estimate.get("date_customer_viewed") or "").strip()
+        if not existing_customer_view_date:
+            customer_viewed_at = datetime.now().strftime("%m/%d/%Y %I:%M %p")
+            db.estimates.update_one(
+                {"_id": ObjectId(estimateId)},
+                {"$set": {"date_customer_viewed": customer_viewed_at}},
+            )
+            estimate["date_customer_viewed"] = customer_viewed_at
 
     quote_email_template = ""
     employee_id = session.get("employee_id")

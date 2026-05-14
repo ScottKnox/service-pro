@@ -36,57 +36,72 @@
           </div>
         </section>
 
-        <div class="subscription-summary-grid">
-          <article class="subscription-summary-card">
-            <p class="subscription-summary-kicker">Current Plan</p>
-            <h3>{{ subscription.plan_name }}</h3>
-            <p class="subscription-summary-amount">${{ '%.2f'|format(subscription.monthly_total) }} / month</p>
-            <p class="subscription-summary-note">Base plan ${{ '%.2f'|format(subscription.plan_price) }}</p>
-          </article>
+        <div class="subscription-page-columns">
+          <section class="subscription-page-column-left" aria-label="Current subscription information">
+            <div class="subscription-summary-grid">
+              <article class="subscription-summary-card">
+                <p class="subscription-summary-kicker">Current Plan</p>
+                <h3>{{ subscription.plan_name }}</h3>
+                <p class="subscription-summary-amount">${{ '%.2f'|format(subscription.monthly_total) }} / month</p>
+                <p class="subscription-summary-note">Base plan ${{ '%.2f'|format(subscription.plan_price) }}</p>
+              </article>
 
-          <article class="subscription-summary-card">
-            <p class="subscription-summary-kicker">Usage</p>
-            <h3>{{ subscription.current_users }} Active Users</h3>
-            <p class="subscription-summary-amount">{{ subscription.max_active_employees }} Max Allowed</p>
-          </article>
+              <article class="subscription-summary-card">
+                <h3>Usage</h3>
+                <p class="subscription-summary-note">{{ subscription.current_users }} Active Users</p>
+                <p class="subscription-summary-amount">{{ subscription.max_active_employees }} Max Allowed</p>
+              </article>
 
-          <article class="subscription-summary-card">
-            <p class="subscription-summary-kicker">Billing</p>
-            <h3>{{ subscription.status }}</h3>
-            <p class="subscription-summary-amount">Renews {{ subscription.renews_on }}</p>
-          </article>
-        </div>
+              <article class="subscription-summary-card">
+                <h3>Billing</h3>
+                <p class="subscription-summary-note">{{ subscription.status }}</p>
+                <p class="subscription-summary-amount">Renews {{ subscription.renews_on }}</p>
+              </article>
+            </div>
 
-        <div class="subscription-detail-grid">
-          <article class="subscription-panel-card">
-            <h3>Subscription Details</h3>
-            <div class="subscription-detail-row">
-              <span>Subscription ID</span>
-              <strong>{{ subscription.subscription_id }}</strong>
+            <div class="subscription-detail-grid">
+              <article class="subscription-panel-card">
+                <h3>Subscription Details</h3>
+                <div class="subscription-detail-row">
+                  <span>Billing Cycle</span>
+                  <strong>{{ subscription.billing_cycle }}</strong>
+                </div>
+                <div class="subscription-detail-row">
+                  <span>Started On</span>
+                  <strong>{{ subscription.started_on }}</strong>
+                </div>
+                {% if subscription.is_cancelled and subscription.ended_on %}
+                <div class="subscription-detail-row">
+                  <span>Ended On</span>
+                  <strong>{{ subscription.ended_on }}</strong>
+                </div>
+                {% endif %}
+                <div class="subscription-detail-row">
+                  <span>Next Billing Date</span>
+                  <strong>{{ subscription.next_billing_date }}</strong>
+                </div>
+              </article>
             </div>
-            <div class="subscription-detail-row">
-              <span>Description</span>
-              <strong>{{ subscription.description or '-' }}</strong>
-            </div>
-            <div class="subscription-detail-row">
-              <span>Billing Cycle</span>
-              <strong>{{ subscription.billing_cycle }}</strong>
-            </div>
-            <div class="subscription-detail-row">
-              <span>Started On</span>
-              <strong>{{ subscription.started_on }}</strong>
-            </div>
-            {% if subscription.is_cancelled and subscription.ended_on %}
-            <div class="subscription-detail-row">
-              <span>Ended On</span>
-              <strong>{{ subscription.ended_on }}</strong>
-            </div>
-            {% endif %}
-            <div class="subscription-detail-row">
-              <span>Next Billing Date</span>
-              <strong>{{ subscription.next_billing_date }}</strong>
-            </div>
-          </article>
+          </section>
+
+          <aside class="subscription-page-column-right" aria-label="Included features">
+            <article class="subscription-panel-card">
+              <h3>Included Features</h3>
+              <ul class="subscription-included-features-list">
+                <li>Job Scheduling &amp; Dispatch</li>
+                <li>Customer Relationship Management</li>
+                <li>Job Workflows</li>
+                <li>Estimate Tools</li>
+                <li>Price Book</li>
+                <li>Automatic Invoicing</li>
+                <li>Instant Payments Suite</li>
+                <li>Automated SMS and Email</li>
+                <li>Reporting Suite</li>
+                <li>Custom Branding</li>
+                <li>Quickbooks Integration</li>
+              </ul>
+            </article>
+          </aside>
         </div>
       {% endif %}
     </div>

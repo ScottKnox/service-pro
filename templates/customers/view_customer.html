@@ -239,6 +239,51 @@
               <a class="customers-add-button" href="{{ url_for('customers.add_property', customerId=customerId) }}">+ Add Property</a>
             {% endif %}
           </div>
+
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>Notes</h3>
+            <div id="view-customer-notes-section">
+              <form class="view-customer-internal-note-form" method="POST" action="{{ url_for('customers.add_customer_note', customerId=customerId) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <textarea id="customer-internal-note-text" name="internal_note" rows="4" placeholder="Share customer notes like health concerns, property details, or behavioral notes."></textarea>
+                <div class="view-customer-internal-note-actions">
+                  <button class="home-latest-action-link" type="submit">+ Add internal note</button>
+                </div>
+              </form>
+
+              <div id="view-customer-internal-notes-list">
+                {% if customer.notes %}
+                  {% for note in customer.notes %}
+                    <div class="note-card view-customer-internal-note-card">
+                      <div class="view-customer-internal-note-header">
+                        <div class="note-card-date">
+                          Written on: {{ note.date_written_display|default('N/A', true) }} by
+                          {% if note.employee_profile_id %}
+                            <a href="{{ url_for('employees.view_employee', employeeId=note.employee_profile_id) }}">{{ note.employee_name|default('Unknown Employee', true) }}</a>
+                          {% else %}
+                            <span>{{ note.employee_name|default('Unknown Employee', true) }}</span>
+                          {% endif %}
+                        </div>
+                        <form method="POST" action="{{ url_for('customers.delete_customer_note', customerId=customerId, noteId=note.note_id) }}" onsubmit="return confirm('Delete this internal note?');">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <button class="view-customer-internal-note-delete" type="submit" aria-label="Delete internal note">
+                            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                              <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v8h-2V9zm4 0h2v8h-2V9zM7 9h2v8H7V9z" fill="currentColor"/>
+                            </svg>
+                          </button>
+                        </form>
+                      </div>
+                      <div class="note-card-text">{{ note.text }}</div>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="view-job-detail-item">
+                    <p>No internal notes added.</p>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
       

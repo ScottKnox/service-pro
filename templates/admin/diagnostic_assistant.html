@@ -1,0 +1,589 @@
+{% extends "base.html" %}
+
+{% block title %}Diagnostic Assistant | Klovent{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="diagnostic-assistant-page" class="resource-page resource-admin">
+      <h1>Diagnostic Assistant</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('admin_bp.reference') }}">Reference</a></li>
+          <li aria-current="page">Diagnostic Assistant</li>
+        </ol>
+      </nav>
+
+      <div class="jobs-controls-right-top">
+        <h2>Common HVAC Issues & Troubleshooting</h2>
+      </div>
+
+      <div class="diagnostic-sections">
+        
+        <!-- Not Cooling or Cooling Poorly -->
+        <details class="diagnostic-main-section">
+          <summary class="diagnostic-summary">
+            <h2>Not Cooling or Cooling Poorly</h2>
+            <span class="diagnostic-expand-icon">+</span>
+          </summary>
+
+          <div class="diagnostic-content">
+            <p class="diagnostic-intro">Check system operation status first, then follow the appropriate path below.</p>
+
+            <!-- Is the outdoor unit running? -->
+            <details class="diagnostic-subsection">
+              <summary class="diagnostic-subsummary">
+                <h3>Outdoor Unit Running - Low Cooling Output</h3>
+                <span class="diagnostic-expand-icon">+</span>
+              </summary>
+              <div class="diagnostic-content">
+                <ol class="probable-causes">
+                  <li>
+                    <strong>Dirty or Restricted Evaporator Coil</strong>
+                    <p>Symptoms: Low airflow at registers, high indoor humidity. Solution: Check filter condition and coil visibly for dust/pet hair. Replace filter and clean coil if necessary.</p>
+                  </li>
+                  <li>
+                    <strong>Low Refrigerant Charge</strong>
+                    <p>Symptoms: Suction line cold/frosted, system running but weak cooling, high suction pressure. Solution: Check for visible leaks, measure superheat against outdoor temperature, verify charge before adding refrigerant.</p>
+                  </li>
+                  <li>
+                    <strong>Dirty Condenser Coil (Outdoor Unit)</strong>
+                    <p>Symptoms: Hot liquid line, high head pressure, compressor running hot. Solution: Hose off condenser coil from top down. Avoid high-pressure washers that damage fins.</p>
+                  </li>
+                  <li>
+                    <strong>Weak Airflow from Indoor Blower</strong>
+                    <p>Symptoms: All registers blowing weak, thermostat shows cool but you don't feel it. Solution: Check filter, verify blower running at correct speed tap, check for ductwork restrictions.</p>
+                  </li>
+                  <li>
+                    <strong>Thermostat Set Incorrectly</strong>
+                    <p>Symptoms: System runs but setpoint too high. Solution: Verify mode is set to Cool and setpoint is below actual temperature. Check for programming errors.</p>
+                  </li>
+                </ol>
+              </div>
+            </details>
+
+            <!-- Outdoor unit not running -->
+            <details class="diagnostic-subsection">
+              <summary class="diagnostic-subsummary">
+                <h3>Outdoor Unit Not Running</h3>
+                <span class="diagnostic-expand-icon">+</span>
+              </summary>
+              <div class="diagnostic-content">
+                <ol class="probable-causes">
+                  <li>
+                    <strong>No Power to Outdoor Unit</strong>
+                    <p>Symptoms: Outdoor unit completely silent. Solution: Check disconnect switch, breaker, and 240V at disconnect with meter. Verify wire connections at breaker.</p>
+                  </li>
+                  <li>
+                    <strong>Thermostat Not Calling for Cool</strong>
+                    <p>Symptoms: Indoor fan running but outdoor unit silent. Solution: Check thermostat Y terminal for 24V call. Verify thermostat mode and setpoint.</p>
+                  </li>
+                  <li>
+                    <strong>Contactor Not Pulling In</strong>
+                    <p>Symptoms: Hum from outdoor unit but fan not running. Solution: Check 24V at contactor coil, measure coil resistance. Check for pitted contacts.</p>
+                  </li>
+                  <li>
+                    <strong>Capacitor Failed (Outdoor)</strong>
+                    <p>Symptoms: Compressor hums but doesn't start, or fan won't turn. Solution: Check capacitor microfarads with meter, compare to nameplate. Replace if out of range.</p>
+                  </li>
+                  <li>
+                    <strong>Compressor Motor Protection Tripped</strong>
+                    <p>Symptoms: Compressor not running after previous short cycles. Solution: Check compressor amps during start, look for thermal overload trips. Verify voltage at motor terminals.</p>
+                  </li>
+                </ol>
+              </div>
+            </details>
+
+          </div>
+        </details>
+
+        <!-- Not Heating or Heating Poorly -->
+        <details class="diagnostic-main-section">
+          <summary class="diagnostic-summary">
+            <h2>Not Heating or Heating Poorly</h2>
+            <span class="diagnostic-expand-icon">+</span>
+          </summary>
+
+          <div class="diagnostic-content">
+            <p class="diagnostic-intro">Follow the ignition sequence and check safety circuits systematically.</p>
+
+            <!-- Furnace running weak heat -->
+            <details class="diagnostic-subsection">
+              <summary class="diagnostic-subsummary">
+                <h3>Furnace Running - Weak Heat Output</h3>
+                <span class="diagnostic-expand-icon">+</span>
+              </summary>
+              <div class="diagnostic-content">
+                <ol class="probable-causes">
+                  <li>
+                    <strong>Restricted Airflow / Dirty Filter</strong>
+                    <p>Symptoms: Low temperature rise across furnace, weak airflow at registers. Solution: Replace filter, check blower speed tap, verify no ductwork obstructions.</p>
+                  </li>
+                  <li>
+                    <strong>Low Gas Pressure / Weak Flame</strong>
+                    <p>Symptoms: Furnace cycles off early, incomplete combustion visible. Solution: Check gas pressure at furnace regulator against specs. Verify gas valve opens fully under call.</p>
+                  </li>
+                  <li>
+                    <strong>Heat Exchanger Blocked or Cracked</strong>
+                    <p>Symptoms: Temperature rise too low even with good gas, soot buildup visible. Solution: Inspect heat exchanger visibly for cracks or carbon blockage. May require replacement.</p>
+                  </li>
+                  <li>
+                    <strong>Blower Running at Wrong Speed</strong>
+                    <p>Symptoms: Furnace hot but weak airflow. Solution: Check blower speed tap setting against furnace nameplate for heating mode. Verify capacitor condition.</p>
+                  </li>
+                  <li>
+                    <strong>Thermostat Setpoint or Mode Wrong</strong>
+                    <p>Symptoms: System runs but seems weak. Solution: Verify thermostat set to Heat mode, setpoint above current temp, and G terminal calls blower.</p>
+                  </li>
+                </ol>
+              </div>
+            </details>
+
+            <!-- Furnace not igniting -->
+            <details class="diagnostic-subsection">
+              <summary class="diagnostic-subsummary">
+                <h3>Furnace Not Igniting</h3>
+                <span class="diagnostic-expand-icon">+</span>
+              </summary>
+              <div class="diagnostic-content">
+                <ol class="probable-causes">
+                  <li>
+                    <strong>Pressure Switch Not Closing (Inducer Not Running)</strong>
+                    <p>Symptoms: Control board not energizing rest of sequence, lockout after 3 attempts. Solution: Listen for inducer motor, check for venting blockage, verify pressure switch tubing connected.</p>
+                  </li>
+                  <li>
+                    <strong>Igniter Failed (Hot Surface or Spark)</strong>
+                    <p>Symptoms: Board energizes gas valve but no flame appears. Solution: Check igniter for visible cracks or glow if hot surface type. Measure continuity if spark type.</p>
+                  </li>
+                  <li>
+                    <strong>Gas Valve Not Opening</strong>
+                    <p>Symptoms: Smell gas but no flame. Solution: Verify 24V at gas valve terminals during call, check valve coil resistance. Ensure manual gas shutoff is on.</p>
+                  </li>
+                  <li>
+                    <strong>Flame Rectification Too Weak</strong>
+                    <p>Symptoms: Flame ignites briefly then lockout occurs. Solution: Inspect flame shape and color, check for soot on flame sensor, verify microamp reading during operation.</p>
+                  </li>
+                  <li>
+                    <strong>Rollout Switch Open (Safety Trip)</strong>
+                    <p>Symptoms: Furnace starts then stops immediately. Solution: Verify furnace area clear of obstructions, check venting for blockage, measure combustion air supply.</p>
+                  </li>
+                </ol>
+              </div>
+            </details>
+
+          </div>
+        </details>
+
+        <!-- System Not Turning On -->
+        <details class="diagnostic-main-section">
+          <summary class="diagnostic-summary">
+            <h2>System Not Turning On At All</h2>
+            <span class="diagnostic-expand-icon">+</span>
+          </summary>
+
+          <div class="diagnostic-content">
+            <p class="diagnostic-intro">Start with power verification and work through the control chain.</p>
+
+            <ol class="probable-causes">
+              <li>
+                <strong>No Power to System</strong>
+                <p>Symptoms: No lights on controls, no sounds. Solution: Check main disconnect, breaker panel, measure 240V at disconnect with meter. Check 24V transformer output.</p>
+              </li>
+              <li>
+                <strong>Thermostat Not Communicating</strong>
+                <p>Symptoms: Thermostat has power but equipment won't respond. Solution: Check 24V at thermostat, verify G/C wiring, test Y or W terminal voltage during call.</p>
+              </li>
+              <li>
+                <strong>Control Board Failure</strong>
+                <p>Symptoms: Power present but no relay clicks when thermostat calls. Solution: Check for blown fuses on board, burned components, measure relay coil voltage.</p>
+              </li>
+              <li>
+                <strong>Main Gas Shutoff or Oil Valve Closed</strong>
+                <p>Symptoms: Equipment tries to run but lockout occurs (heating mode). Solution: Verify manual gas shutoff is fully open, check burner oil supply valve if oil-fired.</p>
+              </li>
+              <li>
+                <strong>Safety Switch Open (Limit, Pressure, Rollout)</strong>
+                <p>Symptoms: Blower tries to run but stops immediately. Solution: Check all safety switch wiring and tubing, verify furnace doors/panels fully closed, inspect venting.</p>
+              </li>
+            </ol>
+          </div>
+        </details>
+
+        <!-- System Runs Constantly -->
+        <details class="diagnostic-main-section">
+          <summary class="diagnostic-summary">
+            <h2>System Runs Constantly & Won't Shut Off</h2>
+            <span class="diagnostic-expand-icon">+</span>
+          </summary>
+
+          <div class="diagnostic-content">
+            <p class="diagnostic-intro">Check thermostat settings and control logic first.</p>
+
+            <ol class="probable-causes">
+              <li>
+                <strong>Thermostat Set to "Fan Always On"</strong>
+                <p>Symptoms: Blower runs constantly regardless of temperature. Solution: Check thermostat fan setting, change from "On" to "Auto" if appropriate.</p>
+              </li>
+              <li>
+                <strong>Setpoint Set Continuously Demanding</strong>
+                <p>Symptoms: In heating mode, heat target unreachably high; in cooling, target unreachably low. Solution: Verify setpoint is realistic and achievable. Check if programming schedule is correct.</p>
+              </li>
+              <li>
+                <strong>Temperature Sensor Reads Incorrectly</strong>
+                <p>Symptoms: Thermostat displays wrong temperature. Solution: Verify sensor is not in draft or direct sunlight, check thermostat calibration, compare displayed temp to accurate thermometer.</p>
+              </li>
+              <li>
+                <strong>Contactor Stuck Closed (Cooling/Heating Contactor)</strong>
+                <p>Symptoms: Equipment runs and won't turn off even when setpoint reached. Solution: Verify 24V at thermostat W/Y terminal goes to zero when satisfied, check contactor coil de-energizes, tap stuck contactor if stuck.</p>
+              </li>
+              <li>
+                <strong>Limit or Pressure Switch Failure</strong>
+                <p>Symptoms: Blower continues running past normal run time in heating. Solution: Check furnace high-limit switch with multimeter during operation, verify pressure switches for sticking or electrical failure.</p>
+              </li>
+            </ol>
+          </div>
+        </details>
+
+        <!-- Strange Noises or Smells -->
+        <details class="diagnostic-main-section">
+          <summary class="diagnostic-summary">
+            <h2>Strange Noises or Smells</h2>
+            <span class="diagnostic-expand-icon">+</span>
+          </summary>
+
+          <div class="diagnostic-content">
+            <p class="diagnostic-intro">Isolate the source and determine if equipment is safe to operate.</p>
+
+            <!-- Noise issues -->
+            <details class="diagnostic-subsection">
+              <summary class="diagnostic-subsummary">
+                <h3>Squealing, Grinding, or Rattling Sounds</h3>
+                <span class="diagnostic-expand-icon">+</span>
+              </summary>
+              <div class="diagnostic-content">
+                <ol class="probable-causes">
+                  <li>
+                    <strong>Blower Wheel Loose or Hitting Housing</strong>
+                    <p>Symptoms: Grinding or scraping noise when blower runs. Solution: Shut off power, inspect blower wheel for debris or looseness, tighten motor mounting, check for wheel rub.</p>
+                  </li>
+                  <li>
+                    <strong>Motor Bearing Worn or Lacking Lubrication</strong>
+                    <p>Symptoms: Squealing noise from blower or compressor. Solution: Check for oil ports on motor, verify capacitor operation, measure motor amps. May indicate bearing replacement needed.</p>
+                  </li>
+                  <li>
+                    <strong>Ductwork or Sheet Metal Loose</strong>
+                    <p>Symptoms: Rattling or buzzing from walls/vents. Solution: Locate source by listening, tighten ductwork connections, check for loose hangers or insulation contact.</p>
+                  </li>
+                  <li>
+                    <strong>Compressor Internal Damage</strong>
+                    <p>Symptoms: Loud grinding from outdoor unit during operation. Solution: Listen carefully to compressor vs other components, verify suction/discharge line temps normal. May require compressor replacement.</p>
+                  </li>
+                  <li>
+                    <strong>Refrigerant Floodback or Liquid Slugging</strong>
+                    <p>Symptoms: Loud bang or clank when compressor shuts down. Solution: Check suction line insulation, measure superheat, ensure proper expansion device operation.</p>
+                  </li>
+                </ol>
+              </div>
+            </details>
+
+            <!-- Smell issues -->
+            <details class="diagnostic-subsection">
+              <summary class="diagnostic-subsummary">
+                <h3>Burning, Chemical, or Fuel Smells</h3>
+                <span class="diagnostic-expand-icon">+</span>
+              </summary>
+              <div class="diagnostic-content">
+                <ol class="probable-causes">
+                  <li>
+                    <strong>First Startup Dust Burn-off</strong>
+                    <p>Symptoms: Smell when system first runs after long shutdown. Solution: Run system for 15-20 minutes with windows open. If smell continues after extended operation, investigate further.</p>
+                  </li>
+                  <li>
+                    <strong>Motor Winding Overheating</strong>
+                    <p>Symptoms: Sharp plastic/insulation burn smell from blower or outdoor compressor. Solution: Measure motor amps, verify voltage correct, check for restricted airflow. Shut down if smell strong.</p>
+                  </li>
+                  <li>
+                    <strong>Gas Leak (Furnace/Boiler)</strong>
+                    <p>Symptoms: Sulfur or rotten egg smell. Solution: EVACUATE SPACE. Use gas detector, do not use ignition sources. Call utility company gas leak line immediately.</p>
+                  </li>
+                  <li>
+                    <strong>Dirty or Blocked Heat Exchanger</strong>
+                    <p>Symptoms: Burning smell during heating, possible soot smell. Solution: Inspect heat exchanger for carbon buildup, verify combustion air flow, may need professional cleaning or replacement.</p>
+                  </li>
+                  <li>
+                    <strong>Electrical Component Failure</strong>
+                    <p>Symptoms: Acrid electric smell, possible visible burned component. Solution: Power down immediately, visually inspect board for burned components, check for loose wire connections causing arcing.</p>
+                  </li>
+                </ol>
+              </div>
+            </details>
+
+          </div>
+        </details>
+
+        <!-- Water Leak or Ice Buildup -->
+        <details class="diagnostic-main-section">
+          <summary class="diagnostic-summary">
+            <h2>Water Leak or Ice Buildup</h2>
+            <span class="diagnostic-expand-icon">+</span>
+          </summary>
+
+          <div class="diagnostic-content">
+            <p class="diagnostic-intro">Water issues usually indicate airflow or condensate drainage problems.</p>
+
+            <ol class="probable-causes">
+              <li>
+                <strong>Condensate Drain Line Blocked or Disconnected</strong>
+                <p>Symptoms: Water pooling under indoor unit. Solution: Check drain line for kinks or blockage, verify connection at unit and termination point, flush with wet vac if blocked with algae.</p>
+              </li>
+              <li>
+                <strong>Low Refrigerant Charge (Evaporator Freezing)</strong>
+                <p>Symptoms: Ice on suction line, freeze-up of coil and water overflow. Solution: Measure superheat, verify refrigerant quantity, check for leaks and repair before adding charge.</p>
+              </li>
+              <li>
+                <strong>Restricted Airflow Over Evaporator Coil</strong>
+                <p>Symptoms: Coil ices up even with normal charge. Solution: Check filter condition, verify blower speed correct, inspect coil for dust/pet hair, check for supply duct leaks before coil.</p>
+              </li>
+              <li>
+                <strong>Thermostat Set Below Outdoor Dew Point in Dry Climate</strong>
+                <p>Symptoms: Excessive condensation forming. Solution: Adjust setpoint to realistic level, verify humidity levels, check if humidifier is on in heating season.</p>
+              </li>
+              <li>
+                <strong>Coil Sloped Incorrectly or Pan Cracked</strong>
+                <p>Symptoms: Water leaking instead of draining, even with clear drain line. Solution: Check unit is level, inspect pan for cracks or corrosion, verify drain line slope gravity-fed toward exit.</p>
+              </li>
+            </ol>
+          </div>
+        </details>
+
+        <!-- High Energy Bill -->
+        <details class="diagnostic-main-section">
+          <summary class="diagnostic-summary">
+            <h2>High Energy Bill</h2>
+            <span class="diagnostic-expand-icon">+</span>
+          </summary>
+
+          <div class="diagnostic-content">
+            <p class="diagnostic-intro">Compare historical usage and check for system inefficiencies.</p>
+
+            <ol class="probable-causes">
+              <li>
+                <strong>Excessive Short Cycling</strong>
+                <p>Symptoms: System runs for short periods frequently. Solution: Check thermostat differential/deadband setting, verify system sized correctly, examine thermostat placement for drafts or sunlight.</p>
+              </li>
+              <li>
+                <strong>Dirty Filter or Coils</strong>
+                <p>Symptoms: System running longer than normal to reach setpoint. Solution: Replace filter, clean evaporator and condenser coils, verify airflow matches design CFM.</p>
+              </li>
+              <li>
+                <strong>Ductwork Leakage</strong>
+                <p>Symptoms: Uneven temperatures room to room, some vents blowing weak. Solution: Visually inspect ducts in attic/crawl for disconnected joints, holes, or poor insulation. Seal and insulate.</p>
+              </li>
+              <li>
+                <strong>Incorrect Thermostat Schedule or Settings</strong>
+                <p>Symptoms: Heating/cooling running when not needed, setpoint unrealistic. Solution: Review thermostat programming, check if in continuous mode (should be auto), verify schedule matches occupancy.</p>
+              </li>
+              <li>
+                <strong>Low Refrigerant or Undercharged System</strong>
+                <p>Symptoms: Compressor running longer to satisfy cooling call. Solution: Measure superheat at various outdoor temperatures, check for leaks, verify correct charge according to nameplate or txv design.</p>
+              </li>
+            </ol>
+          </div>
+        </details>
+
+        <!-- Uneven Temps Room to Room -->
+        <details class="diagnostic-main-section">
+          <summary class="diagnostic-summary">
+            <h2>Uneven Temperatures Room to Room</h2>
+            <span class="diagnostic-expand-icon">+</span>
+          </summary>
+
+          <div class="diagnostic-content">
+            <p class="diagnostic-intro">Investigate airflow distribution and zoning control.</p>
+
+            <ol class="probable-causes">
+              <li>
+                <strong>Ductwork Restrictions or Leaks</strong>
+                <p>Symptoms: Some rooms cold/hot while others are comfortable. Solution: Feel air at different supply vents and returns, locate blockages (furniture, damper, collapsed duct), verify connections tight.</p>
+              </li>
+              <li>
+                <strong>Supply Dampers Partially Closed</strong>
+                <p>Symptoms: One or more rooms not getting air. Solution: Check duct dampers in attic/basement, verify all damper handles are open position, ensure zone control system operates correctly.</p>
+              </li>
+              <li>
+                <strong>Return Air Blockage or Imbalance</strong>
+                <p>Symptoms: Rooms far from return grill uncomfortable. Solution: Verify return pathways clear (undercut doors, open returns), check filter not dirty, measure static pressure.</p>
+              </li>
+              <li>
+                <strong>Thermostat Placement Poor</strong>
+                <p>Symptoms: Thermostat in hallway but bedrooms different temp. Solution: Check for drafts, sunlight, or heat sources near thermostat affecting reading. Consider remote sensors if zoning available.</p>
+              </li>
+              <li>
+                <strong>Blower Speed Too Low for System</strong>
+                <p>Symptoms: Weak airflow throughout. Solution: Verify blower speed tap correct for heating/cooling mode, check capacitor condition, measure static pressure against design specs.</p>
+              </li>
+            </ol>
+          </div>
+        </details>
+
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .diagnostic-sections {
+      margin-top: 2rem;
+    }
+
+    .diagnostic-main-section {
+      margin-bottom: 1.5rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+
+    .diagnostic-main-section[open] {
+      background: #fff;
+      border-color: #4CAF50;
+    }
+
+    .diagnostic-summary {
+      padding: 1.25rem;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s;
+    }
+
+    .diagnostic-summary:hover {
+      background: #f0f0f0;
+    }
+
+    .diagnostic-main-section[open] .diagnostic-summary {
+      background: #f5f5f5;
+    }
+
+    .diagnostic-summary h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      flex: 1;
+    }
+
+    .diagnostic-expand-icon {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #666;
+      min-width: 30px;
+      text-align: right;
+      transition: transform 0.2s;
+    }
+
+    .diagnostic-main-section[open] .diagnostic-expand-icon {
+      transform: rotate(45deg);
+      color: #4CAF50;
+    }
+
+    .diagnostic-content {
+      padding: 1.5rem;
+      padding-top: 0;
+    }
+
+    .diagnostic-intro {
+      font-size: 1rem;
+      color: #555;
+      margin-bottom: 1.5rem;
+      font-style: italic;
+    }
+
+    .diagnostic-subsection {
+      margin: 1.5rem 0;
+      border-left: 4px solid #4CAF50;
+      background: #fafafa;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .diagnostic-subsection[open] {
+      background: #f0f7f0;
+    }
+
+    .diagnostic-subsummary {
+      padding: 1rem;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s;
+    }
+
+    .diagnostic-subsummary:hover {
+      background: #f0f0f0;
+    }
+
+    .diagnostic-subsection[open] .diagnostic-subsummary {
+      background: #e8f5e9;
+    }
+
+    .diagnostic-subsummary h3 {
+      margin: 0;
+      font-size: 1.05rem;
+      flex: 1;
+      color: #333;
+    }
+
+    .diagnostic-subsummary .diagnostic-expand-icon {
+      font-size: 1.25rem;
+    }
+
+    .diagnostic-subsection[open] .diagnostic-expand-icon {
+      transform: rotate(45deg);
+    }
+
+    .probable-causes {
+      list-style: decimal;
+      padding-left: 2rem;
+      margin: 0;
+    }
+
+    .probable-causes li {
+      margin-bottom: 1.5rem;
+      line-height: 1.6;
+    }
+
+    .probable-causes strong {
+      color: #2c3e50;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    .probable-causes p {
+      margin: 0.5rem 0 0 0;
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 768px) {
+      .diagnostic-summary,
+      .diagnostic-subsummary {
+        padding: 1rem;
+      }
+
+      .diagnostic-summary h2 {
+        font-size: 1.1rem;
+      }
+
+      .diagnostic-subsummary h3 {
+        font-size: 0.95rem;
+      }
+
+      .diagnostic-expand-icon {
+        min-width: 25px;
+      }
+    }
+  </style>
+{% endblock %}

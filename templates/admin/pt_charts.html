@@ -1,0 +1,662 @@
+{% extends "base.html" %}
+
+{% block title %}PT Charts | Klovent{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="pt-charts-page" class="resource-page resource-admin">
+      <h1>PT Charts</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li><a href="{{ url_for('admin_bp.reference') }}">Reference</a></li>
+          <li aria-current="page">PT Charts</li>
+        </ol>
+      </nav>
+
+      <div class="jobs-controls-right-top">
+        <h2>Common Refrigerant Reference</h2>
+      </div>
+
+      <div class="pt-intro-card">
+        <p>
+          Use these cards as a fast field reference for the refrigerants your technicians are most likely to see.
+          For exact pressure-to-temperature values, always confirm with the equipment manufacturer chart and compare against actual operating conditions.
+        </p>
+        <ul>
+          <li>Use dew point for superheat on blended refrigerants when applicable.</li>
+          <li>Use bubble point for subcooling on blended refrigerants when applicable.</li>
+          <li>Confirm refrigerant type before charging, recovering, or diagnosing.</li>
+        </ul>
+      </div>
+
+      <div class="pt-chart-grid">
+        <details class="pt-chart-card">
+          <summary>
+            <div>
+              <h3>R-22</h3>
+              <p>Legacy refrigerant commonly found in older split systems and heat pumps.</p>
+            </div>
+            <span class="pt-card-badge">Legacy</span>
+          </summary>
+          <div class="pt-chart-body">
+            <p class="pt-chart-note">Approximate saturated pressures in psig. Confirm against the OEM chart for final service decisions.</p>
+            <table class="pt-pressure-table">
+              <thead>
+                <tr>
+                  <th>Temp (F)</th>
+                  <th>Pressure (psig)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>30</td><td>58</td></tr>
+                <tr><td>40</td><td>69</td></tr>
+                <tr><td>50</td><td>81</td></tr>
+                <tr><td>60</td><td>94</td></tr>
+                <tr><td>70</td><td>109</td></tr>
+                <tr><td>80</td><td>125</td></tr>
+                <tr><td>90</td><td>143</td></tr>
+                <tr><td>100</td><td>162</td></tr>
+              </tbody>
+            </table>
+            <div class="pt-meta-grid">
+              <div>
+                <h4>Field notes</h4>
+                <p>Often serviced on aging equipment. Verify retrofit history before assuming the label is current.</p>
+              </div>
+              <div>
+                <h4>Diagnostic focus</h4>
+                <p>Check for low charge, dirty coils, and restrictions before replacing components.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="pt-chart-card">
+          <summary>
+            <div>
+              <h3>R-410A</h3>
+              <p>High-pressure blend used in many residential systems installed over the last two decades.</p>
+            </div>
+            <span class="pt-card-badge">High Pressure</span>
+          </summary>
+          <div class="pt-chart-body">
+            <p class="pt-chart-note">Approximate saturated pressures in psig. Higher operating pressure than R-22; use proper gauges and hoses.</p>
+            <table class="pt-pressure-table">
+              <thead>
+                <tr>
+                  <th>Temp (F)</th>
+                  <th>Pressure (psig)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>30</td><td>95</td></tr>
+                <tr><td>40</td><td>118</td></tr>
+                <tr><td>50</td><td>145</td></tr>
+                <tr><td>60</td><td>174</td></tr>
+                <tr><td>70</td><td>205</td></tr>
+                <tr><td>80</td><td>239</td></tr>
+                <tr><td>90</td><td>274</td></tr>
+                <tr><td>100</td><td>312</td></tr>
+              </tbody>
+            </table>
+            <div class="pt-meta-grid">
+              <div>
+                <h4>Field notes</h4>
+                <p>Higher operating pressures than R-22. Use proper gauges and hoses rated for the application.</p>
+              </div>
+              <div>
+                <h4>Diagnostic focus</h4>
+                <p>Check charge, airflow, outdoor coil cleanliness, and metering device performance.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="pt-chart-card">
+          <summary>
+            <div>
+              <h3>R-32</h3>
+              <p>Efficient single-component refrigerant used in newer equipment and mini split systems.</p>
+            </div>
+            <span class="pt-card-badge">Modern</span>
+          </summary>
+          <div class="pt-chart-body">
+            <p class="pt-chart-note">Approximate saturated pressures in psig. Confirm service procedures and charge method before connecting tools.</p>
+            <table class="pt-pressure-table">
+              <thead>
+                <tr>
+                  <th>Temp (F)</th>
+                  <th>Pressure (psig)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>30</td><td>98</td></tr>
+                <tr><td>40</td><td>122</td></tr>
+                <tr><td>50</td><td>149</td></tr>
+                <tr><td>60</td><td>180</td></tr>
+                <tr><td>70</td><td>215</td></tr>
+                <tr><td>80</td><td>254</td></tr>
+                <tr><td>90</td><td>297</td></tr>
+                <tr><td>100</td><td>344</td></tr>
+              </tbody>
+            </table>
+            <div class="pt-meta-grid">
+              <div>
+                <h4>Field notes</h4>
+                <p>Follow manufacturer instructions carefully. Confirm charge method and service port setup before connecting tools.</p>
+              </div>
+              <div>
+                <h4>Diagnostic focus</h4>
+                <p>Look closely at airflow, charge accuracy, and temperature split behavior at the indoor coil.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="pt-chart-card">
+          <summary>
+            <div>
+              <h3>R-454B</h3>
+              <p>Lower-GWP replacement refrigerant being adopted in newer HVAC equipment.</p>
+            </div>
+            <span class="pt-card-badge">A2L</span>
+          </summary>
+          <div class="pt-chart-body">
+            <p class="pt-chart-note">Approximate saturated pressures in psig. Follow A2L handling and OEM service instructions closely.</p>
+            <table class="pt-pressure-table">
+              <thead>
+                <tr>
+                  <th>Temp (F)</th>
+                  <th>Pressure (psig)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>30</td><td>96</td></tr>
+                <tr><td>40</td><td>119</td></tr>
+                <tr><td>50</td><td>146</td></tr>
+                <tr><td>60</td><td>177</td></tr>
+                <tr><td>70</td><td>211</td></tr>
+                <tr><td>80</td><td>249</td></tr>
+                <tr><td>90</td><td>291</td></tr>
+                <tr><td>100</td><td>337</td></tr>
+              </tbody>
+            </table>
+            <div class="pt-meta-grid">
+              <div>
+                <h4>Field notes</h4>
+                <p>Confirm recovery, leak detection, and tool compatibility before service. Follow all safety requirements for flammable refrigerants.</p>
+              </div>
+              <div>
+                <h4>Diagnostic focus</h4>
+                <p>Use the OEM chart and service instructions. Do not assume R-410A charging behavior applies here.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="pt-chart-card">
+          <summary>
+            <div>
+              <h3>R-134a</h3>
+              <p>Common in chillers, refrigeration equipment, and automotive-style cooling applications.</p>
+            </div>
+            <span class="pt-card-badge">Low Pressure</span>
+          </summary>
+          <div class="pt-chart-body">
+            <p class="pt-chart-note">Approximate saturated pressures in psig. Lower-pressure comfort and refrigeration applications often use this refrigerant.</p>
+            <table class="pt-pressure-table">
+              <thead>
+                <tr>
+                  <th>Temp (F)</th>
+                  <th>Pressure (psig)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>30</td><td>22</td></tr>
+                <tr><td>40</td><td>35</td></tr>
+                <tr><td>50</td><td>44</td></tr>
+                <tr><td>60</td><td>53</td></tr>
+                <tr><td>70</td><td>65</td></tr>
+                <tr><td>80</td><td>78</td></tr>
+                <tr><td>90</td><td>93</td></tr>
+                <tr><td>100</td><td>110</td></tr>
+              </tbody>
+            </table>
+            <div class="pt-meta-grid">
+              <div>
+                <h4>Field notes</h4>
+                <p>Lower pressure profile than many comfort-cooling refrigerants. Verify compressor and expansion device behavior carefully.</p>
+              </div>
+              <div>
+                <h4>Diagnostic focus</h4>
+                <p>Watch for charge imbalance, poor condenser performance, and evaporator starvation.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="pt-chart-card">
+          <summary>
+            <div>
+              <h3>R-407C</h3>
+              <p>Blend used in many retrofit and comfort cooling applications with glide to account for.</p>
+            </div>
+            <span class="pt-card-badge">Blend</span>
+          </summary>
+          <div class="pt-chart-body">
+            <p class="pt-chart-note">Approximate saturated pressures in psig. Use dew point for superheat and bubble point for subcooling on blend systems.</p>
+            <table class="pt-pressure-table">
+              <thead>
+                <tr>
+                  <th>Temp (F)</th>
+                  <th>Pressure (psig)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>30</td><td>66</td></tr>
+                <tr><td>40</td><td>79</td></tr>
+                <tr><td>50</td><td>92</td></tr>
+                <tr><td>60</td><td>107</td></tr>
+                <tr><td>70</td><td>123</td></tr>
+                <tr><td>80</td><td>141</td></tr>
+                <tr><td>90</td><td>160</td></tr>
+                <tr><td>100</td><td>180</td></tr>
+              </tbody>
+            </table>
+            <div class="pt-meta-grid">
+              <div>
+                <h4>Field notes</h4>
+                <p>Temperature glide matters. Use dew and bubble points correctly when evaluating superheat and subcooling.</p>
+              </div>
+              <div>
+                <h4>Diagnostic focus</h4>
+                <p>Verify charge method and pay attention to evaporator and condenser approach temperatures.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="pt-chart-card">
+          <summary>
+            <div>
+              <h3>R-404A</h3>
+              <p>Commonly found in refrigeration systems, especially older medium and low-temperature equipment.</p>
+            </div>
+            <span class="pt-card-badge">Refrigeration</span>
+          </summary>
+          <div class="pt-chart-body">
+            <p class="pt-chart-note">Approximate saturated pressures in psig. Confirm system type and application range before making decisions.</p>
+            <table class="pt-pressure-table">
+              <thead>
+                <tr>
+                  <th>Temp (F)</th>
+                  <th>Pressure (psig)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>30</td><td>51</td></tr>
+                <tr><td>40</td><td>62</td></tr>
+                <tr><td>50</td><td>74</td></tr>
+                <tr><td>60</td><td>89</td></tr>
+                <tr><td>70</td><td>105</td></tr>
+                <tr><td>80</td><td>123</td></tr>
+                <tr><td>90</td><td>143</td></tr>
+                <tr><td>100</td><td>164</td></tr>
+              </tbody>
+            </table>
+            <div class="pt-meta-grid">
+              <div>
+                <h4>Field notes</h4>
+                <p>Blend characteristics matter. Use the correct side of the chart and verify system application range.</p>
+              </div>
+              <div>
+                <h4>Diagnostic focus</h4>
+                <p>Check for coil frost patterns, compressor amp draw, and condenser cleanliness.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="pt-chart-card">
+          <summary>
+            <div>
+              <h3>R-448A / R-449A</h3>
+              <p>Replacement blends used in commercial refrigeration and retrofit applications.</p>
+            </div>
+            <span class="pt-card-badge">Retrofit</span>
+          </summary>
+          <div class="pt-chart-body">
+            <p class="pt-chart-note">Approximate saturated pressures in psig. Use the correct blend chart and confirm OEM approval for retrofit work.</p>
+            <table class="pt-pressure-table">
+              <thead>
+                <tr>
+                  <th>Temp (F)</th>
+                  <th>Pressure (psig)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>30</td><td>55</td></tr>
+                <tr><td>40</td><td>66</td></tr>
+                <tr><td>50</td><td>79</td></tr>
+                <tr><td>60</td><td>93</td></tr>
+                <tr><td>70</td><td>109</td></tr>
+                <tr><td>80</td><td>126</td></tr>
+                <tr><td>90</td><td>145</td></tr>
+                <tr><td>100</td><td>166</td></tr>
+              </tbody>
+            </table>
+            <div class="pt-meta-grid">
+              <div>
+                <h4>Field notes</h4>
+                <p>These blends can replace older HFC refrigerants in selected equipment. Always confirm OEM approval and charge procedures.</p>
+              </div>
+              <div>
+                <h4>Diagnostic focus</h4>
+                <p>Check operating pressures against the proper blend chart and monitor evaporator performance closely.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="pt-chart-card">
+          <summary>
+            <div>
+              <h3>R-1234yf</h3>
+              <p>Low-GWP refrigerant used heavily in automotive and select specialty cooling applications.</p>
+            </div>
+            <span class="pt-card-badge">A2L</span>
+          </summary>
+          <div class="pt-chart-body">
+            <p class="pt-chart-note">Approximate saturated pressures in psig. Follow the equipment label and recovery requirements for this low-charge refrigerant.</p>
+            <table class="pt-pressure-table">
+              <thead>
+                <tr>
+                  <th>Temp (F)</th>
+                  <th>Pressure (psig)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>30</td><td>12</td></tr>
+                <tr><td>40</td><td>19</td></tr>
+                <tr><td>50</td><td>27</td></tr>
+                <tr><td>60</td><td>35</td></tr>
+                <tr><td>70</td><td>45</td></tr>
+                <tr><td>80</td><td>56</td></tr>
+                <tr><td>90</td><td>68</td></tr>
+                <tr><td>100</td><td>81</td></tr>
+              </tbody>
+            </table>
+            <div class="pt-meta-grid">
+              <div>
+                <h4>Field notes</h4>
+                <p>Common in automotive systems and some specialty equipment. Verify A2L-compatible service tools and follow label instructions.</p>
+              </div>
+              <div>
+                <h4>Diagnostic focus</h4>
+                <p>Because charge quantity is often small, small leaks and airflow issues can have an outsized effect on performance.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="pt-chart-card">
+          <summary>
+            <div>
+              <h3>R-290</h3>
+              <p>Propane refrigerant used in select small equipment and low-charge systems.</p>
+            </div>
+            <span class="pt-card-badge">Hydrocarbon</span>
+          </summary>
+          <div class="pt-chart-body">
+            <p class="pt-chart-note">Approximate saturated pressures in psig. Treat this refrigerant as flammable and follow all equipment and code restrictions.</p>
+            <table class="pt-pressure-table">
+              <thead>
+                <tr>
+                  <th>Temp (F)</th>
+                  <th>Pressure (psig)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>30</td><td>25</td></tr>
+                <tr><td>40</td><td>33</td></tr>
+                <tr><td>50</td><td>42</td></tr>
+                <tr><td>60</td><td>52</td></tr>
+                <tr><td>70</td><td>63</td></tr>
+                <tr><td>80</td><td>75</td></tr>
+                <tr><td>90</td><td>88</td></tr>
+                <tr><td>100</td><td>102</td></tr>
+              </tbody>
+            </table>
+            <div class="pt-meta-grid">
+              <div>
+                <h4>Field notes</h4>
+                <p>Low charge systems can perform well but require strict leak prevention and the correct service procedure.</p>
+              </div>
+              <div>
+                <h4>Diagnostic focus</h4>
+                <p>Check charge carefully, look for airflow restrictions, and respect flammability requirements during service.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="pt-chart-card">
+          <summary>
+            <div>
+              <h3>R-600a</h3>
+              <p>Isobutane refrigerant found in many small appliances and ultra-low-charge systems.</p>
+            </div>
+            <span class="pt-card-badge">Hydrocarbon</span>
+          </summary>
+          <div class="pt-chart-body">
+            <p class="pt-chart-note">Approximate saturated pressures in psig. Very small charge systems are sensitive to contamination, leaks, and overcharging.</p>
+            <table class="pt-pressure-table">
+              <thead>
+                <tr>
+                  <th>Temp (F)</th>
+                  <th>Pressure (psig)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>30</td><td>11</td></tr>
+                <tr><td>40</td><td>18</td></tr>
+                <tr><td>50</td><td>25</td></tr>
+                <tr><td>60</td><td>33</td></tr>
+                <tr><td>70</td><td>42</td></tr>
+                <tr><td>80</td><td>51</td></tr>
+                <tr><td>90</td><td>61</td></tr>
+                <tr><td>100</td><td>72</td></tr>
+              </tbody>
+            </table>
+            <div class="pt-meta-grid">
+              <div>
+                <h4>Field notes</h4>
+                <p>Common in refrigerators, beverage coolers, and compact equipment with very small refrigerant charges.</p>
+              </div>
+              <div>
+                <h4>Diagnostic focus</h4>
+                <p>Use leak-aware service procedures and avoid overcharging. Small changes in charge can cause large performance swings.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .pt-intro-card {
+      margin-top: 1.5rem;
+      padding: 1.25rem 1.5rem;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #f4f8fb 0%, #eef6ef 100%);
+      border: 1px solid #d7e4da;
+      color: #2d3a33;
+    }
+
+    .pt-intro-card p {
+      margin: 0 0 1rem 0;
+      line-height: 1.6;
+    }
+
+    .pt-intro-card ul {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+
+    .pt-intro-card li {
+      margin-bottom: 0.4rem;
+    }
+
+    .pt-chart-grid {
+      margin-top: 1.75rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .pt-chart-card {
+      border: 1px solid #d8e2dc;
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+      box-shadow: 0 8px 18px rgba(24, 39, 29, 0.05);
+    }
+
+    .pt-chart-card summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 1rem 1.1rem;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      background: linear-gradient(180deg, #fbfdfb 0%, #f5f9f6 100%);
+    }
+
+    .pt-chart-card summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .pt-chart-card h3 {
+      margin: 0 0 0.25rem 0;
+      font-size: 1.15rem;
+    }
+
+    .pt-chart-card summary p {
+      margin: 0;
+      color: #5c6961;
+      line-height: 1.45;
+    }
+
+    .pt-card-badge {
+      flex: 0 0 auto;
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      background: #dff0e4;
+      color: #23633b;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      margin-top: 0.15rem;
+    }
+
+    .pt-chart-body {
+      padding: 0 1.1rem 1.1rem;
+    }
+
+    .pt-chart-note {
+      margin: 0.95rem 0 0.85rem 0;
+      color: #53635b;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .pt-pressure-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+      border: 1px solid #d8e2dc;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .pt-pressure-table thead th {
+      text-align: left;
+      padding: 0.75rem 0.85rem;
+      background: #eaf3ec;
+      color: #264936;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .pt-pressure-table tbody td {
+      padding: 0.7rem 0.85rem;
+      border-top: 1px solid #edf2ee;
+      color: #30433a;
+    }
+
+    .pt-pressure-table tbody tr:nth-child(even) td {
+      background: #fafdfb;
+    }
+
+    .pt-meta-grid {
+      display: grid;
+      gap: 0.9rem;
+      margin-top: 0.95rem;
+    }
+
+    .pt-meta-grid h4 {
+      margin: 0 0 0.35rem 0;
+      font-size: 0.92rem;
+      color: #234;
+    }
+
+    .pt-meta-grid p {
+      margin: 0;
+      color: #4e5a53;
+      line-height: 1.55;
+    }
+
+    @media print {
+      .jobs-controls-right-top,
+      .pt-intro-card,
+      .pt-card-badge {
+        break-inside: avoid;
+      }
+
+      .pt-chart-card {
+        box-shadow: none;
+        border-color: #b8c7bc;
+      }
+
+      .pt-chart-card summary {
+        background: #f8faf8;
+      }
+
+      .pt-chart-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .pt-chart-card {
+        page-break-inside: avoid;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .pt-chart-card summary {
+        flex-direction: column;
+      }
+
+      .pt-card-badge {
+        align-self: flex-start;
+      }
+    }
+  </style>
+{% endblock %}

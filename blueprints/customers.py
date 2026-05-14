@@ -34,6 +34,63 @@ def _resolve_current_business_id(db):
         return ObjectId(business_ref)
     return None
 
+
+def _parse_note_datetime(value):
+    raw_value = str(value or "").strip()
+    if not raw_value:
+        return datetime.min
+    try:
+        return datetime.strptime(raw_value, "%m/%d/%Y %H:%M:%S")
+    except ValueError:
+        return datetime.min
+
+
+def _format_note_datetime_display(value):
+    parsed_value = _parse_note_datetime(value)
+    if parsed_value == datetime.min:
+        return str(value or "").strip()
+    return parsed_value.strftime("%m/%d/%Y %I:%M %p")
+
+
+def _build_customer_notes_for_view(db, customer):
+    raw_notes = list((customer or {}).get("notes") or [])
+    normalized_notes = []
+    employee_object_ids = []
+
+    for note in raw_notes:
+        if not isinstance(note, dict):
+            continue
+
+        employee_id = str(note.get("employee_id") or "").strip()
+        if ObjectId.is_valid(employee_id):
+            employee_object_ids.append(ObjectId(employee_id))
+
+        normalized_notes.append(
+            {
+                "note_id": str(note.get("note_id") or "").strip(),
+                "text": str(note.get("text") or "").strip(),
+                "date_written": str(note.get("date_written") or "").strip(),
+                "employee_id": employee_id,
+            }
+        )
+
+    employees_by_id = {}
+    if employee_object_ids:
+        for employee in db.employees.find({"_id": {"$in": employee_object_ids}}, {"first_name": 1, "last_name": 1}):
+            employee_id = str(employee.get("_id") or "").strip()
+            full_name = f"{str(employee.get('first_name') or '').strip()} {str(employee.get('last_name') or '').strip()}".strip()
+            employees_by_id[employee_id] = full_name or "Unknown Employee"
+
+    normalized_notes.sort(key=lambda note: _parse_note_datetime(note.get("date_written")), reverse=True)
+
+    for note in normalized_notes:
+        employee_id = note.get("employee_id") or ""
+        note["employee_name"] = employees_by_id.get(employee_id, "Unknown Employee")
+        note["employee_profile_id"] = employee_id if ObjectId.is_valid(employee_id) else ""
+        note["date_written_display"] = _format_note_datetime_display(note.get("date_written"))
+
+    return normalized_notes
+
 EMAIL_VALIDATION_MESSAGE = "Enter a valid email address."
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
@@ -1913,6 +1970,7 @@ def add_customer():
                 }
             ],
             "referral_source": referral_source,
+            "notes": [],
             "customer_status": customer_status,
             "date_added": datetime.now().strftime("%m/%d/%Y"),
             "created_at": datetime.now(UTC),
@@ -2512,11 +2570,13 @@ def view_customer(customerId):
         estimate["status"] = str(estimate.get("status") or "Created")
 
     properties = _get_customer_properties(customer)
+    customer_doc = serialize_doc(customer)
+    customer_doc["notes"] = _build_customer_notes_for_view(db, customer)
 
     return render_template(
         "customers/view_customer.html",
         customerId=customerId,
-        customer=serialize_doc(customer),
+        customer=customer_doc,
         customer_pages=customer_pages,
         customer_jobs=customer_jobs,
         customer_jobs_total_pages=customer_jobs_total_pages,
@@ -2526,6 +2586,50 @@ def view_customer(customerId):
         customer_estimates_total_pages=customer_estimates_total_pages,
         properties=properties,
     )
+
+
+@bp.route("/customers/<customerId>/notes", methods=["POST"])
+def add_customer_note(customerId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers.customers"))
+
+    note_text = str(request.form.get("internal_note") or "").strip()
+    if not note_text:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    db.customers.update_one(
+        {"_id": ObjectId(customerId)},
+        {
+            "$push": {
+                "notes": {
+                    "note_id": str(ObjectId()),
+                    "text": note_text,
+                    "date_written": datetime.now().strftime("%m/%d/%Y %H:%M:%S"),
+                    "employee_id": str(session.get("employee_id") or "").strip(),
+                }
+            }
+        },
+    )
+
+    next_url = request.form.get("next") or url_for("customers.view_customer", customerId=customerId)
+    return redirect(next_url)
+
+
+@bp.route("/customers/<customerId>/notes/<noteId>/delete", methods=["POST"])
+def delete_customer_note(customerId, noteId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers.customers"))
+
+    db.customers.update_one(
+        {"_id": ObjectId(customerId)},
+        {"$pull": {"notes": {"note_id": str(noteId or "").strip()}}},
+    )
+
+    return redirect(url_for("customers.view_customer", customerId=customerId))
 
 
 @bp.route("/customers/<customerId>/hvac/<reference_type>/<reference_id>")

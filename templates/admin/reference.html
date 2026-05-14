@@ -5,7 +5,7 @@
 {% block content %}
   <div id="main-container">
     <div id="manage-jobs-header" class="resource-page resource-admin admin-reference-page">
-      <h1>Field Reference</h1>
+      <h1>Reference Tools</h1>
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
@@ -16,140 +16,25 @@
       </nav>
 
       <div class="jobs-controls-right-top">
-        <h2>Quick Coaching For Common Calls</h2>
+        <h2>Technician Resources</h2>
       </div>
 
-      <div class="admin-reference-actions no-print">
-        <button type="button" class="admin-reference-print-btn" onclick="window.print()">Print Reference</button>
-      </div>
+      <div class="admin-links-grid">
+        <a class="admin-link-card" href="{{ url_for('admin_bp.diagnostic_assistant') }}">
+          <h3>Diagnostic Assistant</h3>
+          <p>Interactive troubleshooting guide for rapid diagnosis of common HVAC issues.</p>
+        </a>
 
-      <div class="admin-reference-anchor-grid">
-        <a class="admin-link-card" href="#diagnosing-common-issues">
-          <h3>Diagnosing Common Issues</h3>
-          <p>Fast, repeatable troubleshooting patterns to identify root cause before replacing parts.</p>
+        <a class="admin-link-card" href="#">
+          <h3>Process Assistant</h3>
+          <p>Step-by-step workflows for part replacement, testing, and service procedures.</p>
         </a>
-        <a class="admin-link-card" href="#part-replacement-process">
-          <h3>Part Replacement Process</h3>
-          <p>Safe, clean replacement steps with documentation habits that prevent callbacks.</p>
-        </a>
-        <a class="admin-link-card" href="#common-test-procedures">
-          <h3>Common Test Procedures</h3>
-          <p>Meter checks, airflow checks, and combustion checks you will use every week.</p>
+
+        <a class="admin-link-card" href="{{ url_for('admin_bp.pt_charts') }}">
+          <h3>PT Charts</h3>
+          <p>Pressure-temperature reference charts for refrigerant diagnostics and analysis.</p>
         </a>
       </div>
-
-      <section id="diagnosing-common-issues" class="admin-reference-section">
-        <h2>Diagnosing Common Issues</h2>
-        <div class="admin-reference-grid">
-          <article class="admin-reference-card">
-            <h3>No Cooling (System Runs, Space Stays Warm)</h3>
-            <ol>
-              <li>Verify call: thermostat mode is Cool, setpoint below indoor temp, and Y call is present at air handler or furnace board.</li>
-              <li>Confirm airflow first: filter condition, blower operation, return and supply restrictions, and visibly iced evaporator.</li>
-              <li>Check outdoor unit: contactor pulled in, condenser fan running, compressor amp draw compared to nameplate expectations.</li>
-              <li>Measure split and line temps: suction line should be cool, liquid line warm, and indoor temperature split should generally trend in the expected range once stabilized.</li>
-              <li>Only then move to refrigerant diagnosis using superheat and subcooling targets from manufacturer data, not guesswork.</li>
-            </ol>
-            <p class="admin-reference-note">Tip: A dirty indoor coil or low airflow can mimic low charge. Always prove airflow before adding refrigerant.</p>
-          </article>
-
-          <article class="admin-reference-card">
-            <h3>No Heat (Gas Furnace)</h3>
-            <ol>
-              <li>Follow ignition sequence in order: inducer, pressure switch, igniter, gas valve, flame prove, blower on-delay.</li>
-              <li>Check safety circuit continuity: rollout, high-limit, and pressure switch tubing/ports for cracks or blockage.</li>
-              <li>Confirm gas valve operation only after verifying board output and proper voltage at the valve terminals.</li>
-              <li>Microamp flame-sense test: weak flame rectification often causes short-cycling lockouts.</li>
-              <li>Review venting and combustion air if pressure switch faults repeat after component replacement.</li>
-            </ol>
-            <p class="admin-reference-note">Tip: If the same fault returns, step back and verify the condition that triggered it. Do not stack-replace controls.</p>
-          </article>
-
-          <article class="admin-reference-card">
-            <h3>High Utility / Comfort Complaints</h3>
-            <ol>
-              <li>Interview first: when complaint happens, weather conditions, occupancy changes, and thermostat schedule settings.</li>
-              <li>Check duct leakage, insulation gaps, and obvious bypasses before blaming equipment efficiency.</li>
-              <li>Verify static pressure and blower speed tap or airflow setting against required CFM for equipment mode.</li>
-              <li>Compare actual run behavior to load expectation: excessive short cycling often indicates control, oversizing, or airflow issues.</li>
-              <li>Document baseline readings and post-adjustment readings so customer sees objective improvement.</li>
-            </ol>
-            <p class="admin-reference-note">Tip: Good notes reduce repeat visits and protect younger techs when different people return later.</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="part-replacement-process" class="admin-reference-section">
-        <h2>Part Replacement Process</h2>
-        <div class="admin-reference-grid">
-          <article class="admin-reference-card">
-            <h3>Before You Remove Anything</h3>
-            <ol>
-              <li>Lock out power and verify with your meter. For gas appliances, isolate fuel where required.</li>
-              <li>Take clear before-photos of wiring, orientation, and mounting hardware.</li>
-              <li>Confirm replacement part match: rating, voltage, rotation, size, and OEM cross-reference.</li>
-              <li>Record baseline values (amps, volts, pressures, temperature rise/split) to compare after repair.</li>
-            </ol>
-          </article>
-
-          <article class="admin-reference-card">
-            <h3>Replacement Execution</h3>
-            <ol>
-              <li>Label wires as removed, even if colors seem obvious.</li>
-              <li>Protect nearby components and insulation while removing old hardware.</li>
-              <li>Install and torque connections securely. Loose electrical and flare connections are callback generators.</li>
-              <li>Restore routing and strain relief so wires and tubes cannot rub or contact hot surfaces.</li>
-            </ol>
-          </article>
-
-          <article class="admin-reference-card">
-            <h3>Post-Replacement Verification</h3>
-            <ol>
-              <li>Cycle system through all operating modes affected by the repair.</li>
-              <li>Recheck all baseline readings and confirm values moved in the expected direction.</li>
-              <li>Clear faults and verify no immediate re-trips after a full run cycle.</li>
-              <li>Explain findings to customer in plain language and document what failed, what was replaced, and final readings.</li>
-            </ol>
-            <p class="admin-reference-note">Tip: Include part number and photos in your notes. It saves time on warranty and future diagnostics.</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="common-test-procedures" class="admin-reference-section">
-        <h2>Common Test Procedures</h2>
-        <div class="admin-reference-grid">
-          <article class="admin-reference-card">
-            <h3>Electrical Testing Standards</h3>
-            <ul>
-              <li>Capacitor: verify microfarads under load condition, not only visual condition.</li>
-              <li>Contactor: measure coil voltage and contact voltage drop; pitted contacts can pass voltage but fail under load.</li>
-              <li>Motors/Compressor: compare amp draw to expected load and nameplate, then investigate cause before replacing.</li>
-              <li>Low-voltage controls: confirm call in and call out at each control stage to find where command is lost.</li>
-            </ul>
-          </article>
-
-          <article class="admin-reference-card">
-            <h3>Airflow and Temperature Testing</h3>
-            <ul>
-              <li>Total external static pressure: compare to blower table and required CFM target.</li>
-              <li>Temperature rise (heating): verify within manufacturer listed rise range, then adjust airflow if out of range.</li>
-              <li>Delta T (cooling): use stabilized readings after airflow confirmation for meaningful interpretation.</li>
-              <li>Filter, wheel, and coil inspection: contamination drives poor airflow and false refrigerant conclusions.</li>
-            </ul>
-          </article>
-
-          <article class="admin-reference-card">
-            <h3>Refrigeration and Combustion Process Checks</h3>
-            <ul>
-              <li>Refrigerant: use superheat/subcooling with outdoor and indoor conditions documented on the ticket.</li>
-              <li>Leak search: pressurize, isolate, then verify with electronic detector and bubble confirmation where needed.</li>
-              <li>Combustion (gas heat): inspect heat exchanger area, flame pattern, and vent draft behavior before final sign-off.</li>
-              <li>Safety controls: test high limits and pressure-related safeties in a controlled way where procedures permit.</li>
-            </ul>
-            <p class="admin-reference-note">Tip: When readings conflict, trust process over assumptions. Re-verify instruments, then re-run the sequence.</p>
-          </article>
-        </div>
-      </section>
     </div>
   </div>
 {% endblock %}

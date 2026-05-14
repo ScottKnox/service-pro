@@ -3405,6 +3405,43 @@ p {
     }
 }
 
+/* Subscription page two-column layout */
+.subscription-page-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 0.4rem;
+  align-items: start;
+  max-width: 1080px;
+  width: 100%;
+  justify-content: start;
+}
+
+.subscription-page-column-left,
+.subscription-page-column-right {
+  min-width: 0;
+}
+
+.subscription-page-column-left {
+  box-sizing: border-box;
+  padding-left: 0.8rem;
+  padding-right: 0.55rem;
+}
+
+.subscription-included-features-list {
+  margin: 0.7rem 0 0;
+  padding-left: 1.1rem;
+  color: #102237;
+}
+
+.subscription-included-features-list li {
+  margin: 0 0 0.45rem;
+  line-height: 1.35;
+}
+
+.subscription-included-features-list li:last-child {
+  margin-bottom: 0;
+}
+
 /* --- TABLET SMALL   (≤ 700px) --- */
 @media (max-width: 700px) {
   .rev-breakdown-row {
@@ -3598,6 +3635,10 @@ p {
   }
 
   @media (max-width: 900px) {
+    .subscription-page-columns {
+      grid-template-columns: 1fr;
+    }
+
     .subscription-summary-grid {
       grid-template-columns: 1fr;
     }
@@ -4515,6 +4556,93 @@ p {
     flex-direction: column;
     gap: 0.75rem;
     padding: 0.25rem 0;
+  }
+
+  #view-customer-notes-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .view-customer-internal-note-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .view-customer-internal-note-form textarea {
+    width: 100%;
+    min-height: 112px;
+    padding: 0.85rem 0.95rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font: inherit;
+    color: #1f2937;
+    background: #ffffff;
+    resize: vertical;
+  }
+
+  .view-customer-internal-note-form textarea:focus {
+    outline: 2px solid #1d4ed8;
+    outline-offset: 1px;
+  }
+
+  .view-customer-internal-note-actions {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  #view-customer-internal-notes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .view-customer-internal-note-card {
+    margin-bottom: 0;
+    padding: 1.25rem;
+  }
+
+  .view-customer-internal-note-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .view-customer-internal-note-header .note-card-date {
+    margin-bottom: 0;
+  }
+
+  .view-customer-internal-note-header .note-card-date a {
+    color: #1d4ed8;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .view-customer-internal-note-header .note-card-date a:hover {
+    text-decoration: underline;
+  }
+
+  .view-customer-internal-note-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fff5f5;
+    color: #b91c1c;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .view-customer-internal-note-delete:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
   }
 
   .view-customer-properties-header,
