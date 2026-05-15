@@ -22,22 +22,70 @@ bp = Blueprint("customers", __name__)
 
 
 def _resolve_current_business_id(db):
+    session_business_id = str(session.get("employee_business_id") or "").strip()
+    if ObjectId.is_valid(session_business_id):
+        return ObjectId(session_business_id)
+
     employee_id = session.get("employee_id")
     if not employee_id or not ObjectId.is_valid(employee_id):
         return None
 
-    employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"business": 1})
-    business_ref = (employee or {}).get("business")
-    if isinstance(business_ref, ObjectId):
-        return business_ref
-    if isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
-        return ObjectId(business_ref)
+    employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"business": 1, "business_id": 1, "company_id": 1})
+    for business_key in ("business", "business_id", "company_id"):
+        business_ref = (employee or {}).get(business_key)
+        if isinstance(business_ref, ObjectId):
+            return business_ref
+        if isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
+            return ObjectId(business_ref)
     return None
 
 
 def _is_authenticated_employee():
     employee_id = session.get("employee_id")
     return bool(employee_id and ObjectId.is_valid(employee_id))
+
+
+def _is_single_business_tenant(db):
+    return db.businesses.count_documents({}) <= 1
+
+
+def _build_customer_scope_query(db, business_id):
+    if not business_id:
+        return {"_id": None}
+
+    business_filters = [
+        {"business": business_id},
+        {"business": str(business_id)},
+        {"business_id": business_id},
+        {"business_id": str(business_id)},
+    ]
+
+    related_customer_ids = set()
+    business_match = {"$or": [{"business_id": business_id}, {"business_id": str(business_id)}]}
+
+    for raw_customer_id in db.jobs.distinct("customer_id", business_match):
+        if isinstance(raw_customer_id, ObjectId):
+            related_customer_ids.add(raw_customer_id)
+        elif isinstance(raw_customer_id, str) and ObjectId.is_valid(raw_customer_id):
+            related_customer_ids.add(ObjectId(raw_customer_id))
+
+    for raw_customer_id in db.estimates.distinct("customer_id", business_match):
+        if isinstance(raw_customer_id, ObjectId):
+            related_customer_ids.add(raw_customer_id)
+        elif isinstance(raw_customer_id, str) and ObjectId.is_valid(raw_customer_id):
+            related_customer_ids.add(ObjectId(raw_customer_id))
+
+    if related_customer_ids:
+        business_filters.append({"_id": {"$in": list(related_customer_ids)}})
+
+    # Backward-compatibility for legacy single-tenant records missing business ownership fields.
+    if _is_single_business_tenant(db):
+        business_filters.append({"business_id": {"$exists": False}})
+        business_filters.append({"business_id": None})
+        business_filters.append({"business": {"$exists": False}})
+        business_filters.append({"business": None})
+
+    return {"$or": business_filters}
 
 
 def _employee_has_access_to_customer(db, customer_id):
@@ -61,11 +109,29 @@ def _employee_has_access_to_customer(db, customer_id):
     if not customer:
         return False
 
-    customer_business_id = customer.get("business_id")
-    if isinstance(customer_business_id, ObjectId):
-        return customer_business_id == employee_business_id
-    if isinstance(customer_business_id, str) and ObjectId.is_valid(customer_business_id):
-        return ObjectId(customer_business_id) == employee_business_id
+    for business_key in ("business_id", "business"):
+        customer_business_id = customer.get(business_key)
+        if isinstance(customer_business_id, ObjectId) and customer_business_id == employee_business_id:
+            return True
+        if isinstance(customer_business_id, str) and ObjectId.is_valid(customer_business_id):
+            if ObjectId(customer_business_id) == employee_business_id:
+                return True
+
+    # Legacy fallback: allow access if customer is linked to jobs/estimates owned by employee business.
+    business_match = {"$or": [{"business_id": employee_business_id}, {"business_id": str(employee_business_id)}]}
+    customer_match = build_reference_filter("customer_id", customer_oid)
+
+    has_related_job = db.jobs.count_documents({"$and": [customer_match, business_match]}, limit=1) > 0
+    if has_related_job:
+        return True
+
+    has_related_estimate = db.estimates.count_documents({"$and": [customer_match, business_match]}, limit=1) > 0
+    if has_related_estimate:
+        return True
+
+    if _is_single_business_tenant(db):
+        return True
+
     return False
 
 
@@ -1986,9 +2052,11 @@ def _build_hvac_system_cards(db, customer_id, property_id=None):
 @bp.route("/customers")
 def customers():
     db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    query = _build_customer_scope_query(db, business_id)
     customers_list = [
         serialize_doc(customer)
-        for customer in db.customers.find().sort([("last_name", 1), ("first_name", 1)])
+        for customer in db.customers.find(query).sort([("last_name", 1), ("first_name", 1)])
     ]
     return render_template("customers/customers.html", customers=customers_list)
 
@@ -1997,33 +2065,7 @@ def customers():
 def export_customers_csv():
     db = ensure_connection_or_500()
     business_id = _resolve_current_business_id(db)
-
-    query = {"_id": None}
-    if business_id:
-        related_customer_ids = set()
-
-        for raw_customer_id in db.jobs.distinct("customer_id", {"business_id": business_id}):
-            if isinstance(raw_customer_id, ObjectId):
-                related_customer_ids.add(raw_customer_id)
-            elif isinstance(raw_customer_id, str) and ObjectId.is_valid(raw_customer_id):
-                related_customer_ids.add(ObjectId(raw_customer_id))
-
-        for raw_customer_id in db.estimates.distinct("customer_id", {"business_id": business_id}):
-            if isinstance(raw_customer_id, ObjectId):
-                related_customer_ids.add(raw_customer_id)
-            elif isinstance(raw_customer_id, str) and ObjectId.is_valid(raw_customer_id):
-                related_customer_ids.add(ObjectId(raw_customer_id))
-
-        business_scoped_filters = [
-            {"business": business_id},
-            {"business": str(business_id)},
-            {"business_id": business_id},
-            {"business_id": str(business_id)},
-        ]
-        if related_customer_ids:
-            business_scoped_filters.append({"_id": {"$in": list(related_customer_ids)}})
-
-        query = {"$or": business_scoped_filters}
+    query = _build_customer_scope_query(db, business_id)
 
     customers_rows = list(db.customers.find(query).sort([("last_name", 1), ("first_name", 1)]))
     return build_csv_export_response(customers_rows, "customers_export.csv")

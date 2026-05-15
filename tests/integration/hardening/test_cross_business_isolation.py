@@ -155,3 +155,109 @@ def test_staff_cannot_access_catalog_item_from_different_business(test_app, mong
 
     response = client.get(f"/services/{service_id}", follow_redirects=False)
     assert response.status_code == 302, "Different business services should be blocked"
+
+
+def test_customer_list_scopes_cards_to_accessible_customers(test_app, mongo_db):
+    """Verify customer cards list only customers the employee can actually open."""
+    business1_id = ObjectId()
+    business2_id = ObjectId()
+    employee1_id = ObjectId()
+
+    mongo_db.businesses.insert_one({"_id": business1_id, "company_name": "Business 1"})
+    mongo_db.businesses.insert_one({"_id": business2_id, "company_name": "Business 2"})
+    mongo_db.employees.insert_one(
+        {
+            "_id": employee1_id,
+            "first_name": "Employee",
+            "last_name": "One",
+            "business": business1_id,
+        }
+    )
+
+    # Directly-scoped customer for business1.
+    visible_customer = mongo_db.customers.insert_one(
+        {
+            "first_name": "Visible",
+            "last_name": "Customer",
+            "business_id": business1_id,
+        }
+    ).inserted_id
+
+    # Legacy customer without business_id, but linked to a business1 job.
+    legacy_customer = mongo_db.customers.insert_one(
+        {
+            "first_name": "Legacy",
+            "last_name": "Customer",
+        }
+    ).inserted_id
+    mongo_db.jobs.insert_one(
+        {
+            "customer_id": legacy_customer,
+            "business_id": business1_id,
+            "status": "Open",
+        }
+    )
+
+    # Customer owned by a different business.
+    hidden_customer = mongo_db.customers.insert_one(
+        {
+            "first_name": "Hidden",
+            "last_name": "Customer",
+            "business_id": business2_id,
+        }
+    ).inserted_id
+
+    client = test_app.test_client()
+    with client.session_transaction() as sess:
+        sess["employee_id"] = str(employee1_id)
+        sess["employee_business_id"] = str(business1_id)
+
+    list_response = client.get("/customers", follow_redirects=False)
+    assert list_response.status_code == 200
+    body = list_response.get_data(as_text=True)
+    assert "Visible Customer" in body
+    assert "Legacy Customer" in body
+    assert "Hidden Customer" not in body
+
+    visible_response = client.get(f"/customers/{visible_customer}", follow_redirects=False)
+    legacy_response = client.get(f"/customers/{legacy_customer}", follow_redirects=False)
+    hidden_response = client.get(f"/customers/{hidden_customer}", follow_redirects=False)
+
+    assert visible_response.status_code == 200
+    assert legacy_response.status_code == 200
+    assert hidden_response.status_code == 302
+
+
+def test_single_business_allows_legacy_unscoped_customers(test_app, mongo_db):
+    """Legacy customers without business markers remain visible in single-business setups."""
+    business_id = ObjectId()
+    employee_id = ObjectId()
+
+    mongo_db.businesses.insert_one({"_id": business_id, "company_name": "Only Business"})
+    mongo_db.employees.insert_one(
+        {
+            "_id": employee_id,
+            "first_name": "Solo",
+            "last_name": "User",
+            "business": business_id,
+        }
+    )
+    legacy_customer_id = mongo_db.customers.insert_one(
+        {
+            "first_name": "Legacy",
+            "last_name": "Unscoped",
+        }
+    ).inserted_id
+
+    client = test_app.test_client()
+    with client.session_transaction() as sess:
+        sess["employee_id"] = str(employee_id)
+        sess["employee_business_id"] = str(business_id)
+
+    list_response = client.get("/customers", follow_redirects=False)
+    assert list_response.status_code == 200
+    body = list_response.get_data(as_text=True)
+    assert "Legacy Unscoped" in body
+
+    detail_response = client.get(f"/customers/{legacy_customer_id}", follow_redirects=False)
+    assert detail_response.status_code == 200
