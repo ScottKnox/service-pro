@@ -52,6 +52,6 @@ htmlcov/
 # Logs
 *.log
 
-userstories
+work/
 static/uploads/
 /invoices

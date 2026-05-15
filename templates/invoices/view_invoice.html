@@ -25,11 +25,23 @@
 
       {% if payment_state == 'success' and not invoice_is_paid %}
         <div id="view-job-recurring-status-note" style="border: 1px solid #B7D8C9; background-color: #EEF9F1; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
-          <p style="margin: 0; color: #185A37; font-weight: 600;">Payment session completed successfully. We are confirming the payment now.</p>
+          {% if payment_method_state in ['cash', 'check'] %}
+            <p style="margin: 0; color: #185A37; font-weight: 600;">Payment completed successfully.</p>
+          {% else %}
+            <p style="margin: 0; color: #185A37; font-weight: 600;">Payment session completed successfully. We are confirming the payment now.</p>
+          {% endif %}
+        </div>
+      {% elif payment_state == 'already_paid' %}
+        <div id="view-job-missing-scheduling-note" style="border: 1px solid #C7C9CF; background-color: #F4F5F7; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
+          <p style="color: #3E4650; font-weight: 600; margin: 0;">This invoice has already been paid in full.</p>
         </div>
       {% elif payment_state == 'canceled' %}
         <div id="view-job-missing-scheduling-note" style="border: 1px solid #FFA500; background-color: #FFF8DC; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
           <p style="color: #B8860B; font-weight: 600; margin: 0;">Payment was canceled before completion.</p>
+        </div>
+      {% elif payment_state == 'invalid' %}
+        <div id="view-job-missing-scheduling-note" style="border: 1px solid #D8B7B7; background-color: #FAEEEE; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
+          <p style="color: #7A1F1F; font-weight: 600; margin: 0;">Payment amount is invalid. Enter an amount greater than zero and no more than the current balance due.</p>
         </div>
       {% endif %}
 
@@ -50,7 +62,13 @@
       {% if invoice_is_paid %}
         <div id="view-job-recurring-status-note" style="border: 1px solid #B7D8C9; background-color: #EEF9F1; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
           <p style="margin: 0; color: #185A37; font-weight: 600;">
-            Payment received{% if invoice.paid_at %} on {{ invoice.paid_at }}{% elif job.datePaid %} on {{ job.datePaid }}{% endif %}.
+            Payment received
+            {% if payment_summary.payment_date %}
+              on <span data-local-datetime-iso="{{ payment_summary.payment_date_iso|default('', true) }}">{{ payment_summary.payment_date }}</span>
+            {% elif job.datePaid %}
+              on {{ job.datePaid }}
+            {% endif %}
+            .
           </p>
         </div>
       {% endif %}
@@ -109,7 +127,7 @@
             </div>
             <div class="view-job-detail-item">
               <h4>Sent Timestamp</h4>
-              <p>{{ invoice_sent_display|default('N/A', true) }}</p>
+              <p data-local-datetime-iso="{{ invoice_sent_iso|default('', true) }}">{{ invoice_sent_display|default('N/A', true) }}</p>
             </div>
             <div class="view-job-detail-item">
               <h4>Invoice Number</h4>
@@ -242,7 +260,8 @@
           {% if pricing_summary.discounts_total > 0 %}
             <div class="estimate-pricing-row"><span>Discounts</span><span>-{{ pricing_summary.discounts_total_display }}</span></div>
           {% endif %}
-          <div class="estimate-pricing-row estimate-pricing-total"><span>Total Due</span><span>{{ pricing_summary.total_due_display }}</span></div>
+          <div class="estimate-pricing-row"><span>Total Invoice</span><span>{{ pricing_summary.total_due_display }}</span></div>
+          <div class="estimate-pricing-row estimate-pricing-total"><span>Balance Due</span><span>{{ balance_due|currency }}</span></div>
         </div>
 
         {% if payment_summary.show %}
@@ -253,10 +272,32 @@
             <div class="estimate-pricing-row"><span>Amount Received</span><span>{{ payment_summary.amount_paid_display }}</span></div>
             <div class="estimate-pricing-row"><span>Remaining Invoice Balance</span><span>{{ payment_summary.invoice_balance_display }}</span></div>
             {% if payment_summary.payment_date %}
-              <div class="estimate-pricing-row"><span>Received On</span><span>{{ payment_summary.payment_date }}</span></div>
+              <div class="estimate-pricing-row"><span>Received On</span><span data-local-datetime-iso="{{ payment_summary.payment_date_iso|default('', true) }}">{{ payment_summary.payment_date }}</span></div>
             {% endif %}
           </div>
         {% endif %}
+
+        <div class="estimate-stack-block">
+          <h3>Payment History</h3>
+          {% if payment_history %}
+            <div class="estimate-line-items">
+              {% for payment in payment_history %}
+                <div class="estimate-line-item-row">
+                  <div class="estimate-line-item-main">
+                    <div class="estimate-line-item-title" data-local-datetime-iso="{{ payment.date_iso|default('', true) }}">{{ payment.date|default('N/A', true) }}</div>
+                    <div class="estimate-line-item-meta">{{ payment.method|default('Unknown', true) }}{% if payment.status %} | {{ payment.status }}{% endif %}</div>
+                    {% if payment.notes %}
+                      <div class="estimate-line-item-meta">{{ payment.notes }}</div>
+                    {% endif %}
+                  </div>
+                  <div class="estimate-line-item-amount">{{ payment.amount_display|default('$0.00', true) }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="estimate-customer-status-text">No payments recorded yet.</p>
+          {% endif %}
+        </div>
 
         {% if job.invoice_notes %}
           <div class="estimate-stack-block">
@@ -344,6 +385,17 @@
                 Choose your preferred payment method.
               {% endif %}
             </p>
+            <div class="estimate-pricing-summary" style="margin-bottom: 1rem;">
+              <div class="estimate-pricing-row"><span>Total Invoice</span><span>{{ pricing_summary.total_due_display }}</span></div>
+              <div class="estimate-pricing-row"><span>Already Paid</span><span>{{ total_amount_paid|currency }}</span></div>
+              <div class="estimate-pricing-row estimate-pricing-total"><span>Balance Due</span><span>{{ balance_due|currency }}</span></div>
+            </div>
+            <div class="add-customer-form-row" style="margin-bottom: 1rem;">
+              <div class="add-customer-form-field">
+                <label for="card-amount-to-charge">Amount To Charge</label>
+                <input id="card-amount-to-charge" type="number" min="0.01" step="0.01" max="{{ '%.2f'|format(balance_due|default(0, true)) }}" value="{{ '%.2f'|format(balance_due|default(0, true)) }}" />
+              </div>
+            </div>
             {% if not stripe_connect_ready and stripe_connect_reason %}
               <p class="estimate-customer-status-text" style="margin-bottom: 1rem; color: #b8860b;">{{ stripe_connect_reason }}</p>
             {% endif %}
@@ -364,10 +416,10 @@
               <div class="add-customer-form-row">
                 <div class="add-customer-form-field">
                   <label for="cash-amount-received">Amount Received</label>
-                  <input id="cash-amount-received" name="amount_received" type="number" min="0" step="0.01" required placeholder="0.00" />
+                  <input id="cash-amount-received" name="amount_received" type="number" min="0.01" max="{{ '%.2f'|format(balance_due|default(0, true)) }}" step="0.01" required placeholder="0.00" value="{{ '%.2f'|format(balance_due|default(0, true)) }}" />
                 </div>
               </div>
-              <p class="estimate-customer-status-text" style="margin: 0.5rem 0 1rem 0;">Change Due: <strong id="cash-change-due">$0.00</strong></p>
+              <p class="estimate-customer-status-text" style="margin: 0.5rem 0 1rem 0;">Remaining Balance After Payment: <strong id="cash-change-due">$0.00</strong></p>
               <div class="add-customer-form-row payment-notes-row">
                 <div class="add-customer-form-field">
                   <label for="cash-payment-notes">Notes</label>
@@ -389,7 +441,7 @@
               <div class="add-customer-form-row">
                 <div class="add-customer-form-field">
                   <label for="check-amount-received">Amount Received</label>
-                  <input id="check-amount-received" name="amount_received" type="number" min="0" step="0.01" required placeholder="0.00" />
+                  <input id="check-amount-received" name="amount_received" type="number" min="0.01" max="{{ '%.2f'|format(balance_due|default(0, true)) }}" step="0.01" required placeholder="0.00" value="{{ '%.2f'|format(balance_due|default(0, true)) }}" />
                 </div>
               </div>
               <div class="add-customer-form-row">
@@ -440,12 +492,9 @@
       var cashAmountReceivedInput = document.getElementById('cash-amount-received');
       var checkAmountReceivedInput = document.getElementById('check-amount-received');
       var checkNumberInput = document.getElementById('check-number');
+      var cardAmountToChargeInput = document.getElementById('card-amount-to-charge');
       var cashChangeDueText = document.getElementById('cash-change-due');
-      var invoiceTotalDue = Number("{{ pricing_summary.total_due|default(0, true) }}") || 0;
-
-      if (!paymentModal || !openPaymentButtons.length) {
-        return;
-      }
+      var invoiceBalanceDue = Number("{{ balance_due|default(0, true) }}") || 0;
 
       function openPaymentModal() {
         if (paymentMethodStep) {
@@ -502,8 +551,8 @@
           return;
         }
         var amountReceived = Number(cashAmountReceivedInput.value || 0);
-        var changeDue = amountReceived - invoiceTotalDue;
-        cashChangeDueText.textContent = '$' + changeDue.toFixed(2);
+        var remainingDue = Math.max(0, invoiceBalanceDue - amountReceived);
+        cashChangeDueText.textContent = '$' + remainingDue.toFixed(2);
       }
 
       function closePaymentModal() {
@@ -511,96 +560,128 @@
         paymentModal.hidden = true;
       }
 
-      openPaymentButtons.forEach(function (button) {
-        button.addEventListener('click', function (event) {
-          event.preventDefault();
-          openPaymentModal();
+      if (paymentModal && openPaymentButtons.length) {
+        openPaymentButtons.forEach(function (button) {
+          button.addEventListener('click', function (event) {
+            event.preventDefault();
+            openPaymentModal();
+          });
         });
-      });
 
-      if (closePaymentBtn) {
-        closePaymentBtn.addEventListener('click', closePaymentModal);
-      }
-      if (cancelPaymentBtn) {
-        cancelPaymentBtn.addEventListener('click', closePaymentModal);
-      }
-
-      if (openCashPaymentFormBtn) {
-        openCashPaymentFormBtn.addEventListener('click', function () {
-          showCashPaymentStep();
-          updateCashChangeDue();
-          if (cashAmountReceivedInput) {
-            cashAmountReceivedInput.focus();
-          }
-        });
-      }
-
-      if (openCheckPaymentFormBtn) {
-        openCheckPaymentFormBtn.addEventListener('click', function () {
-          showCheckPaymentStep();
-          if (checkAmountReceivedInput) {
-            checkAmountReceivedInput.value = invoiceTotalDue.toFixed(2);
-          }
-          if (checkNumberInput) {
-            checkNumberInput.focus();
-          }
-        });
-      }
-
-      if (cashPaymentBackBtn) {
-        cashPaymentBackBtn.addEventListener('click', function () {
-          showPaymentMethodStep();
-        });
-      }
-
-      if (checkPaymentBackBtn) {
-        checkPaymentBackBtn.addEventListener('click', function () {
-          showPaymentMethodStep();
-        });
-      }
-
-      if (cashAmountReceivedInput) {
-        cashAmountReceivedInput.addEventListener('input', updateCashChangeDue);
-      }
-
-      paymentModal.addEventListener('click', function (event) {
-        if (event.target === paymentModal) {
-          closePaymentModal();
+        if (closePaymentBtn) {
+          closePaymentBtn.addEventListener('click', closePaymentModal);
         }
-      });
+        if (cancelPaymentBtn) {
+          cancelPaymentBtn.addEventListener('click', closePaymentModal);
+        }
 
-      if (stripeCheckoutBtn) {
-        stripeCheckoutBtn.addEventListener('click', function () {
-          var originalText = stripeCheckoutBtn.textContent;
-          stripeCheckoutBtn.disabled = true;
-          stripeCheckoutBtn.textContent = 'Redirecting...';
+        if (openCashPaymentFormBtn) {
+          openCashPaymentFormBtn.addEventListener('click', function () {
+            showCashPaymentStep();
+            updateCashChangeDue();
+            if (cashAmountReceivedInput) {
+              cashAmountReceivedInput.focus();
+            }
+          });
+        }
 
-          var checkoutUrl = new URL("{{ url_for('jobs.create_invoice_checkout_session', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true), _external=True) }}");
-          checkoutUrl.searchParams.set('access_token', "{{ access_token|default('', true) }}");
-          checkoutUrl.searchParams.set('customer_email', "{{ customer.email|default('', true) }}");
+        if (openCheckPaymentFormBtn) {
+          openCheckPaymentFormBtn.addEventListener('click', function () {
+            showCheckPaymentStep();
+            if (checkAmountReceivedInput) {
+              checkAmountReceivedInput.value = invoiceBalanceDue.toFixed(2);
+            }
+            if (checkNumberInput) {
+              checkNumberInput.focus();
+            }
+          });
+        }
 
-          fetch(checkoutUrl.toString(), {
-            method: 'GET',
-          })
-            .then(function (response) {
-              return response.json();
+        if (cashPaymentBackBtn) {
+          cashPaymentBackBtn.addEventListener('click', function () {
+            showPaymentMethodStep();
+          });
+        }
+
+        if (checkPaymentBackBtn) {
+          checkPaymentBackBtn.addEventListener('click', function () {
+            showPaymentMethodStep();
+          });
+        }
+
+        if (cashAmountReceivedInput) {
+          cashAmountReceivedInput.addEventListener('input', updateCashChangeDue);
+        }
+
+        paymentModal.addEventListener('click', function (event) {
+          if (event.target === paymentModal) {
+            closePaymentModal();
+          }
+        });
+
+        if (stripeCheckoutBtn) {
+          stripeCheckoutBtn.addEventListener('click', function () {
+            var paymentAmount = cardAmountToChargeInput ? Number(cardAmountToChargeInput.value || 0) : invoiceBalanceDue;
+            if (paymentAmount <= 0 || paymentAmount > invoiceBalanceDue) {
+              alert('Enter an amount greater than zero and no more than the current balance due.');
+              return;
+            }
+
+            var originalText = stripeCheckoutBtn.textContent;
+            stripeCheckoutBtn.disabled = true;
+            stripeCheckoutBtn.textContent = 'Redirecting...';
+
+            var checkoutUrl = new URL("{{ url_for('jobs.create_invoice_checkout_session', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true), _external=True) }}");
+            checkoutUrl.searchParams.set('access_token', "{{ access_token|default('', true) }}");
+            checkoutUrl.searchParams.set('customer_email', "{{ customer.email|default('', true) }}");
+            checkoutUrl.searchParams.set('amount', paymentAmount.toFixed(2));
+
+            fetch(checkoutUrl.toString(), {
+              method: 'GET',
             })
-            .then(function (data) {
-              if (data.success && data.checkout_url) {
-                window.location.href = data.checkout_url;
-                return;
-              }
-              stripeCheckoutBtn.disabled = false;
-              stripeCheckoutBtn.textContent = originalText;
-              alert('Unable to start card payment: ' + (data.error || 'Unknown error'));
-            })
-            .catch(function (error) {
-              stripeCheckoutBtn.disabled = false;
-              stripeCheckoutBtn.textContent = originalText;
-              alert('Unable to start card payment: ' + error);
-            });
+              .then(function (response) {
+                return response.json();
+              })
+              .then(function (data) {
+                if (data.success && data.checkout_url) {
+                  window.location.href = data.checkout_url;
+                  return;
+                }
+                stripeCheckoutBtn.disabled = false;
+                stripeCheckoutBtn.textContent = originalText;
+                alert('Unable to start card payment: ' + (data.error || 'Unknown error'));
+              })
+              .catch(function (error) {
+                stripeCheckoutBtn.disabled = false;
+                stripeCheckoutBtn.textContent = originalText;
+                alert('Unable to start card payment: ' + error);
+              });
+          });
+        }
+      }
+
+      function localizeInvoicePaymentDates() {
+        var dateNodes = document.querySelectorAll('[data-local-datetime-iso]');
+        if (!dateNodes.length) {
+          return;
+        }
+        dateNodes.forEach(function (node) {
+          var isoText = (node.getAttribute('data-local-datetime-iso') || '').trim();
+          if (!isoText) {
+            return;
+          }
+          var parsed = new Date(isoText);
+          if (isNaN(parsed.getTime())) {
+            return;
+          }
+          node.textContent = parsed.toLocaleString(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short'
+          });
         });
       }
+
+      localizeInvoicePaymentDates();
     });
   </script>
 {% endblock %}

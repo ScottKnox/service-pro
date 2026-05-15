@@ -173,6 +173,7 @@ def ensure_collection_validators(db):
                 "customer_id": {"bsonType": ["objectId"]},
                 "business_id": {"bsonType": ["objectId", "null"]},
                 "status": {"enum": ["Pending", "Scheduled", "En Route", "Started", "Completed", "Paid"]},
+                "payment_status": {"enum": ["pending_paid", "partial_paid", "paid", None]},
                 "job_kind": {"enum": ["one_time", "recurring_occurrence", "series_template"]},
                 "series_id": {"bsonType": ["objectId", "null"]},
                 "occurrence_index": {"bsonType": ["int", "long", "null"]},
@@ -185,10 +186,48 @@ def ensure_collection_validators(db):
                 "equipments": {"bsonType": "array"},
                 "discounts": {"bsonType": "array"},
                 "total_amount": {"bsonType": ["double", "int", "long", "decimal"]},
+                "total_amount_paid": {"bsonType": ["double", "int", "long", "decimal", "null"]},
+                "balance_due": {"bsonType": ["double", "int", "long", "decimal", "null"]},
                 "payment_due_days": {"bsonType": ["int", "long"]},
                 "created_at": {"bsonType": ["date"]},
                 "scheduled_at": {"bsonType": ["date", "null"]},
                 "completed_at": {"bsonType": ["date", "null"]},
+                "paid_at": {"bsonType": ["date", "null"]},
+            },
+        }
+    }
+
+    payments_validator = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": [
+                "job_id",
+                "invoice_id",
+                "company_id",
+                "customer_id",
+                "amount",
+                "payment_method",
+                "status",
+                "paid_at",
+                "recorded_by",
+                "created_at",
+            ],
+            "properties": {
+                "job_id": {"bsonType": ["objectId", "string"]},
+                "invoice_id": {"bsonType": ["string"]},
+                "company_id": {"bsonType": ["objectId", "string", "null"]},
+                "customer_id": {"bsonType": ["objectId", "string"]},
+                "amount": {"bsonType": ["double", "int", "long", "decimal"]},
+                "payment_method": {"enum": ["card", "ach", "cash", "check"]},
+                "stripe_payment_intent_id": {"bsonType": ["string", "null"]},
+                "check_number": {"bsonType": ["string", "null"]},
+                "status": {"enum": ["completed", "failed", "refunded"]},
+                "paid_at": {"bsonType": ["date"]},
+                "recorded_by": {"bsonType": ["objectId", "string", "null"]},
+                "notes": {"bsonType": ["string", "null"]},
+                "quickbooks_payment_id": {"bsonType": ["string", "null"]},
+                "synced_to_quickbooks_at": {"bsonType": ["date", "null"]},
+                "created_at": {"bsonType": ["date"]},
             },
         }
     }
@@ -327,6 +366,7 @@ def ensure_collection_validators(db):
     }
 
     _ensure_collection_with_validator(db, "jobs", jobs_validator)
+    _ensure_collection_with_validator(db, "payments", payments_validator)
     _ensure_collection_with_validator(db, "recurring_job_series", recurring_job_series_validator)
     _ensure_collection_with_validator(db, "estimates", estimates_validator)
     _ensure_collection_with_validator(db, "services", services_validator)
@@ -336,3 +376,7 @@ def ensure_collection_validators(db):
 
     db.hvacDiagnostics.create_index([("hvac_system_id", 1), ("created_at", -1)])
     db.hvacDiagnostics.create_index([("customer_id", 1), ("created_at", -1)])
+    db.payments.create_index([("job_id", 1), ("paid_at", -1)])
+    db.payments.create_index([("customer_id", 1), ("paid_at", -1)])
+    db.payments.create_index([("invoice_id", 1), ("paid_at", -1)])
+    db.payments.create_index([("status", 1), ("paid_at", -1)])

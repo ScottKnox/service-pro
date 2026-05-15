@@ -590,6 +590,10 @@ def _create_occurrence_from_series(db, series_doc, scheduled_date, occurrence_in
         "date_created": datetime.now().strftime("%m/%d/%Y"),
         "created_at": datetime.now(UTC),
         "invoices": [],
+        "total_amount_paid": 0.0,
+        "balance_due": float(series_doc.get("total_amount") or 0.0),
+        "payment_status": "pending_paid",
+        "paid_at": None,
         "business_id": series_doc.get("business_id"),
         "job_kind": "recurring_occurrence",
         "series_id": series_id,
@@ -924,6 +928,10 @@ def _create_job_from_accepted_estimate(db, estimate_id):
         "date_created": datetime.now().strftime("%m/%d/%Y"),
         "created_at": datetime.now(UTC),
         "invoices": [],
+        "total_amount_paid": 0.0,
+        "balance_due": float(estimate.get("total_amount") or 0.0),
+        "payment_status": "pending_paid",
+        "paid_at": None,
         "business_id": business_id,
         "job_kind": "one_time",
         "series_id": None,
@@ -1225,9 +1233,16 @@ def _ensure_invoice_reminder_indexes(db):
 
 
 def _is_invoice_paid(job_doc, invoice_entry):
-    invoice_status = str((invoice_entry or {}).get("payment_status") or "").strip().lower()
+    invoice_status = str((invoice_entry or {}).get("status") or "").strip().lower()
+    if invoice_status == "paid":
+        return True
+
     job_status = str((job_doc or {}).get("status") or "").strip().lower()
-    return invoice_status == "paid" or job_status == "paid"
+    if job_status == "paid":
+        return True
+
+    balance_due = _safe_float((job_doc or {}).get("balance_due"), _safe_float((job_doc or {}).get("total_amount"), 0.0))
+    return round(balance_due, 2) <= 0
 
 
 def _resolve_invoice_ref(invoice_entry, fallback_ref=""):
@@ -1699,41 +1714,245 @@ def _build_job_paid_timestamp_text():
     return datetime.now().strftime("%m/%d/%Y %H:%M:%S")
 
 
-def _resolve_invoice_identifiers_from_session_id(db, stripe_session_id):
-    session_id = str(stripe_session_id or "").strip()
-    if not session_id:
-        return "", ""
+def _safe_float(value, default=0.0):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
 
-    job = db.jobs.find_one(
-        {"invoices.stripe_checkout_session_id": session_id},
-        {"_id": 1, "invoices": 1},
+
+def _reference_match(field_name, value, extra_match=None):
+    clauses = [build_reference_filter(field_name, value)]
+    if extra_match:
+        clauses.append(extra_match)
+    if len(clauses) == 1:
+        return clauses[0]
+    return {"$and": clauses}
+
+
+def _reference_storage_value(value):
+    oid_value = coerce_object_id(value)
+    if oid_value is not None:
+        return oid_value
+    return str(value or "").strip()
+
+
+def _normalize_payment_method(value):
+    normalized = str(value or "").strip().lower()
+    return normalized if normalized in {"card", "ach", "cash", "check"} else ""
+
+
+def _payment_method_from_checkout_session(checkout_session):
+    payment_method_types = _stripe_obj_value(checkout_session, "payment_method_types", []) or []
+    if not isinstance(payment_method_types, list):
+        payment_method_types = []
+    normalized_types = {str(item or "").strip().lower() for item in payment_method_types}
+    if "us_bank_account" in normalized_types:
+        return "ach"
+    return "card"
+
+
+def _normalize_stripe_payment_method_type(method_type):
+    normalized = str(method_type or "").strip().lower()
+    if normalized == "us_bank_account":
+        return "ach"
+    if normalized == "card":
+        return "card"
+    return ""
+
+
+def _resolve_payment_method_from_payment_intent(payment_intent_id):
+    intent_id = str(payment_intent_id or "").strip()
+    if not intent_id or not _configure_stripe_client():
+        return ""
+
+    try:
+        payment_intent = stripe.PaymentIntent.retrieve(
+            intent_id,
+            expand=["payment_method", "latest_charge"],
+        )
+    except Exception as exc:
+        current_app.logger.warning("Failed to retrieve payment intent for method resolution: payment_intent=%s error=%s", intent_id, exc)
+        return ""
+
+    payment_method_obj = _stripe_obj_value(payment_intent, "payment_method", None)
+    payment_method_type = _stripe_obj_value(payment_method_obj, "type", "")
+
+    # Some API responses return only a PaymentMethod ID on the intent.
+    if not payment_method_type and isinstance(payment_method_obj, str):
+        method_id = str(payment_method_obj or "").strip()
+        if method_id:
+            try:
+                payment_method = stripe.PaymentMethod.retrieve(method_id)
+                payment_method_type = _stripe_obj_value(payment_method, "type", "")
+            except Exception as exc:
+                current_app.logger.warning("Failed to retrieve payment method for method resolution: payment_method=%s error=%s", method_id, exc)
+
+    normalized = _normalize_stripe_payment_method_type(payment_method_type)
+    if normalized:
+        return normalized
+
+    latest_charge = _stripe_obj_value(payment_intent, "latest_charge", None)
+    payment_method_details = _stripe_obj_value(latest_charge, "payment_method_details", None)
+    charge_method_type = _stripe_obj_value(payment_method_details, "type", "")
+    return _normalize_stripe_payment_method_type(charge_method_type)
+
+
+def _first_completed_payment_datetime(payments):
+    earliest_value = None
+    for payment in payments:
+        if not isinstance(payment, dict):
+            continue
+        paid_at_value = payment.get("paid_at")
+        parsed_value = _coerce_datetime_utc(paid_at_value)
+        if parsed_value is None:
+            continue
+        if earliest_value is None or parsed_value < earliest_value:
+            earliest_value = parsed_value
+    return earliest_value
+
+
+def _refresh_customer_balance_from_jobs(db, customer_id):
+    if not customer_id:
+        return
+    balance_due_total = 0.0
+    for job_doc in db.jobs.find(build_reference_filter("customer_id", customer_id), {"balance_due": 1, "total_amount": 1, "total_amount_paid": 1}):
+        if "balance_due" in job_doc:
+            balance_due_total += max(0.0, _safe_float(job_doc.get("balance_due"), 0.0))
+            continue
+        total_amount = _safe_float(job_doc.get("total_amount"), 0.0)
+        total_amount_paid = _safe_float(job_doc.get("total_amount_paid"), 0.0)
+        balance_due_total += max(0.0, total_amount - total_amount_paid)
+
+    customer = db.customers.find_one(build_reference_filter("_id", customer_id), {"_id": 1})
+    if not customer:
+        return
+
+    rounded_balance = round(balance_due_total, 2)
+    db.customers.update_one(
+        {"_id": customer.get("_id")},
+        {
+            "$set": {
+                "balance_due_amount": rounded_balance,
+                "balance_due": normalize_currency(rounded_balance),
+            }
+        },
     )
+
+
+def _synchronize_job_payment_fields(db, job_id):
+    job = db.jobs.find_one({"_id": ObjectId(job_id)})
     if not job:
-        return "", ""
+        return None
 
-    job_id = str(job.get("_id") or "").strip()
-    for entry in list(job.get("invoices") or []):
+    total_amount = round(_safe_float(job.get("total_amount"), 0.0), 2)
+    payment_docs = list(
+        db.payments.find(
+            _reference_match(
+                "job_id",
+                job_id,
+                {"status": "completed"},
+            )
+        )
+    )
+    total_amount_paid = round(sum(_safe_float(item.get("amount"), 0.0) for item in payment_docs), 2)
+    balance_due = round(max(0.0, total_amount - total_amount_paid), 2)
+
+    if total_amount_paid <= 0:
+        payment_status = "pending_paid"
+    elif balance_due <= 0:
+        payment_status = "paid"
+    else:
+        payment_status = "partial_paid"
+
+    first_paid_at = _first_completed_payment_datetime(payment_docs)
+    existing_paid_at = _coerce_datetime_utc(job.get("paid_at"))
+    paid_at_value = existing_paid_at or first_paid_at
+
+    job_updates = {
+        "total_amount_paid": total_amount_paid,
+        "balance_due": balance_due,
+        "payment_status": payment_status,
+        "updated_at": datetime.now(UTC),
+    }
+    if paid_at_value is not None:
+        job_updates["paid_at"] = paid_at_value
+        job_updates["datePaid"] = paid_at_value.strftime("%m/%d/%Y %H:%M:%S")
+
+    if balance_due <= 0:
+        job_updates["status"] = "Paid"
+
+    db.jobs.update_one({"_id": ObjectId(job_id)}, {"$set": job_updates})
+
+    refreshed = db.jobs.find_one({"_id": ObjectId(job_id)})
+    if refreshed:
+        _refresh_customer_balance_from_jobs(db, refreshed.get("customer_id"))
+    return refreshed
+
+
+def _sanitize_invoice_payment_fields(invoice_entry):
+    sanitized = dict(invoice_entry or {})
+    for deprecated_field in (
+        "payment_status",
+        "amount_paid",
+        "payment_type",
+        "payment_notes",
+        "check_number",
+        "stripe_payment_intent_id",
+        "stripe_checkout_session_id",
+        "paid_at",
+    ):
+        sanitized.pop(deprecated_field, None)
+    return sanitized
+
+
+def _update_invoice_status_from_job_payment(db, job_doc, invoice_ref):
+    if not job_doc:
+        return
+
+    normalized_invoice_ref = str(invoice_ref or "").strip()
+    total_amount = round(_safe_float(job_doc.get("total_amount"), 0.0), 2)
+    total_amount_paid = round(_safe_float(job_doc.get("total_amount_paid"), 0.0), 2)
+    is_fully_paid = total_amount > 0 and round(total_amount - total_amount_paid, 2) <= 0
+
+    updated_invoices = []
+    for entry in list(job_doc.get("invoices") or []):
         if not isinstance(entry, dict):
+            updated_invoices.append(entry)
             continue
-        if str(entry.get("stripe_checkout_session_id") or "").strip() != session_id:
-            continue
-        invoice_ref = str(entry.get("invoice_id") or entry.get("invoice_number") or "").strip()
-        if invoice_ref:
-            return job_id, invoice_ref
-    return "", ""
+
+        updated_entry = _sanitize_invoice_payment_fields(entry)
+        entry_invoice_id = str(updated_entry.get("invoice_id") or "").strip()
+        entry_invoice_number = str(updated_entry.get("invoice_number") or "").strip()
+        if normalized_invoice_ref and normalized_invoice_ref in {entry_invoice_id, entry_invoice_number}:
+            updated_entry["status"] = "Paid" if is_fully_paid else "Sent"
+        updated_invoices.append(updated_entry)
+
+    db.jobs.update_one(
+        {"_id": job_doc.get("_id")},
+        {
+            "$set": {
+                "invoices": updated_invoices,
+                "updated_at": datetime.now(UTC),
+            }
+        },
+    )
 
 
-def _finalize_invoice_payment(
+def _record_payment(
     db,
     job_id,
     invoice_ref,
-    stripe_session_id="",
-    payment_intent_id="",
-    amount_paid=0.0,
-    payment_type="",
-    payment_notes="",
+    amount,
+    payment_method,
+    status="completed",
+    stripe_payment_intent_id="",
     check_number="",
+    notes="",
 ):
+    if not ObjectId.is_valid(job_id):
+        return False
+
     job = db.jobs.find_one({"_id": ObjectId(job_id)})
     if not job:
         return False
@@ -1743,89 +1962,75 @@ def _finalize_invoice_payment(
     if not invoice_entry:
         return False
 
-    if str(invoice_entry.get("payment_status") or "").strip().lower() == "paid":
-        return True
+    normalized_method = _normalize_payment_method(payment_method)
+    if not normalized_method:
+        return False
+
+    payment_amount = round(_safe_float(amount, 0.0), 2)
+    if payment_amount <= 0:
+        return False
+
+    current_total_paid = round(_safe_float(job_doc.get("total_amount_paid"), 0.0), 2)
+    if current_total_paid <= 0:
+        current_total_paid = round(
+            sum(
+                _safe_float(item.get("amount"), 0.0)
+                for item in db.payments.find(_reference_match("job_id", job_id, {"status": "completed"}))
+            ),
+            2,
+        )
+    total_amount = round(_safe_float(job_doc.get("total_amount"), 0.0), 2)
+    current_balance_due = round(max(0.0, total_amount - current_total_paid), 2)
+    if payment_amount > current_balance_due:
+        return False
 
     paid_at_utc = datetime.now(UTC)
-    paid_at_text = _build_job_paid_timestamp_text()
-    normalized_invoice_ref = str(invoice_ref or "").strip()
+    recorded_by = str(session.get("employee_id") or "").strip()
+    payment_doc = {
+        "job_id": _reference_storage_value(job_id),
+        "invoice_id": str((invoice_entry or {}).get("invoice_id") or (invoice_entry or {}).get("invoice_number") or "").strip(),
+        "company_id": _reference_storage_value(job.get("business_id")),
+        "customer_id": _reference_storage_value(job.get("customer_id")),
+        "amount": payment_amount,
+        "payment_method": normalized_method,
+        "stripe_payment_intent_id": str(stripe_payment_intent_id or "").strip() if normalized_method in {"card", "ach"} else None,
+        "check_number": str(check_number or "").strip() if normalized_method == "check" else None,
+        "status": str(status or "completed").strip().lower() or "completed",
+        "paid_at": paid_at_utc,
+        "recorded_by": _reference_storage_value(recorded_by),
+        "notes": str(notes or "").strip(),
+        "quickbooks_payment_id": None,
+        "synced_to_quickbooks_at": None,
+        "created_at": paid_at_utc,
+    }
+    db.payments.insert_one(payment_doc)
 
-    updated_invoices = []
-    for entry in list(job_doc.get("invoices") or []):
-        if not isinstance(entry, dict):
-            updated_invoices.append(entry)
-            continue
-
-        entry_invoice_id = str(entry.get("invoice_id") or "").strip()
-        entry_invoice_number = str(entry.get("invoice_number") or "").strip()
-        updated_entry = dict(entry)
-        if normalized_invoice_ref in {entry_invoice_id, entry_invoice_number}:
-            updated_entry["payment_status"] = "paid"
-            updated_entry["status"] = "Paid"
-            updated_entry["paid_at"] = paid_at_text
-            if stripe_session_id:
-                updated_entry["stripe_checkout_session_id"] = stripe_session_id
-            if payment_intent_id:
-                updated_entry["stripe_payment_intent_id"] = payment_intent_id
-            if amount_paid:
-                updated_entry["amount_paid"] = round(float(amount_paid), 2)
-            normalized_payment_type = str(payment_type or "").strip().lower()
-            if normalized_payment_type:
-                updated_entry["payment_type"] = normalized_payment_type
-            normalized_payment_notes = str(payment_notes or "").strip()
-            if normalized_payment_notes:
-                updated_entry["payment_notes"] = normalized_payment_notes
-            normalized_check_number = str(check_number or "").strip()
-            if normalized_check_number:
-                updated_entry["check_number"] = normalized_check_number
-        updated_invoices.append(updated_entry)
-
-    db.jobs.update_one(
-        {"_id": ObjectId(job_id)},
-        {
-            "$set": {
-                "status": "Paid",
-                "datePaid": paid_at_text,
-                "paid_at": paid_at_utc,
-                "updated_at": paid_at_utc,
-                "invoices": updated_invoices,
-            }
-        },
-    )
-
-    _cancel_pending_invoice_reminders(
-        db,
-        job_id,
-        normalized_invoice_ref,
-        reason="Invoice marked paid",
-    )
-
-    customer_id = job.get("customer_id")
-    if customer_id:
-        customer_doc = db.customers.find_one(build_reference_filter("_id", customer_id))
-        if customer_doc:
-            current_balance = float(customer_doc.get("balance_due_amount", currency_to_float(customer_doc.get("balance_due", "$0.00"))))
-            payment_value = float(amount_paid or job.get("total_amount") or 0.0)
-            updated_balance_amount = max(0.0, round(current_balance - payment_value, 2))
-            db.customers.update_one(
-                {"_id": customer_doc.get("_id")},
-                {
-                    "$set": {
-                        "balance_due_amount": updated_balance_amount,
-                        "balance_due": normalize_currency(str(updated_balance_amount)),
-                    }
-                },
+    refreshed_job = _synchronize_job_payment_fields(db, job_id)
+    if refreshed_job:
+        _update_invoice_status_from_job_payment(db, refreshed_job, invoice_ref)
+        refreshed_job_doc = serialize_doc(refreshed_job)
+        refreshed_invoice = _find_invoice_entry(refreshed_job_doc, invoice_ref=invoice_ref)
+        if refreshed_invoice and str(refreshed_invoice.get("status") or "").strip().lower() == "paid":
+            _cancel_pending_invoice_reminders(
+                db,
+                job_id,
+                _resolve_invoice_ref(refreshed_invoice, fallback_ref=invoice_ref),
+                reason="Invoice marked paid",
             )
 
     return True
 
 
 def process_stripe_checkout_completed(db, checkout_session):
-    stripe_session_id = str(_stripe_obj_value(checkout_session, "id", "") or "").strip()
     metadata_raw = _stripe_obj_value(checkout_session, "metadata", {}) or {}
     metadata = _stripe_obj_dict(metadata_raw)
     job_id = str(metadata.get("job_id") or "").strip()
-    invoice_ref = str(metadata.get("invoice_ref") or "").strip()
+    invoice_ref = str(
+        metadata.get("invoice_ref")
+        or metadata.get("invoice_id")
+        or metadata.get("invoice_number")
+        or ""
+    ).strip()
 
     if not job_id or not invoice_ref:
         client_reference_id = str(_stripe_obj_value(checkout_session, "client_reference_id", "") or "").strip()
@@ -1836,33 +2041,68 @@ def process_stripe_checkout_completed(db, checkout_session):
             if not invoice_ref:
                 invoice_ref = str(parsed_invoice_ref or "").strip()
 
-    if (not job_id or not invoice_ref) and stripe_session_id:
-        resolved_job_id, resolved_invoice_ref = _resolve_invoice_identifiers_from_session_id(db, stripe_session_id)
-        if not job_id:
-            job_id = resolved_job_id
-        if not invoice_ref:
-            invoice_ref = resolved_invoice_ref
+    if (not job_id or not invoice_ref) and str(_stripe_obj_value(checkout_session, "payment_intent", "") or "").strip() and _configure_stripe_client():
+        try:
+            payment_intent = stripe.PaymentIntent.retrieve(str(_stripe_obj_value(checkout_session, "payment_intent", "") or "").strip())
+            payment_intent_metadata = _stripe_obj_dict(_stripe_obj_value(payment_intent, "metadata", {}) or {})
+            if not job_id:
+                job_id = str(payment_intent_metadata.get("job_id") or "").strip()
+            if not invoice_ref:
+                invoice_ref = str(
+                    payment_intent_metadata.get("invoice_ref")
+                    or payment_intent_metadata.get("invoice_id")
+                    or payment_intent_metadata.get("invoice_number")
+                    or ""
+                ).strip()
+        except Exception as exc:
+            current_app.logger.warning(
+                "Stripe checkout completion could not resolve payment intent metadata: error=%s",
+                exc,
+            )
 
     if not job_id or not invoice_ref or not ObjectId.is_valid(job_id):
         current_app.logger.warning(
-            "Stripe checkout completion ignored due to missing metadata: session_id=%s job_id=%s invoice_ref=%s",
-            stripe_session_id,
+            "Stripe checkout completion ignored due to missing metadata: job_id=%s invoice_ref=%s",
             job_id,
             invoice_ref,
         )
         return False
 
     amount_total = float(_stripe_obj_value(checkout_session, "amount_total", 0) or 0) / 100.0
+    if amount_total <= 0:
+        amount_total = _safe_float(metadata.get("amount"), 0.0)
     payment_intent_id = str(_stripe_obj_value(checkout_session, "payment_intent", "") or "").strip()
-    return _finalize_invoice_payment(
+    payment_method = _resolve_payment_method_from_payment_intent(payment_intent_id) or _payment_method_from_checkout_session(checkout_session)
+    finalized = _record_payment(
         db,
         job_id,
         invoice_ref,
-        stripe_session_id=stripe_session_id,
-        payment_intent_id=payment_intent_id,
-        amount_paid=amount_total,
-        payment_type="card",
+        amount=amount_total,
+        payment_method=payment_method,
+        stripe_payment_intent_id=payment_intent_id,
+        status="completed",
     )
+    if not finalized:
+        current_app.logger.warning(
+            "Stripe checkout completion failed to record payment: job_id=%s invoice_ref=%s amount=%s payment_intent=%s metadata=%s",
+            job_id,
+            invoice_ref,
+            amount_total,
+            payment_intent_id,
+            metadata,
+        )
+        return False
+
+    stripe_customer_id = str(_stripe_obj_value(checkout_session, "customer", "") or "").strip()
+    if stripe_customer_id:
+        job = db.jobs.find_one({"_id": ObjectId(job_id)}, {"customer_id": 1}) or {}
+        customer = db.customers.find_one(build_reference_filter("_id", job.get("customer_id")), {"_id": 1, "stripe_customer_id": 1})
+        if customer and not str(customer.get("stripe_customer_id") or "").strip():
+            db.customers.update_one(
+                {"_id": customer.get("_id")},
+                {"$set": {"stripe_customer_id": stripe_customer_id}},
+            )
+    return True
 
 
 def _normalize_manual_payment_type(value):
@@ -1889,35 +2129,59 @@ def record_invoice_payment(jobId, invoiceRef):
     if not payment_type:
         return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="invalid"))
 
-    total_due = float(job_doc.get("total_amount") or 0.0)
-    amount_received = float(currency_to_float(request.form.get("amount_received", "")))
+    total_due = round(_safe_float(job_doc.get("total_amount"), 0.0), 2)
+    amount_already_paid = round(_safe_float(job_doc.get("total_amount_paid"), 0.0), 2)
+    if amount_already_paid <= 0:
+        amount_already_paid = round(
+            sum(
+                _safe_float(item.get("amount"), 0.0)
+                for item in db.payments.find(_reference_match("job_id", jobId, {"status": "completed"}))
+            ),
+            2,
+        )
+    balance_due = round(max(0.0, total_due - amount_already_paid), 2)
+
+    amount_received = round(float(currency_to_float(request.form.get("amount_received", ""))), 2)
     check_number = ""
+    if balance_due <= 0:
+        return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="already_paid"))
+
     if payment_type == "cash":
         if amount_received <= 0:
             return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="invalid"))
-        if amount_received < total_due:
-            return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="insufficient_cash"))
     elif payment_type == "check":
         check_number = str(request.form.get("check_number") or "").strip()
         if not check_number:
             return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="invalid"))
         if amount_received <= 0:
-            amount_received = total_due
+            amount_received = balance_due
+
+    if amount_received > balance_due:
+        return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="invalid"))
 
     payment_notes = str(request.form.get("payment_notes") or "").strip()
-    finalized = _finalize_invoice_payment(
+    finalized = _record_payment(
         db,
         jobId,
         invoiceRef,
-        amount_paid=min(max(amount_received, 0.0), total_due if total_due > 0 else amount_received),
-        payment_type=payment_type,
-        payment_notes=payment_notes,
+        amount=amount_received,
+        payment_method=payment_type,
+        status="completed",
+        notes=payment_notes,
         check_number=check_number,
     )
     if not finalized:
         return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="failed"))
 
-    return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="success"))
+    return redirect(
+        url_for(
+            "jobs.view_invoice",
+            jobId=jobId,
+            invoiceRef=invoiceRef,
+            payment="success",
+            payment_method=payment_type,
+        )
+    )
 
 
 @bp.route("/jobs/<jobId>/invoices/<invoiceRef>/send-reminder", methods=["POST"])
@@ -2053,39 +2317,82 @@ def _build_invoice_pricing_summary(job_doc):
     }
 
 
-def _build_invoice_payment_summary(invoice_entry, pricing_summary, invoice_is_paid):
-    invoice_payload = invoice_entry or {}
-    summary_payload = pricing_summary or {}
-
-    total_due = float(summary_payload.get("total_due") or 0.0)
-    amount_paid_raw = invoice_payload.get("amount_paid")
-    try:
-        amount_paid = float(amount_paid_raw)
-    except (TypeError, ValueError):
-        amount_paid = total_due if invoice_is_paid else 0.0
-
-    if invoice_is_paid and amount_paid <= 0:
-        amount_paid = total_due
-
-    invoice_balance = max(0.0, round(total_due - amount_paid, 2))
-    payment_date = str(invoice_payload.get("paid_at") or "").strip()
-    payment_type = str(invoice_payload.get("payment_type") or "").strip().lower()
-    payment_type_labels = {
-        "card": "Online card payment",
-        "cash": "Cash payment",
-        "check": "Check payment",
-        "phone": "Phone payment",
+def _format_payment_method_label(method):
+    labels = {
+        "card": "Card",
+        "ach": "ACH",
+        "cash": "Cash",
+        "check": "Check",
     }
+    normalized_method = str(method or "").strip().lower()
+    return labels.get(normalized_method, "Unknown")
+
+
+def _build_payment_history(db, job_id, invoice_ref=""):
+    job_filter = _reference_match("job_id", job_id)
+    normalized_invoice_ref = str(invoice_ref or "").strip()
+    if normalized_invoice_ref:
+        invoice_filter = build_reference_filter("invoice_id", normalized_invoice_ref)
+        payment_filter = {"$and": [job_filter, invoice_filter]}
+    else:
+        payment_filter = job_filter
+
+    payment_docs = list(db.payments.find(payment_filter).sort([("paid_at", -1), ("created_at", -1), ("_id", -1)]))
+    history_rows = []
+    for payment in payment_docs:
+        amount = round(_safe_float(payment.get("amount"), 0.0), 2)
+        paid_at_value = _coerce_datetime_utc(payment.get("paid_at"))
+        paid_at_iso = ""
+        if paid_at_value is None:
+            date_display = str(payment.get("paid_at") or payment.get("created_at") or "").strip()
+        else:
+            if paid_at_value.tzinfo is None:
+                paid_at_value = paid_at_value.replace(tzinfo=UTC)
+            paid_at_iso = paid_at_value.isoformat()
+            date_display = paid_at_value.strftime("%m/%d/%Y %H:%M:%S")
+
+        history_rows.append(
+            {
+                "id": str(payment.get("_id") or "").strip(),
+                "date": date_display,
+                "date_iso": paid_at_iso,
+                "amount": amount,
+                "amount_display": normalize_currency(amount),
+                "method": _format_payment_method_label(payment.get("payment_method")),
+                "status": str(payment.get("status") or "").strip().title() or "Unknown",
+                "notes": str(payment.get("notes") or "").strip(),
+            }
+        )
+    return history_rows
+
+
+def _build_invoice_payment_summary(job_doc, pricing_summary, payment_history):
+    summary_payload = pricing_summary or {}
+    payload = job_doc or {}
+    total_due = round(_safe_float(summary_payload.get("total_due"), 0.0), 2)
+    amount_paid = round(_safe_float(payload.get("total_amount_paid"), 0.0), 2)
+    if amount_paid <= 0 and payment_history:
+        amount_paid = round(sum(_safe_float(item.get("amount"), 0.0) for item in payment_history if str(item.get("status") or "").strip().lower() == "completed"), 2)
+
+    invoice_balance = round(max(0.0, total_due - amount_paid), 2)
+    payment_state = str(payload.get("payment_status") or "").strip().lower()
+    status_label_map = {
+        "pending_paid": "Payment pending",
+        "partial_paid": "Partially paid",
+        "paid": "Paid in full",
+    }
+    latest_payment = payment_history[0] if payment_history else {}
 
     return {
-        "show": invoice_is_paid or amount_paid > 0,
-        "status_label": "Paid in full" if invoice_is_paid else "Payment pending",
+        "show": bool(payment_history) or amount_paid > 0,
+        "status_label": status_label_map.get(payment_state, "Payment pending" if invoice_balance > 0 else "Paid in full"),
         "amount_paid": amount_paid,
         "amount_paid_display": normalize_currency(amount_paid),
         "invoice_balance": invoice_balance,
         "invoice_balance_display": normalize_currency(invoice_balance),
-        "payment_date": payment_date,
-        "payment_channel_label": payment_type_labels.get(payment_type, "Online card payment") if amount_paid > 0 else "Pending",
+        "payment_date": str(latest_payment.get("date") or "").strip(),
+        "payment_date_iso": str(latest_payment.get("date_iso") or "").strip(),
+        "payment_channel_label": str(latest_payment.get("method") or "Pending"),
     }
 
 
@@ -2095,9 +2402,9 @@ def _resolve_invoice_status(invoice_entry, job_doc=None):
     if normalized_status in {"Created", "Sent", "Paid"}:
         return normalized_status
 
-    invoice_payment_status = str(invoice_payload.get("payment_status") or "").strip().lower()
     job_status = str((job_doc or {}).get("status") or "").strip().lower()
-    if invoice_payment_status == "paid" or job_status == "paid":
+    payment_status = str((job_doc or {}).get("payment_status") or "").strip().lower()
+    if payment_status == "paid" or job_status == "paid":
         return "Paid"
 
     if str(invoice_payload.get("date_sent") or "").strip() or str(invoice_payload.get("date_sent_utc") or "").strip() or str((job_doc or {}).get("date_invoice_sent") or "").strip():
@@ -2109,7 +2416,8 @@ def _resolve_invoice_status(invoice_entry, job_doc=None):
 def _resolve_invoice_sent_display(invoice_entry, job_doc=None):
     invoice_payload = invoice_entry or {}
     raw_value = str(
-        invoice_payload.get("date_sent")
+        invoice_payload.get("sent_at")
+        or invoice_payload.get("date_sent")
         or invoice_payload.get("date_sent_utc")
         or (job_doc or {}).get("date_invoice_sent")
         or ""
@@ -2127,6 +2435,29 @@ def _resolve_invoice_sent_display(invoice_entry, job_doc=None):
         return raw_value
 
     return parsed_value.strftime("%m/%d/%Y %H:%M:%S")
+
+
+def _resolve_invoice_sent_iso(invoice_entry, job_doc=None):
+    invoice_payload = invoice_entry or {}
+    raw_value = str(
+        invoice_payload.get("sent_at")
+        or invoice_payload.get("date_sent")
+        or invoice_payload.get("date_sent_utc")
+        or (job_doc or {}).get("date_invoice_sent")
+        or ""
+    ).strip()
+    if not raw_value:
+        return ""
+
+    normalized_value = raw_value.replace("Z", "+00:00")
+    try:
+        parsed_value = datetime.fromisoformat(normalized_value)
+    except ValueError:
+        return ""
+
+    if parsed_value.tzinfo is None:
+        parsed_value = parsed_value.replace(tzinfo=UTC)
+    return parsed_value.isoformat()
 
 
 def _normalize_estimate_expiration_days(value, fallback=30):
@@ -2540,6 +2871,10 @@ def create_job(customerId):
             "date_created": datetime.now().strftime("%m/%d/%Y"),
             "created_at": datetime.now(UTC),
             "invoices": [],
+            "total_amount_paid": 0.0,
+            "balance_due": float(total or 0.0),
+            "payment_status": "pending_paid",
+            "paid_at": None,
             "business_id": business_id,
             "job_kind": "one_time",
             "series_id": None,
@@ -3432,6 +3767,7 @@ def view_invoice(jobId, invoiceRef):
 
     token_value = str(request.args.get("token") or "").strip()
     payment_state = str(request.args.get("payment") or "").strip().lower()
+    payment_method_state = str(request.args.get("payment_method") or "").strip().lower()
     reminder_state = str(request.args.get("reminder") or "").strip().lower()
     returned_session_id = str(request.args.get("session_id") or "").strip()
     is_staff_view = _is_authenticated_employee()
@@ -3446,6 +3782,18 @@ def view_invoice(jobId, invoiceRef):
     if not is_staff_view and has_customer_token:
         session[session_access_key] = True
 
+    # Refresh payment totals on load so displayed balances are always in sync.
+    synchronized_job = _synchronize_job_payment_fields(db, jobId)
+    if synchronized_job:
+        job_doc = serialize_doc(synchronized_job)
+        refreshed_invoice = _find_invoice_entry(job_doc, invoice_ref=invoiceRef)
+        if refreshed_invoice:
+            invoice = refreshed_invoice
+
+    invoice_status = _resolve_invoice_status(invoice, job_doc)
+    invoice["status"] = invoice_status
+    invoice_sent_display = _resolve_invoice_sent_display(invoice, job_doc)
+    invoice_sent_iso = _resolve_invoice_sent_iso(invoice, job_doc)
     invoice_status_normalized = invoice_status.lower()
     invoice_is_paid = invoice_status_normalized == "paid"
 
@@ -3513,9 +3861,9 @@ def view_invoice(jobId, invoiceRef):
 
     completed_dt = _parse_mmddyyyy_date(str(job_doc.get("dateCompleted") or "")[:10])
     payment_due_days = _normalize_payment_due_days(job_doc.get("payment_due_days"), 30)
-    due_date = ""
+    due_date = str((invoice or {}).get("due_date") or "").strip()
     if completed_dt:
-        due_date = (completed_dt + timedelta(days=payment_due_days)).strftime("%m/%d/%Y")
+        due_date = due_date or (completed_dt + timedelta(days=payment_due_days)).strftime("%m/%d/%Y")
 
     stripe_connect_ready = False
     stripe_connect_reason = ""
@@ -3537,7 +3885,10 @@ def view_invoice(jobId, invoiceRef):
             stripe_connect_reason = "Card payments are unavailable until this business connects Stripe and enables charges/payouts."
 
     pricing_summary = _build_invoice_pricing_summary(job_doc)
-    payment_summary = _build_invoice_payment_summary(invoice, pricing_summary, invoice_is_paid)
+    payment_history = _build_payment_history(db, jobId, _resolve_invoice_ref(invoice, fallback_ref=invoiceRef))
+    payment_summary = _build_invoice_payment_summary(job_doc, pricing_summary, payment_history)
+    total_amount_paid = round(_safe_float(job_doc.get("total_amount_paid"), 0.0), 2)
+    balance_due = round(_safe_float(job_doc.get("balance_due"), max(0.0, _safe_float(job_doc.get("total_amount"), 0.0) - total_amount_paid)), 2)
 
     return render_template(
         "invoices/view_invoice.html",
@@ -3548,13 +3899,18 @@ def view_invoice(jobId, invoiceRef):
         customer=customer,
         pricing_summary=pricing_summary,
         payment_summary=payment_summary,
+        payment_history=payment_history,
+        total_amount_paid=total_amount_paid,
+        balance_due=balance_due,
         payment_due_days=payment_due_days,
         due_date=due_date,
         invoice_sent_display=invoice_sent_display,
+        invoice_sent_iso=invoice_sent_iso,
         is_staff_view=is_staff_view,
         access_token=token_value,
         invoice_email_template=invoice_email_template,
         payment_state=payment_state,
+        payment_method_state=payment_method_state,
         reminder_state=reminder_state,
         stripe_publishable_key=_resolve_stripe_publishable_key(),
         stripe_connect_ready=stripe_connect_ready,
@@ -3586,9 +3942,24 @@ def create_invoice_checkout_session(jobId, invoiceRef):
     if not secret_key:
         return jsonify({"success": False, "error": "Stripe is not configured"}), 500
 
-    amount_total = int(round(float(job_doc.get("total_amount") or 0.0) * 100))
-    if amount_total <= 0:
-        return jsonify({"success": False, "error": "Invoice total must be greater than zero"}), 400
+    synchronized_job = _synchronize_job_payment_fields(db, jobId)
+    if synchronized_job:
+        job_doc = serialize_doc(synchronized_job)
+
+    total_amount = round(_safe_float(job_doc.get("total_amount"), 0.0), 2)
+    amount_already_paid = round(_safe_float(job_doc.get("total_amount_paid"), 0.0), 2)
+    balance_due = round(max(0.0, total_amount - amount_already_paid), 2)
+    if balance_due <= 0:
+        return jsonify({"success": False, "error": "Invoice is already fully paid"}), 400
+
+    requested_amount = request_data.get("amount")
+    if requested_amount in (None, ""):
+        requested_amount = request.args.get("amount", "")
+    charge_amount = round(_safe_float(requested_amount, balance_due), 2)
+    if charge_amount <= 0 or charge_amount > balance_due:
+        return jsonify({"success": False, "error": "Payment amount must be greater than zero and no more than balance due"}), 400
+
+    amount_total = int(round(charge_amount * 100))
 
     business_id = str(job_doc.get("business_id") or "").strip()
     if not business_id:
@@ -3608,9 +3979,9 @@ def create_invoice_checkout_session(jobId, invoiceRef):
     platform_fee_percent = _resolve_platform_fee_percent(0.0)
     application_fee_amount = int(round(amount_total * (platform_fee_percent / 100.0))) if platform_fee_percent > 0 else 0
 
-    customer_email = str((request_data.get("customer_email") or "")).strip() or str((job_doc.get("email") or "")).strip()
-    if not customer_email:
-        customer_email = str((db.customers.find_one(build_reference_filter("_id", job.get("customer_id")), {"email": 1}) or {}).get("email") or "").strip()
+    customer_doc = db.customers.find_one(build_reference_filter("_id", job.get("customer_id")), {"email": 1, "stripe_customer_id": 1}) or {}
+    customer_email = str((request_data.get("customer_email") or "")).strip() or str((job_doc.get("email") or "")).strip() or str(customer_doc.get("email") or "").strip()
+    stripe_customer_id = str(customer_doc.get("stripe_customer_id") or "").strip()
 
     success_url_base = url_for(
         "jobs.view_invoice",
@@ -3632,8 +4003,9 @@ def create_invoice_checkout_session(jobId, invoiceRef):
 
     checkout_session = stripe.checkout.Session.create(
         mode="payment",
-        payment_method_types=["card"],
-        customer_email=customer_email or None,
+        payment_method_types=["card", "us_bank_account"],
+        customer=stripe_customer_id or None,
+        customer_email=None if stripe_customer_id else (customer_email or None),
         client_reference_id=f"{jobId}:{str(invoice.get('invoice_id') or invoiceRef)}",
         line_items=[
             {
@@ -3651,6 +4023,7 @@ def create_invoice_checkout_session(jobId, invoiceRef):
             "job_id": jobId,
             "invoice_ref": str(invoice.get("invoice_id") or invoice.get("invoice_number") or invoiceRef),
             "business_id": business_id,
+            "amount": f"{charge_amount:.2f}",
         },
         payment_intent_data={
             "application_fee_amount": application_fee_amount,
@@ -3659,31 +4032,12 @@ def create_invoice_checkout_session(jobId, invoiceRef):
                 "job_id": jobId,
                 "invoice_ref": str(invoice.get("invoice_id") or invoice.get("invoice_number") or invoiceRef),
                 "business_id": business_id,
+                "amount": f"{charge_amount:.2f}",
             },
         },
         success_url=success_url,
         cancel_url=cancel_url,
     )
-
-    checkout_session_id = str(getattr(checkout_session, "id", "") or checkout_session.get("id") or "").strip()
-    if checkout_session_id:
-        updated_invoices = []
-        normalized_invoice_ref = str(invoiceRef or "").strip()
-        for entry in list(job_doc.get("invoices") or []):
-            if not isinstance(entry, dict):
-                updated_invoices.append(entry)
-                continue
-            entry_invoice_id = str(entry.get("invoice_id") or "").strip()
-            entry_invoice_number = str(entry.get("invoice_number") or "").strip()
-            updated_entry = dict(entry)
-            if normalized_invoice_ref in {entry_invoice_id, entry_invoice_number}:
-                updated_entry["stripe_checkout_session_id"] = checkout_session_id
-            updated_invoices.append(updated_entry)
-
-        db.jobs.update_one(
-            {"_id": ObjectId(jobId)},
-            {"$set": {"invoices": updated_invoices, "updated_at": datetime.now(UTC)}},
-        )
 
     return jsonify({"success": True, "checkout_url": checkout_session.url}), 200
 
@@ -3691,7 +4045,8 @@ def create_invoice_checkout_session(jobId, invoiceRef):
 @bp.route("/jobs/<jobId>")
 def view_job(jobId):
     db = ensure_connection_or_500()
-    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    synchronized_job = _synchronize_job_payment_fields(db, jobId)
+    job = synchronized_job or db.jobs.find_one({"_id": object_id_or_404(jobId)})
     if not job:
         return redirect(url_for("jobs.jobs"))
 
@@ -3729,6 +4084,7 @@ def view_job(jobId):
 
     job_doc = serialize_doc(job)
     job_doc["internal_notes"] = _build_internal_notes_for_view(db, job)
+    payment_history = _build_payment_history(db, jobId)
 
     # Detect if the viewing employee has a *different* active job (En Route / Started).
     # Used to disable transition buttons so only one job can be active at a time.
@@ -3751,6 +4107,7 @@ def view_job(jobId):
         "jobs/view_job.html",
         jobId=jobId,
         job=job_doc,
+        payment_history=payment_history,
         job_series=serialize_doc(job_series) if job_series else None,
         customer=customer,
         quote_email_template=quote_email_template,
@@ -4046,12 +4403,19 @@ def complete_job(jobId):
                 "completed_at": current_timestamp_utc,
                 "updated_at": current_timestamp_utc,
                 "timeSpent": time_spent_str,
+                "total_amount_paid": round(_safe_float(job.get("total_amount"), 0.0) - max(0.0, _safe_float(job.get("balance_due"), _safe_float(job.get("total_amount"), 0.0))), 2),
+                "balance_due": round(max(0.0, _safe_float(job.get("balance_due"), _safe_float(job.get("total_amount"), 0.0))), 2),
+                "payment_status": str(job.get("payment_status") or "pending_paid"),
             },
             "$push": {
                 "invoices": {
                     "invoice_id": str(ObjectId()),
                     "invoice_number": f"INV-{jobId[:8].upper()}",
+                    "job_id": str(jobId),
                     "file_path": url_for("download_invoice", filename=filename),
+                    "sent_at": None,
+                    "due_date": "",
+                    "status": "Created",
                 }
             },
         },
@@ -4075,20 +4439,7 @@ def complete_job(jobId):
     current_app.logger.info("Job completed: id=%s invoice=%s by employee_id=%s", jobId, filename, session.get("employee_id"))
 
     if customer_oid and customer_doc:
-        current_balance = float(customer_doc.get("balance_due_amount", currency_to_float(customer_doc.get("balance_due", "$0.00"))))
-        invoice_total = float(job.get("total_amount", 0.0))
-        updated_balance_amount = float(current_balance + invoice_total)
-        updated_balance = normalize_currency(str(updated_balance_amount))
-
-        db.customers.update_one(
-            {"_id": customer_oid},
-            {
-                "$set": {
-                    "balance_due": updated_balance,
-                    "balance_due_amount": updated_balance_amount,
-                }
-            },
-        )
+        _refresh_customer_balance_from_jobs(db, customer_oid)
 
     return redirect(next_url if next_url else url_for("jobs.view_job", jobId=jobId))
 
@@ -4180,6 +4531,9 @@ def send_estimate_email(jobId):
             refreshed_job = db.jobs.find_one({"_id": ObjectId(jobId)})
             refreshed_job_doc = serialize_doc(refreshed_job) if refreshed_job else {}
             refreshed_invoice_entry = _find_invoice_entry(refreshed_job_doc, invoice_ref=invoice_ref) if invoice_ref else None
+            completed_dt = _parse_mmddyyyy_date(str((refreshed_job_doc or {}).get("dateCompleted") or "")[:10])
+            payment_due_days = _normalize_payment_due_days((refreshed_job_doc or {}).get("payment_due_days"), 30)
+            due_date = (completed_dt + timedelta(days=payment_due_days)).strftime("%m/%d/%Y") if completed_dt else ""
 
             updated_invoices = []
             for entry in list(refreshed_job_doc.get("invoices") or []):
@@ -4189,10 +4543,10 @@ def send_estimate_email(jobId):
 
                 entry_id = str(entry.get("invoice_id") or "").strip()
                 entry_number = str(entry.get("invoice_number") or "").strip()
-                updated_entry = dict(entry)
+                updated_entry = _sanitize_invoice_payment_fields(entry)
                 if invoice_ref and invoice_ref in {entry_id, entry_number}:
-                    updated_entry["date_sent"] = sent_at_text
-                    updated_entry["date_sent_utc"] = sent_at_utc.isoformat()
+                    updated_entry["sent_at"] = sent_at_utc.isoformat()
+                    updated_entry["due_date"] = due_date
                     updated_entry["status"] = "Sent"
                 updated_invoices.append(updated_entry)
 

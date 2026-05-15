@@ -215,6 +215,18 @@
                 <h4>Total</h4>
                 <p>{{ job.total_amount|currency }}</p>
               </div>
+              <div class="view-job-detail-item">
+                <h4>Amount Paid</h4>
+                <p>{{ job.total_amount_paid|default(0, true)|currency }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Balance Due</h4>
+                <p>{{ job.balance_due|default(job.total_amount, true)|currency }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Payment Status</h4>
+                <p>{{ job.payment_status|default('pending_paid', true)|replace('_', ' ')|title }}</p>
+              </div>
               {% if detail_job_status_normalized == 'started' or detail_job_status_normalized == 'completed' or detail_job_status_normalized == 'paid' %}
               <div class="view-job-detail-item">
                 <h4>Date Started</h4>
@@ -400,6 +412,34 @@
                 {% endfor %}
               {% else %}
                   <p>No invoices generated for this job.</p>
+              {% endif %}
+            </div>
+          </div>
+          <div class="view-job-section-column view-job-details-column"></div>
+        </div>
+
+        <div class="view-job-section-row" id="view-job-payments-row">
+          <div class="view-job-section-column view-job-details-column">
+            <h3>Payment History</h3>
+            <div id="view-job-payments-list">
+              {% if payment_history %}
+                {% for payment in payment_history %}
+                  <div class="view-job-detail-item view-job-line-item">
+                    <span><strong>Date:</strong> {{ payment.date|default('N/A', true) }}</span>
+                    <span class="view-job-line-divider" aria-hidden="true">•</span>
+                    <span><strong>Amount:</strong> {{ payment.amount_display|default('$0.00', true) }}</span>
+                    <span class="view-job-line-divider" aria-hidden="true">•</span>
+                    <span><strong>Method:</strong> {{ payment.method|default('Unknown', true) }}</span>
+                    {% if payment.status %}
+                    <span class="view-job-line-divider" aria-hidden="true">•</span>
+                    <span><strong>Status:</strong> {{ payment.status }}</span>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="view-job-detail-item">
+                  <p>No payments recorded for this job.</p>
+                </div>
               {% endif %}
             </div>
           </div>

@@ -123,6 +123,10 @@
                 <h4>Account Status</h4>
                 <p>{{ customer.account_status|default('N/A', true) }}</p>
               </div>
+              <div class="view-customer-detail-item">
+                <h4>Stripe Customer ID</h4>
+                <p>{{ customer.stripe_customer_id|default('Not linked', true) }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -157,8 +161,12 @@
               {% if customer_payments %}
                 {% for payment in customer_payments %}
                   <a class="view-customer-card-link" href="#">
-                    <h4>{{ payment.date or payment.payment_date or payment.created_at or '' }}</h4>
-                    <p>{{ payment.amount or payment.total or '$0.00' }}</p>
+                    <h4>{{ payment.paid_at|default(payment.created_at, true)|default('N/A', true) }}</h4>
+                    <p>
+                      {{ payment.amount|default(0, true)|currency }}
+                      {% if payment.payment_method %}| {{ payment.payment_method|replace('_', ' ')|title }}{% endif %}
+                      {% if payment.status %}| {{ payment.status|title }}{% endif %}
+                    </p>
                   </a>
                 {% endfor %}
               {% else %}

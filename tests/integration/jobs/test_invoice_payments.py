@@ -23,12 +23,14 @@ def test_checkout_completion_uses_stored_session_mapping_when_metadata_is_missin
             "customer_id": customer_id,
             "status": "Completed",
             "total_amount": 275.0,
+            "total_amount_paid": 0.0,
+            "balance_due": 275.0,
+            "payment_status": "pending_paid",
             "invoices": [
                 {
                     "invoice_id": "INV-SESSION-1",
                     "invoice_number": "INV-1001",
-                    "payment_status": "unpaid",
-                    "stripe_checkout_session_id": session_id,
+                    "status": "Sent",
                 }
             ],
         }
@@ -49,12 +51,19 @@ def test_checkout_completion_uses_stored_session_mapping_when_metadata_is_missin
     updated_job = mongo_db.jobs.find_one({"_id": job_id})
     assert updated_job is not None
     assert updated_job["status"] == "Paid"
+    assert updated_job["payment_status"] == "paid"
+    assert updated_job["total_amount_paid"] == 275.0
+    assert updated_job["balance_due"] == 0.0
     updated_invoice = updated_job["invoices"][0]
-    assert updated_invoice["payment_status"] == "paid"
-    assert updated_invoice["amount_paid"] == 275.0
-    assert updated_invoice["stripe_checkout_session_id"] == session_id
-    assert updated_invoice["stripe_payment_intent_id"] == "pi_test_123"
-    assert updated_invoice["paid_at"]
+    assert updated_invoice["status"] == "Paid"
+
+    payment_doc = mongo_db.payments.find_one({"job_id": job_id})
+    assert payment_doc is not None
+    assert payment_doc["invoice_id"] == "INV-SESSION-1"
+    assert payment_doc["amount"] == 275.0
+    assert payment_doc["payment_method"] == "card"
+    assert payment_doc["stripe_payment_intent_id"] == "pi_test_123"
+    assert payment_doc["status"] == "completed"
 
     updated_customer = mongo_db.customers.find_one({"_id": customer_id})
     assert updated_customer is not None

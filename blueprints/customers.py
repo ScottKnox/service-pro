@@ -91,6 +91,39 @@ def _build_customer_notes_for_view(db, customer):
 
     return normalized_notes
 
+
+def _safe_float(value, default=0.0):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _recalculate_customer_balance_from_jobs(db, customer_id):
+    customer = db.customers.find_one(build_reference_filter("_id", customer_id), {"_id": 1})
+    if not customer:
+        return
+
+    running_balance = 0.0
+    for job in db.jobs.find(build_reference_filter("customer_id", customer_id), {"balance_due": 1, "total_amount": 1, "total_amount_paid": 1}):
+        if "balance_due" in job:
+            running_balance += max(0.0, _safe_float(job.get("balance_due"), 0.0))
+            continue
+        total_amount = _safe_float(job.get("total_amount"), 0.0)
+        total_paid = _safe_float(job.get("total_amount_paid"), 0.0)
+        running_balance += max(0.0, total_amount - total_paid)
+
+    running_balance = round(running_balance, 2)
+    db.customers.update_one(
+        {"_id": customer.get("_id")},
+        {
+            "$set": {
+                "balance_due_amount": running_balance,
+                "balance_due": f"${running_balance:,.2f}",
+            }
+        },
+    )
+
 EMAIL_VALIDATION_MESSAGE = "Enter a valid email address."
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
@@ -1978,6 +2011,7 @@ def add_customer():
             "account_type": "Residential",
             "balance_due": "$0.00",
             "balance_due_amount": 0.0,
+            "stripe_customer_id": None,
             "account_status": "Current",
         }
         inserted = db.customers.insert_one(customer)
@@ -2494,6 +2528,7 @@ def set_default_property(customerId, propertyId):
 @bp.route("/customers/<customerId>")
 def view_customer(customerId):
     db = ensure_connection_or_500()
+    _recalculate_customer_balance_from_jobs(db, customerId)
     customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
     if not customer:
         return redirect(url_for("customers.customers"))
@@ -2557,7 +2592,7 @@ def view_customer(customerId):
     payments_skip = (payments_page - 1) * payments_per_page
     customer_payments = [
         serialize_doc(payment)
-        for payment in db.payments.find(build_reference_filter("customer_id", customerId)).sort([("date", -1), ("_id", -1)]).skip(payments_skip).limit(payments_per_page)
+        for payment in db.payments.find(build_reference_filter("customer_id", customerId)).sort([("paid_at", -1), ("created_at", -1), ("_id", -1)]).skip(payments_skip).limit(payments_per_page)
     ]
 
     estimates_skip = (estimates_page - 1) * estimates_per_page
