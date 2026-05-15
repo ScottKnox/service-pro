@@ -8,6 +8,7 @@ import os
 from xml.sax.saxutils import escape as xml_escape
 
 from PIL import Image as PILImage
+from utils.taxes import build_line_item_tax_inputs, calculate_itemized_tax, normalize_business_tax_rates
 
 
 def _currency_to_float(value):
@@ -656,35 +657,13 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
     discounts_total = min(discounts_total, subtotal)
     base_total = subtotal - discounts_total
 
-    parts_total = sum(_currency_to_float(row[1]) for row in parts_rows)
-    labor_total = sum(_currency_to_float(row[3]) for row in labor_rows)
-    materials_total = sum(_currency_to_float(row[2]) for row in material_rows)
-    installation_total = sum(_currency_to_float(row[1]) for row in service_rows) + sum(_currency_to_float(row[3]) for row in equipment_rows)
-    fabrication_total = 0.0
-
-    def _tax_line(enabled_key, rate_key, taxable_amount, label):
-        enabled = str(business.get(enabled_key, "no")).strip().lower() == "yes"
-        if not enabled:
-            return None
-        rate = float(str(business.get(rate_key, "0") or "0").strip() or "0")
-        if rate <= 0 or taxable_amount <= 0:
-            return None
-        amount = taxable_amount * (rate / 100.0)
-        return [label, _format_currency(amount)]
-
-    tax_rows = [
-        _tax_line("tax_parts", "tax_parts_rate", parts_total, f"Tax (Parts {business.get('tax_parts_rate', '0')}%)"),
-        _tax_line("tax_repair_labor", "tax_repair_labor_rate", labor_total, f"Tax (Repair Labor {business.get('tax_repair_labor_rate', '0')}%)"),
-        _tax_line("tax_materials", "tax_materials_rate", materials_total, f"Tax (Materials {business.get('tax_materials_rate', '0')}%)"),
-        _tax_line("tax_installation", "tax_installation_rate", installation_total, f"Tax (Installation {business.get('tax_installation_rate', '0')}%)"),
-        _tax_line("tax_fabrication", "tax_fabrication_rate", fabrication_total, f"Tax (Fabrication {business.get('tax_fabrication_rate', '0')}%)"),
-    ]
-    tax_rows = [row for row in tax_rows if row]
-    tax_total = sum(_currency_to_float(row[1]) for row in tax_rows)
-
-    computed_total = base_total + tax_total
-    final_total = computed_total
-    effective_tax_rate = (tax_total / base_total * 100.0) if base_total > 0 else 0.0
+    tax_breakdown = calculate_itemized_tax(
+        build_line_item_tax_inputs(job),
+        normalize_business_tax_rates(business),
+        customer_tax_exempt=bool((customer or {}).get("tax_exempt")),
+    )
+    tax_total = float(tax_breakdown.get("tax_total") or 0.0)
+    final_total = base_total + tax_total
 
     summary_rows = [
         ["Subtotal", _format_currency(subtotal)],
@@ -693,9 +672,11 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
         summary_rows.extend(discount_rows_for_totals)
     elif discounts_total > 0:
         summary_rows.append(["Discount", _format_currency(-discounts_total)])
-    if tax_rows:
-        summary_rows.extend(tax_rows)
-    summary_rows.append([f"Tax Total ({effective_tax_rate:.2f}% Applied)", _format_currency(tax_total)])
+    if tax_breakdown.get("is_tax_exempt"):
+        summary_rows.append(["Tax exempt", "$0.00"])
+    else:
+        for tax_line in tax_breakdown.get("tax_lines") or []:
+            summary_rows.append([str(tax_line.get("display_name") or tax_line.get("name") or "Tax"), _format_currency(tax_line.get("amount"))])
     summary_rows.append(["Total Due", _format_currency(final_total)])
 
     totals_table = Table(summary_rows, colWidths=[2.4 * inch, 1.6 * inch])
@@ -1239,20 +1220,63 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
         story.append(equipment_breakdown_table)
         story.append(Spacer(1, 0.4 * inch))
 
-    # Estimated Amount
-    total_amount_data = [
-        ["Estimated Total:", _format_currency(job.get("total_amount", 0.0))],
-    ]
-    total_table = Table(total_amount_data, colWidths=[3 * inch, 1 * inch])
+    services_list = job.get("services") if isinstance(job.get("services"), list) else []
+    parts_list = job.get("parts") if isinstance(job.get("parts"), list) else []
+    labors_list = job.get("labors") if isinstance(job.get("labors"), list) else []
+    materials_list = job.get("materials") if isinstance(job.get("materials"), list) else []
+    equipments_list = job.get("equipments") if isinstance(job.get("equipments"), list) else []
+
+    subtotal = (
+        sum(_currency_to_float(service.get("standard_price") or service.get("price")) for service in services_list)
+        + sum(_currency_to_float(part.get("unit_cost") or part.get("price")) for part in parts_list)
+        + sum(_currency_to_float(labor.get("line_total") or labor.get("hourly_rate")) for labor in labors_list)
+        + sum(_currency_to_float(material.get("line_total") or material.get("price")) for material in materials_list)
+        + sum(_currency_to_float(equipment.get("line_total") or equipment.get("price")) for equipment in equipments_list)
+    )
+
+    discounts_total = 0.0
+    for discount in (job.get("discounts") or []):
+        if not isinstance(discount, dict):
+            continue
+        percent = _currency_to_float(discount.get("discount_percentage"))
+        if percent > 0:
+            discounts_total += max(0.0, subtotal * (percent / 100.0))
+            continue
+        discounts_total += abs(_currency_to_float(discount.get("discount_amount") or discount.get("line_total")))
+
+    discounts_total = min(discounts_total, max(0.0, subtotal))
+    pre_tax_total = max(0.0, subtotal - discounts_total)
+    tax_breakdown = calculate_itemized_tax(
+        build_line_item_tax_inputs(job),
+        normalize_business_tax_rates(business),
+        customer_tax_exempt=bool((customer or {}).get("tax_exempt")),
+    )
+    tax_total = float(tax_breakdown.get("tax_total") or 0.0)
+    estimate_total = pre_tax_total + tax_total
+
+    total_amount_data = [["Subtotal:", _format_currency(subtotal)]]
+    if discounts_total > 0:
+        total_amount_data.append(["Discounts:", _format_currency(-discounts_total)])
+    if tax_breakdown.get("is_tax_exempt"):
+        total_amount_data.append(["Tax exempt:", "$0.00"])
+    else:
+        for tax_line in tax_breakdown.get("tax_lines") or []:
+            total_amount_data.append([
+                str(tax_line.get("display_name") or tax_line.get("name") or "Tax") + ":",
+                _format_currency(tax_line.get("amount")),
+            ])
+    total_amount_data.append(["Estimated Total:", _format_currency(estimate_total)])
+
+    total_table = Table(total_amount_data, colWidths=[3 * inch, 1.7 * inch])
     total_table.setStyle(
         TableStyle(
             [
-                ("FONT", (0, 0), (-1, -1), "Helvetica-Bold", 12),
+                ("FONT", (0, 0), (-1, -1), "Helvetica", 11),
+                ("FONT", (0, -1), (-1, -1), "Helvetica-Bold", 12),
                 ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1B263B")),
                 ("ALIGN", (0, 0), (0, -1), "RIGHT"),
                 ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-                ("LINEABOVE", (0, 0), (-1, -1), 2, colors.HexColor("#1B263B")),
-                ("LINEBELOW", (0, 0), (-1, -1), 2, colors.HexColor("#1B263B")),
+                ("LINEABOVE", (0, -1), (-1, -1), 2, colors.HexColor("#1B263B")),
             ]
         )
     )

@@ -310,8 +310,12 @@
         <div class="estimate-stack-block estimate-pricing-summary">
           <h3>Pricing Summary</h3>
           <div class="estimate-pricing-row"><span>Subtotal</span><span>{{ pricing_summary.subtotal_display }}</span></div>
-          {% if pricing_summary.tax_total > 0 %}
-            <div class="estimate-pricing-row"><span>Tax</span><span>{{ pricing_summary.tax_total_display }}</span></div>
+          {% if pricing_summary.is_tax_exempt %}
+            <div class="estimate-pricing-row"><span>Tax exempt</span><span>$0.00</span></div>
+          {% elif pricing_summary.tax_lines %}
+            {% for tax_line in pricing_summary.tax_lines %}
+              <div class="estimate-pricing-row"><span>{{ tax_line.display_name }}</span><span>{{ tax_line.amount_display }}</span></div>
+            {% endfor %}
           {% endif %}
           {% if pricing_summary.discounts_total > 0 %}
             <div class="estimate-pricing-row"><span>Discounts</span><span>-{{ pricing_summary.discounts_total_display }}</span></div>

@@ -146,6 +146,21 @@
           <div class="add-customer-form-field"></div>
         </div>
 
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-tax-exempt">Tax Exempt</label>
+            <select id="customer-tax-exempt" name="tax_exempt">
+              <option value="false" {% if not customer.tax_exempt %}selected{% endif %}>No</option>
+              <option value="true" {% if customer.tax_exempt %}selected{% endif %}>Yes</option>
+            </select>
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="customer-tax-exemption-number">Tax Exemption Number</label>
+            <input id="customer-tax-exemption-number" name="tax_exemption_number" type="text" placeholder="Optional" value="{{ customer.tax_exemption_number|default('', true) }}" />
+          </div>
+        </div>
+
         <div id="add-customer-form-actions">
           <button type="submit">Save Changes</button>
         </div>

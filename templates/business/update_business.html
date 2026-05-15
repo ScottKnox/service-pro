@@ -112,74 +112,117 @@
         </div>
 
         <h2 class="create-job-form-section-header">Tax Configuration</h2>
+        <p class="form-field-note">Services and labor are marked non-taxable by default reflecting Missouri tax law. If a service includes significant parts or materials sold separately add them as individual line items to ensure correct tax treatment.</p>
 
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="tax-parts">Tax Parts?</label>
-            <select id="tax-parts" name="tax_parts">
-              <option value="no" {% if business.get('tax_parts', 'no') == 'no' %}selected{% endif %}>No</option>
-              <option value="yes" {% if business.get('tax_parts', 'no') == 'yes' %}selected{% endif %}>Yes</option>
-            </select>
-          </div>
-          <div class="add-customer-form-field">
-            <label for="tax-parts-rate">Tax Parts Rate (%)</label>
-            <input id="tax-parts-rate" name="tax_parts_rate" type="number" step="0.01" min="0" value="{{ business.get('tax_parts_rate', business.get('tax_rate', '0')) }}" />
-          </div>
+        <div id="tax-rates-list">
+          {% for tax_rate in business.get('tax_rates', []) %}
+            <div class="tax-rate-row-wrapper">
+              <div class="add-customer-form-row add-customer-form-row--top-aligned tax-rate-row">
+                <div class="add-customer-form-field">
+                  <label>Tax Name</label>
+                  <input name="tax_rate_name[]" type="text" value="{{ tax_rate.name|default('', true) }}" placeholder="Missouri Sales Tax" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label>Rate (%)</label>
+                  <input name="tax_rate_rate[]" type="number" step="0.00001" min="0" value="{{ tax_rate.rate|default(0, true) }}" placeholder="4.225" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label>Applies To</label>
+                  <div class="tax-rate-applies-to-grid">
+                    <label>
+                      <input type="checkbox" name="tax_rate_applies_to_parts[]" value="{{ loop.index0 }}" {% if 'parts' in tax_rate.applies_to %}checked{% endif %} /> Parts
+                    </label>
+                    <label>
+                      <input type="checkbox" name="tax_rate_applies_to_materials[]" value="{{ loop.index0 }}" {% if 'materials' in tax_rate.applies_to %}checked{% endif %} /> Materials
+                    </label>
+                    <label>
+                      <input type="checkbox" name="tax_rate_applies_to_equipment[]" value="{{ loop.index0 }}" {% if 'equipment' in tax_rate.applies_to %}checked{% endif %} /> Equipment
+                    </label>
+                    <label>
+                      <input type="checkbox" name="tax_rate_applies_to_services[]" value="{{ loop.index0 }}" {% if 'services' in tax_rate.applies_to %}checked{% endif %} /> Services
+                    </label>
+                    <label>
+                      <input type="checkbox" name="tax_rate_applies_to_labor[]" value="{{ loop.index0 }}" {% if 'labor' in tax_rate.applies_to %}checked{% endif %} /> Labor
+                    </label>
+                  </div>
+                </div>
+                <div class="add-customer-form-field">
+                  <label>Agency</label>
+                  <input name="tax_rate_agency[]" type="text" value="{{ tax_rate.agency|default('', true) }}" placeholder="State Department of Revenue" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label>QuickBooks Tax Code</label>
+                  <input name="tax_rate_quickbooks_tax_code[]" type="text" value="{{ tax_rate.quickbooks_tax_code|default('', true) }}" placeholder="Optional" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label>Active</label>
+                  <select name="tax_rate_active[]">
+                    <option value="true" {% if tax_rate.active %}selected{% endif %}>Yes</option>
+                    <option value="false" {% if not tax_rate.active %}selected{% endif %}>No</option>
+                  </select>
+                </div>
+              </div>
+              <div class="tax-rate-row-remove-wrap">
+                <button type="button" class="tax-rate-remove-button">Remove Tax Rate</button>
+              </div>
+            </div>
+          {% endfor %}
         </div>
 
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="tax-repair-labor">Tax Repair Labor?</label>
-            <select id="tax-repair-labor" name="tax_repair_labor">
-              <option value="no" {% if business.get('tax_repair_labor', 'no') == 'no' %}selected{% endif %}>No</option>
-              <option value="yes" {% if business.get('tax_repair_labor', 'no') == 'yes' %}selected{% endif %}>Yes</option>
-            </select>
+        <template id="tax-rate-template">
+          <div class="add-customer-form-row add-customer-form-row--top-aligned tax-rate-row">
+            <div class="add-customer-form-field">
+              <label>Tax Name</label>
+              <input name="tax_rate_name[]" type="text" placeholder="City Tax" />
+            </div>
+            <div class="add-customer-form-field">
+              <label>Rate (%)</label>
+              <input name="tax_rate_rate[]" type="number" step="0.00001" min="0" placeholder="2.125" />
+            </div>
+            <div class="add-customer-form-field">
+              <label>Applies To</label>
+              <div class="tax-rate-applies-to-grid">
+                <label>
+                  <input type="checkbox" name="tax_rate_applies_to_parts[]" value="" checked /> Parts
+                </label>
+                <label>
+                  <input type="checkbox" name="tax_rate_applies_to_materials[]" value="" checked /> Materials
+                </label>
+                <label>
+                  <input type="checkbox" name="tax_rate_applies_to_equipment[]" value="" checked /> Equipment
+                </label>
+                <label>
+                  <input type="checkbox" name="tax_rate_applies_to_services[]" value="" /> Services
+                </label>
+                <label>
+                  <input type="checkbox" name="tax_rate_applies_to_labor[]" value="" /> Labor
+                </label>
+              </div>
+            </div>
+            <div class="add-customer-form-field">
+              <label>Agency</label>
+              <input name="tax_rate_agency[]" type="text" placeholder="Tax agency" />
+            </div>
+            <div class="add-customer-form-field">
+              <label>QuickBooks Tax Code</label>
+              <input name="tax_rate_quickbooks_tax_code[]" type="text" placeholder="Optional" />
+            </div>
+            <div class="add-customer-form-field">
+              <label>Active</label>
+              <select name="tax_rate_active[]">
+                <option value="true" selected>Yes</option>
+                <option value="false">No</option>
+              </select>
+            </div>
           </div>
-          <div class="add-customer-form-field">
-            <label for="tax-repair-labor-rate">Tax Repair Labor Rate (%)</label>
-            <input id="tax-repair-labor-rate" name="tax_repair_labor_rate" type="number" step="0.01" min="0" value="{{ business.get('tax_repair_labor_rate', '0') }}" />
+          <div class="tax-rate-row-remove-wrap">
+            <button type="button" class="tax-rate-remove-button">Remove Tax Rate</button>
           </div>
-        </div>
+        </template>
 
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="tax-installation">Tax Installation?</label>
-            <select id="tax-installation" name="tax_installation">
-              <option value="no" {% if business.get('tax_installation', 'no') == 'no' %}selected{% endif %}>No</option>
-              <option value="yes" {% if business.get('tax_installation', 'no') == 'yes' %}selected{% endif %}>Yes</option>
-            </select>
-          </div>
-          <div class="add-customer-form-field">
-            <label for="tax-installation-rate">Tax Installation Rate (%)</label>
-            <input id="tax-installation-rate" name="tax_installation_rate" type="number" step="0.01" min="0" value="{{ business.get('tax_installation_rate', '0') }}" />
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="tax-fabrication">Tax Fabrication?</label>
-            <select id="tax-fabrication" name="tax_fabrication">
-              <option value="no" {% if business.get('tax_fabrication', 'no') == 'no' %}selected{% endif %}>No</option>
-              <option value="yes" {% if business.get('tax_fabrication', 'no') == 'yes' %}selected{% endif %}>Yes</option>
-            </select>
-          </div>
-          <div class="add-customer-form-field">
-            <label for="tax-fabrication-rate">Tax Fabrication Rate (%)</label>
-            <input id="tax-fabrication-rate" name="tax_fabrication_rate" type="number" step="0.01" min="0" value="{{ business.get('tax_fabrication_rate', '0') }}" />
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="tax-materials">Tax Materials?</label>
-            <select id="tax-materials" name="tax_materials">
-              <option value="no" {% if business.get('tax_materials', 'no') == 'no' %}selected{% endif %}>No</option>
-              <option value="yes" {% if business.get('tax_materials', 'no') == 'yes' %}selected{% endif %}>Yes</option>
-            </select>
-          </div>
-          <div class="add-customer-form-field">
-            <label for="tax-materials-rate">Tax Materials Rate (%)</label>
-            <input id="tax-materials-rate" name="tax_materials_rate" type="number" step="0.01" min="0" value="{{ business.get('tax_materials_rate', '0') }}" />
+        <div class="add-customer-form-row add-customer-form-row--single">
+          <div class="add-customer-form-field" style="margin-top: 0.5rem;">
+            <button type="button" id="add-tax-rate-row">Add Tax Rate</button>
           </div>
         </div>
 
@@ -212,4 +255,92 @@
       </form>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    (function () {
+      const addButton = document.getElementById('add-tax-rate-row');
+      const list = document.getElementById('tax-rates-list');
+      const template = document.getElementById('tax-rate-template');
+      const applyToCheckboxSelector = [
+        'input[name="tax_rate_applies_to_parts[]"]',
+        'input[name="tax_rate_applies_to_materials[]"]',
+        'input[name="tax_rate_applies_to_equipment[]"]',
+        'input[name="tax_rate_applies_to_services[]"]',
+        'input[name="tax_rate_applies_to_labor[]"]',
+      ].join(',');
+
+      function handleRemoveClick(event) {
+        event.preventDefault();
+        const button = event.target;
+        const wrapper = button.closest('.tax-rate-row-wrapper');
+        if (wrapper) {
+          wrapper.remove();
+          reindexApplyToCheckboxValues();
+          updateRemoveButtonVisibility();
+        }
+      }
+
+      function reindexApplyToCheckboxValues() {
+        const rows = list.querySelectorAll('.tax-rate-row-wrapper');
+        rows.forEach((wrapper, index) => {
+          const row = wrapper.querySelector('.tax-rate-row');
+          if (!row) {
+            return;
+          }
+          row.querySelectorAll(applyToCheckboxSelector).forEach((checkbox) => {
+            checkbox.value = String(index);
+          });
+        });
+      }
+
+      function updateRemoveButtonVisibility() {
+        const rows = list.querySelectorAll('.tax-rate-row-wrapper');
+        const removeButtons = list.querySelectorAll('.tax-rate-remove-button');
+        const shouldHide = rows.length <= 1;
+        removeButtons.forEach((button) => {
+          button.style.display = shouldHide ? 'none' : 'block';
+        });
+      }
+
+      function attachRemoveListeners() {
+        list.querySelectorAll('.tax-rate-remove-button').forEach((button) => {
+          button.removeEventListener('click', handleRemoveClick);
+          button.addEventListener('click', handleRemoveClick);
+        });
+        updateRemoveButtonVisibility();
+      }
+
+      if (!addButton || !list || !template) {
+        return;
+      }
+
+      list.querySelectorAll('.tax-rate-row').forEach((row) => {
+        const wrapper = row.parentElement;
+        if (wrapper && !wrapper.classList.contains('tax-rate-row-wrapper')) {
+          wrapper.classList.add('tax-rate-row-wrapper');
+        }
+      });
+      reindexApplyToCheckboxValues();
+      attachRemoveListeners();
+
+      addButton.addEventListener('click', () => {
+        const clone = template.content.cloneNode(true);
+        const newIndex = list.querySelectorAll('.tax-rate-row-wrapper').length;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'tax-rate-row-wrapper tax-rate-row-wrapper--new';
+        wrapper.appendChild(clone);
+        const row = wrapper.querySelector('.tax-rate-row');
+        if (row) {
+          row.querySelectorAll(applyToCheckboxSelector).forEach((checkbox) => {
+            checkbox.value = String(newIndex);
+          });
+        }
+        list.appendChild(wrapper);
+        reindexApplyToCheckboxValues();
+        attachRemoveListeners();
+      });
+    })();
+  </script>
 {% endblock %}

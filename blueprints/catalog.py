@@ -97,6 +97,15 @@ def _parse_boolean(raw_value):
     return str(raw_value or "").strip().lower() in {"true", "1", "yes", "on"}
 
 
+def _parse_tax_override(raw_value):
+    value = str(raw_value or "").strip().lower()
+    if value in {"true", "always"}:
+        return True
+    if value in {"false", "never"}:
+        return False
+    return None
+
+
 def _resolve_current_business_id(db):
     employee_id = session.get("employee_id")
     if not employee_id or not ObjectId.is_valid(employee_id):
@@ -334,6 +343,7 @@ def _service_form_data(service=None):
         "standard_price": str(service.get("standard_price") or "").strip(),
         "emergency": emergency_value,
         "emergency_price": str(service.get("emergency_price") or "").strip(),
+        "tax_override": "always" if service.get("tax_override") is True else ("never" if service.get("tax_override") is False else "default"),
     }
 
 
@@ -347,6 +357,7 @@ def _part_form_data(part=None):
         "description": str(part.get("description") or "").strip(),
         "unit_cost": str(part.get("unit_cost") or "").strip(),
         "purchase_link": str(part.get("purchase_link") or "").strip(),
+        "tax_override": "always" if part.get("tax_override") is True else ("never" if part.get("tax_override") is False else "default"),
     }
 
 
@@ -357,6 +368,7 @@ def _labor_form_data(labor=None):
         "labor_category": str(labor.get("labor_category") or "").strip(),
         "labor_default_hours": str(labor.get("labor_default_hours") or "").strip(),
         "labor_hourly_rate": str(labor.get("labor_hourly_rate") or "").strip(),
+        "tax_override": "always" if labor.get("tax_override") is True else ("never" if labor.get("tax_override") is False else "default"),
     }
 
 
@@ -371,6 +383,7 @@ def _material_form_data(material=None):
         "unit_of_measure": str(material.get("unit_of_measure") or "").strip(),
         "price": str(material.get("price") or "").strip(),
         "purchase_link": str(material.get("purchase_link") or "").strip(),
+        "tax_override": "always" if material.get("tax_override") is True else ("never" if material.get("tax_override") is False else "default"),
     }
 
 
@@ -387,6 +400,7 @@ def _equipment_form_data(equipment=None):
         "purchase_link": str(equipment.get("purchase_link") or "").strip(),
         "default_price": str(equipment.get("default_price") or "").strip(),
         "default_quantity_installed": str(equipment.get("default_quantity_installed") or "").strip(),
+        "tax_override": "always" if equipment.get("tax_override") is True else ("never" if equipment.get("tax_override") is False else "default"),
     }
 
 
@@ -594,6 +608,7 @@ def create_service():
 
     if request.method == "POST":
         form_data = _service_form_data(request.form)
+        tax_override = _parse_tax_override(request.form.get("tax_override"))
         selected_part_ids = request.form.getlist("part_id[]")
         selected_material_ids = request.form.getlist("material_id[]")
         selected_equipment_ids = request.form.getlist("equipment_id[]")
@@ -656,6 +671,7 @@ def create_service():
                     "standard_price": standard_price,
                     "emergency": emergency_enabled,
                     "emergency_price": emergency_price,
+                    "tax_override": tax_override,
                     "part_ids": valid_part_ids,
                     "service_parts": service_part_entries,
                     "material_ids": valid_material_ids,
@@ -935,6 +951,7 @@ def create_part():
 
     if request.method == "POST":
         form_data = _part_form_data(request.form)
+        tax_override = _parse_tax_override(request.form.get("tax_override"))
         unit_cost, error = _parse_nonnegative_float(form_data["unit_cost"], "Unit Cost")
 
         if not error and not form_data["part_name"]:
@@ -959,6 +976,7 @@ def create_part():
                     "description": form_data["description"],
                     "unit_cost": unit_cost,
                     "purchase_link": form_data["purchase_link"],
+                    "tax_override": tax_override,
                 }
             )
             return redirect(url_for("catalog.manage_parts"))
@@ -997,6 +1015,7 @@ def update_part(partId):
 
     if request.method == "POST":
         form_data = _part_form_data(request.form)
+        tax_override = _parse_tax_override(request.form.get("tax_override"))
         unit_cost, error = _parse_nonnegative_float(form_data["unit_cost"], "Unit Cost")
 
         if not error and not form_data["part_name"]:
@@ -1025,6 +1044,7 @@ def update_part(partId):
                     "description": form_data["description"],
                     "unit_cost": unit_cost,
                     "purchase_link": form_data["purchase_link"],
+                    "tax_override": tax_override,
                 }},
             )
             return redirect(url_for("catalog.view_part", partId=partId))
@@ -1056,6 +1076,7 @@ def create_labor():
 
     if request.method == "POST":
         form_data = _labor_form_data(request.form)
+        tax_override = _parse_tax_override(request.form.get("tax_override"))
         labor_default_hours, error = _parse_nonnegative_float(form_data["labor_default_hours"], "Default Hours")
         if not error:
             labor_hourly_rate, error = _parse_nonnegative_float(form_data["labor_hourly_rate"], "Hourly Rate")
@@ -1073,6 +1094,7 @@ def create_labor():
                     "labor_category": form_data["labor_category"],
                     "labor_default_hours": labor_default_hours,
                     "labor_hourly_rate": labor_hourly_rate,
+                    "tax_override": tax_override,
                 }
             )
             return redirect(url_for("catalog.manage_labor"))
@@ -1111,6 +1133,7 @@ def update_labor(laborId):
 
     if request.method == "POST":
         form_data = _labor_form_data(request.form)
+        tax_override = _parse_tax_override(request.form.get("tax_override"))
         labor_default_hours, error = _parse_nonnegative_float(form_data["labor_default_hours"], "Default Hours")
         if not error:
             labor_hourly_rate, error = _parse_nonnegative_float(form_data["labor_hourly_rate"], "Hourly Rate")
@@ -1129,6 +1152,7 @@ def update_labor(laborId):
                         "labor_category": form_data["labor_category"],
                         "labor_default_hours": labor_default_hours,
                         "labor_hourly_rate": labor_hourly_rate,
+                        "tax_override": tax_override,
                     }
                 },
             )
@@ -1162,6 +1186,7 @@ def create_material():
 
     if request.method == "POST":
         form_data = _material_form_data(request.form)
+        tax_override = _parse_tax_override(request.form.get("tax_override"))
         default_quantity_used, error = _parse_optional_nonnegative_float(form_data["default_quantity_used"], "Default Quantity Used")
         if not error:
             price, error = _parse_optional_nonnegative_float(form_data["price"], "Price")
@@ -1181,6 +1206,7 @@ def create_material():
                     "unit_of_measure": form_data["unit_of_measure"],
                     "price": price,
                     "purchase_link": form_data["purchase_link"],
+                    "tax_override": tax_override,
                 }
             )
             return redirect(url_for("catalog.manage_materials"))
@@ -1220,6 +1246,7 @@ def update_material(materialId):
 
     if request.method == "POST":
         form_data = _material_form_data(request.form)
+        tax_override = _parse_tax_override(request.form.get("tax_override"))
         default_quantity_used, error = _parse_optional_nonnegative_float(form_data["default_quantity_used"], "Default Quantity Used")
         if not error:
             price, error = _parse_optional_nonnegative_float(form_data["price"], "Price")
@@ -1240,6 +1267,7 @@ def update_material(materialId):
                         "unit_of_measure": form_data["unit_of_measure"],
                         "price": price,
                         "purchase_link": form_data["purchase_link"],
+                        "tax_override": tax_override,
                     }
                 },
             )
@@ -1272,6 +1300,7 @@ def create_equipment():
 
     if request.method == "POST":
         form_data = _equipment_form_data(request.form)
+        tax_override = _parse_tax_override(request.form.get("tax_override"))
         default_price, error = _parse_optional_nonnegative_float(form_data["default_price"], "Default Price")
         if not error:
             default_quantity_installed, error = _parse_optional_nonnegative_float(form_data["default_quantity_installed"], "Default Quantity Installed")
@@ -1293,6 +1322,7 @@ def create_equipment():
                     "purchase_link": form_data["purchase_link"],
                     "default_price": default_price,
                     "default_quantity_installed": default_quantity_installed,
+                    "tax_override": tax_override,
                 }
             )
             return redirect(url_for("catalog.manage_equipment"))
@@ -1331,6 +1361,7 @@ def update_equipment(equipmentId):
 
     if request.method == "POST":
         form_data = _equipment_form_data(request.form)
+        tax_override = _parse_tax_override(request.form.get("tax_override"))
         default_price, error = _parse_optional_nonnegative_float(form_data["default_price"], "Default Price")
         if not error:
             default_quantity_installed, error = _parse_optional_nonnegative_float(form_data["default_quantity_installed"], "Default Quantity Installed")
@@ -1353,6 +1384,7 @@ def update_equipment(equipmentId):
                         "purchase_link": form_data["purchase_link"],
                         "default_price": default_price,
                         "default_quantity_installed": default_quantity_installed,
+                        "tax_override": tax_override,
                     }
                 },
             )

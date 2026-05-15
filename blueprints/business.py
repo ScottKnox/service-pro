@@ -18,6 +18,7 @@ MAX_LOGO_WIDTH = 2400
 MAX_LOGO_HEIGHT = 1400
 LOGO_UPLOAD_SUBDIR = os.path.join("uploads", "logos")
 LOGO_UPLOAD_URL_SUBDIR = "uploads/logos"
+DEFAULT_TAX_RATE_TYPES = ["parts", "materials", "equipment"]
 
 
 def _configure_stripe_client():
@@ -123,6 +124,131 @@ def _twilio_status_payload(business):
     return "success", "Twilio SMS is configured for this business."
 
 
+def _normalize_tax_rates_for_view(business):
+    tax_rates = business.get("tax_rates")
+    normalized = []
+
+    if isinstance(tax_rates, list):
+        for index, tax_rate in enumerate(tax_rates):
+            if not isinstance(tax_rate, dict):
+                continue
+            name = str(tax_rate.get("name") or "").strip()
+            if not name:
+                continue
+            try:
+                rate = float(str(tax_rate.get("rate") or "0").strip() or "0")
+            except ValueError:
+                rate = 0.0
+            applies_to = tax_rate.get("applies_to") if isinstance(tax_rate.get("applies_to"), list) else []
+            cleaned_applies_to = []
+            for item in applies_to:
+                item_name = str(item or "").strip().lower()
+                if item_name in ["parts", "materials", "equipment", "services", "labor"] and item_name not in cleaned_applies_to:
+                    cleaned_applies_to.append(item_name)
+            normalized.append(
+                {
+                    "name": name,
+                    "rate": rate,
+                    "agency": str(tax_rate.get("agency") or "").strip(),
+                    "active": bool(tax_rate.get("active", True)),
+                    "display_order": int(tax_rate.get("display_order") or index),
+                    "quickbooks_tax_code": str(tax_rate.get("quickbooks_tax_code") or "").strip(),
+                    "applies_to": cleaned_applies_to,
+                }
+            )
+
+    if normalized:
+        return sorted(normalized, key=lambda row: row.get("display_order", 0))
+
+    # Bootstrap sensible defaults when none exist yet.
+    return [
+        {
+            "name": "Missouri Sales Tax",
+            "rate": 0.0,
+            "agency": "",
+            "active": True,
+            "display_order": 0,
+            "quickbooks_tax_code": "",
+            "applies_to": list(DEFAULT_TAX_RATE_TYPES),
+        }
+    ]
+
+
+def _is_truthy_form_value(value):
+    return str(value or "").strip().lower() in ["true", "1", "yes", "on"]
+
+
+def _parse_tax_rates_from_form(form):
+    names = form.getlist("tax_rate_name[]")
+    rates = form.getlist("tax_rate_rate[]")
+    agencies = form.getlist("tax_rate_agency[]")
+    applies_to_parts_values = form.getlist("tax_rate_applies_to_parts[]")
+    applies_to_materials_values = form.getlist("tax_rate_applies_to_materials[]")
+    applies_to_equipment_values = form.getlist("tax_rate_applies_to_equipment[]")
+    applies_to_services_values = form.getlist("tax_rate_applies_to_services[]")
+    applies_to_labor_values = form.getlist("tax_rate_applies_to_labor[]")
+    applies_to_parts_set = set(str(value).strip() for value in applies_to_parts_values)
+    applies_to_materials_set = set(str(value).strip() for value in applies_to_materials_values)
+    applies_to_equipment_set = set(str(value).strip() for value in applies_to_equipment_values)
+    applies_to_services_set = set(str(value).strip() for value in applies_to_services_values)
+    applies_to_labor_set = set(str(value).strip() for value in applies_to_labor_values)
+    active_values = form.getlist("tax_rate_active[]")
+    quickbooks_codes = form.getlist("tax_rate_quickbooks_tax_code[]")
+
+    length = max(
+        len(names),
+        len(rates),
+        len(agencies),
+        len(active_values),
+        len(quickbooks_codes),
+    )
+
+    parsed = []
+    for index in range(length):
+        name = str(names[index] if index < len(names) else "").strip()
+        if not name:
+            continue
+
+        try:
+            rate = float(str(rates[index] if index < len(rates) else "0").strip() or "0")
+        except ValueError:
+            rate = 0.0
+
+        applies_to = []
+        row_key = str(index)
+        if row_key in applies_to_parts_set:
+            applies_to.append("parts")
+        if row_key in applies_to_materials_set:
+            applies_to.append("materials")
+        if row_key in applies_to_equipment_set:
+            applies_to.append("equipment")
+        if row_key in applies_to_services_set:
+            applies_to.append("services")
+        if row_key in applies_to_labor_set:
+            applies_to.append("labor")
+
+        if not applies_to:
+            applies_to = list(DEFAULT_TAX_RATE_TYPES)
+
+        active = _is_truthy_form_value(active_values[index] if index < len(active_values) else "true")
+
+        display_order = index
+
+        parsed.append(
+            {
+                "name": name,
+                "rate": rate,
+                "applies_to": applies_to,
+                "agency": str(agencies[index] if index < len(agencies) else "").strip(),
+                "active": active,
+                "display_order": display_order,
+                "quickbooks_tax_code": str(quickbooks_codes[index] if index < len(quickbooks_codes) else "").strip(),
+            }
+        )
+
+    return sorted(parsed, key=lambda row: row.get("display_order", 0))
+
+
 @bp.route("/business")
 def business_profile():
     if not _is_authorized():
@@ -139,6 +265,7 @@ def business_profile():
         return redirect(url_for("error_page", error="no_business"))
 
     business = serialize_doc(business)
+    business["tax_rates"] = _normalize_tax_rates_for_view(business)
 
     custom_logo = os.path.basename(str(business.get("custom_logo") or "").strip())
     logo_path = (
@@ -389,16 +516,7 @@ def update_business():
         email = request.form.get("email", "").strip()
         website = request.form.get("website", "").strip()
         license_number = request.form.get("license_number", "").strip()
-        tax_parts = request.form.get("tax_parts", "no").strip().lower()
-        tax_parts_rate = request.form.get("tax_parts_rate", "0").strip()
-        tax_repair_labor = request.form.get("tax_repair_labor", "no").strip().lower()
-        tax_repair_labor_rate = request.form.get("tax_repair_labor_rate", "0").strip()
-        tax_installation = request.form.get("tax_installation", "no").strip().lower()
-        tax_installation_rate = request.form.get("tax_installation_rate", "0").strip()
-        tax_fabrication = request.form.get("tax_fabrication", "no").strip().lower()
-        tax_fabrication_rate = request.form.get("tax_fabrication_rate", "0").strip()
-        tax_materials = request.form.get("tax_materials", "no").strip().lower()
-        tax_materials_rate = request.form.get("tax_materials_rate", "0").strip()
+        tax_rates = _parse_tax_rates_from_form(request.form)
         quote_email_template = request.form.get("quote_email_template", "").strip()
         invoice_email_template = request.form.get("invoice_email_template", "").strip()
         report_email_template = request.form.get("report_email_template", "").strip()
@@ -414,9 +532,6 @@ def update_business():
             default_payment_due_days = max(1, int(default_payment_due_days_raw))
         except ValueError:
             default_payment_due_days = 30
-
-        # Preserve legacy top-level tax_rate for compatibility with existing invoice logic
-        tax_rate = tax_parts_rate
 
         db.businesses.update_one(
             {"_id": business_oid},
@@ -435,17 +550,7 @@ def update_business():
                     "email": email,
                     "website": website,
                     "license_number": license_number,
-                    "tax_rate": tax_rate,
-                    "tax_parts": tax_parts,
-                    "tax_parts_rate": tax_parts_rate,
-                    "tax_repair_labor": tax_repair_labor,
-                    "tax_repair_labor_rate": tax_repair_labor_rate,
-                    "tax_installation": tax_installation,
-                    "tax_installation_rate": tax_installation_rate,
-                    "tax_fabrication": tax_fabrication,
-                    "tax_fabrication_rate": tax_fabrication_rate,
-                    "tax_materials": tax_materials,
-                    "tax_materials_rate": tax_materials_rate,
+                    "tax_rates": tax_rates,
                     "quote_email_template": quote_email_template,
                     "invoice_email_template": invoice_email_template,
                     "report_email_template": report_email_template,
@@ -462,16 +567,7 @@ def update_business():
         return redirect(url_for("error_page", error="no_business"))
 
     business = serialize_doc(business)
-    business["tax_parts"] = str(business.get("tax_parts") or "no").strip().lower()
-    business["tax_parts_rate"] = str(business.get("tax_parts_rate") or business.get("tax_rate") or "0").strip()
-    business["tax_repair_labor"] = str(business.get("tax_repair_labor") or "no").strip().lower()
-    business["tax_repair_labor_rate"] = str(business.get("tax_repair_labor_rate") or "0").strip()
-    business["tax_installation"] = str(business.get("tax_installation") or "no").strip().lower()
-    business["tax_installation_rate"] = str(business.get("tax_installation_rate") or "0").strip()
-    business["tax_fabrication"] = str(business.get("tax_fabrication") or "no").strip().lower()
-    business["tax_fabrication_rate"] = str(business.get("tax_fabrication_rate") or "0").strip()
-    business["tax_materials"] = str(business.get("tax_materials") or "no").strip().lower()
-    business["tax_materials_rate"] = str(business.get("tax_materials_rate") or "0").strip()
+    business["tax_rates"] = _normalize_tax_rates_for_view(business)
     business["address_line_1"] = str(business.get("address_line_1") or "").strip()
     business["address_line_2"] = str(business.get("address_line_2") or "").strip()
     business["city"] = str(business.get("city") or "").strip()

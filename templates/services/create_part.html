@@ -73,6 +73,15 @@
             <label for="purchase-link">Purchase Link</label>
             <input id="purchase-link" name="purchase_link" type="url" placeholder="https://supplier.example.com/part" value="{{ form_data.purchase_link|default('', true) }}" />
           </div>
+
+          <div class="add-customer-form-field">
+            <label for="part-tax-override">Tax Rule</label>
+            <select id="part-tax-override" name="tax_override">
+              <option value="default" {% if form_data.tax_override|default('default', true) == 'default' %}selected{% endif %}>Use default tax rule for this item type</option>
+              <option value="always" {% if form_data.tax_override == 'always' %}selected{% endif %}>Always tax this item</option>
+              <option value="never" {% if form_data.tax_override == 'never' %}selected{% endif %}>Never tax this item</option>
+            </select>
+          </div>
         </div>
 
         <div id="create-service-form-actions">

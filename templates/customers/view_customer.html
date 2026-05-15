@@ -127,6 +127,14 @@
                 <h4>Stripe Customer ID</h4>
                 <p>{{ customer.stripe_customer_id|default('Not linked', true) }}</p>
               </div>
+              <div class="view-customer-detail-item">
+                <h4>Tax Exempt</h4>
+                <p>{{ 'Yes' if customer.tax_exempt else 'No' }}</p>
+              </div>
+              <div class="view-customer-detail-item">
+                <h4>Tax Exemption Number</h4>
+                <p>{{ customer.tax_exemption_number|default('N/A', true) }}</p>
+              </div>
             </div>
           </div>
         </div>

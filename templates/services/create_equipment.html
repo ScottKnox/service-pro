@@ -98,6 +98,15 @@
             <label for="equipment-default-quantity">Default Quantity Installed</label>
             <input id="equipment-default-quantity" name="default_quantity_installed" type="number" step="0.25" min="0" placeholder="0" value="{{ form_data.default_quantity_installed|default('', true) }}" />
           </div>
+
+          <div class="add-customer-form-field">
+            <label for="equipment-tax-override">Tax Rule</label>
+            <select id="equipment-tax-override" name="tax_override">
+              <option value="default" {% if form_data.tax_override|default('default', true) == 'default' %}selected{% endif %}>Use default tax rule for this item type</option>
+              <option value="always" {% if form_data.tax_override == 'always' %}selected{% endif %}>Always tax this item</option>
+              <option value="never" {% if form_data.tax_override == 'never' %}selected{% endif %}>Never tax this item</option>
+            </select>
+          </div>
         </div>
 
         <div id="create-service-form-actions">

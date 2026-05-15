@@ -3741,6 +3741,10 @@ p {
     gap: 0.4rem;
   }
 
+  .add-customer-form-field:has(> button) {
+    width: auto;
+  }
+
   .add-customer-form-field label {
     color: #1B263B;
     font-size: 1rem;
@@ -3831,6 +3835,96 @@ p {
   .add-customer-form-field textarea {
     resize: vertical;
     font-family: inherit;
+  }
+
+  .tax-rate-applies-to-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  .tax-rate-applies-to-grid label {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 40px;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid #C5C7CB;
+    border-radius: 6px;
+    background-color: #FFFFFF;
+    color: #1B263B;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .tax-rate-applies-to-grid label:has(input[type="checkbox"]:checked) {
+    border-color: #1E7A46;
+    background-color: #E4F5EA;
+  }
+
+  .tax-rate-applies-to-grid input[type="checkbox"] {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    accent-color: #1E7A46;
+    cursor: pointer;
+  }
+
+  @media (max-width: 860px) {
+    .tax-rate-applies-to-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .tax-rate-row-wrapper {
+    display: contents;
+  }
+
+  .tax-rate-row-wrapper--new .add-customer-form-row {
+    margin-top: 1rem;
+  }
+
+  .tax-rate-row-remove-wrap {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.35rem;
+  }
+
+  .tax-rate-remove-button {
+    padding: 0.45rem 0.75rem;
+    border: 1px solid #B91C1C;
+    border-radius: 4px;
+    background-color: #FEF2F2;
+    color: #991B1B;
+    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .tax-rate-remove-button:hover {
+    background-color: #FEE2E2;
+  }
+
+  #add-tax-rate-row {
+    padding: 0.55rem 0.95rem;
+    border: 1px solid #1B263B;
+    border-radius: 4px;
+    background-color: #FFFFFF;
+    color: #1B263B;
+    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: auto;
+    align-self: flex-start;
+  }
+
+  #add-tax-rate-row:hover {
+    background-color: #F1F5F9;
   }
 
   .hvac-range-inputs {

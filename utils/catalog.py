@@ -1,6 +1,7 @@
 """Service, parts, labor, materials, equipment, and discount catalog building utilities."""
 
 from utils.currency import normalize_currency
+from utils.taxes import parse_tax_override
 
 
 def _format_hours_value(value):
@@ -68,6 +69,7 @@ def build_service_catalog(services):
             "material_ids": [entry["material_id"] for entry in service_material_entries] or [str(mid) for mid in (service.get("material_ids") or []) if mid],
             "service_parts": service_part_entries,
             "service_materials": service_material_entries,
+            "tax_override": parse_tax_override(service.get("tax_override")),
         }
 
     return catalog
@@ -87,6 +89,7 @@ def build_part_catalog(parts):
             "description": str(part.get("description") or "").strip(),
             "price": normalize_currency(part.get("unit_cost", 0)),
             "unit_cost": normalize_currency(part.get("unit_cost", 0)),
+            "tax_override": parse_tax_override(part.get("tax_override")),
         }
 
     return catalog
@@ -105,6 +108,7 @@ def build_labor_catalog(labors):
             "category": str(labor.get("labor_category") or "").strip(),
             "default_hours": _format_hours_value(labor.get("labor_default_hours", "")),
             "hourly_rate": normalize_currency(labor.get("labor_hourly_rate", 0)),
+            "tax_override": parse_tax_override(labor.get("tax_override")),
         }
 
     return catalog
@@ -127,6 +131,7 @@ def build_material_catalog(materials):
             "unit_of_measure": str(material.get("unit_of_measure") or "").strip(),
             "price": normalize_currency(material.get("price", 0)),
             "purchase_link": str(material.get("purchase_link") or "").strip(),
+            "tax_override": parse_tax_override(material.get("tax_override")),
         }
 
     return catalog
@@ -149,6 +154,7 @@ def build_equipment_catalog(equipments):
             "notes": str(equipment.get("notes") or "").strip(),
             "default_price": normalize_currency(equipment.get("default_price", 0)),
             "default_quantity_installed": _format_hours_value(equipment.get("default_quantity_installed", "")),
+            "tax_override": parse_tax_override(equipment.get("tax_override")),
         }
 
     return catalog
@@ -219,6 +225,7 @@ def build_job_services_from_form(service_codes, service_prices, service_duration
                 "price": normalized_price,
                 "estimated_hours": normalized_duration,
                 "emergency_call": emergency_call,
+                "tax_override": parse_tax_override(catalog_entry.get("tax_override")),
             }
         )
         total += float(normalized_price.replace("$", "").replace(",", ""))
@@ -252,6 +259,7 @@ def build_job_parts_from_form(part_codes, part_prices, part_catalog):
                 "name": part_name,
                 "code": part_code,
                 "price": normalized_price,
+                "tax_override": parse_tax_override(catalog_entry.get("tax_override")),
             }
         )
         total += float(normalized_price.replace("$", "").replace(",", ""))
@@ -299,6 +307,7 @@ def build_job_labors_from_form(labor_descriptions, labor_hours, labor_rates, lab
                 "hours": normalized_hours,
                 "hourly_rate": normalized_rate,
                 "line_total": normalize_currency(row_total),
+                "tax_override": parse_tax_override(catalog_entry.get("tax_override")),
             }
         )
         total += row_total
@@ -356,6 +365,7 @@ def build_job_materials_from_form(
                 "unit_of_measure": (entered_unit if (entered_unit or "").strip() else catalog_entry.get("unit_of_measure", "")).strip(),
                 "price": unit_price,
                 "line_total": normalize_currency(line_total),
+                "tax_override": parse_tax_override(catalog_entry.get("tax_override")),
             }
         )
         total += line_total
@@ -410,6 +420,7 @@ def build_job_equipments_from_form(
                 "quantity_installed": quantity,
                 "price": unit_price,
                 "line_total": normalize_currency(line_total),
+                "tax_override": parse_tax_override(catalog_entry.get("tax_override")),
             }
         )
         total += line_total

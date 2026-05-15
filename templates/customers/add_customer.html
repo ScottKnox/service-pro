@@ -73,6 +73,21 @@
           </div>
         </div>
 
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="customer-tax-exempt">Tax Exempt</label>
+            <select id="customer-tax-exempt" name="tax_exempt">
+              <option value="false" {% if not form_data.get('tax_exempt') %}selected{% endif %}>No</option>
+              <option value="true" {% if form_data.get('tax_exempt') %}selected{% endif %}>Yes</option>
+            </select>
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="customer-tax-exemption-number">Tax Exemption Number</label>
+            <input id="customer-tax-exemption-number" name="tax_exemption_number" type="text" placeholder="Optional" value="{{ form_data.get('tax_exemption_number', '') }}" />
+          </div>
+        </div>
+
         <h2 class="create-job-form-section-header">Primary Address</h2>
         <p class="form-field-note form-field-note--compact">This is the address the customer resides at, you can add additional properties later.</p>
 

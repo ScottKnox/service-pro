@@ -138,6 +138,16 @@
               <p>{{ job.customer_name|default('N/A', true) }}</p>
             </div>
             <div class="view-job-detail-item">
+              <h4>Tax Exempt</h4>
+              <p>{{ 'Yes' if customer.tax_exempt else 'No' }}</p>
+            </div>
+            {% if customer.tax_exempt and customer.tax_exemption_number %}
+            <div class="view-job-detail-item">
+              <h4>Exemption Number</h4>
+              <p>{{ customer.tax_exemption_number }}</p>
+            </div>
+            {% endif %}
+            <div class="view-job-detail-item">
               <h4>Assigned Employee</h4>
               <p>{{ job.assigned_employee|default('N/A', true) }}</p>
             </div>
@@ -254,8 +264,12 @@
         <div class="estimate-stack-block estimate-pricing-summary">
           <h3>Pricing Summary</h3>
           <div class="estimate-pricing-row"><span>Subtotal</span><span>{{ pricing_summary.subtotal_display }}</span></div>
-          {% if pricing_summary.tax_total > 0 %}
-            <div class="estimate-pricing-row"><span>Tax</span><span>{{ pricing_summary.tax_total_display }}</span></div>
+          {% if pricing_summary.is_tax_exempt %}
+            <div class="estimate-pricing-row"><span>Tax exempt</span><span>$0.00</span></div>
+          {% elif pricing_summary.tax_lines %}
+            {% for tax_line in pricing_summary.tax_lines %}
+              <div class="estimate-pricing-row"><span>{{ tax_line.display_name }}</span><span>{{ tax_line.amount_display }}</span></div>
+            {% endfor %}
           {% endif %}
           {% if pricing_summary.discounts_total > 0 %}
             <div class="estimate-pricing-row"><span>Discounts</span><span>-{{ pricing_summary.discounts_total_display }}</span></div>

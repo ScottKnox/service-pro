@@ -31,6 +31,7 @@ from utils.currency import currency_to_float, normalize_currency
 from utils.csv_export import build_csv_export_response
 from utils.formatters import format_date
 from utils.notifications import normalize_phone_for_twilio, send_sms_via_twilio, sms_features_enabled
+from utils.taxes import build_line_item_tax_inputs, calculate_itemized_tax, normalize_business_tax_rates
 
 bp = Blueprint("jobs", __name__)
 
@@ -2238,83 +2239,76 @@ def _coerce_line_amount(value):
     return float(currency_to_float(value))
 
 
-def _build_estimate_pricing_summary(estimate):
-    estimate_doc = estimate or {}
-
-    services_total = sum(_coerce_line_amount(service.get("price")) for service in (estimate_doc.get("services") or []))
-    parts_total = sum(_coerce_line_amount(part.get("price")) for part in (estimate_doc.get("parts") or []))
-    labors_total = sum(
-        _coerce_line_amount(labor.get("line_total") or labor.get("hourly_rate"))
-        for labor in (estimate_doc.get("labors") or [])
-    )
-    materials_total = sum(
-        _coerce_line_amount(material.get("line_total") or material.get("price"))
-        for material in (estimate_doc.get("materials") or [])
-    )
-    equipment_total = sum(
-        _coerce_line_amount(equipment.get("line_total") or equipment.get("price"))
-        for equipment in (estimate_doc.get("equipments") or [])
-    )
-
+def _calculate_discount_totals(payload, subtotal):
+    discount_rows = []
     discounts_total = 0.0
-    for discount in (estimate_doc.get("discounts") or []):
-        line_value = _coerce_line_amount(discount.get("discount_amount") or discount.get("line_total"))
-        discounts_total += abs(line_value)
 
-    subtotal = services_total + parts_total + labors_total + materials_total + equipment_total
-    pre_tax_total = max(0.0, subtotal - discounts_total)
-    total_due = _coerce_line_amount(estimate_doc.get("total_amount"))
-    tax_total = max(0.0, total_due - pre_tax_total)
-
-    return {
-        "subtotal": subtotal,
-        "tax_total": tax_total,
-        "discounts_total": discounts_total,
-        "total_due": total_due,
-        "subtotal_display": normalize_currency(subtotal),
-        "tax_total_display": normalize_currency(tax_total),
-        "discounts_total_display": normalize_currency(discounts_total),
-        "total_due_display": normalize_currency(total_due),
-    }
-
-
-def _build_invoice_pricing_summary(job_doc):
-    payload = job_doc or {}
-    services_total = sum(_coerce_line_amount(service.get("price")) for service in (payload.get("services") or []))
-    parts_total = sum(_coerce_line_amount(part.get("price")) for part in (payload.get("parts") or []))
-    labors_total = sum(
-        _coerce_line_amount(labor.get("line_total") or labor.get("hourly_rate"))
-        for labor in (payload.get("labors") or [])
-    )
-    materials_total = sum(
-        _coerce_line_amount(material.get("line_total") or material.get("price"))
-        for material in (payload.get("materials") or [])
-    )
-    equipment_total = sum(
-        _coerce_line_amount(equipment.get("line_total") or equipment.get("price"))
-        for equipment in (payload.get("equipments") or [])
-    )
-
-    discounts_total = 0.0
     for discount in (payload.get("discounts") or []):
-        line_value = _coerce_line_amount(discount.get("discount_amount") or discount.get("line_total"))
-        discounts_total += abs(line_value)
+        if not isinstance(discount, dict):
+            continue
+
+        percent_value = _coerce_line_amount(discount.get("discount_percentage"))
+        if percent_value > 0:
+            amount_value = max(0.0, subtotal * (percent_value / 100.0))
+        else:
+            amount_value = abs(_coerce_line_amount(discount.get("discount_amount") or discount.get("line_total")))
+
+        if amount_value <= 0:
+            continue
+
+        discounts_total += amount_value
+        discount_rows.append({"name": str(discount.get("discount_name") or "Discount").strip() or "Discount", "amount": amount_value})
+
+    discounts_total = min(discounts_total, max(0.0, subtotal))
+    return discount_rows, discounts_total
+
+
+def _build_pricing_summary(payload, business_doc=None, customer_doc=None):
+    source = payload or {}
+    customer = customer_doc or {}
+    business = business_doc or {}
+
+    services_total = sum(_coerce_line_amount(service.get("price")) for service in (source.get("services") or []))
+    parts_total = sum(_coerce_line_amount(part.get("price")) for part in (source.get("parts") or []))
+    labors_total = sum(_coerce_line_amount(labor.get("line_total") or labor.get("hourly_rate")) for labor in (source.get("labors") or []))
+    materials_total = sum(_coerce_line_amount(material.get("line_total") or material.get("price")) for material in (source.get("materials") or []))
+    equipment_total = sum(_coerce_line_amount(equipment.get("line_total") or equipment.get("price")) for equipment in (source.get("equipments") or []))
 
     subtotal = services_total + parts_total + labors_total + materials_total + equipment_total
+    _, discounts_total = _calculate_discount_totals(source, subtotal)
     pre_tax_total = max(0.0, subtotal - discounts_total)
-    total_due = _coerce_line_amount(payload.get("total_amount"))
-    tax_total = max(0.0, total_due - pre_tax_total)
+
+    tax_inputs = build_line_item_tax_inputs(source)
+    tax_breakdown = calculate_itemized_tax(
+        tax_inputs,
+        normalize_business_tax_rates(business),
+        customer_tax_exempt=bool(customer.get("tax_exempt")),
+    )
+
+    total_due = round(pre_tax_total + tax_breakdown.get("tax_total", 0.0), 2)
+    tax_lines = tax_breakdown.get("tax_lines") or []
 
     return {
-        "subtotal": subtotal,
-        "tax_total": tax_total,
-        "discounts_total": discounts_total,
+        "subtotal": round(subtotal, 2),
+        "tax_total": round(tax_breakdown.get("tax_total", 0.0), 2),
+        "discounts_total": round(discounts_total, 2),
         "total_due": total_due,
+        "tax_lines": tax_lines,
+        "is_tax_exempt": bool(tax_breakdown.get("is_tax_exempt")),
+        "has_taxable_items": bool(tax_breakdown.get("has_taxable_items")),
         "subtotal_display": normalize_currency(subtotal),
-        "tax_total_display": normalize_currency(tax_total),
+        "tax_total_display": normalize_currency(tax_breakdown.get("tax_total", 0.0)),
         "discounts_total_display": normalize_currency(discounts_total),
         "total_due_display": normalize_currency(total_due),
     }
+
+
+def _build_estimate_pricing_summary(estimate, business_doc=None, customer_doc=None):
+    return _build_pricing_summary(estimate or {}, business_doc=business_doc, customer_doc=customer_doc)
+
+
+def _build_invoice_pricing_summary(job_doc, business_doc=None, customer_doc=None):
+    return _build_pricing_summary(job_doc or {}, business_doc=business_doc, customer_doc=customer_doc)
 
 
 def _format_payment_method_label(method):
@@ -2796,7 +2790,19 @@ def create_job(customerId):
         _apply_hvac_ids_to_components(labors, request.form.getlist("labor_hvac_system_ids[]"))
         _apply_hvac_ids_to_components(materials, request.form.getlist("material_hvac_system_ids[]"))
         _apply_hvac_ids_to_components(equipments, request.form.getlist("equipment_hvac_system_ids[]"))
-        total = services_total + parts_total + labor_total + materials_total + equipment_total - discounts_total
+        pricing_summary = _build_pricing_summary(
+            {
+                "services": services,
+                "parts": parts,
+                "labors": labors,
+                "materials": materials,
+                "equipments": equipments,
+                "discounts": discounts,
+            },
+            business_doc=serialize_doc(db.businesses.find_one({"_id": business_id})) if business_id else {},
+            customer_doc=serialize_doc(customer),
+        )
+        total = pricing_summary["total_due"]
 
         primary_service = services[0]["type"] if services else "No services added."
         scheduled_date = format_date(request.form.get("job_date", ""))
@@ -3044,7 +3050,19 @@ def create_estimate(customerId):
             entered_discount_amounts,
             discount_catalog,
         )
-        total = services_total + parts_total + labor_total + materials_total + equipment_total - discounts_total
+        pricing_summary = _build_pricing_summary(
+            {
+                "services": services,
+                "parts": parts,
+                "labors": labors,
+                "materials": materials,
+                "equipments": equipments,
+                "discounts": discounts,
+            },
+            business_doc=serialize_doc(db.businesses.find_one({"_id": business_id})) if business_id else {},
+            customer_doc=serialize_doc(customer),
+        )
+        total = pricing_summary["total_due"]
 
         estimated_by_employee = request.form.get("job_assigned_employee", "").strip()
         estimate_notes = request.form.get("estimate_notes", "").strip()
@@ -3126,6 +3144,7 @@ def create_estimate(customerId):
                         "website": 1,
                         "license_number": 1,
                         "warranty_info": 1,
+                        "tax_rates": 1,
                     },
                 )
                 if business_doc:
@@ -3292,7 +3311,13 @@ def view_estimate(estimateId):
     estimate_doc["accepted_signature_captured_date_iso"] = accepted_signature_date_iso
     estimate_doc["accepted_signature_captured_time"] = accepted_signature_time
     estimate_doc["accepted_signature_captured_date_display"] = accepted_signature_date_display
-    pricing_summary = _build_estimate_pricing_summary(estimate_doc)
+    estimate_business = {}
+    estimate_business_id = str(estimate_doc.get("business_id") or "").strip()
+    if estimate_business_id:
+        estimate_business_doc = db.businesses.find_one(build_reference_filter("_id", estimate_business_id))
+        if estimate_business_doc:
+            estimate_business = serialize_doc(estimate_business_doc)
+    pricing_summary = _build_estimate_pricing_summary(estimate_doc, business_doc=estimate_business, customer_doc=customer)
 
     return render_template(
         "estimates/view_estimate.html",
@@ -3401,7 +3426,26 @@ def update_estimate(estimateId):
             entered_discount_amounts,
             discount_catalog,
         )
-        total = services_total + parts_total + labor_total + materials_total + equipment_total - discounts_total
+        customer = {}
+        customer_id = estimate.get("customer_id")
+        if customer_id:
+            customer_doc = db.customers.find_one(build_reference_filter("_id", customer_id))
+            if customer_doc:
+                customer = serialize_doc(customer_doc)
+
+        pricing_summary = _build_pricing_summary(
+            {
+                "services": services,
+                "parts": parts,
+                "labors": labors,
+                "materials": materials,
+                "equipments": equipments,
+                "discounts": discounts,
+            },
+            business_doc=serialize_doc(db.businesses.find_one({"_id": business_id})) if business_id else {},
+            customer_doc=customer,
+        )
+        total = pricing_summary["total_due"]
 
         estimated_by_employee = request.form.get("job_assigned_employee", "").strip()
         estimate_notes = request.form.get("estimate_notes", "").strip()
@@ -3448,12 +3492,7 @@ def update_estimate(estimateId):
 
         estimate_for_pdf = dict(estimate)
         estimate_for_pdf.update(updated_data)
-        customer = {}
-        customer_id = estimate.get("customer_id")
-        if customer_id:
-            customer_doc = db.customers.find_one(build_reference_filter("_id", customer_id))
-            if customer_doc:
-                customer = serialize_doc(customer_doc)
+        customer = customer or {}
 
         business_logo_path = resolve_current_business_logo_path(db)
         business_payload = {}
@@ -3475,6 +3514,7 @@ def update_estimate(estimateId):
                     "website": 1,
                     "license_number": 1,
                     "warranty_info": 1,
+                    "tax_rates": 1,
                 },
             )
             if business_doc:
@@ -3867,6 +3907,7 @@ def view_invoice(jobId, invoiceRef):
 
     stripe_connect_ready = False
     stripe_connect_reason = ""
+    business = {}
     business_id = str(job_doc.get("business_id") or "").strip()
     if not business_id:
         # Fallback for older jobs saved before business_id was persisted.
@@ -3884,11 +3925,11 @@ def view_invoice(jobId, invoiceRef):
         if not stripe_connect_ready:
             stripe_connect_reason = "Card payments are unavailable until this business connects Stripe and enables charges/payouts."
 
-    pricing_summary = _build_invoice_pricing_summary(job_doc)
+    pricing_summary = _build_invoice_pricing_summary(job_doc, business_doc=business, customer_doc=customer)
     payment_history = _build_payment_history(db, jobId, _resolve_invoice_ref(invoice, fallback_ref=invoiceRef))
     payment_summary = _build_invoice_payment_summary(job_doc, pricing_summary, payment_history)
-    total_amount_paid = round(_safe_float(job_doc.get("total_amount_paid"), 0.0), 2)
-    balance_due = round(_safe_float(job_doc.get("balance_due"), max(0.0, _safe_float(job_doc.get("total_amount"), 0.0) - total_amount_paid)), 2)
+    total_amount_paid = round(_safe_float(payment_summary.get("amount_paid"), 0.0), 2)
+    balance_due = round(_safe_float(payment_summary.get("invoice_balance"), 0.0), 2)
 
     return render_template(
         "invoices/view_invoice.html",
@@ -4083,6 +4124,18 @@ def view_job(jobId):
             customer = serialize_doc(customer_doc)
 
     job_doc = serialize_doc(job)
+    job_business = {}
+    job_business_id = str(job_doc.get("business_id") or "").strip()
+    if not job_business_id:
+        sole_business = db.businesses.find_one({}, {"_id": 1})
+        if sole_business:
+            job_business_id = str(sole_business["_id"])
+    if job_business_id:
+        business_doc = db.businesses.find_one(build_reference_filter("_id", job_business_id))
+        if business_doc:
+            job_business = serialize_doc(business_doc)
+
+    pricing_summary = _build_invoice_pricing_summary(job_doc, business_doc=job_business, customer_doc=customer)
     job_doc["internal_notes"] = _build_internal_notes_for_view(db, job)
     payment_history = _build_payment_history(db, jobId)
 
@@ -4112,6 +4165,7 @@ def view_job(jobId):
         customer=customer,
         quote_email_template=quote_email_template,
         invoice_email_template=invoice_email_template,
+        pricing_summary=pricing_summary,
         employee_has_other_active_job=employee_has_other_active_job,
     )
 
@@ -4346,16 +4400,7 @@ def complete_job(jobId):
                 "website": 1,
                 "license_number": 1,
                 "warranty_info": 1,
-                "tax_parts": 1,
-                "tax_parts_rate": 1,
-                "tax_repair_labor": 1,
-                "tax_repair_labor_rate": 1,
-                "tax_materials": 1,
-                "tax_materials_rate": 1,
-                "tax_installation": 1,
-                "tax_installation_rate": 1,
-                "tax_fabrication": 1,
-                "tax_fabrication_rate": 1,
+                "tax_rates": 1,
             },
         )
         if business_doc:
@@ -4680,7 +4725,26 @@ def update_job(jobId):
         _apply_hvac_ids_to_components(labors, request.form.getlist("labor_hvac_system_ids[]"))
         _apply_hvac_ids_to_components(materials, request.form.getlist("material_hvac_system_ids[]"))
         _apply_hvac_ids_to_components(equipments, request.form.getlist("equipment_hvac_system_ids[]"))
-        total = services_total + parts_total + labor_total + materials_total + equipment_total - discounts_total
+        customer = {}
+        customer_id = job.get("customer_id")
+        if customer_id:
+            customer_doc = db.customers.find_one(build_reference_filter("_id", customer_id))
+            if customer_doc:
+                customer = serialize_doc(customer_doc)
+
+        pricing_summary = _build_pricing_summary(
+            {
+                "services": services,
+                "parts": parts,
+                "labors": labors,
+                "materials": materials,
+                "equipments": equipments,
+                "discounts": discounts,
+            },
+            business_doc=serialize_doc(db.businesses.find_one({"_id": business_id})) if business_id else {},
+            customer_doc=customer,
+        )
+        total = pricing_summary["total_due"]
 
         primary_service = services[0]["type"] if services else "No services added."
         scheduled_date = format_date(request.form.get("job_date", ""))

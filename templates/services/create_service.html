@@ -85,6 +85,15 @@
             <label for="emergency-price">Emergency Price</label>
             <input id="emergency-price" name="emergency_price" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.emergency_price|default('', true) }}" required />
           </div>
+
+          <div class="add-customer-form-field">
+            <label for="service-tax-override">Tax Rule</label>
+            <select id="service-tax-override" name="tax_override">
+              <option value="default" {% if form_data.tax_override|default('default', true) == 'default' %}selected{% endif %}>Use default tax rule for this item type</option>
+              <option value="always" {% if form_data.tax_override == 'always' %}selected{% endif %}>Always tax this item</option>
+              <option value="never" {% if form_data.tax_override == 'never' %}selected{% endif %}>Never tax this item</option>
+            </select>
+          </div>
         </div>
 
         <h2 class="create-job-form-section-header">Add Parts</h2>

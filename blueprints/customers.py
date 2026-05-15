@@ -99,6 +99,10 @@ def _safe_float(value, default=0.0):
         return float(default)
 
 
+def _parse_bool_field(raw_value):
+    return str(raw_value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _recalculate_customer_balance_from_jobs(db, customer_id):
     customer = db.customers.find_one(build_reference_filter("_id", customer_id), {"_id": 1})
     if not customer:
@@ -1958,6 +1962,8 @@ def add_customer():
         state = request.form.get("state", "").strip().upper()
         zip_code = request.form.get("zip_code", "").strip()
         referral_source = request.form.get("referral_source", "").strip()
+        tax_exempt = _parse_bool_field(request.form.get("tax_exempt"))
+        tax_exemption_number = request.form.get("tax_exemption_number", "").strip()
 
         if not first_name or not last_name:
             return render_template(
@@ -2003,6 +2009,8 @@ def add_customer():
                 }
             ],
             "referral_source": referral_source,
+            "tax_exempt": tax_exempt,
+            "tax_exemption_number": tax_exemption_number,
             "notes": [],
             "customer_status": customer_status,
             "date_added": datetime.now().strftime("%m/%d/%Y"),
@@ -2037,6 +2045,8 @@ def update_customer(customerId):
         city = request.form.get("city", "").strip()
         state = request.form.get("state", "").strip().upper()
         zip_code = request.form.get("zip_code", "").strip()
+        tax_exempt = _parse_bool_field(request.form.get("tax_exempt"))
+        tax_exemption_number = request.form.get("tax_exemption_number", "").strip()
 
         if not first_name or not last_name:
             return render_template(
@@ -2064,6 +2074,8 @@ def update_customer(customerId):
             "zip_code": zip_code,
             "referral_source": request.form.get("referral_source", "").strip(),
             "customer_status": next_status,
+            "tax_exempt": tax_exempt,
+            "tax_exemption_number": tax_exemption_number,
         }
 
         address_fields = ("address_line_1", "address_line_2", "city", "state", "zip_code")

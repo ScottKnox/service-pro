@@ -176,6 +176,16 @@
                 </div>
               </div>
               <div class="view-job-detail-item">
+                <h4>Tax Exempt</h4>
+                <p>{{ 'Yes' if customer.tax_exempt else 'No' }}</p>
+              </div>
+              {% if customer.tax_exempt and customer.tax_exemption_number %}
+              <div class="view-job-detail-item">
+                <h4>Exemption Number</h4>
+                <p>{{ customer.tax_exemption_number }}</p>
+              </div>
+              {% endif %}
+              <div class="view-job-detail-item">
                 <h4>Scheduled Date</h4>
                 <p>{{ job.scheduled_date|default('N/A', true) }}</p>
               </div>
@@ -212,8 +222,8 @@
               {% endif %}
               {% endif %}
               <div class="view-job-detail-item">
-                <h4>Total</h4>
-                <p>{{ job.total_amount|currency }}</p>
+                <h4>Total Due</h4>
+                <p>{{ pricing_summary.total_due_display }}</p>
               </div>
               <div class="view-job-detail-item">
                 <h4>Amount Paid</h4>
@@ -384,6 +394,47 @@
                   <p>No equipment added.</p>
                 </div>
               {% endif %}
+            </div>
+          </div>
+          <div class="view-job-section-column view-job-details-column"></div>
+        </div>
+
+        <div class="view-job-section-row" id="view-job-pricing-summary-row">
+          <div class="view-job-section-column view-job-details-column">
+            <h3>Pricing Summary</h3>
+            <div id="view-job-pricing-summary-list">
+              <div class="view-job-detail-item">
+                <h4>Subtotal</h4>
+                <p>{{ pricing_summary.subtotal_display }}</p>
+              </div>
+              {% if pricing_summary.is_tax_exempt %}
+                <div class="view-job-detail-item">
+                  <h4>Tax Exempt</h4>
+                  <p>$0.00</p>
+                </div>
+              {% elif pricing_summary.tax_lines %}
+                {% for tax_line in pricing_summary.tax_lines %}
+                  <div class="view-job-detail-item">
+                    <h4>{{ tax_line.display_name }}</h4>
+                    <p>{{ tax_line.amount_display }}</p>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="view-job-detail-item">
+                  <h4>Tax</h4>
+                  <p>{{ pricing_summary.tax_total_display }}</p>
+                </div>
+              {% endif %}
+              {% if pricing_summary.discounts_total > 0 %}
+                <div class="view-job-detail-item">
+                  <h4>Discounts</h4>
+                  <p>-{{ pricing_summary.discounts_total_display }}</p>
+                </div>
+              {% endif %}
+              <div class="view-job-detail-item">
+                <h4>Total Due</h4>
+                <p>{{ pricing_summary.total_due_display }}</p>
+              </div>
             </div>
           </div>
           <div class="view-job-section-column view-job-details-column"></div>
