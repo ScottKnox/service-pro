@@ -67,6 +67,7 @@ def require_login():
         "static",
         "home",
         "error_page",
+        "download_invoice",
         "jobs.view_estimate",
         "jobs.view_invoice",
         "jobs.create_invoice_checkout_session",
@@ -779,9 +780,54 @@ def download_invoice(filename):
     invoices_dir = os.path.join(os.path.dirname(__file__), "invoices")
     filepath = os.path.join(invoices_dir, filename)
 
-    if os.path.exists(filepath) and os.path.abspath(filepath).startswith(os.path.abspath(invoices_dir)):
-        return send_file(filepath, mimetype="application/pdf", as_attachment=False)
-    return "Invoice not found", 404
+    if not (os.path.exists(filepath) and os.path.abspath(filepath).startswith(os.path.abspath(invoices_dir))):
+        return "Invoice not found", 404
+
+    db = ensure_connection_or_500()
+    invoice_path_suffix = f"/invoices/{filename}"
+    matching_job = db.jobs.find_one(
+        {
+            "invoices.file_path": {
+                "$regex": re.escape(invoice_path_suffix) + r"$",
+            }
+        },
+        {"invoices": 1, "business_id": 1},
+    )
+    if not matching_job:
+        return "Invoice not found", 404
+
+    matching_invoice = None
+    for invoice in matching_job.get("invoices") or []:
+        if not isinstance(invoice, dict):
+            continue
+        file_path = str(invoice.get("file_path") or "").strip()
+        if file_path.endswith(invoice_path_suffix):
+            matching_invoice = invoice
+            break
+
+    if not matching_invoice:
+        return "Invoice not found", 404
+
+    employee_id = session.get("employee_id")
+    if employee_id and ObjectId.is_valid(employee_id):
+        employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"business": 1}) or {}
+        employee_business = employee.get("business")
+        employee_business_id = str(employee_business or "").strip()
+        job_business_id = str(matching_job.get("business_id") or "").strip()
+        if employee_business_id and job_business_id and employee_business_id == job_business_id:
+            return send_file(filepath, mimetype="application/pdf", as_attachment=False)
+        return "Forbidden", 403
+
+    token_value = str(request.args.get("token") or "").strip()
+    if not token_value:
+        return redirect(url_for("auth.login"))
+
+    from blueprints.jobs import _verify_invoice_access_token
+
+    if not _verify_invoice_access_token(matching_invoice, token_value):
+        return "Forbidden", 403
+
+    return send_file(filepath, mimetype="application/pdf", as_attachment=False)
 
 
 @app.route("/payments/stripe/webhook", methods=["POST"])

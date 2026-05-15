@@ -99,7 +99,7 @@
             Email Invoice
           </button>
           {% if invoice.file_path %}
-            <a href="{{ invoice.file_path }}" target="_blank" rel="noopener noreferrer">Open Invoice PDF</a>
+            <a href="{{ invoice.file_path }}{% if not is_staff_view and access_token %}{% if '?' in invoice.file_path %}&{% else %}?{% endif %}token={{ access_token|urlencode }}{% endif %}" target="_blank" rel="noopener noreferrer">Open Invoice PDF</a>
           {% endif %}
           {% if invoice_has_been_sent and not invoice_is_paid %}
             <form method="POST" action="{{ url_for('jobs.send_invoice_reminder_manually', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true)) }}" style="display: inline;">
@@ -509,6 +509,7 @@
       var cardAmountToChargeInput = document.getElementById('card-amount-to-charge');
       var cashChangeDueText = document.getElementById('cash-change-due');
       var invoiceBalanceDue = Number("{{ balance_due|default(0, true) }}") || 0;
+      var csrfToken = "{{ csrf_token() }}";
 
       function openPaymentModal() {
         if (paymentMethodStep) {
@@ -645,13 +646,19 @@
             stripeCheckoutBtn.disabled = true;
             stripeCheckoutBtn.textContent = 'Redirecting...';
 
-            var checkoutUrl = new URL("{{ url_for('jobs.create_invoice_checkout_session', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true), _external=True) }}");
-            checkoutUrl.searchParams.set('access_token', "{{ access_token|default('', true) }}");
-            checkoutUrl.searchParams.set('customer_email', "{{ customer.email|default('', true) }}");
-            checkoutUrl.searchParams.set('amount', paymentAmount.toFixed(2));
+            var checkoutUrl = "{{ url_for('jobs.create_invoice_checkout_session', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true), _external=True) }}";
 
-            fetch(checkoutUrl.toString(), {
-              method: 'GET',
+            fetch(checkoutUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+              },
+              body: JSON.stringify({
+                access_token: "{{ access_token|default('', true) }}",
+                customer_email: "{{ customer.email|default('', true) }}",
+                amount: paymentAmount.toFixed(2)
+              })
             })
               .then(function (response) {
                 return response.json();
