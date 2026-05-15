@@ -2109,6 +2109,36 @@ def process_stripe_checkout_completed(db, checkout_session):
     amount_total = float(_stripe_obj_value(checkout_session, "amount_total", 0) or 0) / 100.0
     if amount_total <= 0:
         amount_total = _safe_float(metadata.get("amount"), 0.0)
+
+    # Validate payment amount against metadata (what was requested)
+    expected_amount = _safe_float(metadata.get("amount"), 0.0)
+    if expected_amount > 0 and round(amount_total, 2) != round(expected_amount, 2):
+        current_app.logger.warning(
+            "Stripe checkout amount mismatch: job_id=%s invoice_ref=%s expected=%.2f actual=%.2f",
+            job_id,
+            invoice_ref,
+            expected_amount,
+            amount_total,
+        )
+        return False
+
+    # Validate amount doesn't exceed current balance_due (prevent overpayment tampering)
+    job = db.jobs.find_one({"_id": ObjectId(job_id)}) if ObjectId.is_valid(job_id) else None
+    if job:
+        job_doc = serialize_doc(job)
+        payment_state = _calculate_job_payment_state(db, job_doc)
+        current_balance_due = payment_state.get("balance_due", 0.0)
+        
+        if amount_total > round(current_balance_due, 2):
+            current_app.logger.warning(
+                "Stripe checkout amount exceeds current balance: job_id=%s invoice_ref=%s amount=%.2f balance_due=%.2f",
+                job_id,
+                invoice_ref,
+                amount_total,
+                current_balance_due,
+            )
+            return False
+
     payment_intent_id = str(_stripe_obj_value(checkout_session, "payment_intent", "") or "").strip()
     payment_method = _resolve_payment_method_from_payment_intent(payment_intent_id) or _payment_method_from_checkout_session(checkout_session)
     finalized = _record_payment(
@@ -4067,6 +4097,18 @@ def create_invoice_checkout_session(jobId, invoiceRef):
     charge_amount = round(_safe_float(requested_amount, balance_due), 2)
     if charge_amount <= 0 or charge_amount > balance_due:
         return jsonify({"success": False, "error": "Payment amount must be greater than zero and no more than balance due"}), 400
+
+    # Validate that the requested amount matches the backend calculation
+    # Round both to 2 decimals and compare to prevent floating point issues
+    calculated_charge = round(balance_due, 2)
+    if charge_amount != calculated_charge:
+        current_app.logger.warning(
+            "Payment amount mismatch detected: job_id=%s requested=%.2f calculated=%.2f",
+            jobId,
+            charge_amount,
+            calculated_charge,
+        )
+        return jsonify({"success": False, "error": "Payment amount does not match invoice balance. Please refresh and try again."}), 400
 
     amount_total = int(round(charge_amount * 100))
 

@@ -35,6 +35,90 @@ def _resolve_current_business_id(db):
     return None
 
 
+def _is_authenticated_employee():
+    employee_id = session.get("employee_id")
+    return bool(employee_id and ObjectId.is_valid(employee_id))
+
+
+def _employee_has_access_to_customer(db, customer_id):
+    """Check if authenticated employee's business has access to this customer."""
+    if not _is_authenticated_employee():
+        return False
+
+    if not customer_id or not ObjectId.is_valid(str(customer_id)):
+        return False
+
+    employee_business_id = _resolve_current_business_id(db)
+    if not employee_business_id:
+        return False
+
+    # Customer is accessible if they have business_id matching employee's business
+    customer_oid = ObjectId(customer_id) if isinstance(customer_id, str) else customer_id
+    customer = db.customers.find_one(
+        {"_id": customer_oid},
+        {"business_id": 1}
+    )
+    if not customer:
+        return False
+
+    customer_business_id = customer.get("business_id")
+    if isinstance(customer_business_id, ObjectId):
+        return customer_business_id == employee_business_id
+    if isinstance(customer_business_id, str) and ObjectId.is_valid(customer_business_id):
+        return ObjectId(customer_business_id) == employee_business_id
+    return False
+
+
+def _employee_has_access_to_employee(db, target_employee_id):
+    """Check if authenticated employee can access another employee (must be same business)."""
+    if not _is_authenticated_employee():
+        return False
+
+    if not target_employee_id or not ObjectId.is_valid(str(target_employee_id)):
+        return False
+
+    employee_business_id = _resolve_current_business_id(db)
+    if not employee_business_id:
+        return False
+
+    target_employee = db.employees.find_one(
+        {"_id": ObjectId(target_employee_id) if isinstance(target_employee_id, str) else target_employee_id},
+        {"business": 1}
+    )
+    if not target_employee:
+        return False
+
+    target_business = target_employee.get("business")
+    if isinstance(target_business, ObjectId):
+        return target_business == employee_business_id
+    if isinstance(target_business, str) and ObjectId.is_valid(target_business):
+        return ObjectId(target_business) == employee_business_id
+    return False
+
+
+@bp.before_request
+def _enforce_staff_customer_scope():
+    """Guard customers routes to prevent cross-business access."""
+    if not _is_authenticated_employee():
+        return None
+
+    view_args = request.view_args or {}
+    customer_id = str(view_args.get("customerId") or "").strip()
+    if not customer_id or not ObjectId.is_valid(customer_id):
+        return None
+
+    db = ensure_connection_or_500()
+    if _employee_has_access_to_customer(db, customer_id):
+        return None
+
+    current_app.logger.warning(
+        "Blocked cross-business customer access: employee_id=%s customer_id=%s",
+        str(session.get("employee_id") or ""),
+        customer_id,
+    )
+    return redirect(url_for("customers.customers"))
+
+
 def _parse_note_datetime(value):
     raw_value = str(value or "").strip()
     if not raw_value:
@@ -1982,7 +2066,9 @@ def add_customer():
         customer_status = "Active" if all((phone, email, address_line_1, city, state)) else "Lead"
 
         customer_count = db.customers.count_documents({}) + 1
+        business_id = _resolve_current_business_id(db)
         customer = {
+            "business_id": business_id,
             "first_name": first_name,
             "last_name": last_name,
             "company": company,

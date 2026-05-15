@@ -40,6 +40,7 @@ def build_update_customer_form_data(**overrides):
 def make_customer_doc(**overrides):
     document = {
         "_id": ObjectId(),
+        "business_id": overrides.pop("business_id", ObjectId()),
         "first_name": "Lead",
         "last_name": "Customer",
         "phone": "",
@@ -62,23 +63,26 @@ def seed_customer(db, **overrides):
     return customer
 
 
-def seed_customer_with_related_records(db, customer_id=None):
+def seed_customer_with_related_records(db, customer_id=None, business_id=None):
     resolved_customer_id = customer_id or ObjectId()
+    resolved_business_id = business_id or ObjectId()
     job_id = ObjectId()
 
     db.customers.insert_one(
         {
             "_id": resolved_customer_id,
+            "business_id": resolved_business_id,
             "first_name": "Delete",
             "last_name": "Me",
         }
     )
-    db.jobs.insert_one({"_id": job_id, "customer_id": resolved_customer_id})
+    db.jobs.insert_one({"_id": job_id, "customer_id": resolved_customer_id, "business_id": resolved_business_id})
     db.equipment.insert_one({"_id": ObjectId(), "customer_id": resolved_customer_id})
-    db.estimates.insert_one({"_id": ObjectId(), "customer_id": resolved_customer_id})
+    db.estimates.insert_one({"_id": ObjectId(), "customer_id": resolved_customer_id, "business_id": resolved_business_id})
     db.estimates.insert_one({"_id": ObjectId(), "job_id": str(job_id)})
 
     return {
         "customer_id": resolved_customer_id,
         "job_id": job_id,
+        "business_id": resolved_business_id,
     }

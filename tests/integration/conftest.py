@@ -41,8 +41,14 @@ def test_app(app_module, mongo_db, monkeypatch):
     customers_module = importlib.import_module("blueprints.customers")
     monkeypatch.setattr(customers_module, "ensure_connection_or_500", lambda: mongo_db)
 
+    employees_module = importlib.import_module("blueprints.employees")
+    monkeypatch.setattr(employees_module, "ensure_connection_or_500", lambda: mongo_db)
+
     jobs_module = importlib.import_module("blueprints.jobs")
     monkeypatch.setattr(jobs_module, "ensure_connection_or_500", lambda: mongo_db)
+
+    catalog_module = importlib.import_module("blueprints.catalog")
+    monkeypatch.setattr(catalog_module, "ensure_connection_or_500", lambda: mongo_db)
 
     return flask_app
 
@@ -69,4 +75,6 @@ def authed_client(test_app, mongo_db):
             sess["employee_name"] = "Integration Tester"
             sess["employee_position"] = "admin"
             sess["employee_business_id"] = str(business_id)
+        # Store business_id on the client object for test access
+        client.business_id = business_id
         yield client

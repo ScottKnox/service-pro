@@ -188,7 +188,7 @@
             <div class="view-job-detail-item">
               <h4>Estimate PDF</h4>
               {% if estimate.latest_file_path %}
-                <p><a href="{{ estimate.latest_file_path }}" target="_blank" rel="noopener noreferrer">Open Estimate PDF</a></p>
+                <p><a href="{{ estimate.latest_file_path }}{% if not is_staff_view and access_token %}{% if '?' in estimate.latest_file_path %}&{% else %}?{% endif %}token={{ access_token|urlencode }}{% endif %}" target="_blank" rel="noopener noreferrer">Open Estimate PDF</a></p>
               {% else %}
                 <p>N/A</p>
               {% endif %}

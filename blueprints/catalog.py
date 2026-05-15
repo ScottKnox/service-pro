@@ -120,6 +120,97 @@ def _resolve_current_business_id(db):
     return None
 
 
+def _is_authenticated_employee():
+    employee_id = session.get("employee_id")
+    return bool(employee_id and ObjectId.is_valid(employee_id))
+
+
+def _employee_has_access_to_catalog_item(db, collection_name, item_id):
+    """Check if authenticated employee can access catalog items (services, parts, labor, equipment)."""
+    if not _is_authenticated_employee():
+        return False
+
+    if not item_id or not ObjectId.is_valid(str(item_id)):
+        return False
+
+    employee_business_id = _resolve_current_business_id(db)
+    if not employee_business_id:
+        return False
+
+    item_oid = ObjectId(item_id) if isinstance(item_id, str) else item_id
+    collection = db[collection_name]
+    item = collection.find_one(
+        {"_id": item_oid},
+        {"business_id": 1}
+    )
+    if not item:
+        return False
+
+    item_business_id = item.get("business_id")
+    if isinstance(item_business_id, ObjectId):
+        return item_business_id == employee_business_id
+    if isinstance(item_business_id, str) and ObjectId.is_valid(item_business_id):
+        return ObjectId(item_business_id) == employee_business_id
+    return False
+
+
+@bp.before_request
+def _enforce_staff_catalog_scope():
+    """Guard catalog item routes to prevent cross-business access."""
+    if not _is_authenticated_employee():
+        return None
+
+    view_args = request.view_args or {}
+    service_id = str(view_args.get("serviceId") or "").strip()
+    part_id = str(view_args.get("partId") or "").strip()
+    labor_id = str(view_args.get("laborId") or "").strip()
+    equipment_id = str(view_args.get("equipmentId") or "").strip()
+
+    db = ensure_connection_or_500()
+
+    if service_id and ObjectId.is_valid(service_id):
+        if not _employee_has_access_to_catalog_item(db, "services", service_id):
+            from flask import current_app
+            current_app.logger.warning(
+                "Blocked cross-business service access: employee_id=%s service_id=%s",
+                str(session.get("employee_id") or ""),
+                service_id,
+            )
+            return redirect(url_for("catalog.manage_services"))
+
+    if part_id and ObjectId.is_valid(part_id):
+        if not _employee_has_access_to_catalog_item(db, "parts", part_id):
+            from flask import current_app
+            current_app.logger.warning(
+                "Blocked cross-business part access: employee_id=%s part_id=%s",
+                str(session.get("employee_id") or ""),
+                part_id,
+            )
+            return redirect(url_for("catalog.manage_parts"))
+
+    if labor_id and ObjectId.is_valid(labor_id):
+        if not _employee_has_access_to_catalog_item(db, "labors", labor_id):
+            from flask import current_app
+            current_app.logger.warning(
+                "Blocked cross-business labor access: employee_id=%s labor_id=%s",
+                str(session.get("employee_id") or ""),
+                labor_id,
+            )
+            return redirect(url_for("catalog.manage_labor"))
+
+    if equipment_id and ObjectId.is_valid(equipment_id):
+        if not _employee_has_access_to_catalog_item(db, "equipment_options", equipment_id):
+            from flask import current_app
+            current_app.logger.warning(
+                "Blocked cross-business equipment access: employee_id=%s equipment_id=%s",
+                str(session.get("employee_id") or ""),
+                equipment_id,
+            )
+            return redirect(url_for("catalog.manage_equipment"))
+
+    return None
+
+
 def _serialize_service(service):
     serialized = serialize_doc(service)
     serialized["service_type"] = str(serialized.get("service_type") or "").strip()

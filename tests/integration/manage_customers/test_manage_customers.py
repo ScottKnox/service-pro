@@ -38,7 +38,7 @@ def test_add_customer_requires_first_and_last_name(authed_client, mongo_db):
 
 
 def test_update_customer_promotes_lead_to_active_when_profile_completed(authed_client, mongo_db):
-    customer = seed_customer(mongo_db)
+    customer = seed_customer(mongo_db, business_id=authed_client.business_id)
     customer_id = customer["_id"]
 
     response = authed_client.post(
@@ -56,7 +56,7 @@ def test_update_customer_promotes_lead_to_active_when_profile_completed(authed_c
 
 
 def test_delete_customer_removes_customer_and_related_documents(authed_client, mongo_db):
-    seeded = seed_customer_with_related_records(mongo_db)
+    seeded = seed_customer_with_related_records(mongo_db, business_id=authed_client.business_id)
     customer_id = seeded["customer_id"]
     job_id = seeded["job_id"]
 

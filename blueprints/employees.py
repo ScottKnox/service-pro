@@ -41,6 +41,61 @@ def _resolve_current_business_id(db):
     return None
 
 
+def _is_authenticated_employee():
+    employee_id = session.get("employee_id")
+    return bool(employee_id and ObjectId.is_valid(employee_id))
+
+
+def _employee_has_access_to_employee(db, target_employee_id):
+    """Check if authenticated employee can access another employee (must be same business)."""
+    if not _is_authenticated_employee():
+        return False
+
+    if not target_employee_id or not ObjectId.is_valid(str(target_employee_id)):
+        return False
+
+    employee_business_id = _resolve_current_business_id(db)
+    if not employee_business_id:
+        return False
+
+    target_employee = db.employees.find_one(
+        {"_id": ObjectId(target_employee_id) if isinstance(target_employee_id, str) else target_employee_id},
+        {"business": 1}
+    )
+    if not target_employee:
+        return False
+
+    target_business = target_employee.get("business")
+    if isinstance(target_business, ObjectId):
+        return target_business == employee_business_id
+    if isinstance(target_business, str) and ObjectId.is_valid(target_business):
+        return ObjectId(target_business) == employee_business_id
+    return False
+
+
+@bp.before_request
+def _enforce_staff_employee_scope():
+    """Guard employee routes to prevent cross-business access."""
+    if not _is_authenticated_employee():
+        return None
+
+    view_args = request.view_args or {}
+    employee_id = str(view_args.get("employeeId") or "").strip()
+    if not employee_id or not ObjectId.is_valid(employee_id):
+        return None
+
+    db = ensure_connection_or_500()
+    if _employee_has_access_to_employee(db, employee_id):
+        return None
+
+    current_app.logger.warning(
+        "Blocked cross-business employee access: employee_id=%s target_employee_id=%s",
+        str(session.get("employee_id") or ""),
+        employee_id,
+    )
+    return redirect(url_for("employees.employees"))
+
+
 @bp.route("/employees")
 def employees():
     db = ensure_connection_or_500()
