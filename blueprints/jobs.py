@@ -184,7 +184,11 @@ def _send_en_route_sms_notification(db, job_doc):
         return
 
     message_body = _build_en_route_sms_message(job_doc, customer_doc, business_doc)
-    status_callback_url = url_for("jobs.twilio_sms_status_callback", jobId=str((job_doc or {}).get("_id") or ""), _external=True)
+    status_callback_url = _build_notification_url(
+        "jobs.twilio_sms_status_callback",
+        external=True,
+        jobId=str((job_doc or {}).get("_id") or ""),
+    )
     sent, detail = send_sms_via_twilio(
         to_number=customer_phone,
         from_number=twilio_from_phone,
@@ -1030,18 +1034,59 @@ def _extract_client_ip():
     return str(request.remote_addr or "").strip()
 
 
+def _notification_base_url():
+    configured_base_url = str(os.getenv("NOTIFICATION_BASE_URL") or "").strip().rstrip("/")
+    if configured_base_url:
+        return configured_base_url
+
+    server_name = str(current_app.config.get("SERVER_NAME") or "").strip()
+    if not server_name:
+        return ""
+
+    preferred_scheme = str(current_app.config.get("PREFERRED_URL_SCHEME") or "https").strip() or "https"
+    return f"{preferred_scheme}://{server_name}"
+
+
+def _build_notification_url(endpoint, external=False, **route_kwargs):
+    base_url = _notification_base_url()
+
+    if base_url:
+        # Build URLs inside a temporary request context so scheduler/background
+        # execution does not depend on SERVER_NAME.
+        with current_app.test_request_context(base_url=f"{base_url}/"):
+            if external:
+                return url_for(endpoint, _external=True, **route_kwargs)
+            return url_for(endpoint, _external=False, **route_kwargs)
+
+    if not external:
+        return url_for(endpoint, _external=False, **route_kwargs)
+
+    try:
+        return url_for(endpoint, _external=True, **route_kwargs)
+    except RuntimeError:
+        current_app.logger.warning(
+            "Notification URL build failed without NOTIFICATION_BASE_URL or SERVER_NAME; returning empty URL"
+        )
+        return ""
+
+
 def _build_estimate_view_url(estimate_id, access_token=None, external=False):
     token_value = str(access_token or "").strip()
+    route_kwargs = {"estimateId": estimate_id}
     if token_value:
-        return url_for("jobs.view_estimate", estimateId=estimate_id, token=token_value, _external=external)
-    return url_for("jobs.view_estimate", estimateId=estimate_id, _external=external)
+        route_kwargs["token"] = token_value
+    return _build_notification_url("jobs.view_estimate", external=external, **route_kwargs)
 
 
 def _build_invoice_view_url(job_id, invoice_ref, access_token=None, external=False):
     token_value = str(access_token or "").strip()
+    route_kwargs = {
+        "jobId": job_id,
+        "invoiceRef": invoice_ref,
+    }
     if token_value:
-        return url_for("jobs.view_invoice", jobId=job_id, invoiceRef=invoice_ref, token=token_value, _external=external)
-    return url_for("jobs.view_invoice", jobId=job_id, invoiceRef=invoice_ref, _external=external)
+        route_kwargs["token"] = token_value
+    return _build_notification_url("jobs.view_invoice", external=external, **route_kwargs)
 
 
 def _issue_estimate_access_token(db, estimate_id, recipient_email=""):
@@ -1137,6 +1182,433 @@ def _verify_invoice_access_token(invoice_entry, provided_token):
 
     candidate_hash = hashlib.sha256(token_value.encode("utf-8")).hexdigest()
     return hmac.compare_digest(candidate_hash, stored_hash)
+
+
+INVOICE_REMINDER_DAY_OFFSETS = (
+    (1, 3),
+    (2, 7),
+    (3, 14),
+)
+
+_invoice_reminder_indexes_ready = False
+
+
+def _coerce_datetime_utc(value):
+    if isinstance(value, datetime):
+        return value
+
+    raw_value = str(value or "").strip()
+    if not raw_value:
+        return None
+
+    for fmt in ("%m/%d/%Y %H:%M:%S", "%m/%d/%Y %H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+        try:
+            return datetime.strptime(raw_value, fmt).replace(tzinfo=UTC)
+        except ValueError:
+            continue
+
+    try:
+        return datetime.fromisoformat(raw_value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _ensure_invoice_reminder_indexes(db):
+    global _invoice_reminder_indexes_ready
+    if _invoice_reminder_indexes_ready:
+        return
+
+    db.invoice_reminders.create_index([("status", 1), ("scheduled_for", 1)])
+    db.invoice_reminders.create_index([("job_id", 1), ("invoice_ref", 1), ("reminder_type", 1)])
+    db.invoice_reminders.create_index([("business_id", 1), ("created_at", -1)])
+    _invoice_reminder_indexes_ready = True
+
+
+def _is_invoice_paid(job_doc, invoice_entry):
+    invoice_status = str((invoice_entry or {}).get("payment_status") or "").strip().lower()
+    job_status = str((job_doc or {}).get("status") or "").strip().lower()
+    return invoice_status == "paid" or job_status == "paid"
+
+
+def _resolve_invoice_ref(invoice_entry, fallback_ref=""):
+    return str((invoice_entry or {}).get("invoice_id") or (invoice_entry or {}).get("invoice_number") or fallback_ref or "").strip()
+
+
+def _resolve_company_name(business_doc):
+    return str((business_doc or {}).get("company_name") or (business_doc or {}).get("business_name") or (business_doc or {}).get("name") or "Klovent").strip()
+
+
+def _resolve_company_phone(business_doc):
+    return str((business_doc or {}).get("phone_number") or (business_doc or {}).get("twilio_phone_number") or "").strip()
+
+
+def _resolve_customer_first_name(customer_doc, job_doc):
+    first_name = str((customer_doc or {}).get("first_name") or "").strip()
+    if first_name:
+        return first_name
+
+    customer_name = str((job_doc or {}).get("customer_name") or "Customer").strip()
+    return customer_name.split(" ", 1)[0] if customer_name else "Customer"
+
+
+def _customer_is_sms_opted_out(customer_doc):
+    customer = customer_doc or {}
+    bool_fields = (
+        "sms_opt_out",
+        "sms_opted_out",
+        "opt_out_sms",
+        "do_not_sms",
+        "do_not_text",
+    )
+    for field_name in bool_fields:
+        if customer.get(field_name) is True:
+            return True
+
+    text_fields = (
+        "sms_subscription_status",
+        "sms_status",
+        "sms_opt_status",
+    )
+    for field_name in text_fields:
+        normalized = str(customer.get(field_name) or "").strip().lower()
+        if normalized in {"opted_out", "unsubscribed", "stop", "stopped"}:
+            return True
+
+    return False
+
+
+def _build_invoice_reminder_message(reminder_type, reminder_number, first_name, total_display, company_name, payment_link, company_phone):
+    if reminder_type == "manual":
+        return (
+            f"Hi {first_name}, friendly reminder your invoice of {total_display} from {company_name} is still outstanding. "
+            f"Pay here: {payment_link} or call {company_phone}."
+        )
+
+    if reminder_number == 1:
+        return (
+            f"Hi {first_name}, friendly reminder your invoice of {total_display} from {company_name} is outstanding. "
+            f"Pay here: {payment_link}. Reply STOP to unsubscribe."
+        )
+
+    if reminder_number == 2:
+        return (
+            f"Hi {first_name}, your invoice of {total_display} from {company_name} is 7 days past due. "
+            f"Pay here: {payment_link} or call {company_phone}."
+        )
+
+    if reminder_number == 3:
+        return (
+            f"Hi {first_name}, final notice - your invoice of {total_display} from {company_name} remains unpaid. "
+            f"Pay here: {payment_link} or call {company_phone}."
+        )
+
+    return (
+        f"Hi {first_name}, this is a reminder your invoice of {total_display} from {company_name} is still unpaid. "
+        f"Pay here: {payment_link} or call {company_phone}."
+    )
+
+
+def _resolve_reminder_channel(customer_doc, business_doc):
+    customer_email = str((customer_doc or {}).get("email") or "").strip()
+    customer_phone = normalize_phone_for_twilio((customer_doc or {}).get("phone"))
+    twilio_phone = normalize_phone_for_twilio((business_doc or {}).get("twilio_phone_number"))
+
+    sms_allowed = (
+        sms_features_enabled()
+        and not _customer_is_sms_opted_out(customer_doc)
+        and bool(customer_phone)
+        and bool(twilio_phone)
+    )
+    email_allowed = bool(customer_email)
+
+    if sms_allowed and email_allowed:
+        channel = "both"
+    elif sms_allowed:
+        channel = "sms"
+    elif email_allowed:
+        channel = "email"
+    else:
+        channel = "none"
+
+    return {
+        "channel": channel,
+        "email": customer_email,
+        "to_phone": customer_phone,
+        "from_phone": twilio_phone,
+    }
+
+
+def _cancel_pending_invoice_reminders(db, job_id, invoice_ref, reason="Invoice paid"):
+    now_utc = datetime.now(UTC)
+    result = db.invoice_reminders.update_many(
+        {
+            "job_id": str(job_id or "").strip(),
+            "invoice_ref": str(invoice_ref or "").strip(),
+            "status": "scheduled",
+            "reminder_type": "automatic",
+        },
+        {
+            "$set": {
+                "status": "cancelled",
+                "cancelled_at": now_utc,
+                "updated_at": now_utc,
+                "error_message": str(reason or "").strip(),
+            }
+        },
+    )
+    return int(result.modified_count or 0)
+
+
+def schedule_invoice_reminders_for_invoice(db, job_doc, invoice_entry, sent_at=None):
+    if not job_doc or not invoice_entry:
+        return 0
+
+    _ensure_invoice_reminder_indexes(db)
+    scheduled_base = sent_at if isinstance(sent_at, datetime) else datetime.now(UTC)
+
+    job_id = str((job_doc or {}).get("_id") or "").strip()
+    invoice_ref = _resolve_invoice_ref(invoice_entry)
+    if not job_id or not invoice_ref:
+        return 0
+
+    _cancel_pending_invoice_reminders(db, job_id, invoice_ref, reason="Invoice resent - reminder schedule refreshed")
+
+    customer_id = str((job_doc or {}).get("customer_id") or "").strip()
+    business_id = str((job_doc or {}).get("business_id") or "").strip()
+    now_utc = datetime.now(UTC)
+    docs = []
+
+    for reminder_number, day_offset in INVOICE_REMINDER_DAY_OFFSETS:
+        docs.append(
+            {
+                "job_id": job_id,
+                "invoice_ref": invoice_ref,
+                "invoice_number": str((invoice_entry or {}).get("invoice_number") or "").strip(),
+                "invoice_id": str((invoice_entry or {}).get("invoice_id") or "").strip(),
+                "business_id": business_id,
+                "customer_id": customer_id,
+                "reminder_type": "automatic",
+                "automatic_sequence_number": reminder_number,
+                "scheduled_for": scheduled_base + timedelta(days=day_offset),
+                "sent_at": None,
+                "automatic_sent_at": None,
+                "status": "scheduled",
+                "channel": "both",
+                "error_message": "",
+                "created_at": now_utc,
+                "updated_at": now_utc,
+            }
+        )
+
+    if not docs:
+        return 0
+
+    result = db.invoice_reminders.insert_many(docs)
+    return len(list(getattr(result, "inserted_ids", []) or []))
+
+
+def _send_single_invoice_reminder(db, reminder_doc):
+    reminder_id = reminder_doc.get("_id")
+    now_utc = datetime.now(UTC)
+
+    job_id = str((reminder_doc or {}).get("job_id") or "").strip()
+    invoice_ref = str((reminder_doc or {}).get("invoice_ref") or "").strip()
+    reminder_type = str((reminder_doc or {}).get("reminder_type") or "automatic").strip().lower()
+    reminder_number = int((reminder_doc or {}).get("automatic_sequence_number") or 0)
+
+    if not job_id or not ObjectId.is_valid(job_id) or not invoice_ref:
+        db.invoice_reminders.update_one(
+            {"_id": reminder_id},
+            {"$set": {"status": "failed", "error_message": "Missing invoice reference context", "updated_at": now_utc}},
+        )
+        return False
+
+    job = db.jobs.find_one({"_id": ObjectId(job_id)})
+    if not job:
+        db.invoice_reminders.update_one(
+            {"_id": reminder_id},
+            {"$set": {"status": "failed", "error_message": "Job not found", "updated_at": now_utc}},
+        )
+        return False
+
+    job_doc = serialize_doc(job)
+    invoice_entry = _find_invoice_entry(job_doc, invoice_ref=invoice_ref)
+    if not invoice_entry:
+        db.invoice_reminders.update_one(
+            {"_id": reminder_id},
+            {"$set": {"status": "failed", "error_message": "Invoice not found", "updated_at": now_utc}},
+        )
+        return False
+
+    if _is_invoice_paid(job_doc, invoice_entry):
+        db.invoice_reminders.update_one(
+            {"_id": reminder_id},
+            {
+                "$set": {
+                    "status": "cancelled",
+                    "error_message": "Invoice already paid",
+                    "cancelled_at": now_utc,
+                    "updated_at": now_utc,
+                }
+            },
+        )
+        return False
+
+    customer = db.customers.find_one(build_reference_filter("_id", (job_doc or {}).get("customer_id"))) or {}
+    business = _resolve_business_doc_for_job(db, job_doc) or {}
+
+    channel_payload = _resolve_reminder_channel(customer, business)
+    if channel_payload["channel"] == "none":
+        db.invoice_reminders.update_one(
+            {"_id": reminder_id},
+            {
+                "$set": {
+                    "status": "cancelled",
+                    "channel": "none",
+                    "error_message": "Customer has no email or SMS destination",
+                    "cancelled_at": now_utc,
+                    "updated_at": now_utc,
+                }
+            },
+        )
+        current_app.logger.warning("Invoice reminder cancelled: missing contact channels job_id=%s invoice_ref=%s", job_id, invoice_ref)
+        return False
+
+    customer_email = channel_payload["email"]
+    token = _issue_invoice_access_token(db, job_id, invoice_ref, customer_email)
+    payment_link = _build_invoice_view_url(job_id, invoice_ref, access_token=token, external=True) if token else _build_invoice_view_url(job_id, invoice_ref, external=True)
+
+    first_name = _resolve_customer_first_name(customer, job_doc)
+    total_display = normalize_currency(str((job_doc or {}).get("total_amount") or 0.0))
+    company_name = _resolve_company_name(business)
+    company_phone = _resolve_company_phone(business) or "our office"
+
+    message_body = _build_invoice_reminder_message(
+        reminder_type,
+        reminder_number,
+        first_name,
+        total_display,
+        company_name,
+        payment_link,
+        company_phone,
+    )
+
+    email_sent = False
+    sms_sent = False
+    failure_reasons = []
+
+    if channel_payload["channel"] in {"both", "email"}:
+        try:
+            email_subject = f"Invoice Reminder - {str((invoice_entry or {}).get('invoice_number') or invoice_ref)}"
+            if reminder_number == 3:
+                email_subject = f"Final Notice - {str((invoice_entry or {}).get('invoice_number') or invoice_ref)}"
+            if reminder_type == "manual":
+                email_subject = f"Manual Payment Reminder - {str((invoice_entry or {}).get('invoice_number') or invoice_ref)}"
+
+            msg = Message(subject=email_subject, recipients=[customer_email], body=message_body)
+            current_app.extensions["mail"].send(msg)
+            email_sent = True
+        except Exception as exc:
+            failure_reasons.append(f"Email failed: {exc}")
+
+    if channel_payload["channel"] in {"both", "sms"}:
+        sms_ok, sms_detail = send_sms_via_twilio(
+            to_number=channel_payload["to_phone"],
+            from_number=channel_payload["from_phone"],
+            message_body=message_body,
+        )
+        if sms_ok:
+            sms_sent = True
+        else:
+            failure_reasons.append(f"SMS failed: {sms_detail}")
+
+    if email_sent and sms_sent:
+        resolved_channel = "both"
+    elif email_sent:
+        resolved_channel = "email"
+    elif sms_sent:
+        resolved_channel = "sms"
+    else:
+        resolved_channel = channel_payload["channel"]
+
+    status = "sent" if (email_sent or sms_sent) else "failed"
+    error_text = " | ".join(failure_reasons)
+
+    db.invoice_reminders.update_one(
+        {"_id": reminder_id},
+        {
+            "$set": {
+                "status": status,
+                "channel": resolved_channel,
+                "sent_at": now_utc,
+                "manual_sent_at": now_utc if reminder_type == "manual" else reminder_doc.get("manual_sent_at"),
+                "automatic_sent_at": now_utc if reminder_type == "automatic" else reminder_doc.get("automatic_sent_at"),
+                "updated_at": now_utc,
+                "error_message": error_text,
+            }
+        },
+    )
+    return status == "sent"
+
+
+def process_due_invoice_reminders(db=None, batch_size=100):
+    if db is None:
+        db = ensure_connection_or_500()
+    _ensure_invoice_reminder_indexes(db)
+
+    due_now = datetime.now(UTC)
+    reminders = list(
+        db.invoice_reminders.aggregate(
+            [
+                {
+                    "$match": {
+                        "status": "scheduled",
+                        "reminder_type": "automatic",
+                    }
+                },
+                {
+                    "$addFields": {
+                        "scheduled_for_utc": {
+                            "$convert": {
+                                "input": "$scheduled_for",
+                                "to": "date",
+                                "onError": None,
+                                "onNull": None,
+                            }
+                        }
+                    }
+                },
+                {
+                    "$match": {
+                        "scheduled_for_utc": {"$ne": None, "$lte": due_now},
+                    }
+                },
+                {"$sort": {"scheduled_for_utc": 1}},
+                {"$limit": max(1, int(batch_size or 100))},
+            ]
+        )
+    )
+
+    processed = 0
+    for reminder in reminders:
+        try:
+            _send_single_invoice_reminder(db, reminder)
+        except Exception as exc:
+            db.invoice_reminders.update_one(
+                {"_id": reminder.get("_id")},
+                {
+                    "$set": {
+                        "status": "failed",
+                        "error_message": str(exc),
+                        "updated_at": datetime.now(UTC),
+                    }
+                },
+            )
+            current_app.logger.error("Invoice reminder processing failed: reminder_id=%s error=%s", str(reminder.get("_id") or ""), exc)
+        finally:
+            processed += 1
+
+    return processed
 
 
 def _resolve_stripe_secret_key():
@@ -1289,6 +1761,7 @@ def _finalize_invoice_payment(
         updated_entry = dict(entry)
         if normalized_invoice_ref in {entry_invoice_id, entry_invoice_number}:
             updated_entry["payment_status"] = "paid"
+            updated_entry["status"] = "Paid"
             updated_entry["paid_at"] = paid_at_text
             if stripe_session_id:
                 updated_entry["stripe_checkout_session_id"] = stripe_session_id
@@ -1318,6 +1791,13 @@ def _finalize_invoice_payment(
                 "invoices": updated_invoices,
             }
         },
+    )
+
+    _cancel_pending_invoice_reminders(
+        db,
+        job_id,
+        normalized_invoice_ref,
+        reason="Invoice marked paid",
     )
 
     customer_id = job.get("customer_id")
@@ -1440,6 +1920,56 @@ def record_invoice_payment(jobId, invoiceRef):
     return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment="success"))
 
 
+@bp.route("/jobs/<jobId>/invoices/<invoiceRef>/send-reminder", methods=["POST"])
+def send_invoice_reminder_manually(jobId, invoiceRef):
+    db = ensure_connection_or_500()
+    if not _is_authenticated_employee():
+        return redirect(url_for("auth.login"))
+
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    job_doc = serialize_doc(job)
+    invoice = _find_invoice_entry(job_doc, invoice_ref=invoiceRef)
+    if not invoice:
+        return redirect(url_for("jobs.view_job", jobId=jobId))
+
+    if _is_invoice_paid(job_doc, invoice):
+        return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, reminder="skipped_paid"))
+
+    _ensure_invoice_reminder_indexes(db)
+    now_utc = datetime.now(UTC)
+
+    reminder_doc = {
+        "job_id": str(jobId or "").strip(),
+        "invoice_ref": _resolve_invoice_ref(invoice, fallback_ref=invoiceRef),
+        "invoice_number": str((invoice or {}).get("invoice_number") or "").strip(),
+        "invoice_id": str((invoice or {}).get("invoice_id") or "").strip(),
+        "business_id": str((job_doc or {}).get("business_id") or "").strip(),
+        "customer_id": str((job_doc or {}).get("customer_id") or "").strip(),
+        "reminder_type": "manual",
+        "scheduled_for": now_utc,
+        "sent_at": None,
+        "manual_sent_at": None,
+        "status": "scheduled",
+        "channel": "both",
+        "error_message": "",
+        "created_by_employee_id": str(session.get("employee_id") or "").strip(),
+        "created_at": now_utc,
+        "updated_at": now_utc,
+    }
+    insert_result = db.invoice_reminders.insert_one(reminder_doc)
+    created = db.invoice_reminders.find_one({"_id": insert_result.inserted_id})
+
+    sent_ok = False
+    if created:
+        sent_ok = _send_single_invoice_reminder(db, created)
+
+    state = "sent" if sent_ok else "failed"
+    return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, reminder=state))
+
+
 def _coerce_line_amount(value):
     return float(currency_to_float(value))
 
@@ -1557,6 +2087,46 @@ def _build_invoice_payment_summary(invoice_entry, pricing_summary, invoice_is_pa
         "payment_date": payment_date,
         "payment_channel_label": payment_type_labels.get(payment_type, "Online card payment") if amount_paid > 0 else "Pending",
     }
+
+
+def _resolve_invoice_status(invoice_entry, job_doc=None):
+    invoice_payload = invoice_entry or {}
+    normalized_status = str(invoice_payload.get("status") or "").strip().title()
+    if normalized_status in {"Created", "Sent", "Paid"}:
+        return normalized_status
+
+    invoice_payment_status = str(invoice_payload.get("payment_status") or "").strip().lower()
+    job_status = str((job_doc or {}).get("status") or "").strip().lower()
+    if invoice_payment_status == "paid" or job_status == "paid":
+        return "Paid"
+
+    if str(invoice_payload.get("date_sent") or "").strip() or str(invoice_payload.get("date_sent_utc") or "").strip() or str((job_doc or {}).get("date_invoice_sent") or "").strip():
+        return "Sent"
+
+    return "Created"
+
+
+def _resolve_invoice_sent_display(invoice_entry, job_doc=None):
+    invoice_payload = invoice_entry or {}
+    raw_value = str(
+        invoice_payload.get("date_sent")
+        or invoice_payload.get("date_sent_utc")
+        or (job_doc or {}).get("date_invoice_sent")
+        or ""
+    ).strip()
+    if not raw_value:
+        return ""
+
+    if "/" in raw_value and ":" in raw_value:
+        return raw_value
+
+    normalized_value = raw_value.replace("Z", "+00:00")
+    try:
+        parsed_value = datetime.fromisoformat(normalized_value)
+    except ValueError:
+        return raw_value
+
+    return parsed_value.strftime("%m/%d/%Y %H:%M:%S")
 
 
 def _normalize_estimate_expiration_days(value, fallback=30):
@@ -2856,8 +3426,13 @@ def view_invoice(jobId, invoiceRef):
     if not invoice:
         return redirect(url_for("jobs.view_job", jobId=jobId))
 
+    invoice_status = _resolve_invoice_status(invoice, job_doc)
+    invoice["status"] = invoice_status
+    invoice_sent_display = _resolve_invoice_sent_display(invoice, job_doc)
+
     token_value = str(request.args.get("token") or "").strip()
     payment_state = str(request.args.get("payment") or "").strip().lower()
+    reminder_state = str(request.args.get("reminder") or "").strip().lower()
     returned_session_id = str(request.args.get("session_id") or "").strip()
     is_staff_view = _is_authenticated_employee()
     has_customer_token = _verify_invoice_access_token(invoice, token_value)
@@ -2871,9 +3446,8 @@ def view_invoice(jobId, invoiceRef):
     if not is_staff_view and has_customer_token:
         session[session_access_key] = True
 
-    invoice_status = str((invoice or {}).get("payment_status") or "").strip().lower()
-    job_status = str((job_doc or {}).get("status") or "").strip().lower()
-    invoice_is_paid = invoice_status == "paid" or job_status == "paid"
+    invoice_status_normalized = invoice_status.lower()
+    invoice_is_paid = invoice_status_normalized == "paid"
 
     # Fallback: if webhook is delayed/missed, finalize payment from returned Checkout Session.
     if (
@@ -2908,6 +3482,10 @@ def view_invoice(jobId, invoiceRef):
                 returned_session_id,
                 exc,
             )
+
+        invoice_status = _resolve_invoice_status(invoice, job_doc)
+        invoice["status"] = invoice_status
+        invoice_is_paid = invoice_status.lower() == "paid"
 
     invoice_email_template = ""
     if is_staff_view:
@@ -2972,10 +3550,12 @@ def view_invoice(jobId, invoiceRef):
         payment_summary=payment_summary,
         payment_due_days=payment_due_days,
         due_date=due_date,
+        invoice_sent_display=invoice_sent_display,
         is_staff_view=is_staff_view,
         access_token=token_value,
         invoice_email_template=invoice_email_template,
         payment_state=payment_state,
+        reminder_state=reminder_state,
         stripe_publishable_key=_resolve_stripe_publishable_key(),
         stripe_connect_ready=stripe_connect_ready,
         stripe_connect_reason=stripe_connect_reason,
@@ -3589,10 +4169,51 @@ def send_estimate_email(jobId):
         current_app.extensions["mail"].send(msg)
 
         if email_type == "invoice":
+            sent_at_utc = datetime.now(UTC)
+            sent_at_text = sent_at_utc.strftime("%m/%d/%Y %H:%M:%S")
+            invoice_ref = str(
+                (resolved_invoice_entry or {}).get("invoice_id")
+                or (resolved_invoice_entry or {}).get("invoice_number")
+                or ""
+            ).strip()
+
+            refreshed_job = db.jobs.find_one({"_id": ObjectId(jobId)})
+            refreshed_job_doc = serialize_doc(refreshed_job) if refreshed_job else {}
+            refreshed_invoice_entry = _find_invoice_entry(refreshed_job_doc, invoice_ref=invoice_ref) if invoice_ref else None
+
+            updated_invoices = []
+            for entry in list(refreshed_job_doc.get("invoices") or []):
+                if not isinstance(entry, dict):
+                    updated_invoices.append(entry)
+                    continue
+
+                entry_id = str(entry.get("invoice_id") or "").strip()
+                entry_number = str(entry.get("invoice_number") or "").strip()
+                updated_entry = dict(entry)
+                if invoice_ref and invoice_ref in {entry_id, entry_number}:
+                    updated_entry["date_sent"] = sent_at_text
+                    updated_entry["date_sent_utc"] = sent_at_utc.isoformat()
+                    updated_entry["status"] = "Sent"
+                updated_invoices.append(updated_entry)
+
             db.jobs.update_one(
                 {"_id": ObjectId(jobId)},
-                {"$set": {"date_invoice_sent": datetime.now().strftime("%m/%d/%Y %H:%M:%S")}},
+                {
+                    "$set": {
+                        "date_invoice_sent": sent_at_text,
+                        "invoices": updated_invoices,
+                        "updated_at": sent_at_utc,
+                    }
+                },
             )
+
+            if refreshed_job_doc and refreshed_invoice_entry:
+                schedule_invoice_reminders_for_invoice(
+                    db,
+                    refreshed_job_doc,
+                    refreshed_invoice_entry,
+                    sent_at=sent_at_utc,
+                )
 
         current_app.logger.info("Estimate email sent: job_id=%s to=%r by employee_id=%s", jobId, recipient_email, session.get("employee_id"))
         return jsonify({"success": True}), 200

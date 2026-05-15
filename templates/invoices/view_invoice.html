@@ -7,9 +7,9 @@
   <div id="main-container">
     <div id="view-job-panel">
       <h1>Invoice {{ invoice.invoice_number|default('', true) }}</h1>
-      {% set invoice_status_normalized = invoice.payment_status|default('', true)|lower %}
-      {% set job_status_normalized = job.status|default('', true)|lower %}
-      {% set invoice_is_paid = invoice_status_normalized == 'paid' or job_status_normalized == 'paid' %}
+      {% set invoice_status_normalized = invoice.status|default('', true)|lower %}
+      {% set invoice_is_paid = invoice_status_normalized == 'paid' %}
+      {% set invoice_has_been_sent = invoice_status_normalized == 'sent' or invoice.date_sent|default('', true) or invoice.date_sent_utc|default('', true) or job.date_invoice_sent|default('', true) %}
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
@@ -30,6 +30,20 @@
       {% elif payment_state == 'canceled' %}
         <div id="view-job-missing-scheduling-note" style="border: 1px solid #FFA500; background-color: #FFF8DC; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
           <p style="color: #B8860B; font-weight: 600; margin: 0;">Payment was canceled before completion.</p>
+        </div>
+      {% endif %}
+
+      {% if reminder_state == 'sent' %}
+        <div id="view-job-recurring-status-note" style="border: 1px solid #B7D8C9; background-color: #EEF9F1; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
+          <p style="margin: 0; color: #185A37; font-weight: 600;">Payment reminder sent successfully.</p>
+        </div>
+      {% elif reminder_state == 'failed' %}
+        <div id="view-job-missing-scheduling-note" style="border: 1px solid #D8B7B7; background-color: #FAEEEE; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
+          <p style="margin: 0; color: #7A1F1F; font-weight: 600;">Manual reminder failed. Check reminder logs for details.</p>
+        </div>
+      {% elif reminder_state == 'skipped_paid' %}
+        <div id="view-job-missing-scheduling-note" style="border: 1px solid #C7C9CF; background-color: #F4F5F7; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
+          <p style="margin: 0; color: #3E4650; font-weight: 600;">Manual reminder not sent because this invoice is already paid.</p>
         </div>
       {% endif %}
 
@@ -69,6 +83,12 @@
           {% if invoice.file_path %}
             <a href="{{ invoice.file_path }}" target="_blank" rel="noopener noreferrer">Open Invoice PDF</a>
           {% endif %}
+          {% if invoice_has_been_sent and not invoice_is_paid %}
+            <form method="POST" action="{{ url_for('jobs.send_invoice_reminder_manually', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true)) }}" style="display: inline;">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="estimate-customer-action-btn estimate-customer-action-btn-accept">Send Payment Reminder</button>
+            </form>
+          {% endif %}
         </div>
       </section>
       {% endif %}
@@ -82,10 +102,14 @@
             <div class="view-job-detail-item">
               <h4>Status</h4>
               <p>
-                <span class="jobs-status-chip{% if job.status|default('', true)|lower == 'paid' %} is-paid{% elif job.status|default('', true)|lower == 'completed' %} is-started{% else %} is-scheduled{% endif %}">
-                  {{ job.status|default('Completed', true) }}
+                <span class="jobs-status-chip{% if invoice_status_normalized == 'created' %} is-pending{% elif invoice_status_normalized == 'sent' %} is-scheduled{% elif invoice_status_normalized == 'paid' %} is-paid{% endif %}">
+                  {{ invoice.status|default('Created', true) }}
                 </span>
               </p>
+            </div>
+            <div class="view-job-detail-item">
+              <h4>Sent Timestamp</h4>
+              <p>{{ invoice_sent_display|default('N/A', true) }}</p>
             </div>
             <div class="view-job-detail-item">
               <h4>Invoice Number</h4>

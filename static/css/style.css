@@ -5924,7 +5924,9 @@ p {
   }
 
   #view-job-actions-row a {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 0.55rem 0.95rem;
     border: 1px solid #1B263B;
     border-radius: 4px;
@@ -5946,7 +5948,9 @@ p {
   }
 
   #view-job-actions-row button {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 0.55rem 0.95rem;
     border: 1px solid #1B263B;
     border-radius: 4px;

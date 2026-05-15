@@ -6,6 +6,7 @@ pillow>=10.0.0
 pymongo>=4.8.0
 python-dotenv>=1.0.1
 Flask-Mail>=0.9.1
+APScheduler>=3.10.4
 stripe>=11.0.0
 twilio>=9.0.0
 pytest>=8.0.0

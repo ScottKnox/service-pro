@@ -1,9 +1,11 @@
 from datetime import datetime
+import atexit
 import logging
 import os
 import re
 
 from bson import ObjectId
+from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, redirect, render_template, request, send_file, session, url_for
 from flask_mail import Mail
 from flask_wtf.csrf import CSRFProtect
@@ -35,6 +37,8 @@ register_blueprints(app)
 
 # Jinja2 template filters
 app.jinja_env.filters['currency'] = lambda val: normalize_currency(val)
+
+_invoice_reminder_scheduler = None
 
 logging.basicConfig(
     level=logging.INFO,
@@ -808,6 +812,74 @@ def stripe_webhook():
         process_stripe_checkout_completed(db, event.get("data", {}).get("object", {}))
 
     return "", 200
+
+
+def _invoice_reminder_scheduler_enabled():
+    enabled_flag = str(os.getenv("INVOICE_REMINDER_SCHEDULER_ENABLED", "true") or "").strip().lower()
+    if enabled_flag in {"0", "false", "no", "off"}:
+        return False
+
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return False
+
+    if app.debug:
+        return os.getenv("WERKZEUG_RUN_MAIN") == "true"
+
+    return True
+
+
+def _invoice_reminder_scheduler_interval_minutes():
+    raw_value = str(os.getenv("INVOICE_REMINDER_SCHEDULER_INTERVAL_MINUTES", "60") or "").strip()
+    try:
+        interval_minutes = int(raw_value)
+    except (TypeError, ValueError):
+        interval_minutes = 60
+    return max(1, interval_minutes)
+
+
+def _run_invoice_reminder_scheduler_tick():
+    try:
+        from blueprints.jobs import process_due_invoice_reminders
+
+        with app.app_context():
+            db = ensure_connection_or_500()
+            processed_count = process_due_invoice_reminders(db=db, batch_size=200)
+            if processed_count:
+                app.logger.info("Invoice reminder scheduler processed %s due reminder(s)", processed_count)
+    except Exception as exc:
+        app.logger.error("Invoice reminder scheduler tick failed: %s", exc)
+
+
+def _start_invoice_reminder_scheduler():
+    global _invoice_reminder_scheduler
+    if _invoice_reminder_scheduler is not None:
+        return
+
+    if not _invoice_reminder_scheduler_enabled():
+        return
+
+    scheduler = BackgroundScheduler(timezone="UTC", daemon=True)
+    scheduler.add_job(
+        _run_invoice_reminder_scheduler_tick,
+        trigger="interval",
+        minutes=_invoice_reminder_scheduler_interval_minutes(),
+        id="invoice_reminder_hourly",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    scheduler.start()
+    _invoice_reminder_scheduler = scheduler
+    app.logger.info("Invoice reminder scheduler started")
+
+    def _shutdown_scheduler():
+        if _invoice_reminder_scheduler is not None:
+            _invoice_reminder_scheduler.shutdown(wait=False)
+
+    atexit.register(_shutdown_scheduler)
+
+
+_start_invoice_reminder_scheduler()
 
 
 if __name__ == "__main__":
