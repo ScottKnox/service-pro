@@ -72,11 +72,11 @@
 
           <div class="job-details-stack">
             <div class="add-customer-form-field">
-              <label for="job-assigned-employee">Estimated By:</label>
-              <select id="job-assigned-employee" name="job_assigned_employee" required>
-                <option value="">-- Select an employee --</option>
+              <label for="primary-technician-id">Primary Technician</label>
+              <select id="primary-technician-id" name="primary_technician_id">
+                <option value="">-- No primary technician --</option>
                 {% for employee in employee_options %}
-                  <option value="{{ employee.name }}" {% if estimate.estimated_by_employee == employee.name %}selected{% endif %}>{{ employee.name }}</option>
+                  <option value="{{ employee.id }}" {% if estimate.primary_technician_id == employee.id or estimate.estimated_by_employee == employee.name %}selected{% endif %}>{{ employee.name }}</option>
                 {% endfor %}
               </select>
             </div>

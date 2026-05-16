@@ -657,8 +657,12 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
     discounts_total = min(discounts_total, subtotal)
     base_total = subtotal - discounts_total
 
+    tax_inputs = build_line_item_tax_inputs(job)
+    if subtotal > 0 and discounts_total > 0:
+        discount_ratio = base_total / subtotal
+        tax_inputs = [{**item, "amount": item["amount"] * discount_ratio} for item in tax_inputs]
     tax_breakdown = calculate_itemized_tax(
-        build_line_item_tax_inputs(job),
+        tax_inputs,
         normalize_business_tax_rates(business),
         customer_tax_exempt=bool((customer or {}).get("tax_exempt")),
     )

@@ -22,6 +22,22 @@
     return String(value || '').trim().toLowerCase();
   }
 
+  function normalizeEmployeeValue(value) {
+    return normalizeValue(value).replace(/\s+/g, '-');
+  }
+
+  function parseEmployeeList(value) {
+    return String(value || '')
+      .split('||')
+      .flatMap(function (entry) {
+        return String(entry || '').split(',');
+      })
+      .map(function (entry) {
+        return normalizeEmployeeValue(entry);
+      })
+      .filter(Boolean);
+  }
+
   function parseUsDate(value) {
     const dateText = String(value || '').trim();
     const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(dateText);
@@ -152,12 +168,18 @@
 
     jobCards.forEach(function (card) {
       const employee = normalizeValue(card.dataset.filterEmployee);
+      const employeeSet = new Set([
+        ...parseEmployeeList(card.dataset.filterTechnicians),
+        ...parseEmployeeList(card.dataset.filterEmployee),
+      ]);
       const status = normalizeValue(card.dataset.filterStatus);
       const city = normalizeValue(card.dataset.filterCity);
       const state = normalizeValue(card.dataset.filterState);
       const scheduledDate = parseUsDate(card.dataset.filterDate);
 
-      const matchesEmployee = selectedEmployees.size === 0 || selectedEmployees.has(employee);
+      const matchesEmployee = selectedEmployees.size === 0 || Array.from(selectedEmployees).some(function (selectedEmployee) {
+        return employeeSet.has(selectedEmployee) || employee === selectedEmployee;
+      });
       const matchesStatus = selectedStatuses.size === 0 || selectedStatuses.has(status);
       const matchesCity = selectedCities.size === 0 || selectedCities.has(city);
       const matchesState = selectedStates.size === 0 || selectedStates.has(state);

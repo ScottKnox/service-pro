@@ -9,7 +9,6 @@
   // Track user interaction for specific fields
   let servicesTouched = false;
   let dateTouched = false;
-  let employeeTouched = false;
 
   // Validation function
   function validateForm() {
@@ -20,8 +19,7 @@
       'job-address-line-1',
       'job-city',
       'job-state',
-      'job-date',
-      'job-assigned-employee'
+      'job-date'
     ];
 
     requiredFields.forEach(function (fieldId) {
@@ -58,7 +56,6 @@
 
     // Handle date field error visibility based on touch status
     const dateField = document.getElementById('job-date');
-    const employeeField = document.getElementById('job-assigned-employee');
     const jobDetailsError = document.getElementById('error-job-details');
     
     let jobDetailsErrors = [];
@@ -66,11 +63,6 @@
     if (dateField && dateField.value.trim() === '' && dateTouched) {
       isValid = false;
       jobDetailsErrors.push('Scheduled Date is required');
-    }
-    
-    if (employeeField && employeeField.value.trim() === '' && employeeTouched) {
-      isValid = false;
-      jobDetailsErrors.push('Assigned Employee is required');
     }
     
     if (jobDetailsError) {
@@ -233,8 +225,7 @@
     'job-address-line-1',
     'job-city',
     'job-state',
-    'job-date',
-    'job-assigned-employee'
+    'job-date'
   ];
 
   fieldsToValidate.forEach(function (fieldId) {
@@ -243,16 +234,12 @@
       field.addEventListener('change', function () {
         if (fieldId === 'job-date') {
           dateTouched = true;
-        } else if (fieldId === 'job-assigned-employee') {
-          employeeTouched = true;
         }
         validateForm();
       });
       field.addEventListener('input', function () {
         if (fieldId === 'job-date') {
           dateTouched = true;
-        } else if (fieldId === 'job-assigned-employee') {
-          employeeTouched = true;
         }
         validateForm();
       });

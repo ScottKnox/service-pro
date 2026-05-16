@@ -126,7 +126,6 @@
   let servicesTouched = false;
   let dateTouched = false;
   let timeTouched = false;
-  let employeeTouched = false;
   let submitAttempted = false;
 
   const estimateField = document.getElementById('job-is-estimate');
@@ -255,6 +254,32 @@
     errorElement.style.display = isVisible ? 'block' : 'none';
   }
 
+  const primaryTechnicianSelect = document.getElementById('primary-technician-id');
+  const additionalTechnicianRows = document.querySelectorAll('[data-additional-tech-id]');
+
+  function syncAdditionalTechnicianOptions() {
+    if (!additionalTechnicianRows.length) {
+      return;
+    }
+
+    const primaryTechnicianId = primaryTechnicianSelect ? String(primaryTechnicianSelect.value || '').trim() : '';
+
+    additionalTechnicianRows.forEach(function (row) {
+      const rowTechId = String(row.dataset.additionalTechId || '').trim();
+      const checkbox = row.querySelector('input[type="checkbox"]');
+      if (!rowTechId || !checkbox) {
+        return;
+      }
+
+      const shouldHide = primaryTechnicianId && rowTechId === primaryTechnicianId;
+      row.hidden = shouldHide;
+      row.style.display = shouldHide ? 'none' : '';
+      if (shouldHide) {
+        checkbox.checked = false;
+      }
+    });
+  }
+
   // Validation function
   function validateForm() {
     let isValid = true;
@@ -262,8 +287,7 @@
     // Get all inputs and selects that are required
     const requiredFields = [
       'job-date',
-      'job-time',
-      'job-assigned-employee'
+      'job-time'
     ];
 
     requiredFields.forEach(function (fieldId) {
@@ -279,7 +303,7 @@
       const isFieldValid = field.value.trim() !== '';
       if (!isFieldValid) {
         isValid = false;
-        const shouldShow = fieldId === 'job-assigned-employee' || submitAttempted || (fieldId === 'job-date' && dateTouched) || (fieldId === 'job-time' && timeTouched);
+        const shouldShow = submitAttempted || (fieldId === 'job-date' && dateTouched) || (fieldId === 'job-time' && timeTouched);
         setFieldError(errorId, shouldShow);
       } else {
         setFieldError(errorId, false);
@@ -1491,8 +1515,7 @@
   // Add event listeners to validate on input change
   const fieldsToValidate = [
     'job-date',
-    'job-time',
-    'job-assigned-employee'
+    'job-time'
   ];
 
   fieldsToValidate.forEach(function (fieldId) {
@@ -1503,8 +1526,6 @@
           dateTouched = true;
         } else if (fieldId === 'job-time') {
           timeTouched = true;
-        } else if (fieldId === 'job-assigned-employee') {
-          employeeTouched = true;
         }
         validateForm();
       });
@@ -1513,8 +1534,6 @@
           dateTouched = true;
         } else if (fieldId === 'job-time') {
           timeTouched = true;
-        } else if (fieldId === 'job-assigned-employee') {
-          employeeTouched = true;
         }
         validateForm();
       });
@@ -1553,6 +1572,14 @@
       timeTouched = false;
       validateForm();
     });
+  }
+
+  if (primaryTechnicianSelect) {
+    primaryTechnicianSelect.addEventListener('change', function () {
+      syncAdditionalTechnicianOptions();
+      validateForm();
+    });
+    syncAdditionalTechnicianOptions();
   }
 
   // Validate on form submission

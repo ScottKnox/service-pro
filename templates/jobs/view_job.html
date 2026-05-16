@@ -198,8 +198,12 @@
                 <p>{{ job.date_created }}</p>
               </div>
               <div class="view-job-detail-item">
-                <h4>Assigned Employee</h4>
-                <p>{{ job.assigned_employee }}</p>
+                <h4>Primary Technician</h4>
+                <p>{{ job.assigned_employee|default('Unassigned', true) }}</p>
+              </div>
+              <div class="view-job-detail-item">
+                <h4>Assisting Technicians</h4>
+                <p>{% if job.additional_technician_names %}{{ job.additional_technician_names|join(', ') }}{% else %}None{% endif %}</p>
               </div>
               <div class="view-job-detail-item">
                 <h4>Job Type</h4>

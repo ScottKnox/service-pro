@@ -479,7 +479,26 @@ def _series_allows_occurrence(series_doc, occurrence_index, scheduled_date):
     return True
 
 
-def _build_recurring_series_document(customer, business_id, selected_property, selected_property_id, primary_service, services, parts, labors, materials, equipments, discounts, total, assigned_employee, recurring_data, scheduled_date, scheduled_time, payment_due_days_offset, request_obj):
+def _build_recurring_series_document(
+    customer,
+    business_id,
+    selected_property,
+    selected_property_id,
+    primary_service,
+    services,
+    parts,
+    labors,
+    materials,
+    equipments,
+    discounts,
+    total,
+    technician_payload,
+    recurring_data,
+    scheduled_date,
+    scheduled_time,
+    payment_due_days_offset,
+    request_obj,
+):
     series_anchor_date = scheduled_date
     anchor_date_dt = _parse_mmddyyyy_date(series_anchor_date)
     next_occurrence_date = _advance_recurring_date(anchor_date_dt, recurring_data.get("frequency"))
@@ -518,7 +537,10 @@ def _build_recurring_series_document(customer, business_id, selected_property, s
         "city": request_obj.form.get("job_city", "").strip(),
         "state": request_obj.form.get("job_state", "").strip().upper(),
         "zip_code": request_obj.form.get("job_zip_code", "").strip(),
-        "assigned_employee": assigned_employee,
+        "primary_technician_id": technician_payload.get("primary_technician_id") or None,
+        "additional_technician_ids": list(technician_payload.get("additional_technician_ids") or []),
+        "additional_technician_names": list(technician_payload.get("additional_technician_names") or []),
+        "assigned_employee": str(technician_payload.get("assigned_employee") or "").strip(),
         "total_amount": float(total or 0.0),
         "invoice_notes": request_obj.form.get("invoice_notes", "").strip(),
         "payment_due_days_offset": recurring_due_offset,
@@ -574,7 +596,17 @@ def _create_occurrence_from_series(db, series_doc, scheduled_date, occurrence_in
         "materials": materials,
         "equipments": equipments,
         "discounts": discounts,
-        "status": resolve_job_status(scheduled_date, scheduled_time, services, parts, labors, materials, equipments, discounts),
+        "status": resolve_job_status(
+            scheduled_date,
+            scheduled_time,
+            services,
+            parts,
+            labors,
+            materials,
+            equipments,
+            discounts,
+            primary_technician_id=str(series_doc.get("primary_technician_id") or "").strip(),
+        ),
         "scheduled_date": scheduled_date,
         "scheduled_time": scheduled_time,
         "dateScheduled": datetime.now().strftime("%m/%d/%Y") if (scheduled_date and scheduled_time) else "",
@@ -583,6 +615,9 @@ def _create_occurrence_from_series(db, series_doc, scheduled_date, occurrence_in
         "city": str(series_doc.get("city") or "").strip(),
         "state": str(series_doc.get("state") or "").strip().upper(),
         "zip_code": str(series_doc.get("zip_code") or "").strip(),
+        "primary_technician_id": str(series_doc.get("primary_technician_id") or "").strip() or None,
+        "additional_technician_ids": list(series_doc.get("additional_technician_ids") or []),
+        "additional_technician_names": list(series_doc.get("additional_technician_names") or []),
         "assigned_employee": str(series_doc.get("assigned_employee") or "").strip(),
         "total_amount": float(series_doc.get("total_amount") or 0.0),
         "invoice_notes": str(series_doc.get("invoice_notes") or "").strip(),
@@ -665,21 +700,17 @@ def resolve_current_business_logo_path(db):
     return logo_path if os.path.exists(logo_path) else ""
 
 
-def resolve_job_status(scheduled_date, scheduled_time, services, parts, labors, materials, equipments, discounts, existing_status=""):
+def resolve_job_status(scheduled_date, scheduled_time, services, parts, labors, materials, equipments, discounts, existing_status="", primary_technician_id=""):
     """Derive job status from scheduling and line items while preserving terminal states."""
     normalized_existing = str(existing_status or "").strip().lower()
     if normalized_existing in {"started", "completed", "paid"}:
         return str(existing_status)
 
     has_schedule = bool(str(scheduled_date).strip()) and bool(str(scheduled_time).strip())
-    has_line_items = bool(services or parts or labors or materials or equipments or discounts)
+    has_primary_technician = bool(str(primary_technician_id or "").strip())
 
-    if has_schedule and has_line_items:
+    if has_schedule and has_primary_technician:
         return "Scheduled"
-    if has_schedule:
-        return "Scheduled"
-    if has_line_items:
-        return "Pending"
     return "Pending"
 
 
@@ -998,10 +1029,12 @@ def estimate_pdf_absolute_path_from_url(file_url):
 
 
 def build_employee_options(db):
-    employee_docs = [
-        serialize_doc(employee)
-        for employee in db.employees.find().sort([("last_name", 1), ("first_name", 1)])
-    ]
+    employee_docs = []
+    for employee in db.employees.find().sort([("last_name", 1), ("first_name", 1)]):
+        serialized_employee = serialize_doc(employee)
+        if str(serialized_employee.get("status") or "active").strip().lower() != "active":
+            continue
+        employee_docs.append(serialized_employee)
 
     employee_options = []
     for employee in employee_docs:
@@ -1018,16 +1051,21 @@ def build_employee_options(db):
 
 
 def resolve_current_business_id(db):
+    session_business_id = str(session.get("employee_business_id") or "").strip()
+    if ObjectId.is_valid(session_business_id):
+        return ObjectId(session_business_id)
+
     employee_id = session.get("employee_id")
     if not employee_id or not ObjectId.is_valid(employee_id):
         return None
 
-    employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"business": 1})
-    business_ref = (employee or {}).get("business")
-    if isinstance(business_ref, ObjectId):
-        return business_ref
-    if isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
-        return ObjectId(business_ref)
+    employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"business": 1, "business_id": 1, "company_id": 1})
+    for business_field in ("business", "business_id", "company_id"):
+        business_ref = (employee or {}).get(business_field)
+        if isinstance(business_ref, ObjectId):
+            return business_ref
+        if isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
+            return ObjectId(business_ref)
     return None
 
 
@@ -1044,17 +1082,91 @@ def _coerce_business_object_id(value):
     return None
 
 
-def _employee_has_access_to_job(db, job_doc):
-    employee_business_id = resolve_current_business_id(db)
-    if not employee_business_id:
-        return False
+def _employee_lookup(db):
+    lookup = {}
+    for employee in db.employees.find().sort([("last_name", 1), ("first_name", 1)]):
+        serialized_employee = serialize_doc(employee)
+        employee_id = str(serialized_employee.get("_id") or "").strip()
+        if not employee_id or str(serialized_employee.get("status") or "active").strip().lower() != "active":
+            continue
+        first_name = str(serialized_employee.get("first_name") or "").strip()
+        last_name = str(serialized_employee.get("last_name") or "").strip()
+        full_name = f"{first_name} {last_name}".strip()
+        if full_name:
+            lookup[employee_id] = full_name
+    return lookup
 
+
+def _resolve_employee_id_value(db, value):
+    raw_value = str(value or "").strip()
+    if not raw_value:
+        return ""
+    if ObjectId.is_valid(raw_value):
+        employee = db.employees.find_one({"_id": ObjectId(raw_value)}, {"status": 1})
+        if employee and str(employee.get("status") or "active").strip().lower() == "active":
+            return raw_value
+        return ""
+
+    normalized_name = " ".join(raw_value.lower().split())
+    if not normalized_name:
+        return ""
+
+    for employee in db.employees.find({}, {"first_name": 1, "last_name": 1, "status": 1}):
+        if str(employee.get("status") or "active").strip().lower() != "active":
+            continue
+        full_name = " ".join(f"{str(employee.get('first_name') or '').strip()} {str(employee.get('last_name') or '').strip()}".split()).lower()
+        if full_name == normalized_name:
+            return str(employee.get("_id") or "").strip()
+    return ""
+
+
+def _resolve_employee_name_from_value(db, value):
+    employee_id = _resolve_employee_id_value(db, value)
+    if not employee_id:
+        return ""
+    employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"first_name": 1, "last_name": 1}) or {}
+    first_name = str(employee.get("first_name") or "").strip()
+    last_name = str(employee.get("last_name") or "").strip()
+    return f"{first_name} {last_name}".strip()
+
+
+def _sanitize_additional_technician_ids(db, additional_ids, primary_technician_id=""):
+    primary_id = str(primary_technician_id or "").strip()
+    cleaned_ids = []
+    seen_ids = set()
+    for raw_id in additional_ids or []:
+        employee_id = _resolve_employee_id_value(db, raw_id)
+        if not employee_id or employee_id == primary_id or employee_id in seen_ids:
+            continue
+        seen_ids.add(employee_id)
+        cleaned_ids.append(employee_id)
+    return cleaned_ids
+
+
+def _build_job_technician_payload(db, primary_technician_id="", additional_technician_ids=None):
+    primary_employee_id = _resolve_employee_id_value(db, primary_technician_id)
+    primary_employee_name = _resolve_employee_name_from_value(db, primary_employee_id)
+    cleaned_additional_ids = _sanitize_additional_technician_ids(db, additional_technician_ids or [], primary_employee_id)
+    lookup = _employee_lookup(db)
+    additional_names = [lookup.get(employee_id, "") for employee_id in cleaned_additional_ids if lookup.get(employee_id)]
+    return {
+        "primary_technician_id": primary_employee_id or None,
+        "additional_technician_ids": cleaned_additional_ids,
+        "additional_technician_names": additional_names,
+        "assigned_employee": primary_employee_name,
+    }
+
+
+def _employee_has_access_to_job(db, job_doc):
     job_business_id = _coerce_business_object_id((job_doc or {}).get("business_id"))
     if not job_business_id:
         return False
 
-    return job_business_id == employee_business_id
+    employee_business_id = resolve_current_business_id(db)
+    if not employee_business_id:
+        return False
 
+    return job_business_id == employee_business_id
 
 @bp.before_request
 def _enforce_staff_job_scope():
@@ -2337,6 +2449,9 @@ def _build_pricing_summary(payload, business_doc=None, customer_doc=None):
     pre_tax_total = max(0.0, subtotal - discounts_total)
 
     tax_inputs = build_line_item_tax_inputs(source)
+    if subtotal > 0 and discounts_total > 0:
+        discount_ratio = pre_tax_total / subtotal
+        tax_inputs = [{**item, "amount": item["amount"] * discount_ratio} for item in tax_inputs]
     tax_breakdown = calculate_itemized_tax(
         tax_inputs,
         normalize_business_tax_rates(business),
@@ -2912,9 +3027,24 @@ def create_job(customerId):
         )
         payment_due_days_offset = payment_due_days
         date_scheduled = datetime.now().strftime("%m/%d/%Y") if (scheduled_date and scheduled_time) else ""
-        job_status = resolve_job_status(scheduled_date, scheduled_time, services, parts, labors, materials, equipments, discounts)
+        primary_technician_id = _resolve_employee_id_value(db, request.form.get("primary_technician_id", "") or request.form.get("job_assigned_employee", ""))
+        technician_payload = _build_job_technician_payload(
+            db,
+            primary_technician_id,
+            request.form.getlist("additional_technician_ids[]"),
+        )
+        job_status = resolve_job_status(
+            scheduled_date,
+            scheduled_time,
+            services,
+            parts,
+            labors,
+            materials,
+            equipments,
+            discounts,
+            primary_technician_id=technician_payload.get("primary_technician_id") or "",
+        )
 
-        assigned_employee = request.form.get("job_assigned_employee", "").strip()
         recurring_data = _parse_recurrence_request(request, scheduled_date, scheduled_time)
         invoice_notes = request.form.get("invoice_notes", "").strip()
 
@@ -2932,7 +3062,7 @@ def create_job(customerId):
                 equipments,
                 discounts,
                 total,
-                assigned_employee,
+                technician_payload,
                 recurring_data,
                 scheduled_date,
                 scheduled_time,
@@ -2968,7 +3098,10 @@ def create_job(customerId):
             "city": request.form.get("job_city", "").strip(),
             "state": request.form.get("job_state", "").strip().upper(),
             "zip_code": request.form.get("job_zip_code", "").strip(),
-            "assigned_employee": assigned_employee,
+            "primary_technician_id": technician_payload.get("primary_technician_id") or None,
+            "additional_technician_ids": technician_payload.get("additional_technician_ids") or [],
+            "additional_technician_names": technician_payload.get("additional_technician_names") or [],
+            "assigned_employee": technician_payload.get("assigned_employee") or "",
             "total_amount": float(total or 0.0),
             "invoice_notes": invoice_notes,
             "payment_due_days": payment_due_days,
@@ -3163,7 +3296,8 @@ def create_estimate(customerId):
         )
         total = pricing_summary["total_due"]
 
-        estimated_by_employee = request.form.get("job_assigned_employee", "").strip()
+        primary_technician_id = _resolve_employee_id_value(db, request.form.get("primary_technician_id", "") or request.form.get("job_assigned_employee", ""))
+        technician_payload = _build_job_technician_payload(db, primary_technician_id, [])
         estimate_notes = request.form.get("estimate_notes", "").strip()
         proposed_job_date = format_date(request.form.get("proposed_job_date", ""))
         proposed_job_time = request.form.get("proposed_job_time", "").strip()
@@ -3201,7 +3335,9 @@ def create_estimate(customerId):
             "state": request.form.get("job_state", "").strip().upper(),
             "zip_code": request.form.get("job_zip_code", "").strip(),
             "created_by_employee": (session.get("employee_name") or "").strip(),
-            "estimated_by_employee": estimated_by_employee,
+            "primary_technician_id": technician_payload.get("primary_technician_id") or None,
+            "estimated_by_employee": technician_payload.get("assigned_employee") or "",
+            "assigned_employee": technician_payload.get("assigned_employee") or "",
             "proposed_job_date": proposed_job_date,
             "proposed_job_time": proposed_job_time,
             "job_schedule_type": recurrence_data.get("schedule_type") or "one_time",
@@ -3546,7 +3682,8 @@ def update_estimate(estimateId):
         )
         total = pricing_summary["total_due"]
 
-        estimated_by_employee = request.form.get("job_assigned_employee", "").strip()
+        primary_technician_id = _resolve_employee_id_value(db, request.form.get("primary_technician_id", "") or request.form.get("job_assigned_employee", ""))
+        technician_payload = _build_job_technician_payload(db, primary_technician_id, [])
         estimate_notes = request.form.get("estimate_notes", "").strip()
         proposed_job_date = format_date(request.form.get("proposed_job_date", ""))
         proposed_job_time = request.form.get("proposed_job_time", "").strip()
@@ -3570,7 +3707,9 @@ def update_estimate(estimateId):
             "city": request.form.get("job_city", "").strip(),
             "state": request.form.get("job_state", "").strip().upper(),
             "zip_code": request.form.get("job_zip_code", "").strip(),
-            "estimated_by_employee": estimated_by_employee,
+            "primary_technician_id": technician_payload.get("primary_technician_id") or None,
+            "estimated_by_employee": technician_payload.get("assigned_employee") or "",
+            "assigned_employee": technician_payload.get("assigned_employee") or "",
             "proposed_job_date": proposed_job_date,
             "proposed_job_time": proposed_job_time,
             "job_schedule_type": recurrence_data.get("schedule_type") or "one_time",
@@ -4890,6 +5029,12 @@ def update_job(jobId):
                 date_scheduled = existing_date_scheduled
         else:
             date_scheduled = ""
+        primary_technician_id = _resolve_employee_id_value(db, request.form.get("primary_technician_id", "") or request.form.get("job_assigned_employee", ""))
+        technician_payload = _build_job_technician_payload(
+            db,
+            primary_technician_id,
+            request.form.getlist("additional_technician_ids[]"),
+        )
         job_status = resolve_job_status(
             scheduled_date,
             scheduled_time,
@@ -4900,9 +5045,9 @@ def update_job(jobId):
             equipments,
             discounts,
             existing_status=job.get("status", ""),
+            primary_technician_id=technician_payload.get("primary_technician_id") or "",
         )
 
-        assigned_employee = request.form.get("job_assigned_employee", "").strip()
         recurring_data = _parse_recurrence_request(
             request,
             scheduled_date,
@@ -4930,7 +5075,10 @@ def update_job(jobId):
             "city": request.form.get("job_city", "").strip(),
             "state": request.form.get("job_state", "").strip().upper(),
             "zip_code": request.form.get("job_zip_code", "").strip(),
-            "assigned_employee": assigned_employee,
+            "primary_technician_id": technician_payload.get("primary_technician_id") or None,
+            "additional_technician_ids": technician_payload.get("additional_technician_ids") or [],
+            "additional_technician_names": technician_payload.get("additional_technician_names") or [],
+            "assigned_employee": technician_payload.get("assigned_employee") or "",
             "invoice_notes": request.form.get("invoice_notes", "").strip(),
             "payment_due_days": payment_due_days,
             "total_amount": float(total or 0.0),
@@ -4966,7 +5114,10 @@ def update_job(jobId):
                     "city": request.form.get("job_city", "").strip(),
                     "state": request.form.get("job_state", "").strip().upper(),
                     "zip_code": request.form.get("job_zip_code", "").strip(),
-                    "assigned_employee": assigned_employee,
+                    "primary_technician_id": technician_payload.get("primary_technician_id") or None,
+                    "additional_technician_ids": technician_payload.get("additional_technician_ids") or [],
+                    "additional_technician_names": technician_payload.get("additional_technician_names") or [],
+                    "assigned_employee": technician_payload.get("assigned_employee") or "",
                     "invoice_notes": request.form.get("invoice_notes", "").strip(),
                     "payment_due_days_offset": payment_due_days_offset,
                     "total_amount": float(total or 0.0),
@@ -4997,7 +5148,7 @@ def update_job(jobId):
                     equipments,
                     discounts,
                     total,
-                    assigned_employee,
+                    technician_payload,
                     recurring_data,
                     scheduled_date,
                     scheduled_time,

@@ -41,7 +41,8 @@
 					{% set this_job_id = job._id|string %}
 					{% set other_job_is_active = current_employee_active_job_id and this_job_id != current_employee_active_job_id %}
 					{% set job_address = [job.address_line_1, job.city, job.state, job.zip_code]|select|join(', ') %}
-					<div class="home-job{% if job_status_key in ['completed', 'complete', 'done', 'paid'] %} is-completed{% endif %}{% if job_status_key in ['en route', 'started'] %} is-active-job{% endif %}" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}" data-assigned-employee="{{ job.assigned_employee.lower().replace(' ', '-') if job.assigned_employee else '' }}">
+					{% set assistant_employee_names = job.additional_technician_names|default([], true) %}
+					<div class="home-job{% if job_status_key in ['completed', 'complete', 'done', 'paid'] %} is-completed{% endif %}{% if job_status_key in ['en route', 'started'] %} is-active-job{% endif %}" data-job-date="{{ job_iso_date }}" data-job-time="{{ job.scheduled_time|default('', true) }}" data-assigned-employee="{{ job.assigned_employee|default('', true)|lower|replace(' ', '-') }}" data-technicians="{{ job.assigned_employee|default('', true) }}{% if assistant_employee_names %}||{{ assistant_employee_names|join(',') }}{% endif %}">
 						<a class="home-job-card-link" href="{{ url_for('jobs.view_job', jobId=job._id) }}">
 							<div class="home-job-card-content">
 								<div class="home-job-title-line">
@@ -53,7 +54,7 @@
 										{% if job.scheduled_date %}{{ job.scheduled_time|default('N/A', true) }}{% else %}Unscheduled{% endif %}
 									</span>
 									<span class="home-job-dot" aria-hidden="true">&bull;</span>
-									<span class="home-job-tech-name">{{ job.assigned_employee|default('Unassigned', true) }}</span>
+									<span class="home-job-tech-name">{{ job.assigned_employee|default('Unassigned', true) }}{% if assistant_employee_names %} + {{ assistant_employee_names|join(', ') }}{% endif %}</span>
 								</div>
 								<span class="jobs-status-chip{% if job_status_key == 'pending' %} is-pending{% elif job_status_key == 'scheduled' %} is-scheduled{% elif job_status_key == 'en route' %} is-en-route{% elif job_status_key == 'started' %} is-started{% elif job_status_key in ['completed', 'complete', 'done'] %} is-completed{% elif job_status_key == 'paid' %} is-paid{% elif job_status_key == 'estimating' %} is-estimating{% elif job_status_key == 'declined' %} is-declined{% endif %}">{{ job.status|default('Unknown', true) }}</span>
 							</div>

@@ -86,19 +86,35 @@
             </div>
 
             <div class="add-customer-form-field">
-              <label for="job-assigned-employee">Assigned Employee</label>
-              <select id="job-assigned-employee" name="job_assigned_employee" required>
-                <option value="">-- Select an employee --</option>
+              <label for="primary-technician-id">Primary Technician</label>
+              <select id="primary-technician-id" name="primary_technician_id">
+                <option value="">-- No primary technician --</option>
                 {% for employee in employee_options %}
-                  <option value="{{ employee.name }}" {% if job.assigned_employee == employee.name %}selected{% endif %}>{{ employee.name }}</option>
+                  <option value="{{ employee.id }}" {% if job.primary_technician_id == employee.id or job.assigned_employee == employee.name %}selected{% endif %}>{{ employee.name }}</option>
                 {% endfor %}
               </select>
-              <span id="error-assigned-employee" class="form-field-error" style="display:{% if job.assigned_employee %}none{% else %}block{% endif %};">Assigned Employee is required</span>
             </div>
 
             <div class="add-customer-form-field">
               <label for="invoice-notes">Invoice Notes</label>
               <textarea id="invoice-notes" name="invoice_notes" rows="4" placeholder="Example: Payment terms, permit details, parts/labor summary, completion scope, and customer care instructions shown on the invoice.">{{ job.invoice_notes|default('', true) }}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="add-customer-form-row add-customer-form-row--single job-additional-technicians-row">
+          <div class="add-customer-form-field">
+            <label>Additional Technicians</label>
+            <div class="job-additional-technicians-list">
+              {% for employee in employee_options %}
+                {% set is_additional = employee.id in (job.additional_technician_ids or []) or employee.name in (job.additional_technician_ids or []) %}
+                <div class="job-additional-technician-option" data-additional-tech-id="{{ employee.id }}" {% if job.primary_technician_id == employee.id or job.assigned_employee == employee.name %}style="display:none;"{% endif %}>
+                  <label>
+                    <input type="checkbox" name="additional_technician_ids[]" value="{{ employee.id }}" {% if is_additional %}checked{% endif %}>
+                    {{ employee.name }}
+                  </label>
+                </div>
+              {% endfor %}
             </div>
           </div>
         </div>

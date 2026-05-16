@@ -87,6 +87,7 @@
                     class="jobs-card"
                     href="{{ url_for('jobs.view_job', jobId=job._id) }}"
                     data-filter-employee="{{ job.assigned_employee|default('', true) }}"
+                    data-filter-technicians="{{ job.assigned_employee|default('', true) }}{% if job.additional_technician_names %}||{{ job.additional_technician_names|join(',') }}{% endif %}"
                     data-filter-status="{{ job.status|default('', true) }}"
                     data-filter-city="{{ job.city|default('', true) }}"
                     data-filter-state="{{ job.state|default('', true) }}"

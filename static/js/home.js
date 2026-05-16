@@ -16,20 +16,53 @@ window.homePageFilter = {
   currentPage: 1,
   JOBS_PER_PAGE: 5,
 
+  normalizeEmployeeValue: function(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-');
+  },
+
+  parseEmployeeList: function(value) {
+    return String(value || '')
+      .split('||')
+      .flatMap((entry) => String(entry || '').split(','))
+      .map((entry) => this.normalizeEmployeeValue(entry))
+      .filter(Boolean);
+  },
+
+  matchesSelectedEmployees: function(job) {
+    if (this.filterData.selectedEmployees.size === 0) {
+      return true;
+    }
+
+    const employeeValues = new Set([
+      ...this.parseEmployeeList(job.dataset.technicians),
+      ...this.parseEmployeeList(job.dataset.assignedEmployee),
+    ]);
+
+    for (const selectedEmployee of this.filterData.selectedEmployees) {
+      if (employeeValues.has(selectedEmployee)) {
+        return true;
+      }
+    }
+
+    return false;
+  },
+
   getHighlightedJobDates: function() {
     const jobElements = document.querySelectorAll(".home-job");
     const jobsByDate = new Map();
 
     jobElements.forEach((job) => {
       const jobDate = job.dataset.jobDate;
-      const jobEmployee = job.dataset.assignedEmployee;
       const isCompleted = job.classList.contains("is-completed");
 
       if (!jobDate) {
         return;
       }
 
-      if (this.filterData.selectedEmployees.size > 0 && !this.filterData.selectedEmployees.has(jobEmployee)) {
+      if (!this.matchesSelectedEmployees(job)) {
         return;
       }
 
@@ -62,13 +95,11 @@ window.homePageFilter = {
     const jobElements = document.querySelectorAll(".home-job");
     const visibleJobs = Array.from(jobElements).filter((job) => {
       const jobDate = job.dataset.jobDate;
-      const jobEmployee = job.dataset.assignedEmployee;
-
       if (this.filterData.selectedDate && jobDate !== this.filterData.selectedDate) {
         return false;
       }
 
-      if (this.filterData.selectedEmployees.size > 0 && !this.filterData.selectedEmployees.has(jobEmployee)) {
+      if (!this.matchesSelectedEmployees(job)) {
         return false;
       }
 
@@ -169,15 +200,13 @@ window.homePageFilter = {
     const pagesContainer = document.getElementById("home-jobs-pages");
     const visibleJobs = Array.from(jobElements).filter((job) => {
       const jobDate = job.dataset.jobDate;
-      const jobEmployee = job.dataset.assignedEmployee;
-
       // Filter by date if a date is selected
       if (this.filterData.selectedDate && jobDate !== this.filterData.selectedDate) {
         return false;
       }
 
       // Filter by employee if any employees are selected
-      if (this.filterData.selectedEmployees.size > 0 && !this.filterData.selectedEmployees.has(jobEmployee)) {
+      if (!this.matchesSelectedEmployees(job)) {
         return false;
       }
 
