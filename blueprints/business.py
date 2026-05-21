@@ -1,4 +1,7 @@
 import os
+from io import BytesIO
+from datetime import UTC, datetime
+from urllib.parse import quote
 
 from PIL import Image
 from bson import ObjectId
@@ -6,6 +9,7 @@ from flask import Blueprint, current_app, redirect, render_template, request, se
 import stripe
 
 from mongo import ensure_connection_or_500, serialize_doc
+from utils import object_storage
 from utils.notifications import sms_features_enabled
 
 bp = Blueprint("business", __name__)
@@ -16,8 +20,6 @@ MIN_LOGO_WIDTH = 300
 MIN_LOGO_HEIGHT = 100
 MAX_LOGO_WIDTH = 2400
 MAX_LOGO_HEIGHT = 1400
-LOGO_UPLOAD_SUBDIR = os.path.join("uploads", "logos")
-LOGO_UPLOAD_URL_SUBDIR = "uploads/logos"
 DEFAULT_TAX_RATE_TYPES = ["parts", "materials", "equipment"]
 
 
@@ -267,15 +269,12 @@ def business_profile():
     business = serialize_doc(business)
     business["tax_rates"] = _normalize_tax_rates_for_view(business)
 
-    custom_logo = os.path.basename(str(business.get("custom_logo") or "").strip())
-    logo_path = (
-        os.path.join(current_app.root_path, "static", LOGO_UPLOAD_SUBDIR, custom_logo)
-        if custom_logo
-        else ""
-    )
-    logo_url = ""
-    if custom_logo and os.path.exists(logo_path):
-        logo_url = url_for("static", filename=f"{LOGO_UPLOAD_URL_SUBDIR}/{custom_logo}")
+    custom_logo = str(business.get("custom_logo") or "").strip()
+    logo_url = object_storage.build_access_url(custom_logo)
+    logo_version = str(business.get("custom_logo_uploaded_at") or "").strip()
+    if logo_url and logo_version:
+        separator = "&" if "?" in logo_url else "?"
+        logo_url = f"{logo_url}{separator}v={quote(logo_version, safe='')}"
 
     logo_status_kind, logo_status_message = _logo_status_payload(request.args.get("logo_status", ""))
     stripe_status_kind, stripe_status_message = _stripe_status_payload(request.args.get("stripe_status", ""))
@@ -455,22 +454,29 @@ def upload_logo():
             ):
                 return redirect(url_for("business.business_profile", logo_status="bad_resolution"))
 
-            image_format = "PNG"
-            upload_filename = f"{str(business_oid)}_logo.png"
-            logo_upload_dir = os.path.join(current_app.root_path, "static", LOGO_UPLOAD_SUBDIR)
-            os.makedirs(logo_upload_dir, exist_ok=True)
-            output_path = os.path.join(logo_upload_dir, upload_filename)
-
             save_image = image_file.convert("RGBA")
             save_image.thumbnail((1200, 600), Image.Resampling.LANCZOS)
-            save_image.save(output_path, format=image_format, optimize=True)
+
+            encoded = BytesIO()
+            save_image.save(encoded, format="PNG", optimize=True)
+            object_key = f"logos/{str(business_oid)}_logo.png"
+            object_storage.upload_bytes(
+                object_key=object_key,
+                data=encoded.getvalue(),
+                content_type="image/png",
+            )
 
     except Exception:
-        return redirect(url_for("business.business_profile", logo_status="invalid_image"))
+        return redirect(url_for("business.business_profile", logo_status="upload_failed"))
 
     db.businesses.update_one(
         {"_id": business_oid},
-        {"$set": {"custom_logo": upload_filename}},
+        {
+            "$set": {
+                "custom_logo": object_key,
+                "custom_logo_uploaded_at": datetime.now(UTC),
+            }
+        },
     )
 
     return redirect(url_for("business.business_profile", logo_status="uploaded"))

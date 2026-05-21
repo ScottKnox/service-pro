@@ -18,8 +18,8 @@
       <ul id="header-nav">
         <li><a href="{{ url_for('home', home_view=_header_home_view) }}">Home</a></li>
         <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
-        <li><a href="{{ url_for('jobs.jobs') }}">Jobs</a></li>
         <li><a href="{{ url_for('jobs.estimates') }}">Estimates</a></li>
+        <li><a href="{{ url_for('jobs.jobs') }}">Jobs</a></li>
         <li><a href="{{ url_for('admin_bp.reporting') }}">Reporting</a></li>
         {% if session.get('employee_position', '')|lower == 'owner' %}
           <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>

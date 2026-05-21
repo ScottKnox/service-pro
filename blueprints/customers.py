@@ -10,13 +10,14 @@ from werkzeug.utils import secure_filename
 
 ALLOWED_PHOTO_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "heic"}
 MAX_PHOTO_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
-HVAC_PHOTO_UPLOAD_SUBDIR = os.path.join("uploads", "hvac_photos")
 MAX_PHOTO_CAPTION_LENGTH = 220
+HVAC_PHOTO_UPLOAD_SUBDIR = os.path.join("uploads", "hvac_photos")
 
 from mongo import build_reference_filter, ensure_connection_or_500, object_id_or_404, reference_value, serialize_doc
 from hvac_report_generator import generate_hvac_system_health_report
 from utils.catalog import build_job_parts_from_form, build_part_catalog
 from utils.csv_export import build_csv_export_response
+from utils import object_storage
 
 bp = Blueprint("customers", __name__)
 
@@ -1443,11 +1444,66 @@ def _diagnostic_section_key(section_label):
 
 
 def _build_hvac_photo_url(filename):
-    safe_filename = str(filename or "").strip()
+    storage_ref = str(filename or "").strip()
+    if not storage_ref:
+        return ""
+
+    remote_url = object_storage.build_access_url(storage_ref)
+    if remote_url:
+        return remote_url
+
+    safe_filename = os.path.basename(storage_ref)
     if not safe_filename:
         return ""
+
     upload_path = os.path.join(HVAC_PHOTO_UPLOAD_SUBDIR, safe_filename).replace("\\", "/")
     return url_for("static", filename=upload_path)
+
+
+def _save_hvac_photo(storage_basename, photo_stream, content_type):
+    safe_name = str(storage_basename or "").strip()
+    if not safe_name:
+        raise ValueError("Photo filename is required.")
+
+    if object_storage.is_configured():
+        object_key = f"hvac_photos/{safe_name}"
+        photo_url = object_storage.upload_file_stream(
+            object_key=object_key,
+            stream=photo_stream,
+            content_type=str(content_type or "image/jpeg"),
+        )
+        return object_key, photo_url
+
+    upload_dir = os.path.join(current_app.root_path, "static", HVAC_PHOTO_UPLOAD_SUBDIR)
+    os.makedirs(upload_dir, exist_ok=True)
+    output_path = os.path.join(upload_dir, safe_name)
+
+    photo_stream.seek(0)
+    with open(output_path, "wb") as output_file:
+        output_file.write(photo_stream.read())
+    photo_stream.seek(0)
+
+    return safe_name, _build_hvac_photo_url(safe_name)
+
+
+def _delete_hvac_photo(storage_ref):
+    target = str(storage_ref or "").strip()
+    if not target:
+        return
+
+    if object_storage.is_configured():
+        object_storage.delete_object(target)
+
+    local_name = os.path.basename(target)
+    if not local_name:
+        return
+
+    local_path = os.path.join(current_app.root_path, "static", HVAC_PHOTO_UPLOAD_SUBDIR, local_name)
+    if os.path.exists(local_path):
+        try:
+            os.remove(local_path)
+        except Exception:
+            pass
 
 
 def _normalize_diagnostic_photo_entry(raw_photo):
@@ -1455,7 +1511,8 @@ def _normalize_diagnostic_photo_entry(raw_photo):
         return None
 
     filename = str(raw_photo.get("filename") or "").strip()
-    url = str(raw_photo.get("url") or "").strip() or _build_hvac_photo_url(filename)
+    raw_url = str(raw_photo.get("url") or "").strip()
+    url = _build_hvac_photo_url(filename or raw_url) or raw_url
     if not filename and not url:
         return None
 
@@ -1995,7 +2052,7 @@ def _build_hvac_detail_payload(db, customer_id, reference_type, reference_id):
         "reports": reports,
         "photos": [
             {
-                "url": url_for("static", filename=f"{HVAC_PHOTO_UPLOAD_SUBDIR.replace(os.sep, '/')}/{photo.get('filename', '')}"),
+                "url": _build_hvac_photo_url(photo.get("filename") or photo.get("url")),
                 "filename": str(photo.get("filename", "")).strip(),
                 "uploaded_at": str(photo.get("uploaded_at", "")).strip() or "-",
             }
@@ -2979,11 +3036,8 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
             for field_name, _label in HVAC_DIAGNOSTIC_FIELDS
         }
 
-        upload_dir = os.path.join(current_app.root_path, "static", HVAC_PHOTO_UPLOAD_SUBDIR)
-        os.makedirs(upload_dir, exist_ok=True)
-
         section_photos = {}
-        saved_file_paths = []
+        uploaded_object_keys = []
         for section_label, _fields in HVAC_DIAGNOSTIC_SECTIONS:
             section_key = _diagnostic_section_key(section_label)
             photo_files = request.files.getlist(f"section_photos__{section_key}[]")
@@ -3017,10 +3071,13 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
                     f"diag_{reference_id}_{section_key}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}_"
                     f"{secure_filename(original_name)}"
                 )
-                save_path = os.path.join(upload_dir, safe_name)
                 try:
-                    photo_file.save(save_path)
-                    saved_file_paths.append(save_path)
+                    storage_ref, photo_url = _save_hvac_photo(
+                        storage_basename=safe_name,
+                        photo_stream=photo_file.stream,
+                        content_type=getattr(photo_file, "mimetype", "") or "image/jpeg",
+                    )
+                    uploaded_object_keys.append(storage_ref)
                 except Exception:
                     error = f"Failed to upload a photo for {section_label}. Please try again."
                     break
@@ -3033,8 +3090,8 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
 
                 saved_photos.append(
                     {
-                        "filename": safe_name,
-                        "url": _build_hvac_photo_url(safe_name),
+                        "filename": storage_ref,
+                        "url": photo_url,
                         "caption": caption,
                         "uploaded_at": datetime.now().strftime("%m/%d/%Y"),
                     }
@@ -3047,12 +3104,8 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
                 section_photos[section_key] = saved_photos
 
         if error:
-            for saved_file_path in saved_file_paths:
-                try:
-                    if os.path.exists(saved_file_path):
-                        os.remove(saved_file_path)
-                except Exception:
-                    pass
+            for storage_ref in uploaded_object_keys:
+                _delete_hvac_photo(storage_ref)
             return render_template(
                 "equipment/add_hvac_diagnostics.html",
                 customerId=customerId,
@@ -3228,6 +3281,7 @@ def delete_hvac_diagnostic_photo(customerId, reference_type, reference_id, diagn
             if not isinstance(photo, dict):
                 continue
             if str(photo.get("filename") or "").strip() == filename:
+                _delete_hvac_photo(filename)
                 continue
             updated_photo_list.append(photo)
 
@@ -3241,13 +3295,6 @@ def delete_hvac_diagnostic_photo(customerId, reference_type, reference_id, diagn
                 }
             },
         )
-
-        file_path = os.path.join(current_app.root_path, "static", HVAC_PHOTO_UPLOAD_SUBDIR, filename)
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception:
-                pass
 
     diagnostic_index_raw = str(request.form.get("diagnostic_index") or "0").strip()
     try:
@@ -3752,18 +3799,19 @@ def upload_hvac_photo(customerId, reference_type, reference_id):
     if file_size > MAX_PHOTO_FILE_SIZE:
         return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id, photo_error="too_large"))
 
-    upload_dir = os.path.join(current_app.root_path, "static", HVAC_PHOTO_UPLOAD_SUBDIR)
-    os.makedirs(upload_dir, exist_ok=True)
-
     safe_name = f"{reference_id}_{datetime.now().strftime('%Y%m%d%H%M%S%f')}_{secure_filename(filename)}"
-    save_path = os.path.join(upload_dir, safe_name)
     try:
-        photo_file.save(save_path)
+        storage_ref, photo_url = _save_hvac_photo(
+            storage_basename=safe_name,
+            photo_stream=photo_file.stream,
+            content_type=getattr(photo_file, "mimetype", "") or "image/jpeg",
+        )
     except Exception:
         return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id, photo_error="upload_failed"))
 
     photo_entry = {
-        "filename": safe_name,
+        "filename": storage_ref,
+        "url": photo_url,
         "uploaded_at": datetime.now().strftime("%m/%d/%Y"),
     }
     db.hvacSystems.update_one(
@@ -3792,12 +3840,7 @@ def delete_hvac_photo(customerId, reference_type, reference_id):
 
     filename_to_delete = str(request.form.get("filename", "")).strip()
     if filename_to_delete:
-        file_path = os.path.join(current_app.root_path, "static", HVAC_PHOTO_UPLOAD_SUBDIR, filename_to_delete)
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception:
-                pass
+        _delete_hvac_photo(filename_to_delete)
         db.hvacSystems.update_one(
             {"$and": [{"_id": hvac_system["_id"]}, build_reference_filter("customer_id", customerId)]},
             {"$pull": {"photos": {"filename": filename_to_delete}}},

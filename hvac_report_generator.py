@@ -24,6 +24,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 from PIL import Image, ImageOps
+from utils import object_storage
 
 # ---------------------------------------------------------------------------
 # Field/section definitions
@@ -118,24 +119,38 @@ def _normalize_section_key(value):
     return re.sub(r"[^a-z0-9]+", "_", key_text).strip("_")
 
 
-def _resolve_photo_absolute_path(photo):
+def _resolve_photo_bytes(photo):
     if not isinstance(photo, dict):
-        return ""
+        return b""
 
     filename = str(photo.get("filename") or "").strip()
-    if filename:
-        candidate = os.path.abspath(os.path.join(os.path.dirname(__file__), "static", "uploads", "hvac_photos", filename))
-        if os.path.exists(candidate):
-            return candidate
+    if filename and os.path.exists(filename):
+        try:
+            with open(filename, "rb") as photo_fp:
+                photo_data = photo_fp.read()
+            if photo_data:
+                return photo_data
+        except Exception:
+            pass
 
     raw_url = str(photo.get("url") or "").strip()
-    if raw_url.startswith("/static/"):
-        relative_path = raw_url[len("/static/"):]
-        candidate = os.path.abspath(os.path.join(os.path.dirname(__file__), "static", relative_path.replace("/", os.sep)))
-        if os.path.exists(candidate):
-            return candidate
+    remote_data = object_storage.download_object_bytes(filename or raw_url)
+    if remote_data:
+        return remote_data
 
-    return ""
+    local_name = os.path.basename(filename or raw_url)
+    if local_name:
+        local_candidate = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "static", "uploads", "hvac_photos", local_name)
+        )
+        if os.path.exists(local_candidate):
+            try:
+                with open(local_candidate, "rb") as photo_fp:
+                    return photo_fp.read()
+            except Exception:
+                pass
+
+    return b""
 
 
 def _section_photo_entries_for_report(raw_diagnostics, report_section_label):
@@ -165,9 +180,12 @@ def _section_photo_entries_for_report(raw_diagnostics, report_section_label):
     return merged_entries
 
 
-def _build_pdf_photo_flowable(photo_path, max_width, max_height):
+def _build_pdf_photo_flowable(photo_data, max_width, max_height):
+    if not photo_data:
+        return None
+
     try:
-        with Image.open(photo_path) as source_image:
+        with Image.open(BytesIO(photo_data)) as source_image:
             normalized_image = ImageOps.exif_transpose(source_image)
             if normalized_image.mode not in ("RGB", "L"):
                 normalized_image = normalized_image.convert("RGB")
@@ -195,21 +213,7 @@ def _build_pdf_photo_flowable(photo_path, max_width, max_height):
         flowable._image_buffer = encoded
         return flowable
     except Exception:
-        try:
-            reader = ImageReader(photo_path)
-            width_px, height_px = reader.getSize()
-            if not width_px or not height_px:
-                return None
-            scale_ratio = min(max_width / float(width_px), max_height / float(height_px), 1.0)
-            flowable = ReportImage(
-                photo_path,
-                width=float(width_px) * scale_ratio,
-                height=float(height_px) * scale_ratio,
-            )
-            flowable.hAlign = "LEFT"
-            return flowable
-        except Exception:
-            return None
+        return None
 
 
 def _parse_float(value):
@@ -1000,13 +1004,13 @@ def generate_hvac_system_health_report(
         section_photos = _section_photo_entries_for_report(raw, section_label)
         photo_cards = []
         for photo in section_photos:
-            photo_path = _resolve_photo_absolute_path(photo)
-            if not photo_path:
+            photo_data = _resolve_photo_bytes(photo)
+            if not photo_data:
                 continue
 
             max_width = 3.15 * inch
             max_height = 2.0 * inch
-            image_flowable = _build_pdf_photo_flowable(photo_path, max_width=max_width, max_height=max_height)
+            image_flowable = _build_pdf_photo_flowable(photo_data, max_width=max_width, max_height=max_height)
             if not image_flowable:
                 continue
 

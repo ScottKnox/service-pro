@@ -4,10 +4,12 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as ReportImage
 from reportlab.lib import colors
 from datetime import datetime, timedelta
+from io import BytesIO
 import os
 from xml.sax.saxutils import escape as xml_escape
 
 from PIL import Image as PILImage
+from utils import object_storage
 from utils.taxes import build_line_item_tax_inputs, calculate_itemized_tax, normalize_business_tax_rates
 
 
@@ -168,24 +170,41 @@ def _build_section_table(story, heading_style, title, headers, rows, col_widths,
     story.append(Spacer(1, section_spacing))
 
 
-def _resolve_logo_path(business_logo_path):
-    if business_logo_path and os.path.exists(business_logo_path):
-        return business_logo_path
+def _resolve_logo_bytes(business_logo_path):
+    raw_reference = str(business_logo_path or "").strip()
+    if raw_reference:
+        if os.path.exists(raw_reference):
+            try:
+                with open(raw_reference, "rb") as logo_fp:
+                    logo_data = logo_fp.read()
+                if logo_data:
+                    return logo_data
+            except Exception:
+                pass
+
+        remote_logo = object_storage.download_object_bytes(raw_reference)
+        if remote_logo:
+            return remote_logo
 
     default_logo_path = os.path.join(os.path.dirname(__file__), "logos", "company_logo.png")
     if os.path.exists(default_logo_path):
-        return default_logo_path
+        try:
+            with open(default_logo_path, "rb") as logo_fp:
+                return logo_fp.read()
+        except Exception:
+            return b""
 
-    return ""
+    return b""
 
 
 def _append_logo(story, business_logo_path):
-    logo_path = _resolve_logo_path(business_logo_path)
-    if not logo_path:
+    logo_bytes = _resolve_logo_bytes(business_logo_path)
+    if not logo_bytes:
         return
 
     try:
-        with PILImage.open(logo_path) as logo_image:
+        logo_source = BytesIO(logo_bytes)
+        with PILImage.open(logo_source) as logo_image:
             width, height = logo_image.size
         if not width or not height:
             return
@@ -194,8 +213,10 @@ def _append_logo(story, business_logo_path):
         max_height = 1.0 * inch
         scale = min(max_width / width, max_height / height)
 
-        report_logo = ReportImage(logo_path, width=width * scale, height=height * scale)
+        report_logo_stream = BytesIO(logo_bytes)
+        report_logo = ReportImage(report_logo_stream, width=width * scale, height=height * scale)
         report_logo.hAlign = "CENTER"
+        report_logo._logo_stream = report_logo_stream
         story.append(report_logo)
         story.append(Spacer(1, 0.12 * inch))
     except Exception:
@@ -203,19 +224,22 @@ def _append_logo(story, business_logo_path):
 
 
 def _build_logo_flowable(business_logo_path, max_width=2.5 * inch, max_height=1.0 * inch):
-    logo_path = _resolve_logo_path(business_logo_path)
-    if not logo_path:
+    logo_bytes = _resolve_logo_bytes(business_logo_path)
+    if not logo_bytes:
         return None
 
     try:
-        with PILImage.open(logo_path) as logo_image:
+        logo_source = BytesIO(logo_bytes)
+        with PILImage.open(logo_source) as logo_image:
             width, height = logo_image.size
         if not width or not height:
             return None
 
         scale = min(max_width / width, max_height / height)
-        logo = ReportImage(logo_path, width=width * scale, height=height * scale)
+        logo_stream = BytesIO(logo_bytes)
+        logo = ReportImage(logo_stream, width=width * scale, height=height * scale)
         logo.hAlign = "LEFT"
+        logo._logo_stream = logo_stream
         return logo
     except Exception:
         return None

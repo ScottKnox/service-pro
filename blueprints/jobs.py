@@ -692,12 +692,7 @@ def resolve_current_business_logo_path(db):
         return ""
 
     business = db.businesses.find_one({"_id": business_oid}, {"custom_logo": 1})
-    custom_logo = os.path.basename(str((business or {}).get("custom_logo") or "").strip())
-    if not custom_logo:
-        return ""
-
-    logo_path = os.path.join(current_app.root_path, "static", "uploads", "logos", custom_logo)
-    return logo_path if os.path.exists(logo_path) else ""
+    return str((business or {}).get("custom_logo") or "").strip()
 
 
 def resolve_job_status(scheduled_date, scheduled_time, services, parts, labors, materials, equipments, discounts, existing_status="", primary_technician_id=""):
