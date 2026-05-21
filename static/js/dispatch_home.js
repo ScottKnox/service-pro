@@ -298,12 +298,24 @@
     track.appendChild(line);
   }
 
+  function snapMinuteToSlotStart(minuteOfDay) {
+    const slotMinutes = 30;
+    const latestSlotStart = Math.max(state.dayStartMinutes, state.dayEndMinutes - slotMinutes);
+    const numericMinute = Number(minuteOfDay);
+    const clamped = Math.max(
+      state.dayStartMinutes,
+      Math.min(latestSlotStart, Number.isNaN(numericMinute) ? state.dayStartMinutes : numericMinute)
+    );
+    const offset = clamped - state.dayStartMinutes;
+    return state.dayStartMinutes + Math.floor(offset / slotMinutes) * slotMinutes;
+  }
+
   function prefillNewJobFromEmptySlot(techId, minuteOfDay) {
     if (!state.customersUrl) {
       return;
     }
 
-    const rounded = Math.max(state.dayStartMinutes, Math.min(state.dayEndMinutes, Math.round(minuteOfDay / 15) * 15));
+    const rounded = snapMinuteToSlotStart(minuteOfDay);
     const hh = String(Math.floor(rounded / 60)).padStart(2, "0");
     const mm = String(rounded % 60).padStart(2, "0");
     const target = new URL(state.customersUrl, window.location.origin);
@@ -314,7 +326,7 @@
   }
 
   function minutesToTimeString(minutesOfDay) {
-    const rounded = Math.max(state.dayStartMinutes, Math.min(state.dayEndMinutes, Math.round(minutesOfDay / 15) * 15));
+    const rounded = snapMinuteToSlotStart(minutesOfDay);
     const hh = String(Math.floor(rounded / 60)).padStart(2, "0");
     const mm = String(rounded % 60).padStart(2, "0");
     return `${hh}:${mm}`;
@@ -634,8 +646,9 @@
         if (minuteOfDay === null) {
           return;
         }
-        showTrackHoverSlot(track, minuteOfDay);
-        openQuickAssignModal(tech.id, minuteOfDay);
+        const snappedMinute = slotStartFromMinute(minuteOfDay);
+        showTrackHoverSlot(track, snappedMinute);
+        openQuickAssignModal(tech.id, snappedMinute);
       });
 
       track.addEventListener("mousemove", (event) => {
