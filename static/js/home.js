@@ -106,6 +106,11 @@ window.homePageFilter = {
       return true;
     });
 
+    const jobsCount = document.getElementById("home-jobs-count");
+    if (jobsCount) {
+      jobsCount.textContent = String(visibleJobs.length);
+    }
+
     this.currentPage = 1;
     this.updatePaginationLinks(visibleJobs.length);
     this.displayPageContent();
@@ -308,30 +313,30 @@ function syncHomeActionFormsSelectedDate() {
   });
 }
 
+function syncHomeJobsColumnMinHeight() {
+  const jobsColumn = document.querySelector(".home-jobs-column");
+  const calendar = document.getElementById("home-calendar");
+  if (!jobsColumn || !calendar) {
+    return;
+  }
+
+  if (window.matchMedia("(max-width: 900px)").matches) {
+    jobsColumn.style.minHeight = "";
+    return;
+  }
+
+  jobsColumn.style.minHeight = `${calendar.offsetHeight}px`;
+}
+
 function formatHomeJobTimes() {
   const timeElements = document.querySelectorAll('.home-job-time-display');
 
   timeElements.forEach((element) => {
     const rawTime = (element.dataset.jobTime || '').trim();
-    const rawDate = (element.dataset.jobDate || '').trim();
 
     if (!rawTime) {
       element.textContent = 'N/A';
       return;
-    }
-
-    const normalizedTime = /:\d{2}:\d{2}$/.test(rawTime) ? rawTime : `${rawTime}:00`;
-
-    if (rawDate) {
-      const utcDate = new Date(`${rawDate}T${normalizedTime}Z`);
-      if (!Number.isNaN(utcDate.getTime())) {
-        element.textContent = utcDate.toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
-        });
-        return;
-      }
     }
 
     const timeMatch = rawTime.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
@@ -511,6 +516,8 @@ function formatHomeJobTimes() {
 
       daysContainer.appendChild(button);
     }
+
+    syncHomeJobsColumnMinHeight();
   }
 
   prevButton.addEventListener("click", () => {
@@ -532,3 +539,5 @@ function formatHomeJobTimes() {
 })();
 
 syncHomeActionFormsSelectedDate();
+syncHomeJobsColumnMinHeight();
+window.addEventListener("resize", syncHomeJobsColumnMinHeight);

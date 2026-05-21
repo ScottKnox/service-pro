@@ -15,9 +15,16 @@
 	</div>
 	{% else %}
 	<div id="main-container">
+		<div class="home-view-toggle-row" aria-label="Home view">
+			<a href="{{ url_for('home', home_view='my_day') }}" class="home-view-toggle-button {% if home_view_mode == 'my_day' %}is-active{% endif %}">My Day</a>
+			<a href="{{ url_for('home', home_view='dispatch') }}" class="home-view-toggle-button {% if home_view_mode == 'dispatch' %}is-active{% endif %}">Dispatch</a>
+		</div>
 		<div class="home-scheduling-row">
 			<div class="home-jobs-column">
-				<h2>Today's Jobs</h2>
+				<div class="dispatch-panel-header home-jobs-panel-header">
+					<h2>Today's Jobs</h2>
+					<span id="home-jobs-count" class="dispatch-pending-count">{{ jobs|length }}</span>
+				</div>
 				<div id="home-jobs-asignee">
 					<span>Assigned to:</span>
 					<div id="home-jobs-assignee-options">
@@ -160,7 +167,6 @@
                 
 			</div>
 			<div class="home-schedule-column">
-				<h2>Schedule</h2>
 				<div id="home-calendar">
 					<div id="home-calendar-header">
 						<button id="home-calendar-prev" type="button" aria-label="Previous month">&lt;</button>

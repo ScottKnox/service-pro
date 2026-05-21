@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy | Klovent{% endblock %}
+
+{% block content %}
+  <div id="main-container">
+    <div id="create-job-panel">
+      <h1>Privacy Policy</h1>
+
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li aria-current="page">Privacy Policy</li>
+        </ol>
+      </nav>
+
+      <section class="policy-page-content" aria-label="Privacy policy content">
+        <p>Klovent collects information needed to provide HVAC service, schedule work, deliver invoices, send service updates, and support our customers and employees. This may include names, phone numbers, email addresses, service addresses, job details, invoice details, payment status, and message delivery records.</p>
+
+        <h2>How We Use Information</h2>
+        <p>We use this information to create accounts, schedule and complete service work, send invoices and reminders, communicate about appointments or service updates, process payments, and provide customer support.</p>
+
+        <h2>SMS and Text Message Data</h2>
+        <p>We use phone numbers only to send service-related text messages such as appointment updates, invoice reminders, and support notifications. We do not use SMS opt-in data or text messaging consent information for marketing purposes.</p>
+
+        <h2>Sharing</h2>
+        <p>No mobile information will be shared with third parties or affiliates for marketing or promotional purposes. We do not sell or rent customer mobile information. We may share information only with service providers that help us operate the platform, such as payment processing, hosting, or messaging providers, and only as needed to provide the service.</p>
+
+        <h2>Data Retention</h2>
+        <p>We retain personal information for as long as needed to provide our services, maintain business records, comply with legal obligations, resolve disputes, and enforce our agreements.</p>
+
+        <h2>Your Choices</h2>
+        <p>You may opt out of text messages at any time by replying <strong>STOP</strong>. You can request help with messages by replying <strong>HELP</strong> or by contacting us using the information below.</p>
+
+        <h2>Contact Us</h2>
+        <p>For questions about this Privacy Policy, contact Klovent at 417digital@gmail.com.</p>
+      </section>
+    </div>
+  </div>
+{% endblock %}

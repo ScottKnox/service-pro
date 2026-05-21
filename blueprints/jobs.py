@@ -1074,6 +1074,138 @@ def _is_authenticated_employee():
     return bool(employee_id and ObjectId.is_valid(employee_id))
 
 
+@bp.route("/jobs/<jobId>/dispatch-assign", methods=["POST"])
+def dispatch_assign_job(jobId):
+    db = ensure_connection_or_500()
+    if not _is_authenticated_employee():
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return jsonify({"success": False, "error": "Job not found"}), 404
+
+    business_id = resolve_current_business_id(db)
+    if business_id and str(job.get("business_id") or "").strip() != str(business_id):
+        return jsonify({"success": False, "error": "Forbidden"}), 403
+
+    payload = request.get_json(silent=True) or request.form
+    primary_technician_raw = str((payload or {}).get("primary_technician_id") or "").strip()
+    scheduled_date_iso = str((payload or {}).get("scheduled_date") or "").strip()
+    scheduled_time = str((payload or {}).get("scheduled_time") or "").strip()
+
+    if not primary_technician_raw or not scheduled_date_iso or not scheduled_time:
+        return jsonify({"success": False, "error": "Primary technician, date, and time are required"}), 400
+
+    try:
+        scheduled_date = datetime.strptime(scheduled_date_iso, "%Y-%m-%d").strftime("%m/%d/%Y")
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid scheduled date format"}), 400
+
+    try:
+        normalized_time = datetime.strptime(scheduled_time, "%H:%M")
+        scheduled_time = normalized_time.strftime("%H:%M")
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid scheduled time format"}), 400
+
+    technician_payload = _build_job_technician_payload(
+        db,
+        primary_technician_raw,
+        list(job.get("additional_technician_ids") or []),
+    )
+    if not technician_payload.get("primary_technician_id"):
+        return jsonify({"success": False, "error": "Selected technician is not active"}), 400
+
+    serialized_job = serialize_doc(job)
+    status_value = resolve_job_status(
+        scheduled_date,
+        scheduled_time,
+        serialized_job.get("services") or [],
+        serialized_job.get("parts") or [],
+        serialized_job.get("labors") or [],
+        serialized_job.get("materials") or [],
+        serialized_job.get("equipments") or [],
+        serialized_job.get("discounts") or [],
+        existing_status=str(serialized_job.get("status") or "").strip(),
+        primary_technician_id=technician_payload.get("primary_technician_id") or "",
+    )
+
+    now_utc = datetime.now(UTC)
+    db.jobs.update_one(
+        {"_id": ObjectId(jobId)},
+        {
+            "$set": {
+                "primary_technician_id": technician_payload.get("primary_technician_id") or None,
+                "additional_technician_ids": technician_payload.get("additional_technician_ids") or [],
+                "additional_technician_names": technician_payload.get("additional_technician_names") or [],
+                "assigned_employee": technician_payload.get("assigned_employee") or "",
+                "scheduled_date": scheduled_date,
+                "scheduled_time": scheduled_time,
+                "dateScheduled": now_utc.strftime("%m/%d/%Y"),
+                "status": status_value,
+                "updated_at": now_utc,
+            }
+        },
+    )
+
+    updated_job = serialize_doc(db.jobs.find_one({"_id": ObjectId(jobId)}) or {})
+    services = list(updated_job.get("services") or [])
+    primary_service_name = ""
+    primary_service_category = ""
+    all_service_names = []
+    for service in services:
+        if not isinstance(service, dict):
+            continue
+        label = ""
+        for field_name in ("type", "service_name", "name", "service_code", "code", "description"):
+            candidate = str(service.get(field_name) or "").strip()
+            if candidate:
+                label = candidate
+                break
+        if label:
+            all_service_names.append(label)
+        if not primary_service_name and label:
+            primary_service_name = label
+            primary_service_category = str(service.get("category") or service.get("service_category") or "").strip()
+
+    try:
+        start_minutes = int(scheduled_time.split(":", 1)[0]) * 60 + int(scheduled_time.split(":", 1)[1])
+    except (ValueError, IndexError):
+        start_minutes = 0
+
+    return jsonify(
+        {
+            "success": True,
+            "job": {
+                "id": str(updated_job.get("_id") or "").strip(),
+                "customer_name": str(updated_job.get("customer_name") or "Unknown Customer").strip() or "Unknown Customer",
+                "primary_service_name": primary_service_name,
+                "primary_service_category": primary_service_category,
+                "status": str(updated_job.get("status") or "Scheduled").strip() or "Scheduled",
+                "address": ", ".join(
+                    [
+                        part
+                        for part in [
+                            str(updated_job.get("address_line_1") or "").strip(),
+                            str(updated_job.get("city") or "").strip(),
+                            str(updated_job.get("state") or "").strip(),
+                            str(updated_job.get("zip_code") or "").strip(),
+                        ]
+                        if part
+                    ]
+                ),
+                "scheduled_date": scheduled_date_iso,
+                "scheduled_time": scheduled_time,
+                "start_minutes": start_minutes,
+                "duration_minutes": 45,
+                "primary_technician_id": str(updated_job.get("primary_technician_id") or "").strip(),
+                "assigned_employee": str(updated_job.get("assigned_employee") or "").strip(),
+                "view_url": url_for("jobs.view_job", jobId=str(updated_job.get("_id") or "").strip()),
+                "all_service_names": all_service_names,
+            },
+        }
+    )
+
+
 def _coerce_business_object_id(value):
     if isinstance(value, ObjectId):
         return value

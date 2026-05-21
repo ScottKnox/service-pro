@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Dispatch | Klovent{% endblock %}
+
+{% block content %}
+  {% if not is_logged_in %}
+  <div id="main-container">
+    <div class="view-customer-detail-container" style="max-width: 720px; margin: 2rem auto; text-align: center;">
+      <h1>Welcome to Klovent</h1>
+      <p>Log in to access your jobs, customers, schedules, and invoices.</p>
+      <div id="view-customer-actions-row" style="justify-content: center; margin-top: 1rem;">
+        <a href="{{ url_for('auth.login') }}">Login</a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div id="main-container" class="dispatch-main-container">
+    <div class="home-view-toggle-row" aria-label="Home view">
+      <a href="{{ url_for('home', home_view='my_day') }}" class="home-view-toggle-button {% if home_view_mode == 'my_day' %}is-active{% endif %}">My Day</a>
+      <a href="{{ url_for('home', home_view='dispatch') }}" class="home-view-toggle-button {% if home_view_mode == 'dispatch' %}is-active{% endif %}">Dispatch</a>
+    </div>
+
+    <div class="dispatch-top-row">
+      <section class="dispatch-panel dispatch-pending-panel" aria-label="Pending jobs queue">
+        <div class="dispatch-panel-header">
+          <h2>Unassigned Jobs</h2>
+          <span class="dispatch-pending-count" id="dispatch-pending-count">{{ dispatch_pending_jobs|length }}</span>
+        </div>
+        <div id="dispatch-pending-list"></div>
+        <p id="dispatch-pending-empty" class="dispatch-empty-state" {% if dispatch_pending_jobs %}hidden{% endif %}>All jobs are assigned to technicians.</p>
+      </section>
+
+      <section class="dispatch-panel dispatch-calendar-panel" aria-label="Dispatch calendar">
+        <div id="dispatch-calendar" class="dispatch-calendar" data-selected-date="{{ dispatch_selected_date }}">
+          <div id="dispatch-calendar-header">
+            <button id="dispatch-calendar-prev" type="button" aria-label="Previous month">&lt;</button>
+            <h3 id="dispatch-calendar-month-label">Month Year</h3>
+            <button id="dispatch-calendar-next" type="button" aria-label="Next month">&gt;</button>
+          </div>
+          <div id="dispatch-calendar-weekdays">
+            <div>Sun</div>
+            <div>Mon</div>
+            <div>Tue</div>
+            <div>Wed</div>
+            <div>Thu</div>
+            <div>Fri</div>
+            <div>Sat</div>
+          </div>
+          <div id="dispatch-calendar-days" aria-label="Calendar days"></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="dispatch-schedule-row" aria-label="Day schedule">
+      <div class="dispatch-panel-header dispatch-schedule-header-row">
+        <h2 id="dispatch-schedule-title">Day Schedule</h2>
+        <div class="dispatch-mobile-tech-picker">
+          <label for="dispatch-mobile-tech-select">Technician</label>
+          <select id="dispatch-mobile-tech-select"></select>
+        </div>
+      </div>
+
+      <div class="dispatch-schedule-grid" id="dispatch-schedule-grid">
+        <div class="dispatch-time-axis" id="dispatch-time-axis"></div>
+        <div class="dispatch-tech-rows" id="dispatch-tech-rows"></div>
+      </div>
+    </section>
+
+    <div id="home-activity-row">
+      <div class="home-activity-section">
+        <h2>Activity Center</h2>
+        <div id="home-activity-content">
+          <div id="home-activity-feed-column">
+            <div id="home-activity-feed-list"></div>
+            <p id="home-activity-empty">No activity yet today for selected employees.</p>
+          </div>
+          <div id="home-activity-map-column">
+            <div id="home-activity-map" aria-label="Employee activity map"></div>
+            <p id="home-activity-map-empty">Map is unavailable until a Google Maps API key is configured.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="dispatch-assignment-modal" class="dispatch-modal" hidden>
+      <div class="dispatch-modal-backdrop" data-dispatch-modal-close></div>
+      <div class="dispatch-modal-content" role="dialog" aria-modal="true" aria-label="Assign job">
+        <div class="dispatch-modal-header">
+          <h3>Assign Job</h3>
+          <button type="button" class="dispatch-modal-close" data-dispatch-modal-close aria-label="Close">&times;</button>
+        </div>
+
+        <div class="dispatch-modal-body">
+          <p class="dispatch-modal-customer" id="dispatch-modal-customer">-</p>
+          <p class="dispatch-modal-address" id="dispatch-modal-address">-</p>
+          <p class="dispatch-modal-services" id="dispatch-modal-services">-</p>
+
+          <div class="dispatch-modal-field">
+            <label for="dispatch-primary-tech">Primary Technician</label>
+            <select id="dispatch-primary-tech">
+              <option value="">Select technician</option>
+              {% for tech in dispatch_technicians %}
+                <option value="{{ tech.id }}">{{ tech.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="dispatch-modal-field-row">
+            <div class="dispatch-modal-field">
+              <label for="dispatch-scheduled-date">Date</label>
+              <input id="dispatch-scheduled-date" type="date" />
+            </div>
+            <div class="dispatch-modal-field">
+              <label for="dispatch-scheduled-time">Time</label>
+              <input id="dispatch-scheduled-time" type="time" />
+            </div>
+          </div>
+
+          <div class="dispatch-modal-actions">
+            <a id="dispatch-modal-view-job" href="#">Open Job</a>
+            <button type="button" id="dispatch-modal-save">Save</button>
+          </div>
+          <p id="dispatch-modal-error" class="dispatch-modal-error" hidden></p>
+        </div>
+      </div>
+    </div>
+
+    <div id="dispatch-quick-assign-modal" class="dispatch-modal" hidden>
+      <div class="dispatch-modal-backdrop" data-dispatch-quick-close></div>
+      <div class="dispatch-modal-content" role="dialog" aria-modal="true" aria-label="Quick assign pending job">
+        <div class="dispatch-modal-header">
+          <h3>Quick Assign Pending Job</h3>
+          <button type="button" class="dispatch-modal-close" data-dispatch-quick-close aria-label="Close">&times;</button>
+        </div>
+
+        <div class="dispatch-modal-body">
+          <p class="dispatch-modal-services">Assign a pending job to this selected time slot.</p>
+
+          <div class="dispatch-modal-field">
+            <label for="dispatch-quick-search">Search Pending Jobs</label>
+            <input id="dispatch-quick-search" type="text" placeholder="Search customer, service, or address" />
+          </div>
+
+          <div class="dispatch-modal-field">
+            <label for="dispatch-quick-job-id">Pending Job</label>
+            <select id="dispatch-quick-job-id"></select>
+            <p id="dispatch-quick-empty" class="dispatch-empty-state" hidden>No pending jobs available.</p>
+          </div>
+
+          <div class="dispatch-modal-field">
+            <label for="dispatch-quick-primary-tech">Primary Technician</label>
+            <select id="dispatch-quick-primary-tech">
+              <option value="">Select technician</option>
+              {% for tech in dispatch_technicians %}
+                <option value="{{ tech.id }}">{{ tech.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="dispatch-modal-field-row">
+            <div class="dispatch-modal-field">
+              <label for="dispatch-quick-date">Date</label>
+              <input id="dispatch-quick-date" type="date" />
+            </div>
+            <div class="dispatch-modal-field">
+              <label for="dispatch-quick-time">Time</label>
+              <input id="dispatch-quick-time" type="time" />
+            </div>
+          </div>
+
+          <div class="dispatch-modal-actions">
+            <button type="button" id="dispatch-quick-create-new">Create New Job</button>
+            <button type="button" id="dispatch-quick-save">Assign Pending Job</button>
+          </div>
+          <p id="dispatch-quick-error" class="dispatch-modal-error" hidden></p>
+        </div>
+      </div>
+    </div>
+
+    <script id="dispatch-home-data" type="application/json">{{ {
+      "selectedDate": dispatch_selected_date,
+      "dayStartHour": dispatch_day_start_hour,
+      "dayEndHour": dispatch_day_end_hour,
+      "dayStartMinutes": dispatch_day_start_minutes,
+      "dayEndMinutes": dispatch_day_end_minutes,
+      "defaultVisibleStartMinutes": dispatch_default_visible_start_minutes,
+      "pendingJobs": dispatch_pending_jobs,
+      "scheduledJobs": dispatch_scheduled_jobs,
+      "techRows": dispatch_tech_rows,
+      "customersUrl": dispatch_customers_url
+    }|tojson }}</script>
+    <script id="home-activity-events-data" type="application/json">{{ activity_events|tojson }}</script>
+    <script id="home-activity-config" type="application/json">{{ {"business_center_address": business_center_address}|tojson }}</script>
+  </div>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  {% if is_logged_in %}
+  <script src="{{ url_for('static', filename='js/dispatch_home.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/home_activity_feed.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/home_activity_map.js') }}" defer></script>
+  {% if google_maps_api_key %}
+  <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key|urlencode }}&libraries=places&callback=initHomeActivityMap" defer></script>
+  {% endif %}
+  {% endif %}
+{% endblock %}

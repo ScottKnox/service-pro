@@ -67,6 +67,8 @@ def require_login():
         "static",
         "home",
         "error_page",
+        "privacy_policy",
+        "terms_and_conditions",
         "download_invoice",
         "jobs.view_estimate",
         "jobs.view_invoice",
@@ -129,7 +131,26 @@ def home():
 
     current_employee_name = (session.get("employee_name") or "").strip()
     current_employee_position = (session.get("employee_position") or "").strip().lower()
+    if not current_employee_position:
+        _session_employee_id = session.get("employee_id")
+        if _session_employee_id and ObjectId.is_valid(_session_employee_id):
+            _position_doc = db.employees.find_one({"_id": ObjectId(_session_employee_id)}, {"position": 1})
+            current_employee_position = str((_position_doc or {}).get("position") or "").strip().lower()
+            if current_employee_position:
+                session["employee_position"] = current_employee_position
     normalized_current_employee_name = " ".join(current_employee_name.lower().split())
+
+    requested_home_view = str(request.args.get("home_view") or "").strip().lower()
+    if requested_home_view in {"my_day", "dispatch"}:
+        session["home_view_mode"] = requested_home_view
+
+    home_view_mode = str(session.get("home_view_mode") or "").strip().lower()
+    if home_view_mode not in {"my_day", "dispatch"}:
+        if current_employee_position in {"owner", "clerk"}:
+            home_view_mode = "dispatch"
+        else:
+            home_view_mode = "my_day"
+        session["home_view_mode"] = home_view_mode
 
     _employee_id = session.get("employee_id")
     _business_oid = None
@@ -228,6 +249,118 @@ def home():
                     continue
 
         return _parse_event_datetime(raw_date)
+
+    def _job_date_to_iso(date_value):
+        raw_date = str(date_value or "").strip()
+        if not raw_date:
+            return ""
+
+        for date_format in ("%m/%d/%Y", "%Y-%m-%d", "%m-%d-%Y"):
+            try:
+                return datetime.strptime(raw_date, date_format).strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+        return ""
+
+    def _iso_date_to_mmddyyyy(date_value):
+        raw_date = str(date_value or "").strip()
+        if not raw_date:
+            return ""
+        try:
+            return datetime.strptime(raw_date, "%Y-%m-%d").strftime("%m/%d/%Y")
+        except ValueError:
+            return ""
+
+    def _parse_time_to_minutes(time_value):
+        raw_time = str(time_value or "").strip()
+        if not raw_time:
+            return None
+
+        for time_format in ("%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M%p"):
+            try:
+                parsed = datetime.strptime(raw_time.upper(), time_format)
+                return parsed.hour * 60 + parsed.minute
+            except ValueError:
+                continue
+        return None
+
+    def _resolve_primary_service(job_doc):
+        services = list((job_doc or {}).get("services") or [])
+        if not services:
+            return "", ""
+
+        first_service = services[0] if isinstance(services[0], dict) else {}
+        service_name = ""
+        for field_name in ("type", "service_name", "name", "service_code", "code", "description"):
+            candidate = str(first_service.get(field_name) or "").strip()
+            if candidate:
+                service_name = candidate
+                break
+
+        service_category = ""
+        for field_name in ("category", "service_category"):
+            candidate = str(first_service.get(field_name) or "").strip()
+            if candidate:
+                service_category = candidate
+                break
+
+        return service_name, service_category
+
+    def _resolve_duration_minutes(job_doc):
+        raw_job = job_doc or {}
+
+        def _coerce_positive_number(value):
+            try:
+                parsed = float(str(value or "").strip())
+            except (TypeError, ValueError):
+                return 0.0
+            return parsed if parsed > 0 else 0.0
+
+        for field_name in ("estimated_duration_minutes", "duration_minutes"):
+            value = _coerce_positive_number(raw_job.get(field_name))
+            if value:
+                return max(15, int(round(value)))
+
+        for field_name in ("estimated_duration", "estimated_hours", "duration_hours"):
+            value = _coerce_positive_number(raw_job.get(field_name))
+            if value:
+                # Values in these fields are treated as hours.
+                return max(15, int(round(value * 60)))
+
+        first_service = (list(raw_job.get("services") or []) or [{}])[0]
+        if isinstance(first_service, dict):
+            for field_name in ("estimated_duration_minutes", "duration_minutes"):
+                value = _coerce_positive_number(first_service.get(field_name))
+                if value:
+                    return max(15, int(round(value)))
+            for field_name in ("estimated_hours", "service_hours", "duration_hours"):
+                value = _coerce_positive_number(first_service.get(field_name))
+                if value:
+                    return max(15, int(round(value * 60)))
+
+        return 45
+
+    def _resolve_job_created_datetime(job_doc):
+        return (
+            _parse_event_datetime((job_doc or {}).get("created_at"))
+            or _parse_event_datetime((job_doc or {}).get("date_created"))
+            or _parse_event_datetime((job_doc or {}).get("updated_at"))
+            or datetime.now()
+        )
+
+    def _employee_belongs_to_business(employee_doc):
+        if not _business_oid:
+            return True
+        if not isinstance(employee_doc, dict):
+            return False
+
+        for field_name in ("business", "business_id", "company_id"):
+            value = employee_doc.get(field_name)
+            if not value:
+                continue
+            if str(value) == str(_business_oid):
+                return True
+        return False
 
     def _derive_activity_event(job_doc):
         status_key = str((job_doc or {}).get("status") or "").strip().lower()
@@ -395,6 +528,192 @@ def home():
                     if part
                 ]
             )
+
+    dispatch_selected_date = str(request.args.get("dispatch_date") or "").strip()
+    if not dispatch_selected_date:
+        dispatch_selected_date = datetime.now().strftime("%Y-%m-%d")
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", dispatch_selected_date):
+        dispatch_selected_date = datetime.now().strftime("%Y-%m-%d")
+
+    dispatch_day_start_hour = 7
+    dispatch_day_end_hour = 21
+    dispatch_default_visible_start_hour = 7
+    dispatch_day_start_minutes = dispatch_day_start_hour * 60
+    dispatch_day_end_minutes = dispatch_day_end_hour * 60
+    dispatch_default_visible_start_minutes = dispatch_default_visible_start_hour * 60
+
+    employees_by_id = {}
+    employee_name_to_id = {}
+    dispatch_technicians = []
+    for employee in employees:
+        if not _employee_belongs_to_business(employee):
+            continue
+
+        employee_id = str(employee.get("_id") or "").strip()
+        if not employee_id:
+            continue
+
+        full_name = f"{str(employee.get('first_name') or '').strip()} {str(employee.get('last_name') or '').strip()}".strip()
+        if not full_name:
+            continue
+
+        employees_by_id[employee_id] = {
+            "id": employee_id,
+            "name": full_name,
+            "status": str(employee.get("status") or "active").strip().lower(),
+        }
+        employee_name_to_id[" ".join(full_name.lower().split())] = employee_id
+
+    for employee_info in employees_by_id.values():
+        if employee_info["status"] == "active":
+            dispatch_technicians.append({"id": employee_info["id"], "name": employee_info["name"]})
+    dispatch_technicians.sort(key=lambda row: row["name"].lower())
+
+    pending_jobs_dispatch = []
+    scheduled_jobs_dispatch = []
+
+    for job in sorted(jobs_list, key=lambda row: (_resolve_job_created_datetime(row), str(row.get("_id") or ""))):
+        job_id = str(job.get("_id") or "").strip()
+        if not job_id:
+            continue
+
+        primary_service_name, primary_service_category = _resolve_primary_service(job)
+        job_address = _compose_address(job)
+        created_dt = _resolve_job_created_datetime(job)
+        pending_days = max(0, (datetime.now() - created_dt).days)
+
+        primary_technician_id = str(job.get("primary_technician_id") or "").strip()
+        scheduled_date_iso = _job_date_to_iso(job.get("scheduled_date"))
+        scheduled_time_raw = str(job.get("scheduled_time") or "").strip()
+
+        missing_primary_technician = not primary_technician_id
+        missing_scheduled_date = not scheduled_date_iso
+        if missing_primary_technician or missing_scheduled_date:
+            additional_services = []
+            for service in list(job.get("services") or [])[1:]:
+                if not isinstance(service, dict):
+                    continue
+                label = ""
+                for field_name in ("type", "service_name", "name", "service_code", "code", "description"):
+                    candidate = str(service.get(field_name) or "").strip()
+                    if candidate:
+                        label = candidate
+                        break
+                if label:
+                    additional_services.append(label)
+
+            pending_jobs_dispatch.append(
+                {
+                    "id": job_id,
+                    "customer_name": str(job.get("customer_name") or "Unknown Customer").strip() or "Unknown Customer",
+                    "primary_service_name": primary_service_name,
+                    "primary_service_category": primary_service_category,
+                    "pending_days": pending_days,
+                    "address": job_address,
+                    "status": str(job.get("status") or "").strip(),
+                    "scheduled_date": scheduled_date_iso,
+                    "scheduled_time": scheduled_time_raw,
+                    "primary_technician_id": primary_technician_id,
+                    "assigned_employee": str(job.get("assigned_employee") or "").strip(),
+                    "additional_services": additional_services,
+                    "view_url": url_for("jobs.view_job", jobId=job_id),
+                }
+            )
+
+        if not primary_technician_id or not scheduled_date_iso:
+            continue
+
+        schedule_minutes = _parse_time_to_minutes(scheduled_time_raw)
+        if schedule_minutes is None:
+            continue
+
+        assigned_name = str(job.get("assigned_employee") or "").strip()
+        if not primary_technician_id and assigned_name:
+            primary_technician_id = employee_name_to_id.get(" ".join(assigned_name.lower().split()), "")
+
+        scheduled_jobs_dispatch.append(
+            {
+                "id": job_id,
+                "customer_name": str(job.get("customer_name") or "Unknown Customer").strip() or "Unknown Customer",
+                "primary_service_name": primary_service_name,
+                "primary_service_category": primary_service_category,
+                "status": str(job.get("status") or "Pending").strip() or "Pending",
+                "address": job_address,
+                "date_iso": scheduled_date_iso,
+                "scheduled_time": scheduled_time_raw,
+                "start_minutes": schedule_minutes,
+                "duration_minutes": _resolve_duration_minutes(job),
+                "primary_technician_id": primary_technician_id,
+                "assigned_employee": assigned_name,
+                "view_url": url_for("jobs.view_job", jobId=job_id),
+                "all_service_names": [
+                    str(service.get("type") or service.get("service_name") or service.get("name") or "").strip()
+                    for service in list(job.get("services") or [])
+                    if isinstance(service, dict)
+                ],
+            }
+        )
+
+    pending_jobs_dispatch.sort(key=lambda row: (row["pending_days"], row["customer_name"].lower()))
+
+    dispatch_tech_rows = {}
+    for technician in dispatch_technicians:
+        dispatch_tech_rows[technician["id"]] = {
+            "id": technician["id"],
+            "name": technician["name"],
+            "is_active": True,
+        }
+
+    for job in scheduled_jobs_dispatch:
+        technician_id = str(job.get("primary_technician_id") or "").strip()
+        if not technician_id:
+            assigned_name = str(job.get("assigned_employee") or "").strip()
+            if assigned_name:
+                technician_id = employee_name_to_id.get(" ".join(assigned_name.lower().split()), "")
+                job["primary_technician_id"] = technician_id
+        if not technician_id:
+            continue
+
+        if technician_id in dispatch_tech_rows:
+            continue
+
+        fallback_name = ""
+        if technician_id in employees_by_id:
+            fallback_name = employees_by_id[technician_id]["name"]
+        if not fallback_name:
+            fallback_name = str(job.get("assigned_employee") or "").strip() or "Former Technician"
+
+        dispatch_tech_rows[technician_id] = {
+            "id": technician_id,
+            "name": fallback_name,
+            "is_active": False,
+        }
+
+    dispatch_tech_rows_list = sorted(
+        dispatch_tech_rows.values(),
+        key=lambda row: (0 if row.get("is_active") else 1, str(row.get("name") or "").lower()),
+    )
+
+    if home_view_mode == "dispatch":
+        return render_template(
+            "dispatch_home.html",
+            is_logged_in=True,
+            home_view_mode=home_view_mode,
+            dispatch_selected_date=dispatch_selected_date,
+            dispatch_day_start_hour=dispatch_day_start_hour,
+            dispatch_day_end_hour=dispatch_day_end_hour,
+            dispatch_day_start_minutes=dispatch_day_start_minutes,
+            dispatch_day_end_minutes=dispatch_day_end_minutes,
+            dispatch_default_visible_start_minutes=dispatch_default_visible_start_minutes,
+            dispatch_pending_jobs=pending_jobs_dispatch,
+            dispatch_scheduled_jobs=scheduled_jobs_dispatch,
+            dispatch_technicians=dispatch_technicians,
+            dispatch_tech_rows=dispatch_tech_rows_list,
+            dispatch_customers_url=url_for("customers.customers"),
+            activity_events=activity_events,
+            business_center_address=business_center_address,
+            google_maps_api_key=(os.getenv("GOOGLE_MAPS_API_KEY") or "").strip(),
+        )
 
     pending_page_raw = request.args.get("pending_page", "1")
     try:
@@ -738,6 +1057,7 @@ def home():
     return render_template(
         "index.html",
         is_logged_in=True,
+        home_view_mode=home_view_mode,
         jobs=jobs_list,
         employee_filters=employee_filters,
         pending_jobs=pending_jobs,
@@ -774,9 +1094,19 @@ def error_page():
     return render_template("error.html", error_message=error_message)
 
 
+@app.route("/privacy-policy")
+def privacy_policy():
+    return render_template("legal/privacy_policy.html")
+
+
+@app.route("/terms-and-conditions")
+def terms_and_conditions():
+    return render_template("legal/terms_and_conditions.html")
+
+
 @app.route("/invoices/<filename>")
 def download_invoice(filename):
-    """Serve invoice and estimate PDFs from the invoices directory."""
+    """Serve invoice, estimate, and diagnostic report PDFs from the invoices directory."""
     invoices_dir = os.path.join(os.path.dirname(__file__), "invoices")
     filepath = os.path.join(invoices_dir, filename)
 
@@ -809,7 +1139,30 @@ def download_invoice(filename):
             {"latest_file_path": 1, "file_path": 1, "business_id": 1},
         )
         if not matching_estimate:
-            return "Invoice not found", 404
+            # Try to find in HVAC diagnostic reports.
+            matching_report = db.hvacDiagnostics.find_one(
+                {
+                    "reports.file_path": {
+                        "$regex": re.escape(f"/invoices/{filename}") + r"$",
+                    }
+                },
+                {"business_id": 1, "customer_id": 1, "hvac_system_id": 1, "reports": 1},
+            )
+            if not matching_report:
+                return "Invoice not found", 404
+
+            employee_id = session.get("employee_id")
+            if not employee_id or not ObjectId.is_valid(employee_id):
+                return redirect(url_for("auth.login"))
+
+            employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"business": 1}) or {}
+            employee_business_id = str(employee.get("business") or "").strip()
+            report_business_id = str(matching_report.get("business_id") or "").strip()
+
+            if employee_business_id and report_business_id and employee_business_id != report_business_id:
+                return "Forbidden", 403
+
+            return send_file(filepath, mimetype="application/pdf", as_attachment=False)
     
     if matching_job:
         # Authorization for invoice (from jobs collection)

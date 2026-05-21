@@ -1,6 +1,7 @@
 <header id="header">
   <div id="header-container">
-    <h1><a href="{{ url_for('home') }}" class="header-home-link">Klovent</a></h1>
+    {% set _header_home_view = 'dispatch' if session.get('employee_position', '')|lower in ['owner', 'clerk'] else 'my_day' %}
+    <h1><a href="{{ url_for('home', home_view=_header_home_view) }}" class="header-home-link">Klovent</a></h1>
     {% if session.get('employee_id') %}
     <button
       id="mobile-nav-toggle"
@@ -15,7 +16,7 @@
     </button>
     <nav id="header-navigation" aria-label="Main navigation">
       <ul id="header-nav">
-        <li><a href="{{ url_for('home') }}">Home</a></li>
+        <li><a href="{{ url_for('home', home_view=_header_home_view) }}">Home</a></li>
         <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
         <li><a href="{{ url_for('jobs.jobs') }}">Jobs</a></li>
         <li><a href="{{ url_for('jobs.estimates') }}">Estimates</a></li>
