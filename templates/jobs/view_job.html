@@ -289,7 +289,7 @@
               {% if job.services %}
                 {% for service in job.services %}
                   <div class="view-job-detail-item view-job-line-item">
-                    <span><strong>Service Name:</strong> {{ service.name|default(service.type, true)|default(service.service_code, true)|default('N/A', true) }}</span>
+                    <span><strong>Service Name:</strong> {{ service.name|default(service.type, true)|default('N/A', true) }}</span>
                     <span class="view-job-line-divider" aria-hidden="true">•</span>
                     <span><strong>Price:</strong> {{ service.standard_price|default(service.price, true)|default('N/A', true) }}</span>
                     {% if service.estimated_hours or service.duration %}
@@ -311,7 +311,7 @@
               {% if job.parts %}
                 {% for part in job.parts %}
                   <div class="view-job-detail-item view-job-line-item">
-                    <span><strong>Part Name:</strong> {{ part.name|default(part.part_code, true)|default('N/A', true) }}</span>
+                    <span><strong>Part Name:</strong> {{ part.name|default('N/A', true) }}</span>
                     <span class="view-job-line-divider" aria-hidden="true">•</span>
                     <span><strong>Unit Cost:</strong> {{ part.unit_cost|default(part.price, true)|default('N/A', true) }}</span>
                   </div>
@@ -357,13 +357,9 @@
                   <div class="view-job-detail-item view-job-line-item">
                     <span><strong>Material:</strong> {{ material.material_name|default('N/A', true) }}</span>
                     <span class="view-job-line-divider" aria-hidden="true">•</span>
-                    <span><strong>Qty:</strong> {{ material.quantity_used|default('0', true) }}</span>
-                    {% if material.unit_of_measure %}
+                    <span><strong>Qty:</strong> {{ material.quantity_used|default('0', true) }} {{ material.unit_of_measure|default('', true) }}</span>
                     <span class="view-job-line-divider" aria-hidden="true">•</span>
-                    <span><strong>Unit:</strong> {{ material.unit_of_measure }}</span>
-                    {% endif %}
-                    <span class="view-job-line-divider" aria-hidden="true">•</span>
-                    <span><strong>Price:</strong> {{ material.price|default('N/A', true) }}</span>
+                    <span><strong>Unit Price:</strong> {{ material.price|default('N/A', true) }}</span>
                     <span class="view-job-line-divider" aria-hidden="true">•</span>
                     <span><strong>Line Total:</strong> {{ material.line_total|default('N/A', true) }}</span>
                   </div>

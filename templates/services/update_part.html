@@ -21,8 +21,9 @@
         <p class="form-field-error">{{ error }}</p>
       {% endif %}
 
-      <form id="create-part-form" action="{{ url_for('catalog.update_part', partId=partId) }}" method="post">
+      <form id="create-part-form" action="{{ url_for('catalog.update_part', partId=partId) }}" method="post" data-markup-context="part" data-markup-rules='{{ markup_rules|default([], true)|tojson|safe }}'>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" id="sell-price-auto-populated" name="sell_price_auto_populated" value="{{ form_data.sell_price_auto_populated|default('false', true) }}">
         <h2 class="create-job-form-section-header">Part Details</h2>
 
         <div class="add-customer-form-row part-form-row--two">
@@ -32,8 +33,11 @@
           </div>
 
           <div class="add-customer-form-field">
-            <label for="part-code">Part Code</label>
-            <input id="part-code" name="part_code" type="text" placeholder="Enter part code" value="{{ form_data.part_code|default('', true) }}" required />
+            <label for="part-subcategory">Subcategory</label>
+            <select id="part-subcategory" name="subcategory" required>
+              <option value="part" {% if form_data.subcategory == 'part' %}selected{% endif %}>Part</option>
+              <option value="equipment" {% if form_data.subcategory == 'equipment' %}selected{% endif %}>Equipment</option>
+            </select>
           </div>
 
           <div class="add-customer-form-field">
@@ -54,9 +58,10 @@
           </div>
 
           <div class="add-customer-form-field">
-            <label for="part-manufacturer">Manufacturer</label>
-            <input id="part-manufacturer" name="manufacturer" type="text" placeholder="Enter part manufacturer" value="{{ form_data.manufacturer|default('', true) }}" required />
+            <label for="part-sku">SKU</label>
+            <input id="part-sku" name="sku" type="text" placeholder="Supplier or internal SKU" value="{{ form_data.sku|default('', true) }}" />
           </div>
+
         </div>
 
         <div class="add-customer-form-row add-customer-form-row--top-aligned part-form-row--two">
@@ -66,8 +71,29 @@
           </div>
 
           <div class="add-customer-form-field">
-            <label for="unit-cost">Unit Cost</label>
-            <input id="unit-cost" name="unit_cost" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.unit_cost|default('', true) }}" required />
+            <label for="cost-price">Cost Price</label>
+            <input id="cost-price" name="cost_price" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.cost_price|default('', true) }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="sell-price">Sell Price</label>
+            <input id="sell-price" name="sell_price" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.sell_price|default('', true) }}" required />
+            <p id="markup-autofill-message" class="form-field-note" style="margin-top: 0.35rem;"></p>
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="part-manufacturer">Manufacturer</label>
+            <input id="part-manufacturer" name="manufacturer" type="text" placeholder="Enter manufacturer" value="{{ form_data.manufacturer|default('', true) }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="part-model-number">Model Number</label>
+            <input id="part-model-number" name="model_number" type="text" placeholder="Model number (equipment often uses this)" value="{{ form_data.model_number|default('', true) }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="part-warranty-months">Warranty Months</label>
+            <input id="part-warranty-months" name="warranty_months" type="number" step="1" min="0" placeholder="Optional" value="{{ form_data.warranty_months|default('', true) }}" />
           </div>
 
           <div class="add-customer-form-field">
@@ -95,4 +121,5 @@
 
 {% block scripts %}
   <script src="{{ url_for('static', filename='js/category_field_toggle.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/markup_autofill.js') }}"></script>
 {% endblock %}

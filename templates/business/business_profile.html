@@ -38,6 +38,26 @@
         </p>
       {% endif %}
 
+      {% if markup_status_message %}
+        <p class="business-logo-status {{ 'is-success' if markup_status_kind == 'success' else 'is-error' }}" style="margin-top: 0.8rem; margin-bottom: 0.8rem;">
+          {{ markup_status_message }}
+        </p>
+      {% endif %}
+
+      {% if show_markup_recalc_prompt %}
+        <section id="business-markup-recalculate-prompt" style="margin-bottom: 1rem;">
+          <h2 style="margin-bottom: 0.4rem;">Apply New Rules to Existing Auto-Populated Prices?</h2>
+          <p style="margin-bottom: 0.6rem;">Recalculate only parts and materials where sell prices were originally auto-populated. Manual overrides will stay unchanged.</p>
+          <div id="view-customer-actions-row">
+            <form method="POST" action="{{ url_for('business.recalculate_markup_prices') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit">Recalculate Existing Auto-Populated Prices</button>
+            </form>
+            <a href="{{ url_for('business.business_profile', markup_status='kept') }}">Keep Existing Prices As-Is</a>
+          </div>
+        </section>
+      {% endif %}
+
       <section id="view-customer-details" aria-label="Business details">
         <h2>Business Details</h2>
         <div class="view-customer-section-row" id="view-profile-details-columns">
@@ -125,6 +145,29 @@
               </div>
 
               <div class="view-customer-detail-item">
+                <h4>Standard Labor Rate</h4>
+                <p>{% if business.get('labor_rate_standard') is not none %}${{ '%.2f'|format(business.get('labor_rate_standard')|float) }}/hr{% else %}-{% endif %}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Emergency Labor Rate</h4>
+                <p>{% if business.get('labor_rate_emergency') is not none %}${{ '%.2f'|format(business.get('labor_rate_emergency')|float) }}/hr{% else %}-{% endif %}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>Markup Rules</h4>
+                {% if business.get('markup_rules') %}
+                  <p>
+                    {% for rule in business.get('markup_rules', []) %}
+                      ${{ rule.range_min }}{% if rule.range_max %} - ${{ rule.range_max }}{% else %} - no limit{% endif %}: {{ rule.markup_percent }}%{% if not loop.last %}<br />{% endif %}
+                    {% endfor %}
+                  </p>
+                {% else %}
+                  <p>No markup rules configured.</p>
+                {% endif %}
+              </div>
+
+              <div class="view-customer-detail-item">
                 <h4>Quote Email Template</h4>
                 <p>{{ business.get('quote_email_template', '') }}</p>
               </div>
@@ -157,6 +200,11 @@
               <div class="view-customer-detail-item">
                 <h4>Stripe Connect Ready</h4>
                 <p>{{ 'Yes' if stripe_connect_ready else 'No' }}</p>
+              </div>
+
+              <div class="view-customer-detail-item">
+                <h4>QuickBooks Materials Revenue Account ID</h4>
+                <p>{{ business.get('qb_material_account_id', '') or '-' }}</p>
               </div>
             </div>
 

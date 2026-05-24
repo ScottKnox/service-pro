@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Manage Materials | Klovent{% endblock %}
 
@@ -36,17 +36,13 @@
             </details>
 
             <details class="jobs-filter-group" open>
-              <summary>Manufacturer</summary>
+              <summary>Unit Group</summary>
               <div class="jobs-filter-content">
-                {% if material_manufacturers %}
-                  {% for manufacturer in material_manufacturers %}
-                    <label for="material-manufacturer-{{ loop.index }}">
-                      <input id="material-manufacturer-{{ loop.index }}" type="checkbox" name="filter_manufacturer" value="{{ manufacturer }}" /> {{ manufacturer }}
-                    </label>
-                  {% endfor %}
-                {% else %}
-                  <p>No manufacturers available.</p>
-                {% endif %}
+                {% for group in material_uom_group_filters %}
+                  <label for="material-uom-group-{{ loop.index }}">
+                    <input id="material-uom-group-{{ loop.index }}" type="checkbox" name="filter_code" value="{{ group.value }}" /> {{ group.label }}
+                  </label>
+                {% endfor %}
               </div>
             </details>
           </div>
@@ -56,7 +52,7 @@
           <div class="jobs-controls-right-top">
             <h2>All Materials</h2>
             <div class="jobs-controls-right-actions">
-              <a href="{{ url_for('catalog.create_material') }}">Create Materials</a>
+              <a href="{{ url_for('catalog.create_material') }}">Create Material</a>
               <a href="{{ url_for('catalog.export_materials_csv') }}">Export CSV</a>
             </div>
           </div>
@@ -80,31 +76,39 @@
                   {% for material in materials %}
                     <a
                       class="jobs-card"
-                      href="{{ url_for('catalog.view_material', materialId=material._id) }}"
                       data-catalog-card
+                      href="{{ url_for('catalog.view_material', materialId=material._id) }}"
                       data-filter-name="{{ material.material_name }}"
                       data-filter-category="{{ material.category }}"
-                      data-filter-manufacturer="{{ material.manufacturer }}"
+                      data-filter-code="{{ material.unit_group }}"
                     >
                       <div class="jobs-card-row">
                         <span class="jobs-card-label">Material</span>
                         <span class="jobs-card-value">{{ material.material_name }}</span>
                       </div>
                       <div class="jobs-card-row">
-                        <span class="jobs-card-label">Part Number</span>
-                        <span class="jobs-card-value">{{ material.part_number }}</span>
-                      </div>
-                      <div class="jobs-card-row">
                         <span class="jobs-card-label">Category</span>
-                        <span class="jobs-card-value">{{ material.category }}</span>
+                        <span class="jobs-card-value">{{ material.category or '-' }}</span>
                       </div>
                       <div class="jobs-card-row">
-                        <span class="jobs-card-label">Manufacturer</span>
-                        <span class="jobs-card-value">{{ material.manufacturer }}</span>
+                        <span class="jobs-card-label">Unit</span>
+                        <span class="jobs-card-value">{{ material.unit_of_measure or '-' }}{% if material.unit_label %} ({{ material.unit_label }}){% endif %}</span>
                       </div>
                       <div class="jobs-card-row">
-                        <span class="jobs-card-label">Price</span>
-                        <span class="jobs-card-value">{{ material.price_display }}</span>
+                        <span class="jobs-card-label">Cost / Unit</span>
+                        <span class="jobs-card-value">{{ material.cost_price_per_unit_display }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Sell / Unit</span>
+                        <span class="jobs-card-value">{{ material.sell_price_per_unit_display }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Markup</span>
+                        <span class="jobs-card-value">{{ material.markup_percent_display }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Status</span>
+                        <span class="jobs-card-value">{{ 'Active' if material.is_active else 'Inactive' }}</span>
                       </div>
                     </a>
                   {% endfor %}
@@ -126,3 +130,4 @@
 {% block scripts %}
   <script src="{{ url_for('static', filename='js/catalog_filters.js') }}" defer></script>
 {% endblock %}
+

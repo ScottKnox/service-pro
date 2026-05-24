@@ -23,8 +23,8 @@ def build_service_catalog(services):
     """Build a service catalog dictionary from service documents."""
     catalog = {}
     for service in services:
-        service_code = str(service.get("service_code") or "").strip()
-        if not service_code:
+        service_id = str(service.get("_id") or "").strip()
+        if not service_id:
             continue
 
         service_part_entries = []
@@ -54,17 +54,23 @@ def build_service_catalog(services):
                 }
             )
 
-        catalog[service_code] = {
+        labor_hours = service.get("labor_hours")
+        if labor_hours is None:
+            labor_hours = service.get("estimated_hours")
+
+        catalog[service_id] = {
             "name": str(service.get("service_name") or "").strip(),
             "service_type": str(service.get("service_type") or "").strip(),
-            "code": service_code,
             "description": str(service.get("description") or "").strip(),
             "price": normalize_currency(service.get("standard_price", 0)),
             "standard_price": normalize_currency(service.get("standard_price", 0)),
             "emergency": service.get("emergency", False) if isinstance(service.get("emergency", False), bool) else _is_truthy(service.get("emergency", False)),
             "emergency_price": normalize_currency(service.get("emergency_price", 0)),
             "materials_cost": normalize_currency(service.get("materials_cost", 0)),
-            "estimated_hours": _format_hours_value(service.get("estimated_hours", "")),
+            "estimated_hours": _format_hours_value(labor_hours),
+            "labor_hours": _format_hours_value(labor_hours),
+            "labor_rate_override": normalize_currency(service.get("labor_rate_override", "")) if service.get("labor_rate_override") is not None else "",
+            "show_labor_breakdown": _is_truthy(service.get("show_labor_breakdown")),
             "part_ids": [entry["part_id"] for entry in service_part_entries] or [str(pid) for pid in (service.get("part_ids") or []) if pid],
             "material_ids": [entry["material_id"] for entry in service_material_entries] or [str(mid) for mid in (service.get("material_ids") or []) if mid],
             "service_parts": service_part_entries,
@@ -79,13 +85,12 @@ def build_part_catalog(parts):
     """Build a parts catalog dictionary from part documents."""
     catalog = {}
     for part in parts:
-        part_code = str(part.get("part_code") or "").strip()
-        if not part_code:
+        part_id = str(part.get("_id") or "").strip()
+        if not part_id:
             continue
 
-        catalog[part_code] = {
+        catalog[part_id] = {
             "name": str(part.get("part_name") or "").strip(),
-            "code": part_code,
             "description": str(part.get("description") or "").strip(),
             "price": normalize_currency(part.get("unit_cost", 0)),
             "unit_cost": normalize_currency(part.get("unit_cost", 0)),
@@ -124,12 +129,17 @@ def build_material_catalog(materials):
 
         catalog[material_name] = {
             "material_name": material_name,
+            "description": str(material.get("description") or "").strip(),
             "category": str(material.get("category") or "").strip(),
             "part_number": str(material.get("part_number") or "").strip(),
             "manufacturer": str(material.get("manufacturer") or "").strip(),
             "default_quantity_used": _format_hours_value(material.get("default_quantity_used", "")),
+            "minimum_quantity": _format_hours_value(material.get("minimum_quantity", "")),
             "unit_of_measure": str(material.get("unit_of_measure") or "").strip(),
-            "price": normalize_currency(material.get("price", 0)),
+            "unit_label": str(material.get("unit_label") or "").strip(),
+            "cost_price_per_unit": normalize_currency(material.get("cost_price_per_unit", 0)),
+            "sell_price_per_unit": normalize_currency(material.get("sell_price_per_unit", material.get("price", 0))),
+            "price": normalize_currency(material.get("sell_price_per_unit", material.get("price", 0))),
             "purchase_link": str(material.get("purchase_link") or "").strip(),
             "tax_override": parse_tax_override(material.get("tax_override")),
         }
@@ -181,7 +191,7 @@ def build_discount_catalog(discounts):
     return catalog
 
 
-def build_job_services_from_form(service_codes, service_prices, service_durations, service_catalog, service_emergency_calls=None):
+def build_job_services_from_form(service_ids, service_prices, service_durations, service_catalog, default_labor_rate=None, service_emergency_calls=None):
     """
     Build a list of services from form input and catalog defaults.
     
@@ -192,12 +202,12 @@ def build_job_services_from_form(service_codes, service_prices, service_duration
     total = 0.0
     service_emergency_calls = service_emergency_calls or []
 
-    for index, raw_service_code in enumerate(service_codes):
-        service_code = (raw_service_code or "").strip()
-        if not service_code:
+    for index, raw_service_id in enumerate(service_ids):
+        service_id = (raw_service_id or "").strip()
+        if not service_id:
             continue
 
-        catalog_entry = service_catalog.get(service_code, {})
+        catalog_entry = service_catalog.get(service_id, {})
         entered_price = service_prices[index] if index < len(service_prices) else ""
         entered_duration = service_durations[index] if index < len(service_durations) else ""
         entered_emergency_call = service_emergency_calls[index] if index < len(service_emergency_calls) else ""
@@ -212,18 +222,35 @@ def build_job_services_from_form(service_codes, service_prices, service_duration
         duration = entered_duration if (entered_duration or "").strip() else catalog_entry.get("estimated_hours", "")
         normalized_price = normalize_currency(price)
         normalized_duration = _format_hours_value(duration)
-        service_name = catalog_entry.get("name") or service_code
+        service_name = catalog_entry.get("name") or "Service"
         service_type = catalog_entry.get("service_type") or ""
+
+        labor_hours_value = catalog_entry.get("labor_hours") or normalized_duration
+        normalized_labor_hours = _format_hours_value(labor_hours_value)
+        labor_rate_override = catalog_entry.get("labor_rate_override")
+        normalized_labor_rate = normalize_currency(labor_rate_override or default_labor_rate or "$0.00")
+        try:
+            labor_hours_number = float(normalized_labor_hours or 0)
+        except ValueError:
+            labor_hours_number = 0.0
+        labor_rate_number = float(normalized_labor_rate.replace("$", "").replace(",", "") or 0)
+        labor_total = normalize_currency(labor_hours_number * labor_rate_number)
 
         services.append(
             {
                 "service_name": service_name,
                 "type": service_name,
                 "service_type": service_type,
-                "code": service_code,
+                "service_id": service_id,
                 "description": str(catalog_entry.get("description") or "").strip(),
                 "price": normalized_price,
                 "estimated_hours": normalized_duration,
+                "labor_hours": normalized_labor_hours,
+                "labor_rate": normalized_labor_rate,
+                "labor_total": labor_total,
+                "show_labor_breakdown": bool(catalog_entry.get("show_labor_breakdown")),
+                "service_parts": list(catalog_entry.get("service_parts") or []),
+                "service_materials": list(catalog_entry.get("service_materials") or []),
                 "emergency_call": emergency_call,
                 "tax_override": parse_tax_override(catalog_entry.get("tax_override")),
             }
@@ -233,7 +260,7 @@ def build_job_services_from_form(service_codes, service_prices, service_duration
     return services, total
 
 
-def build_job_parts_from_form(part_codes, part_prices, part_catalog):
+def build_job_parts_from_form(part_ids, part_prices, part_catalog):
     """
     Build a list of parts from form input and catalog defaults.
     
@@ -243,21 +270,20 @@ def build_job_parts_from_form(part_codes, part_prices, part_catalog):
     parts = []
     total = 0.0
 
-    for index, raw_part_code in enumerate(part_codes):
-        part_code = (raw_part_code or "").strip()
-        if not part_code:
+    for index, raw_part_id in enumerate(part_ids):
+        part_id = (raw_part_id or "").strip()
+        if not part_id:
             continue
 
-        catalog_entry = part_catalog.get(part_code, {})
+        catalog_entry = part_catalog.get(part_id, {})
         entered_price = part_prices[index] if index < len(part_prices) else ""
         price = entered_price if (entered_price or "").strip() else catalog_entry.get("price", "$0.00")
         normalized_price = normalize_currency(price)
-        part_name = catalog_entry.get("name") or part_code
+        part_name = catalog_entry.get("name") or "Part"
 
         parts.append(
             {
                 "name": part_name,
-                "code": part_code,
                 "price": normalized_price,
                 "tax_override": parse_tax_override(catalog_entry.get("tax_override")),
             }
@@ -345,7 +371,7 @@ def build_job_materials_from_form(
             entered_quantity if (entered_quantity or "").strip() else catalog_entry.get("default_quantity_used", "")
         )
         unit_price = normalize_currency(
-            entered_price if (entered_price or "").strip() else catalog_entry.get("price", "$0.00")
+            entered_price if (entered_price or "").strip() else catalog_entry.get("sell_price_per_unit", catalog_entry.get("price", "$0.00"))
         )
 
         try:
@@ -357,14 +383,26 @@ def build_job_materials_from_form(
 
         materials.append(
             {
+                "description": material_name,
+                "type": "material",
                 "material_name": material_name,
                 "category": catalog_entry.get("category", ""),
                 "part_number": catalog_entry.get("part_number", ""),
                 "manufacturer": catalog_entry.get("manufacturer", ""),
+                "quantity": quantity,
                 "quantity_used": quantity,
                 "unit_of_measure": (entered_unit if (entered_unit or "").strip() else catalog_entry.get("unit_of_measure", "")).strip(),
+                "unit_label": str(catalog_entry.get("unit_label") or "").strip(),
+                "unit_price": unit_price,
                 "price": unit_price,
+                "total": normalize_currency(line_total),
                 "line_total": normalize_currency(line_total),
+                "cost_price_per_unit": catalog_entry.get("cost_price_per_unit", "$0.00"),
+                "cost_total": normalize_currency(
+                    quantity_value
+                    * float(str(catalog_entry.get("cost_price_per_unit", "$0.00")).replace("$", "").replace(",", "") or 0)
+                ),
+                "minimum_quantity": catalog_entry.get("minimum_quantity", ""),
                 "tax_override": parse_tax_override(catalog_entry.get("tax_override")),
             }
         )

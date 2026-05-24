@@ -793,18 +793,19 @@ def _hydrate_service_descriptions_for_pdf(db, payload, business_id=None):
         or_filters.append({"service_code": {"$in": sorted(service_codes)}})
     if service_names:
         or_filters.append({"service_name": {"$in": sorted(service_names)}})
+        or_filters.append({"name": {"$in": sorted(service_names)}})
     if not or_filters:
         return hydrated_payload
     query["$or"] = or_filters
 
     description_by_code = {}
     description_by_name = {}
-    for service_doc in db.services.find(query, {"service_code": 1, "service_name": 1, "description": 1}):
+    for service_doc in db.services.find(query, {"service_code": 1, "service_name": 1, "name": 1, "description": 1}):
         description = str(service_doc.get("description") or "").strip()
         if not description:
             continue
         service_code = str(service_doc.get("service_code") or "").strip()
-        service_name = str(service_doc.get("service_name") or "").strip()
+        service_name = str(service_doc.get("service_name") or service_doc.get("name") or "").strip()
         if service_code:
             description_by_code[service_code] = description
         if service_name:
@@ -2565,8 +2566,24 @@ def _build_pricing_summary(payload, business_doc=None, customer_doc=None):
     customer = customer_doc or {}
     business = business_doc or {}
 
-    services_total = sum(_coerce_line_amount(service.get("price")) for service in (source.get("services") or []))
-    parts_total = sum(_coerce_line_amount(part.get("price")) for part in (source.get("parts") or []))
+    def _resolve_service_amount(service):
+        if not isinstance(service, dict):
+            return 0
+        return service.get("price") or service.get("standard_price") or 0
+
+    def _resolve_part_amount(part):
+        if not isinstance(part, dict):
+            return 0
+        return part.get("price") or part.get("sell_price") or part.get("unit_cost") or 0
+
+    services_total = sum(
+        _coerce_line_amount(_resolve_service_amount(service))
+        for service in (source.get("services") or [])
+    )
+    parts_total = sum(
+        _coerce_line_amount(_resolve_part_amount(part))
+        for part in (source.get("parts") or [])
+    )
     labors_total = sum(_coerce_line_amount(labor.get("line_total") or labor.get("hourly_rate")) for labor in (source.get("labors") or []))
     materials_total = sum(_coerce_line_amount(material.get("line_total") or material.get("price")) for material in (source.get("materials") or []))
     equipment_total = sum(_coerce_line_amount(equipment.get("line_total") or equipment.get("price")) for equipment in (source.get("equipments") or []))
@@ -3058,9 +3075,6 @@ def create_job(customerId):
         entered_service_emergency_calls = request.form.getlist("service_emergency_call[]")
         selected_part_names = request.form.getlist("part_code[]") or request.form.getlist("part_name[]")
         entered_part_prices = request.form.getlist("part_unit_cost[]") or request.form.getlist("part_price[]")
-        selected_labor_descriptions = request.form.getlist("labor_description[]")
-        entered_labor_hours = request.form.getlist("labor_hours[]")
-        entered_labor_rates = request.form.getlist("labor_hourly_rate[]")
         selected_material_names = request.form.getlist("material_name[]")
         entered_material_quantities = request.form.getlist("material_quantity_used[]")
         entered_material_units = request.form.getlist("material_unit_of_measure[]")
@@ -3073,27 +3087,26 @@ def create_job(customerId):
         entered_discount_amounts = request.form.getlist("discount_amount[]")
         service_query = {"business_id": business_id} if business_id else {"_id": None}
         part_query = {"business_id": business_id} if business_id else {"_id": None}
-        labor_query = {"business_id": business_id} if business_id else {"_id": None}
         material_query = {"business_id": business_id} if business_id else {"_id": None}
         equipment_query = {"business_id": business_id} if business_id else {"_id": None}
         discount_query = {"business_id": business_id} if business_id else {"_id": None}
         service_docs = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
         part_docs = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
-        labor_docs = [serialize_doc(labor) for labor in db.labors.find(labor_query).sort("labor_description", 1)]
         material_docs = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
         equipment_docs = [serialize_doc(equipment) for equipment in db.equipment.find(equipment_query).sort("equipment_name", 1)]
         discount_docs = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
         service_catalog = build_service_catalog(service_docs)
         part_catalog = build_part_catalog(part_docs)
-        labor_catalog = build_labor_catalog(labor_docs)
         material_catalog = build_material_catalog(material_docs)
         equipment_catalog = build_equipment_catalog(equipment_docs)
         discount_catalog = build_discount_catalog(discount_docs)
+        business_doc_for_rates = serialize_doc(db.businesses.find_one({"_id": business_id})) if business_id else {}
         services, services_total = build_job_services_from_form(
             selected_service_types,
             entered_service_prices,
             entered_service_durations,
             service_catalog,
+            business_doc_for_rates.get("labor_rate_standard"),
             entered_service_emergency_calls,
         )
         parts, parts_total = build_job_parts_from_form(
@@ -3101,12 +3114,7 @@ def create_job(customerId):
             entered_part_prices,
             part_catalog,
         )
-        labors, labor_total = build_job_labors_from_form(
-            selected_labor_descriptions,
-            entered_labor_hours,
-            entered_labor_rates,
-            labor_catalog,
-        )
+        labors, labor_total = [], 0.0
         materials, materials_total = build_job_materials_from_form(
             selected_material_names,
             entered_material_quantities,
@@ -3128,7 +3136,6 @@ def create_job(customerId):
         )
         _apply_hvac_ids_to_components(services, request.form.getlist("service_hvac_system_ids[]"))
         _apply_hvac_ids_to_components(parts, request.form.getlist("part_hvac_system_ids[]"))
-        _apply_hvac_ids_to_components(labors, request.form.getlist("labor_hvac_system_ids[]"))
         _apply_hvac_ids_to_components(materials, request.form.getlist("material_hvac_system_ids[]"))
         _apply_hvac_ids_to_components(equipments, request.form.getlist("equipment_hvac_system_ids[]"))
         pricing_summary = _build_pricing_summary(
@@ -3140,7 +3147,7 @@ def create_job(customerId):
                 "equipments": equipments,
                 "discounts": discounts,
             },
-            business_doc=serialize_doc(db.businesses.find_one({"_id": business_id})) if business_id else {},
+            business_doc=business_doc_for_rates,
             customer_doc=serialize_doc(customer),
         )
         total = pricing_summary["total_due"]
@@ -3270,7 +3277,7 @@ def create_job(customerId):
     materials_catalog = build_material_catalog(materials)
     equipments_catalog = build_equipment_catalog(equipments)
     discounts_catalog = build_discount_catalog(discounts)
-    parts_by_id = {p["_id"]: p["part_code"] for p in parts}
+    parts_by_id = {p["_id"]: p.get("part_name", "") for p in parts}
     materials_by_id = {m["_id"]: m["material_name"] for m in materials}
     default_payment_due_days = _resolve_default_payment_due_days(db)
     payment_due_days_value = default_payment_due_days
@@ -3339,9 +3346,6 @@ def create_estimate(customerId):
         entered_service_emergency_calls = request.form.getlist("service_emergency_call[]")
         selected_part_names = request.form.getlist("part_code[]") or request.form.getlist("part_name[]")
         entered_part_prices = request.form.getlist("part_unit_cost[]") or request.form.getlist("part_price[]")
-        selected_labor_descriptions = request.form.getlist("labor_description[]")
-        entered_labor_hours = request.form.getlist("labor_hours[]")
-        entered_labor_rates = request.form.getlist("labor_hourly_rate[]")
         selected_material_names = request.form.getlist("material_name[]")
         entered_material_quantities = request.form.getlist("material_quantity_used[]")
         entered_material_units = request.form.getlist("material_unit_of_measure[]")
@@ -3355,28 +3359,27 @@ def create_estimate(customerId):
 
         service_query = {"business_id": business_id} if business_id else {"_id": None}
         part_query = {"business_id": business_id} if business_id else {"_id": None}
-        labor_query = {"business_id": business_id} if business_id else {"_id": None}
         material_query = {"business_id": business_id} if business_id else {"_id": None}
         equipment_query = {"business_id": business_id} if business_id else {"_id": None}
         discount_query = {"business_id": business_id} if business_id else {"_id": None}
         service_docs = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
         part_docs = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
-        labor_docs = [serialize_doc(labor) for labor in db.labors.find(labor_query).sort("labor_description", 1)]
         material_docs = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
         equipment_docs = [serialize_doc(equipment) for equipment in db.equipment.find(equipment_query).sort("equipment_name", 1)]
         discount_docs = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
         service_catalog = build_service_catalog(service_docs)
         part_catalog = build_part_catalog(part_docs)
-        labor_catalog = build_labor_catalog(labor_docs)
         material_catalog = build_material_catalog(material_docs)
         equipment_catalog = build_equipment_catalog(equipment_docs)
         discount_catalog = build_discount_catalog(discount_docs)
 
+        business_doc_for_rates = serialize_doc(db.businesses.find_one({"_id": business_id})) if business_id else {}
         services, services_total = build_job_services_from_form(
             selected_service_types,
             entered_service_prices,
             entered_service_durations,
             service_catalog,
+            business_doc_for_rates.get("labor_rate_standard"),
             entered_service_emergency_calls,
         )
         parts, parts_total = build_job_parts_from_form(
@@ -3384,12 +3387,7 @@ def create_estimate(customerId):
             entered_part_prices,
             part_catalog,
         )
-        labors, labor_total = build_job_labors_from_form(
-            selected_labor_descriptions,
-            entered_labor_hours,
-            entered_labor_rates,
-            labor_catalog,
-        )
+        labors, labor_total = [], 0.0
         materials, materials_total = build_job_materials_from_form(
             selected_material_names,
             entered_material_quantities,
@@ -3418,7 +3416,7 @@ def create_estimate(customerId):
                 "equipments": equipments,
                 "discounts": discounts,
             },
-            business_doc=serialize_doc(db.businesses.find_one({"_id": business_id})) if business_id else {},
+            business_doc=business_doc_for_rates,
             customer_doc=serialize_doc(customer),
         )
         total = pricing_summary["total_due"]
@@ -3564,7 +3562,7 @@ def create_estimate(customerId):
     materials_catalog = build_material_catalog(materials)
     equipments_catalog = build_equipment_catalog(equipments)
     discounts_catalog = build_discount_catalog(discounts)
-    parts_by_id = {p["_id"]: p["part_code"] for p in parts}
+    parts_by_id = {p["_id"]: p.get("part_name", "") for p in parts}
     materials_by_id = {m["_id"]: m["material_name"] for m in materials}
     default_property = _resolve_default_property(customer)
     selected_property_id = str((default_property or {}).get("property_id") or "").strip()
@@ -3718,9 +3716,6 @@ def update_estimate(estimateId):
         entered_service_emergency_calls = request.form.getlist("service_emergency_call[]")
         selected_part_names = request.form.getlist("part_code[]") or request.form.getlist("part_name[]")
         entered_part_prices = request.form.getlist("part_unit_cost[]") or request.form.getlist("part_price[]")
-        selected_labor_descriptions = request.form.getlist("labor_description[]")
-        entered_labor_hours = request.form.getlist("labor_hours[]")
-        entered_labor_rates = request.form.getlist("labor_hourly_rate[]")
         selected_material_names = request.form.getlist("material_name[]")
         entered_material_quantities = request.form.getlist("material_quantity_used[]")
         entered_material_units = request.form.getlist("material_unit_of_measure[]")
@@ -3734,28 +3729,27 @@ def update_estimate(estimateId):
 
         service_query = {"business_id": business_id} if business_id else {"_id": None}
         part_query = {"business_id": business_id} if business_id else {"_id": None}
-        labor_query = {"business_id": business_id} if business_id else {"_id": None}
         material_query = {"business_id": business_id} if business_id else {"_id": None}
         equipment_query = {"business_id": business_id} if business_id else {"_id": None}
         discount_query = {"business_id": business_id} if business_id else {"_id": None}
         service_docs = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
         part_docs = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
-        labor_docs = [serialize_doc(labor) for labor in db.labors.find(labor_query).sort("labor_description", 1)]
         material_docs = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
         equipment_docs = [serialize_doc(equipment) for equipment in db.equipment.find(equipment_query).sort("equipment_name", 1)]
         discount_docs = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
         service_catalog = build_service_catalog(service_docs)
         part_catalog = build_part_catalog(part_docs)
-        labor_catalog = build_labor_catalog(labor_docs)
         material_catalog = build_material_catalog(material_docs)
         equipment_catalog = build_equipment_catalog(equipment_docs)
         discount_catalog = build_discount_catalog(discount_docs)
 
+        business_doc_for_rates = serialize_doc(db.businesses.find_one({"_id": business_id})) if business_id else {}
         services, services_total = build_job_services_from_form(
             selected_service_types,
             entered_service_prices,
             entered_service_durations,
             service_catalog,
+            business_doc_for_rates.get("labor_rate_standard"),
             entered_service_emergency_calls,
         )
         parts, parts_total = build_job_parts_from_form(
@@ -3763,12 +3757,7 @@ def update_estimate(estimateId):
             entered_part_prices,
             part_catalog,
         )
-        labors, labor_total = build_job_labors_from_form(
-            selected_labor_descriptions,
-            entered_labor_hours,
-            entered_labor_rates,
-            labor_catalog,
-        )
+        labors, labor_total = [], 0.0
         materials, materials_total = build_job_materials_from_form(
             selected_material_names,
             entered_material_quantities,
@@ -3804,7 +3793,7 @@ def update_estimate(estimateId):
                 "equipments": equipments,
                 "discounts": discounts,
             },
-            business_doc=serialize_doc(db.businesses.find_one({"_id": business_id})) if business_id else {},
+            business_doc=business_doc_for_rates,
             customer_doc=customer,
         )
         total = pricing_summary["total_due"]
@@ -3939,7 +3928,7 @@ def update_estimate(estimateId):
     materials_catalog = build_material_catalog(materials)
     equipments_catalog = build_equipment_catalog(equipments)
     discounts_catalog = build_discount_catalog(discounts)
-    parts_by_id = {p["_id"]: p["part_code"] for p in parts}
+    parts_by_id = {p["_id"]: p.get("part_name", "") for p in parts}
     materials_by_id = {m["_id"]: m["material_name"] for m in materials}
 
     estimate_doc = serialize_doc(estimate)
@@ -4819,6 +4808,40 @@ def complete_job(jobId):
     completion_total_due = round(_safe_float(completion_pricing_summary.get("total_due"), _safe_float(job.get("total_amount"), 0.0)), 2)
     existing_paid = round(_safe_float(job.get("total_amount_paid"), 0.0), 2)
     completion_balance_due = round(max(0.0, completion_total_due - existing_paid), 2)
+
+    total_parts_cost = 0.0
+    for part in (job.get("parts") or []):
+        if not isinstance(part, dict):
+            continue
+        part_cost = _safe_float(part.get("cost_price") or part.get("cost") or 0.0)
+        if part_cost > 0:
+            total_parts_cost += part_cost
+
+    total_materials_cost = 0.0
+    for material in (job.get("materials") or []):
+        if not isinstance(material, dict):
+            continue
+
+        explicit_cost_total = _safe_float(material.get("cost_total") or 0.0)
+        if explicit_cost_total > 0:
+            total_materials_cost += explicit_cost_total
+            continue
+
+        quantity_value = _safe_float(material.get("quantity") or material.get("quantity_used") or 0.0)
+        cost_per_unit = _safe_float(material.get("cost_price_per_unit") or 0.0)
+        if quantity_value > 0 and cost_per_unit > 0:
+            total_materials_cost += quantity_value * cost_per_unit
+        else:
+            current_app.logger.warning(
+                "Skipping material cost rollup due to missing cost/quantity: job_id=%s material=%s",
+                jobId,
+                str(material.get("material_name") or material.get("description") or ""),
+            )
+
+    total_parts_cost = round(total_parts_cost, 2)
+    total_materials_cost = round(total_materials_cost, 2)
+    gross_profit = round(completion_total_due - total_parts_cost - total_materials_cost, 2)
+
     if existing_paid <= 0:
         completion_payment_status = "pending_paid"
     elif completion_balance_due <= 0:
@@ -4839,6 +4862,9 @@ def complete_job(jobId):
                 "total_amount_paid": existing_paid,
                 "balance_due": completion_balance_due,
                 "payment_status": completion_payment_status,
+                "total_parts_cost": total_parts_cost,
+                "total_materials_cost": total_materials_cost,
+                "gross_profit": gross_profit,
             },
             "$push": {
                 "invoices": {
@@ -5040,9 +5066,6 @@ def update_job(jobId):
         entered_service_emergency_calls = request.form.getlist("service_emergency_call[]")
         selected_part_names = request.form.getlist("part_code[]") or request.form.getlist("part_name[]")
         entered_part_prices = request.form.getlist("part_unit_cost[]") or request.form.getlist("part_price[]")
-        selected_labor_descriptions = request.form.getlist("labor_description[]")
-        entered_labor_hours = request.form.getlist("labor_hours[]")
-        entered_labor_rates = request.form.getlist("labor_hourly_rate[]")
         selected_material_names = request.form.getlist("material_name[]")
         entered_material_quantities = request.form.getlist("material_quantity_used[]")
         entered_material_units = request.form.getlist("material_unit_of_measure[]")
@@ -5055,27 +5078,26 @@ def update_job(jobId):
         entered_discount_amounts = request.form.getlist("discount_amount[]")
         service_query = {"business_id": business_id} if business_id else {"_id": None}
         part_query = {"business_id": business_id} if business_id else {"_id": None}
-        labor_query = {"business_id": business_id} if business_id else {"_id": None}
         material_query = {"business_id": business_id} if business_id else {"_id": None}
         equipment_query = {"business_id": business_id} if business_id else {"_id": None}
         discount_query = {"business_id": business_id} if business_id else {"_id": None}
         service_docs = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
         part_docs = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
-        labor_docs = [serialize_doc(labor) for labor in db.labors.find(labor_query).sort("labor_description", 1)]
         material_docs = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
         equipment_docs = [serialize_doc(equipment) for equipment in db.equipment.find(equipment_query).sort("equipment_name", 1)]
         discount_docs = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
         service_catalog = build_service_catalog(service_docs)
         part_catalog = build_part_catalog(part_docs)
-        labor_catalog = build_labor_catalog(labor_docs)
         material_catalog = build_material_catalog(material_docs)
         equipment_catalog = build_equipment_catalog(equipment_docs)
         discount_catalog = build_discount_catalog(discount_docs)
+        business_doc_for_rates = serialize_doc(db.businesses.find_one({"_id": business_id})) if business_id else {}
         services, services_total = build_job_services_from_form(
             selected_service_types,
             entered_service_prices,
             entered_service_durations,
             service_catalog,
+            business_doc_for_rates.get("labor_rate_standard"),
             entered_service_emergency_calls,
         )
         parts, parts_total = build_job_parts_from_form(
@@ -5083,12 +5105,7 @@ def update_job(jobId):
             entered_part_prices,
             part_catalog,
         )
-        labors, labor_total = build_job_labors_from_form(
-            selected_labor_descriptions,
-            entered_labor_hours,
-            entered_labor_rates,
-            labor_catalog,
-        )
+        labors, labor_total = [], 0.0
         materials, materials_total = build_job_materials_from_form(
             selected_material_names,
             entered_material_quantities,
@@ -5110,7 +5127,6 @@ def update_job(jobId):
         )
         _apply_hvac_ids_to_components(services, request.form.getlist("service_hvac_system_ids[]"))
         _apply_hvac_ids_to_components(parts, request.form.getlist("part_hvac_system_ids[]"))
-        _apply_hvac_ids_to_components(labors, request.form.getlist("labor_hvac_system_ids[]"))
         _apply_hvac_ids_to_components(materials, request.form.getlist("material_hvac_system_ids[]"))
         _apply_hvac_ids_to_components(equipments, request.form.getlist("equipment_hvac_system_ids[]"))
         customer = {}
@@ -5129,7 +5145,7 @@ def update_job(jobId):
                 "equipments": equipments,
                 "discounts": discounts,
             },
-            business_doc=serialize_doc(db.businesses.find_one({"_id": business_id})) if business_id else {},
+            business_doc=business_doc_for_rates,
             customer_doc=customer,
         )
         total = pricing_summary["total_due"]
@@ -5337,7 +5353,7 @@ def update_job(jobId):
     materials_catalog = build_material_catalog(materials)
     equipments_catalog = build_equipment_catalog(equipments)
     discounts_catalog = build_discount_catalog(discounts)
-    parts_by_id = {p["_id"]: p["part_code"] for p in parts}
+    parts_by_id = {p["_id"]: p.get("part_name", "") for p in parts}
     materials_by_id = {m["_id"]: m["material_name"] for m in materials}
     default_payment_due_days = _resolve_default_payment_due_days(db)
     payment_due_days_value = _normalize_payment_due_days(job.get("payment_due_days"), default_payment_due_days)

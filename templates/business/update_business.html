@@ -18,6 +18,9 @@
 
       <form id="business-profile-form" action="{{ url_for('business.update_business') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if markup_rules_error_message %}
+          <p class="form-error">{{ markup_rules_error_message }}</p>
+        {% endif %}
         <h2 class="create-job-form-section-header">Business Information</h2>
 
         <div class="add-customer-form-row">
@@ -108,6 +111,105 @@
           <div class="add-customer-form-field">
             <label for="default-payment-due-days">Default Payment Due Days</label>
             <input id="default-payment-due-days" name="default_payment_due_days" type="number" min="1" step="1" value="{{ business.get('default_payment_due_days', 30) }}" />
+          </div>
+        </div>
+
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="qb-material-account-id">QuickBooks Materials Revenue Account ID</label>
+            <input id="qb-material-account-id" name="qb_material_account_id" type="text" value="{{ business.get('qb_material_account_id', '') }}" placeholder="Optional (future QuickBooks mapping)" />
+          </div>
+        </div>
+
+        <h2 class="create-job-form-section-header">Labor Rates</h2>
+        <div class="add-customer-form-row">
+          <div class="add-customer-form-field">
+            <label for="labor-rate-standard">Standard Labor Rate (per hour)</label>
+            <input id="labor-rate-standard" name="labor_rate_standard" type="number" step="0.01" min="0" placeholder="95.00" value="{{ business.get('labor_rate_standard', '') }}" />
+          </div>
+          <div class="add-customer-form-field">
+            <label for="labor-rate-emergency">Emergency Labor Rate (per hour)</label>
+            <input id="labor-rate-emergency" name="labor_rate_emergency" type="number" step="0.01" min="0" placeholder="145.00" value="{{ business.get('labor_rate_emergency', '') }}" />
+          </div>
+        </div>
+
+        <h2 class="create-job-form-section-header">Markup Rules</h2>
+        <p class="form-field-note">Define cost ranges and markup percentages used to auto-populate sell prices on parts and materials. Rules cannot overlap.</p>
+
+        <div id="markup-rules-list">
+          {% for markup_rule in business.get('markup_rules', []) %}
+            <div class="markup-rule-row-wrapper">
+              <div class="add-customer-form-row add-customer-form-row--top-aligned markup-rule-row">
+                <div class="add-customer-form-field">
+                  <label>Cost Range Min ($)</label>
+                  <input name="markup_range_min[]" type="number" step="0.01" min="0" value="{{ markup_rule.range_min|default('', true) }}" placeholder="0.00" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label>Cost Range Max ($)</label>
+                  <input name="markup_range_max[]" type="number" step="0.01" min="0" value="{{ markup_rule.range_max|default('', true) }}" placeholder="Leave blank for no limit" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label>Markup (%)</label>
+                  <input name="markup_percent[]" type="number" step="0.01" min="0.01" value="{{ markup_rule.markup_percent|default('', true) }}" placeholder="40.00" />
+                </div>
+              </div>
+              <div class="tax-rate-row-remove-wrap">
+                <button type="button" class="markup-rule-remove-button">Remove Rule</button>
+              </div>
+              <div class="form-error markup-rule-error">
+                {% for error in markup_rules_errors.get(loop.index0, []) %}
+                  {{ error }}{% if not loop.last %}<br />{% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          {% else %}
+            <div class="markup-rule-row-wrapper">
+              <div class="add-customer-form-row add-customer-form-row--top-aligned markup-rule-row">
+                <div class="add-customer-form-field">
+                  <label>Cost Range Min ($)</label>
+                  <input name="markup_range_min[]" type="number" step="0.01" min="0" value="" placeholder="0.00" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label>Cost Range Max ($)</label>
+                  <input name="markup_range_max[]" type="number" step="0.01" min="0" value="" placeholder="Leave blank for no limit" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label>Markup (%)</label>
+                  <input name="markup_percent[]" type="number" step="0.01" min="0.01" value="" placeholder="40.00" />
+                </div>
+              </div>
+              <div class="tax-rate-row-remove-wrap">
+                <button type="button" class="markup-rule-remove-button">Remove Rule</button>
+              </div>
+              <div class="form-error markup-rule-error"></div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <template id="markup-rule-template">
+          <div class="add-customer-form-row add-customer-form-row--top-aligned markup-rule-row">
+            <div class="add-customer-form-field">
+              <label>Cost Range Min ($)</label>
+              <input name="markup_range_min[]" type="number" step="0.01" min="0" value="" placeholder="0.00" />
+            </div>
+            <div class="add-customer-form-field">
+              <label>Cost Range Max ($)</label>
+              <input name="markup_range_max[]" type="number" step="0.01" min="0" value="" placeholder="Leave blank for no limit" />
+            </div>
+            <div class="add-customer-form-field">
+              <label>Markup (%)</label>
+              <input name="markup_percent[]" type="number" step="0.01" min="0.01" value="" placeholder="40.00" />
+            </div>
+          </div>
+          <div class="tax-rate-row-remove-wrap">
+            <button type="button" class="markup-rule-remove-button">Remove Rule</button>
+          </div>
+          <div class="form-error markup-rule-error"></div>
+        </template>
+
+        <div class="add-customer-form-row add-customer-form-row--single">
+          <div class="add-customer-form-field" style="margin-top: 0.5rem;">
+            <button type="button" id="add-markup-rule-row">Add Markup Rule</button>
           </div>
         </div>
 
@@ -340,6 +442,159 @@
         list.appendChild(wrapper);
         reindexApplyToCheckboxValues();
         attachRemoveListeners();
+      });
+    })();
+
+    (function () {
+      const form = document.getElementById('business-profile-form');
+      const addButton = document.getElementById('add-markup-rule-row');
+      const list = document.getElementById('markup-rules-list');
+      const template = document.getElementById('markup-rule-template');
+
+      function renderRowErrors(wrapper, errors) {
+        const errorNode = wrapper.querySelector('.markup-rule-error');
+        if (!errorNode) {
+          return;
+        }
+        if (!errors.length) {
+          errorNode.innerHTML = '';
+          return;
+        }
+        errorNode.innerHTML = errors.join('<br />');
+      }
+
+      function validateRows() {
+        const wrappers = Array.from(list.querySelectorAll('.markup-rule-row-wrapper'));
+        const rows = [];
+        wrappers.forEach((wrapper, index) => {
+          const row = wrapper.querySelector('.markup-rule-row');
+          const minInput = row ? row.querySelector('input[name="markup_range_min[]"]') : null;
+          const maxInput = row ? row.querySelector('input[name="markup_range_max[]"]') : null;
+          const percentInput = row ? row.querySelector('input[name="markup_percent[]"]') : null;
+          const minText = String(minInput ? minInput.value : '').trim();
+          const maxText = String(maxInput ? maxInput.value : '').trim();
+          const percentText = String(percentInput ? percentInput.value : '').trim();
+
+          renderRowErrors(wrapper, []);
+          if (!minText && !maxText && !percentText) {
+            return;
+          }
+
+          const errors = [];
+          const minValue = Number(minText);
+          const maxValue = maxText ? Number(maxText) : null;
+          const percentValue = Number(percentText);
+
+          if (!minText || Number.isNaN(minValue)) {
+            errors.push('Range min must be a valid number.');
+          }
+          if (maxText && Number.isNaN(maxValue)) {
+            errors.push('Range max must be a valid number.');
+          }
+          if (!percentText || Number.isNaN(percentValue)) {
+            errors.push('Markup percent must be a valid number.');
+          }
+          if (!Number.isNaN(minValue) && minValue < 0) {
+            errors.push('Range min must be zero or greater.');
+          }
+          if (!Number.isNaN(minValue) && maxValue !== null && !Number.isNaN(maxValue) && minValue >= maxValue) {
+            errors.push('Range min must be less than range max.');
+          }
+          if (!Number.isNaN(percentValue) && percentValue <= 0) {
+            errors.push('Markup percent must be greater than zero.');
+          }
+
+          if (errors.length) {
+            renderRowErrors(wrapper, errors);
+            return;
+          }
+
+          rows.push({
+            wrapper,
+            min: minValue,
+            max: maxValue,
+          });
+        });
+
+        rows.sort((a, b) => a.min - b.min);
+        const openEnded = rows.filter((row) => row.max === null);
+        if (openEnded.length > 1) {
+          openEnded.forEach((row) => {
+            const existing = row.wrapper.querySelector('.markup-rule-error');
+            const line = 'Only one rule can have no upper limit.';
+            existing.innerHTML = existing.innerHTML ? existing.innerHTML + '<br />' + line : line;
+          });
+        }
+
+        rows.forEach((row, index) => {
+          if (row.max === null && index !== rows.length - 1) {
+            const existing = row.wrapper.querySelector('.markup-rule-error');
+            const line = 'No-limit rule must be the highest range.';
+            existing.innerHTML = existing.innerHTML ? existing.innerHTML + '<br />' + line : line;
+          }
+        });
+
+        for (let index = 1; index < rows.length; index += 1) {
+          const previous = rows[index - 1];
+          const current = rows[index];
+          if (previous.max === null || current.min < previous.max) {
+            const overlapLine = 'Range overlaps with another rule.';
+            const previousError = previous.wrapper.querySelector('.markup-rule-error');
+            const currentError = current.wrapper.querySelector('.markup-rule-error');
+            previousError.innerHTML = previousError.innerHTML ? previousError.innerHTML + '<br />' + overlapLine : overlapLine;
+            currentError.innerHTML = currentError.innerHTML ? currentError.innerHTML + '<br />' + overlapLine : overlapLine;
+          }
+        }
+
+        return wrappers.every((wrapper) => {
+          const errorNode = wrapper.querySelector('.markup-rule-error');
+          return !errorNode || !String(errorNode.textContent || '').trim();
+        });
+      }
+
+      function updateRemoveButtonVisibility() {
+        const wrappers = list.querySelectorAll('.markup-rule-row-wrapper');
+        const removeButtons = list.querySelectorAll('.markup-rule-remove-button');
+        const shouldHide = wrappers.length <= 1;
+        removeButtons.forEach((button) => {
+          button.style.display = shouldHide ? 'none' : 'block';
+        });
+      }
+
+      function attachRowListeners(wrapper) {
+        const removeButton = wrapper.querySelector('.markup-rule-remove-button');
+        if (removeButton) {
+          removeButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            wrapper.remove();
+            updateRemoveButtonVisibility();
+          });
+        }
+      }
+
+      if (!form || !addButton || !list || !template) {
+        return;
+      }
+
+      list.querySelectorAll('.markup-rule-row-wrapper').forEach((wrapper) => {
+        attachRowListeners(wrapper);
+      });
+      updateRemoveButtonVisibility();
+
+      addButton.addEventListener('click', () => {
+        const clone = template.content.cloneNode(true);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'markup-rule-row-wrapper';
+        wrapper.appendChild(clone);
+        list.appendChild(wrapper);
+        attachRowListeners(wrapper);
+        updateRemoveButtonVisibility();
+      });
+
+      form.addEventListener('submit', (event) => {
+        if (!validateRows()) {
+          event.preventDefault();
+        }
       });
     })();
   </script>

@@ -762,8 +762,7 @@ p {
   color: var(--kl-accent-strong);
 }
 
-#dispatch-quick-job-id,
-#dispatch-quick-search {
+#dispatch-quick-job-id {
   width: 100%;
 }
 
@@ -4494,6 +4493,46 @@ p {
 
   #add-tax-rate-row:hover {
     background-color: #F1F5F9;
+  }
+
+  .markup-rule-remove-button {
+    padding: 0.45rem 0.85rem;
+    border: 1px solid #BE2D2D;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #FFF7F7 0%, #FEEBEC 100%);
+    color: #9B1D1D;
+    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  }
+
+  .markup-rule-remove-button:hover {
+    background: linear-gradient(180deg, #FFEDED 0%, #FBDADA 100%);
+    box-shadow: 0 4px 10px rgba(139, 22, 22, 0.12);
+    transform: translateY(-1px);
+  }
+
+  #add-markup-rule-row {
+    padding: 0.58rem 1rem;
+    border: 1px solid #1E7A46;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #F1FBF5 0%, #E1F5E8 100%);
+    color: #165A35;
+    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    width: auto;
+    align-self: flex-start;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  }
+
+  #add-markup-rule-row:hover {
+    background: linear-gradient(180deg, #EAF8F0 0%, #D5F0E0 100%);
+    box-shadow: 0 5px 12px rgba(16, 86, 45, 0.14);
+    transform: translateY(-1px);
   }
 
   .hvac-range-inputs {

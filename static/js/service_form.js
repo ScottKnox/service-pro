@@ -110,7 +110,7 @@
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'job-row-remove-button';
-    btn.textContent = 'Remove Part';
+    btn.textContent = 'Remove Included Part';
     btn.addEventListener('click', function () {
       row.remove();
       ensureAtLeastOneRow();
@@ -165,8 +165,12 @@
         '</select>' +
       '</div>' +
       '<div class="add-customer-form-field">' +
-        '<label for="service-part-cost-' + idx + '">Unit Cost</label>' +
-        '<input id="service-part-cost-' + idx + '" name="part_cost_display[]" type="text" placeholder="$0.00" />' +
+        '<label for="service-part-quantity-' + idx + '">Quantity</label>' +
+        '<input id="service-part-quantity-' + idx + '" name="part_quantity[]" type="number" step="0.25" min="0" placeholder="1" value="1" />' +
+      '</div>' +
+      '<div class="add-customer-form-field">' +
+        '<label for="service-part-cost-' + idx + '">Unit Price</label>' +
+        '<input id="service-part-cost-' + idx + '" name="part_price_display[]" type="text" placeholder="$0.00" />' +
       '</div>';
     attachSelectListener(row.querySelector('select'));
     attachRemoveButton(row);

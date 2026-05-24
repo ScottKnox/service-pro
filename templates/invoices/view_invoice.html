@@ -181,11 +181,23 @@
               {% for service in job.services %}
                 <div class="estimate-line-item-row">
                   <div class="estimate-line-item-main">
-                    <div class="estimate-line-item-title">{{ service.name|default(service.type, true)|default(service.service_code, true)|default('N/A', true) }}</div>
+                    <div class="estimate-line-item-title">{{ service.name|default(service.type, true)|default('N/A', true) }}</div>
                     {% if service.description %}
                       <div class="estimate-line-item-meta">{{ service.description }}</div>
                     {% endif %}
-                    <div class="estimate-line-item-meta">{{ service.estimated_hours|default(service.duration, true)|default('', true) }}</div>
+                    {% if service.show_labor_breakdown %}
+                      {% if service.labor_hours and service.labor_hours != '0' and service.labor_hours != '0.0' %}
+                        <div class="estimate-line-item-meta">Labor {{ service.labor_hours }} hrs @ {{ service.labor_rate|default('$0.00', true) }}/hr = {{ service.labor_total|default('$0.00', true) }}</div>
+                      {% endif %}
+                      {% for item in service.service_parts|default([], true) %}
+                        <div class="estimate-line-item-meta">{{ item.part_name|default('Part', true) }}{% if item.quantity %} {{ item.quantity }}{% endif %}{% if item.unit_cost %} @ {{ item.unit_cost }}{% endif %}</div>
+                      {% endfor %}
+                      {% for item in service.service_materials|default([], true) %}
+                        <div class="estimate-line-item-meta">{{ item.material_name|default('Material', true) }}{% if item.default_quantity_used %} {{ item.default_quantity_used }}{% endif %}{% if item.unit_of_measure %} {{ item.unit_of_measure }}{% endif %}{% if item.price %} @ {{ item.price }}{% endif %}</div>
+                      {% endfor %}
+                    {% elif service.estimated_hours or service.duration %}
+                      <div class="estimate-line-item-meta">{{ service.estimated_hours|default(service.duration, true) }}</div>
+                    {% endif %}
                   </div>
                   <div class="estimate-line-item-amount">{{ service.standard_price|default(service.price, true)|default('$0.00', true) }}</div>
                 </div>
@@ -201,26 +213,9 @@
               {% for part in job.parts %}
                 <div class="estimate-line-item-row">
                   <div class="estimate-line-item-main">
-                    <div class="estimate-line-item-title">{{ part.name|default(part.part_code, true)|default('N/A', true) }}</div>
+                    <div class="estimate-line-item-title">{{ part.name|default('N/A', true) }}</div>
                   </div>
                   <div class="estimate-line-item-amount">{{ part.unit_cost|default(part.price, true)|default('$0.00', true) }}</div>
-                </div>
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
-
-        {% if job.labors %}
-          <div class="estimate-stack-block">
-            <h3>Labor</h3>
-            <div class="estimate-line-items">
-              {% for labor in job.labors %}
-                <div class="estimate-line-item-row">
-                  <div class="estimate-line-item-main">
-                    <div class="estimate-line-item-title">{{ labor.description|default('N/A', true) }}</div>
-                    <div class="estimate-line-item-meta">Hours: {{ labor.hours|default('0', true) }} | Rate: {{ labor.hourly_rate|default('$0.00', true) }}</div>
-                  </div>
-                  <div class="estimate-line-item-amount">{{ labor.line_total|default('$0.00', true) }}</div>
                 </div>
               {% endfor %}
             </div>
@@ -235,7 +230,11 @@
                 <div class="estimate-line-item-row">
                   <div class="estimate-line-item-main">
                     <div class="estimate-line-item-title">{{ material.material_name|default('N/A', true) }}</div>
-                    <div class="estimate-line-item-meta">Qty: {{ material.quantity_used|default('0', true) }} | Price: {{ material.price|default('$0.00', true) }}</div>
+                    <div class="estimate-line-item-meta">
+                      Qty: {{ material.quantity_used|default('0', true) }} {{ material.unit_of_measure|default('', true) }}
+                      {% if material.unit_label %}| {{ material.unit_label }}{% endif %}
+                      | Price: {{ material.price|default('$0.00', true) }}
+                    </div>
                   </div>
                   <div class="estimate-line-item-amount">{{ material.line_total|default('$0.00', true) }}</div>
                 </div>

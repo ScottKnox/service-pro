@@ -35,16 +35,24 @@
             <p>{{ part.part_name }}</p>
           </div>
           <div class="view-service-detail-item">
-            <h4>Part Code</h4>
-            <p>{{ part.part_code }}</p>
+            <h4>Subcategory</h4>
+            <p>{{ part.subcategory|title }}</p>
           </div>
           <div class="view-service-detail-item">
             <h4>Category</h4>
             <p>{{ part.category }}</p>
           </div>
           <div class="view-service-detail-item">
+            <h4>SKU</h4>
+            <p>{{ part.sku or '-' }}</p>
+          </div>
+          <div class="view-service-detail-item">
             <h4>Manufacturer</h4>
             <p>{{ part.manufacturer or '-' }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Model Number</h4>
+            <p>{{ part.model_number or '-' }}</p>
           </div>
           <div class="view-service-detail-item">
             <h4>Description</h4>
@@ -59,8 +67,20 @@
             {% endif %}
           </div>
           <div class="view-service-detail-item">
-            <h4>Unit Cost</h4>
-            <p>{{ part.unit_cost_display }}</p>
+            <h4>Cost Price</h4>
+            <p>{{ part.cost_price_display }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Sell Price</h4>
+            <p>{{ part.sell_price_display }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Markup</h4>
+            <p>{{ part.markup_percent_display }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Warranty Months</h4>
+            <p>{{ part.warranty_months if part.warranty_months != '' else '-' }}</p>
           </div>
         </div>
       </section>

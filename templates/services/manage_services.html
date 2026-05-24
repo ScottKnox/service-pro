@@ -35,20 +35,6 @@
               </div>
             </details>
 
-            <details class="jobs-filter-group" open>
-              <summary>Service Code</summary>
-              <div class="jobs-filter-content">
-                {% if service_codes %}
-                  {% for code in service_codes %}
-                    <label for="service-code-{{ loop.index }}">
-                      <input id="service-code-{{ loop.index }}" type="checkbox" name="filter_code" value="{{ code }}" /> {{ code }}
-                    </label>
-                  {% endfor %}
-                {% else %}
-                  <p>No codes available.</p>
-                {% endif %}
-              </div>
-            </details>
           </div>
         </div>
 
@@ -84,27 +70,30 @@
                       data-catalog-card
                       data-filter-name="{{ service.service_name }}"
                       data-filter-category="{{ service.category }}"
-                      data-filter-code="{{ service.service_code }}"
                     >
                       <div class="jobs-card-row">
                         <span class="jobs-card-label">Service</span>
                         <span class="jobs-card-value">{{ service.service_name }}</span>
                       </div>
                       <div class="jobs-card-row">
-                        <span class="jobs-card-label">Code</span>
-                        <span class="jobs-card-value">{{ service.service_code }}</span>
-                      </div>
-                      <div class="jobs-card-row">
                         <span class="jobs-card-label">Category</span>
                         <span class="jobs-card-value">{{ service.category }}</span>
                       </div>
                       <div class="jobs-card-row">
-                        <span class="jobs-card-label">Estimated Hours</span>
+                        <span class="jobs-card-label">Labor Hours</span>
                         <span class="jobs-card-value">{{ service.estimated_hours_display }}</span>
                       </div>
                       <div class="jobs-card-row">
-                        <span class="jobs-card-label">Standard Price</span>
-                        <span class="jobs-card-value">{{ service.standard_price_display }}</span>
+                        <span class="jobs-card-label">Price</span>
+                        <span class="jobs-card-value">{{ service.price_display }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Included Parts</span>
+                        <span class="jobs-card-value">{{ service.included_parts_count }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Show Breakdown</span>
+                        <span class="jobs-card-value">{{ service.show_labor_breakdown_display }}</span>
                       </div>
                     </a>
                   {% endfor %}

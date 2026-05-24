@@ -36,16 +36,16 @@
             </details>
 
             <details class="jobs-filter-group" open>
-              <summary>Part Code</summary>
+              <summary>Subcategory (Part, Equipment)</summary>
               <div class="jobs-filter-content">
-                {% if part_codes %}
-                  {% for code in part_codes %}
-                    <label for="part-code-{{ loop.index }}">
-                      <input id="part-code-{{ loop.index }}" type="checkbox" name="filter_code" value="{{ code }}" /> {{ code }}
+                {% if part_subcategories %}
+                  {% for subcategory in part_subcategories %}
+                    <label for="part-subcategory-{{ loop.index }}">
+                      <input id="part-subcategory-{{ loop.index }}" type="checkbox" name="filter_code" value="{{ subcategory }}" /> {{ subcategory|title }}
                     </label>
                   {% endfor %}
                 {% else %}
-                  <p>No codes available.</p>
+                  <p>No subcategories available.</p>
                 {% endif %}
               </div>
             </details>
@@ -108,7 +108,7 @@
                       data-card-link-url="{{ url_for('catalog.view_part', partId=part._id) }}"
                       data-filter-name="{{ part.part_name }}"
                       data-filter-category="{{ part.category }}"
-                      data-filter-code="{{ part.part_code }}"
+                      data-filter-code="{{ part.subcategory }}"
                       data-filter-manufacturer="{{ part.manufacturer|default('', true) }}"
                       role="link"
                       tabindex="0"
@@ -119,8 +119,8 @@
                         <span class="jobs-card-value">{{ part.part_name }}</span>
                       </div>
                       <div class="jobs-card-row">
-                        <span class="jobs-card-label">Code</span>
-                        <span class="jobs-card-value">{{ part.part_code }}</span>
+                        <span class="jobs-card-label">Subcategory</span>
+                        <span class="jobs-card-value">{{ part.subcategory|title }}</span>
                       </div>
                       <div class="jobs-card-row">
                         <span class="jobs-card-label">Category</span>
@@ -131,8 +131,16 @@
                         <span class="jobs-card-value">{{ part.manufacturer or '-' }}</span>
                       </div>
                       <div class="jobs-card-row">
-                        <span class="jobs-card-label">Unit Cost</span>
-                        <span class="jobs-card-value">{{ part.unit_cost_display }}</span>
+                        <span class="jobs-card-label">Cost Price</span>
+                        <span class="jobs-card-value">{{ part.cost_price_display }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Sell Price</span>
+                        <span class="jobs-card-value">{{ part.sell_price_display }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Markup</span>
+                        <span class="jobs-card-value">{{ part.markup_percent_display }}</span>
                       </div>
                       <div class="jobs-card-actions">
                         {% if part.purchase_link %}

@@ -9,6 +9,7 @@ from flask import Blueprint, current_app, redirect, render_template, request, se
 import stripe
 
 from mongo import ensure_connection_or_500, serialize_doc
+from utils.markup import calculate_sell_price, get_markup_rule
 from utils import object_storage
 from utils.notifications import sms_features_enabled
 
@@ -180,6 +181,163 @@ def _is_truthy_form_value(value):
     return str(value or "").strip().lower() in ["true", "1", "yes", "on"]
 
 
+def _parse_optional_nonnegative_float(value):
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        numeric = float(text)
+    except ValueError:
+        return None
+    if numeric < 0:
+        return None
+    return numeric
+
+
+def _normalize_markup_rules_for_view(business):
+    rules = business.get("markup_rules")
+    if not isinstance(rules, list):
+        return []
+
+    normalized = []
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        try:
+            range_min = float(rule.get("range_min") or 0)
+            markup_percent = float(rule.get("markup_percent") or 0)
+        except (TypeError, ValueError):
+            continue
+        range_max_raw = rule.get("range_max")
+        range_max = None
+        if range_max_raw not in [None, ""]:
+            try:
+                range_max = float(range_max_raw)
+            except (TypeError, ValueError):
+                range_max = None
+        normalized.append(
+            {
+                "range_min": f"{range_min:.2f}",
+                "range_max": "" if range_max is None else f"{range_max:.2f}",
+                "markup_percent": f"{markup_percent:.2f}",
+            }
+        )
+    normalized.sort(key=lambda row: float(row.get("range_min") or 0))
+    return normalized
+
+
+def _parse_markup_rules_from_form(form):
+    mins = form.getlist("markup_range_min[]")
+    maxes = form.getlist("markup_range_max[]")
+    percents = form.getlist("markup_percent[]")
+
+    length = max(len(mins), len(maxes), len(percents))
+    parsed_rows = []
+    rules = []
+    row_errors = {}
+
+    for index in range(length):
+        min_text = str(mins[index] if index < len(mins) else "").strip()
+        max_text = str(maxes[index] if index < len(maxes) else "").strip()
+        percent_text = str(percents[index] if index < len(percents) else "").strip()
+
+        if not min_text and not max_text and not percent_text:
+            continue
+
+        parsed_rows.append(
+            {
+                "range_min": min_text,
+                "range_max": max_text,
+                "markup_percent": percent_text,
+            }
+        )
+
+        errors = []
+        try:
+            range_min = float(min_text)
+        except ValueError:
+            errors.append("Range min must be a valid number.")
+            range_min = None
+
+        range_max = None
+        if max_text:
+            try:
+                range_max = float(max_text)
+            except ValueError:
+                errors.append("Range max must be a valid number.")
+
+        try:
+            markup_percent = float(percent_text)
+        except ValueError:
+            errors.append("Markup percent must be a valid number.")
+            markup_percent = None
+
+        if range_min is not None and range_min < 0:
+            errors.append("Range min must be zero or greater.")
+
+        if range_min is not None and range_max is not None and range_min >= range_max:
+            errors.append("Range min must be less than range max.")
+
+        if markup_percent is not None and markup_percent <= 0:
+            errors.append("Markup percent must be greater than zero.")
+
+        if errors:
+            row_errors[len(parsed_rows) - 1] = errors
+            continue
+
+        rules.append(
+            {
+                "row_index": len(parsed_rows) - 1,
+                "range_min": range_min,
+                "range_max": range_max,
+                "markup_percent": markup_percent,
+            }
+        )
+
+    rules.sort(key=lambda rule: rule["range_min"])
+
+    none_max_count = sum(1 for rule in rules if rule["range_max"] is None)
+    if none_max_count > 1:
+        for rule in rules:
+            if rule["range_max"] is None:
+                row_errors.setdefault(rule["row_index"], []).append("Only one rule can have no upper limit.")
+
+    for index, rule in enumerate(rules):
+        if rule["range_max"] is None and index != len(rules) - 1:
+            row_errors.setdefault(rule["row_index"], []).append("No-limit rule must be the highest range.")
+
+    for index in range(1, len(rules)):
+        previous = rules[index - 1]
+        current = rules[index]
+        previous_max = previous["range_max"]
+        if previous_max is None or current["range_min"] < previous_max:
+            row_errors.setdefault(previous["row_index"], []).append("Range overlaps with another rule.")
+            row_errors.setdefault(current["row_index"], []).append("Range overlaps with another rule.")
+
+    cleaned_rules = [
+        {
+            "range_min": rule["range_min"],
+            "range_max": rule["range_max"],
+            "markup_percent": rule["markup_percent"],
+        }
+        for rule in rules
+    ]
+
+    return cleaned_rules, parsed_rows, row_errors
+
+
+def _markup_status_payload(status):
+    if status == "saved":
+        return "success", "Markup rules saved. These rules apply to new parts and materials going forward. Existing sell prices are unchanged."
+    if status == "recalculated":
+        return "success", "Existing auto-populated sell prices were recalculated using your latest markup rules."
+    if status == "kept":
+        return "success", "Existing sell prices were kept unchanged."
+    if status == "recalc_failed":
+        return "error", "Unable to recalculate prices because markup rules are missing or invalid."
+    return "", ""
+
+
 def _parse_tax_rates_from_form(form):
     names = form.getlist("tax_rate_name[]")
     rates = form.getlist("tax_rate_rate[]")
@@ -268,6 +426,7 @@ def business_profile():
 
     business = serialize_doc(business)
     business["tax_rates"] = _normalize_tax_rates_for_view(business)
+    business["markup_rules"] = _normalize_markup_rules_for_view(business)
 
     custom_logo = str(business.get("custom_logo") or "").strip()
     logo_url = object_storage.build_access_url(custom_logo)
@@ -279,6 +438,8 @@ def business_profile():
     logo_status_kind, logo_status_message = _logo_status_payload(request.args.get("logo_status", ""))
     stripe_status_kind, stripe_status_message = _stripe_status_payload(request.args.get("stripe_status", ""))
     twilio_status_kind, twilio_status_message = _twilio_status_payload(business)
+    markup_status_kind, markup_status_message = _markup_status_payload(request.args.get("markup_status", ""))
+    show_markup_recalc_prompt = str(request.args.get("markup_status") or "").strip() == "saved"
 
     stripe_account_id = str(business.get("stripe_account_id") or "").strip()
     stripe_charges_enabled = bool(business.get("stripe_charges_enabled"))
@@ -299,6 +460,9 @@ def business_profile():
         stripe_connect_ready=stripe_connect_ready,
         twilio_status_kind=twilio_status_kind,
         twilio_status_message=twilio_status_message,
+        markup_status_kind=markup_status_kind,
+        markup_status_message=markup_status_message,
+        show_markup_recalc_prompt=show_markup_recalc_prompt,
     )
 
 
@@ -528,6 +692,10 @@ def update_business():
         report_email_template = request.form.get("report_email_template", "").strip()
         default_estimate_expiration_days_raw = request.form.get("default_estimate_expiration_days", "").strip()
         default_payment_due_days_raw = request.form.get("default_payment_due_days", "").strip()
+        qb_material_account_id = request.form.get("qb_material_account_id", "").strip()
+        labor_rate_standard = _parse_optional_nonnegative_float(request.form.get("labor_rate_standard", ""))
+        labor_rate_emergency = _parse_optional_nonnegative_float(request.form.get("labor_rate_emergency", ""))
+        markup_rules, markup_rules_rows, markup_rules_errors = _parse_markup_rules_from_form(request.form)
 
         try:
             default_estimate_expiration_days = max(1, int(default_estimate_expiration_days_raw))
@@ -539,34 +707,70 @@ def update_business():
         except ValueError:
             default_payment_due_days = 30
 
-        db.businesses.update_one(
-            {"_id": business_oid},
-            {
-                "$set": {
-                    "company_name": company_name,
-                    "warranty_info": warranty_info,
-                    "address_line_1": address_line_1,
-                    "address_line_2": address_line_2,
-                    "city": city,
-                    "state": state,
-                    "zip_code": zip_code,
-                    "phone_number": phone_number,
-                    "twilio_phone_number": twilio_phone_number,
-                    "fax_number": fax_number,
-                    "email": email,
-                    "website": website,
-                    "license_number": license_number,
-                    "tax_rates": tax_rates,
-                    "quote_email_template": quote_email_template,
-                    "invoice_email_template": invoice_email_template,
-                    "report_email_template": report_email_template,
-                    "default_estimate_expiration_days": default_estimate_expiration_days,
-                    "default_payment_due_days": default_payment_due_days,
-                }
-            },
-        )
+        if not markup_rules_errors:
+            db.businesses.update_one(
+                {"_id": business_oid},
+                {
+                    "$set": {
+                        "company_name": company_name,
+                        "warranty_info": warranty_info,
+                        "address_line_1": address_line_1,
+                        "address_line_2": address_line_2,
+                        "city": city,
+                        "state": state,
+                        "zip_code": zip_code,
+                        "phone_number": phone_number,
+                        "twilio_phone_number": twilio_phone_number,
+                        "fax_number": fax_number,
+                        "email": email,
+                        "website": website,
+                        "license_number": license_number,
+                        "tax_rates": tax_rates,
+                        "quote_email_template": quote_email_template,
+                        "invoice_email_template": invoice_email_template,
+                        "report_email_template": report_email_template,
+                        "default_estimate_expiration_days": default_estimate_expiration_days,
+                        "default_payment_due_days": default_payment_due_days,
+                        "qb_material_account_id": qb_material_account_id,
+                        "labor_rate_standard": labor_rate_standard,
+                        "labor_rate_emergency": labor_rate_emergency,
+                        "markup_rules": markup_rules,
+                    }
+                },
+            )
 
-        return redirect(url_for("business.business_profile"))
+            return redirect(url_for("business.business_profile", markup_status="saved"))
+
+        business = serialize_doc(db.businesses.find_one({"_id": business_oid}) or {})
+        business["tax_rates"] = tax_rates
+        business["company_name"] = company_name
+        business["warranty_info"] = warranty_info
+        business["address_line_1"] = address_line_1
+        business["address_line_2"] = address_line_2
+        business["city"] = city
+        business["state"] = state
+        business["zip_code"] = zip_code
+        business["phone_number"] = phone_number
+        business["twilio_phone_number"] = twilio_phone_number
+        business["fax_number"] = fax_number
+        business["email"] = email
+        business["website"] = website
+        business["license_number"] = license_number
+        business["quote_email_template"] = quote_email_template
+        business["invoice_email_template"] = invoice_email_template
+        business["report_email_template"] = report_email_template
+        business["default_estimate_expiration_days"] = default_estimate_expiration_days
+        business["default_payment_due_days"] = default_payment_due_days
+        business["qb_material_account_id"] = qb_material_account_id
+        business["labor_rate_standard"] = "" if labor_rate_standard is None else f"{labor_rate_standard:.2f}"
+        business["labor_rate_emergency"] = "" if labor_rate_emergency is None else f"{labor_rate_emergency:.2f}"
+        business["markup_rules"] = markup_rules_rows
+        return render_template(
+            "business/update_business.html",
+            business=business,
+            markup_rules_errors=markup_rules_errors,
+            markup_rules_error_message="Fix markup rule errors before saving.",
+        )
 
     business = db.businesses.find_one({"_id": business_oid})
     if not business:
@@ -587,6 +791,7 @@ def update_business():
     business["license_number"] = str(business.get("license_number") or "").strip()
     business["warranty_info"] = str(business.get("warranty_info") or "").strip()
     business["report_email_template"] = str(business.get("report_email_template") or "").strip()
+    business["qb_material_account_id"] = str(business.get("qb_material_account_id") or "").strip()
     try:
         business["default_estimate_expiration_days"] = max(1, int(business.get("default_estimate_expiration_days") or 30))
     except (TypeError, ValueError):
@@ -595,4 +800,76 @@ def update_business():
         business["default_payment_due_days"] = max(1, int(business.get("default_payment_due_days") or 30))
     except (TypeError, ValueError):
         business["default_payment_due_days"] = 30
-    return render_template("business/update_business.html", business=business)
+    labor_rate_standard = _parse_optional_nonnegative_float(business.get("labor_rate_standard"))
+    labor_rate_emergency = _parse_optional_nonnegative_float(business.get("labor_rate_emergency"))
+    business["labor_rate_standard"] = "" if labor_rate_standard is None else f"{labor_rate_standard:.2f}"
+    business["labor_rate_emergency"] = "" if labor_rate_emergency is None else f"{labor_rate_emergency:.2f}"
+    business["markup_rules"] = _normalize_markup_rules_for_view(business)
+    return render_template("business/update_business.html", business=business, markup_rules_errors={}, markup_rules_error_message="")
+
+
+@bp.route("/business/markup/recalculate", methods=["POST"])
+def recalculate_markup_prices():
+    if not _is_authorized():
+        return redirect(url_for("admin_bp.admin"))
+
+    db = ensure_connection_or_500()
+    employee, business_oid, business = _business_context(db)
+    if not employee:
+        session.clear()
+        return redirect(url_for("auth.login"))
+    if not business_oid or not business:
+        return redirect(url_for("error_page", error="no_business"))
+
+    markup_rules = (business or {}).get("markup_rules")
+    if not isinstance(markup_rules, list) or not markup_rules:
+        return redirect(url_for("business.business_profile", markup_status="recalc_failed"))
+
+    part_updates = 0
+    for part in db.parts.find({"business_id": business_oid, "sell_price_auto_populated": True}):
+        cost_price = part.get("cost_price")
+        rule = get_markup_rule(cost_price, markup_rules)
+        if not rule:
+            continue
+        sell_price = calculate_sell_price(cost_price, rule.get("markup_percent"))
+        result = db.parts.update_one(
+            {"_id": part.get("_id")},
+            {
+                "$set": {
+                    "sell_price": sell_price,
+                    "price": sell_price,
+                    "sell_price_auto_populated": True,
+                }
+            },
+        )
+        if result.modified_count:
+            part_updates += 1
+
+    material_updates = 0
+    for material in db.materials.find({"business_id": business_oid, "sell_price_auto_populated": True}):
+        cost_price_per_unit = material.get("cost_price_per_unit")
+        rule = get_markup_rule(cost_price_per_unit, markup_rules)
+        if not rule:
+            continue
+        sell_price_per_unit = calculate_sell_price(cost_price_per_unit, rule.get("markup_percent"))
+        result = db.materials.update_one(
+            {"_id": material.get("_id")},
+            {
+                "$set": {
+                    "sell_price_per_unit": sell_price_per_unit,
+                    "price": sell_price_per_unit,
+                    "sell_price_auto_populated": True,
+                }
+            },
+        )
+        if result.modified_count:
+            material_updates += 1
+
+    return redirect(
+        url_for(
+            "business.business_profile",
+            markup_status="recalculated",
+            updated_parts=part_updates,
+            updated_materials=material_updates,
+        )
+    )

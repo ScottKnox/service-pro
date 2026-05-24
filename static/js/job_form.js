@@ -840,8 +840,9 @@
         '</select>' +
       '</div>' +
       '<div class="add-customer-form-field">' +
-        '<label for="material-quantity-used-' + nextIndex + '">Quantity Used</label>' +
+        '<label for="material-quantity-used-' + nextIndex + '">Quantity</label>' +
         '<input id="material-quantity-used-' + nextIndex + '" name="material_quantity_used[]" type="number" step="0.25" min="0" placeholder="0" />' +
+        '<p class="form-field-note material-minimum-warning" style="display:none;margin:0.35rem 0 0;"></p>' +
       '</div>' +
       '<div class="add-customer-form-field">' +
         '<label for="material-unit-of-measure-' + nextIndex + '">Unit</label>' +
@@ -863,6 +864,49 @@
     updateRemoveButtonVisibility(row, 'material');
     addHvacPickerToRow(row, 'material', []);
     return row;
+  }
+
+  function applyMaterialQuantityMetadata(materialIndex, materialDetails) {
+    const quantityInput = document.getElementById('material-quantity-used-' + materialIndex);
+    const quantityLabel = document.querySelector('label[for="material-quantity-used-' + materialIndex + '"]');
+    if (!quantityInput || !quantityLabel) {
+      return;
+    }
+
+    const unitLabel = materialDetails && materialDetails.unit_label ? String(materialDetails.unit_label).trim() : '';
+    const minimumQuantity = materialDetails && materialDetails.minimum_quantity !== undefined
+      ? String(materialDetails.minimum_quantity).trim()
+      : '';
+
+    quantityLabel.textContent = unitLabel ? ('Quantity (' + unitLabel + ')') : 'Quantity';
+    quantityInput.dataset.minimumQuantity = minimumQuantity;
+
+    const row = quantityInput.closest('.job-material-row');
+    if (!row) {
+      return;
+    }
+
+    let warning = row.querySelector('.material-minimum-warning');
+    if (!warning) {
+      warning = document.createElement('p');
+      warning.className = 'form-field-note material-minimum-warning';
+      warning.style.display = 'none';
+      warning.style.margin = '0.35rem 0 0';
+      const field = quantityInput.closest('.add-customer-form-field');
+      if (field) {
+        field.appendChild(warning);
+      }
+    }
+
+    const enteredValue = parseFloat(quantityInput.value || '0');
+    const minValue = parseFloat(minimumQuantity || '0');
+    if (minimumQuantity && !Number.isNaN(minValue) && minValue > 0 && !Number.isNaN(enteredValue) && enteredValue > 0 && enteredValue < minValue) {
+      warning.textContent = 'Warning: entered quantity is below the recommended minimum of ' + minimumQuantity + '.';
+      warning.style.display = 'block';
+    } else {
+      warning.textContent = '';
+      warning.style.display = 'none';
+    }
   }
 
   function createDiscountRow() {
@@ -1365,6 +1409,17 @@
       const materialRow = this.closest('.job-material-row');
       if (materialRow) {
         updateRemoveButtonVisibility(materialRow, 'material');
+      }
+
+      applyMaterialQuantityMetadata(materialIndex, materialDetails);
+
+      if (quantityInput && !quantityInput.dataset.materialMinimumListenerAttached) {
+        quantityInput.addEventListener('input', function () {
+          const selected = selectElement.value;
+          const details = selected ? materialsCatalog[selected] : null;
+          applyMaterialQuantityMetadata(materialIndex, details);
+        });
+        quantityInput.dataset.materialMinimumListenerAttached = 'true';
       }
 
       refreshRemoveButtons('material');

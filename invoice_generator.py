@@ -247,9 +247,53 @@ def _build_logo_flowable(business_logo_path, max_width=2.5 * inch, max_height=1.
 
 def _line_item_count(job):
     total = 0
-    for key in ("services", "parts", "labors", "materials", "equipments"):
+    for key in ("services", "parts", "materials", "equipments"):
         total += sum(1 for item in (job.get(key) or []) if isinstance(item, dict))
     return total
+
+
+def _service_display_name(service):
+    return (
+        service.get("name")
+        or service.get("service_name")
+        or service.get("type")
+        or "Service"
+    )
+
+
+def _service_display_price(service):
+    return (
+        service.get("standard_price")
+        or service.get("price")
+        or "$0.00"
+    )
+
+
+def _service_display_duration(service):
+    return _format_duration_with_unit(
+        service.get("labor_hours")
+        or service.get("estimated_hours")
+        or service.get("duration")
+        or ""
+    )
+
+
+def _part_display_name(part):
+    return (
+        part.get("name")
+        or part.get("part_name")
+        or part.get("description")
+        or "Part"
+    )
+
+
+def _part_display_amount(part):
+    return (
+        part.get("price")
+        or part.get("unit_cost")
+        or part.get("sell_price")
+        or "$0.00"
+    )
 
 
 def generate_invoice(job_id, job, customer, business_logo_path="", business=None):
@@ -586,9 +630,46 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
     for service in job.get("services", []) or []:
         if not isinstance(service, dict):
             continue
-        name = service.get("name") or service.get("type") or service.get("code") or "Service"
-        price = service.get("standard_price") or service.get("price") or "$0.00"
-        description = service.get("description") or ""
+        name = _service_display_name(service)
+        price = _service_display_price(service)
+        description_lines = []
+        base_description = str(service.get("description") or "").strip()
+        if base_description:
+            description_lines.append(base_description)
+        if service.get("show_labor_breakdown"):
+            labor_hours = str(service.get("labor_hours") or "").strip()
+            if labor_hours and labor_hours not in {"0", "0.0"}:
+                description_lines.append(
+                    f"Labor {labor_hours} hrs @ {str(service.get('labor_rate') or '$0.00')} /hr = {str(service.get('labor_total') or '$0.00')}"
+                )
+            for item in service.get("service_parts") or []:
+                if not isinstance(item, dict):
+                    continue
+                part_name = str(item.get("part_name") or "Part").strip()
+                quantity = str(item.get("quantity") or "").strip()
+                unit_cost = str(item.get("unit_cost") or "").strip()
+                line = part_name
+                if quantity:
+                    line += f" {quantity}"
+                if unit_cost:
+                    line += f" @ {unit_cost}"
+                description_lines.append(line)
+            for item in service.get("service_materials") or []:
+                if not isinstance(item, dict):
+                    continue
+                material_name = str(item.get("material_name") or "Material").strip()
+                quantity = str(item.get("default_quantity_used") or item.get("quantity") or "").strip()
+                unit = str(item.get("unit_of_measure") or "").strip()
+                unit_price = str(item.get("price") or item.get("unit_price") or "").strip()
+                line = material_name
+                if quantity:
+                    line += f" {quantity}"
+                if unit:
+                    line += f" {unit}"
+                if unit_price:
+                    line += f" @ {unit_price}"
+                description_lines.append(line)
+        description = "\n".join(description_lines)
         service_rows.append([_build_service_line_item_cell(name, description), str(price)])
 
     parts_rows = []
@@ -596,19 +677,8 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
         if not isinstance(part, dict):
             continue
         parts_rows.append([
-            str(part.get("name") or part.get("code") or "Part"),
-            str(part.get("price") or part.get("unit_cost") or "$0.00"),
-        ])
-
-    labor_rows = []
-    for labor in job.get("labors", []) or []:
-        if not isinstance(labor, dict):
-            continue
-        labor_rows.append([
-            str(labor.get("description") or "Labor"),
-            _format_display_hours(labor.get("hours") or "0"),
-            str(labor.get("hourly_rate") or "$0.00"),
-            str(labor.get("line_total") or "$0.00"),
+            str(_part_display_name(part)),
+            str(_part_display_amount(part)),
         ])
 
     material_rows = []
@@ -637,14 +707,12 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
 
     _build_section_table(story, heading_style, "", ["Service", "Amount"], service_rows, [4.4 * inch, 2.2 * inch], section_spacing=section_spacer_height)
     _build_section_table(story, heading_style, "", ["Part", "Amount"], parts_rows, [4.4 * inch, 2.2 * inch], section_spacing=section_spacer_height)
-    _build_section_table(story, heading_style, "", ["Description", "Hours", "Rate", "Amount"], labor_rows, [2.8 * inch, 0.8 * inch, 1.2 * inch, 1.8 * inch], section_spacing=section_spacer_height)
     _build_section_table(story, heading_style, "", ["Material", "Quantity", "Amount"], material_rows, [3.2 * inch, 1.2 * inch, 2.2 * inch], section_spacing=section_spacer_height)
     _build_section_table(story, heading_style, "", ["Equipment", "Qty", "Price", "Amount"], equipment_rows, [2.6 * inch, 0.8 * inch, 1.2 * inch, 2.0 * inch], section_spacing=section_spacer_height)
 
     subtotal = (
         sum(_currency_to_float(row[1]) for row in service_rows)
         + sum(_currency_to_float(row[1]) for row in parts_rows)
-        + sum(_currency_to_float(row[3]) for row in labor_rows)
         + sum(_currency_to_float(row[2]) for row in material_rows)
         + sum(_currency_to_float(row[3]) for row in equipment_rows)
     )
@@ -1158,15 +1226,10 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
             if not isinstance(service, dict):
                 continue
             name = (
-                service.get("name")
-                or service.get("service_name")
-                or service.get("type")
-                or service.get("service_code")
-                or service.get("code")
-                or "Service"
+                _service_display_name(service)
             )
-            price = service.get("standard_price") or service.get("price") or "$0.00"
-            duration = _format_duration_with_unit(service.get("estimated_hours") or service.get("duration") or "")
+            price = _service_display_price(service)
+            duration = _service_display_duration(service)
             description = service.get("description") or service.get("service_description") or ""
             services_data.append([
                 _build_service_line_item_cell(name, description),
@@ -1197,8 +1260,9 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
         story.append(Paragraph("Parts", heading_style))
         parts_data = [["Part", "Price"]]
         for part in job.get('parts', []):
-            if isinstance(part, dict) and 'name' in part and 'price' in part:
-                parts_data.append([part['name'], part['price']])
+            if not isinstance(part, dict):
+                continue
+            parts_data.append([str(_part_display_name(part)), str(_part_display_amount(part))])
 
         parts_breakdown_table = Table(parts_data, colWidths=[4.0 * inch, 1.5 * inch])
         parts_breakdown_table.setStyle(
@@ -1216,6 +1280,36 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
             )
         )
         story.append(parts_breakdown_table)
+        story.append(Spacer(1, 0.4 * inch))
+
+    if job.get('materials'):
+        story.append(Paragraph("Materials", heading_style))
+        materials_data = [["Material", "Quantity", "Price", "Line Total"]]
+        for material in job.get('materials', []):
+            if isinstance(material, dict) and material.get('material_name'):
+                materials_data.append([
+                    material.get('material_name', ''),
+                    f"{material.get('quantity_used', '')} {material.get('unit_of_measure', '')}".strip(),
+                    material.get('price', '$0.00'),
+                    material.get('line_total', '$0.00'),
+                ])
+
+        materials_breakdown_table = Table(materials_data, colWidths=[2.2 * inch, 1.0 * inch, 1.0 * inch, 1.3 * inch])
+        materials_breakdown_table.setStyle(
+            TableStyle(
+                [
+                    ("FONT", (0, 0), (-1, -1), "Helvetica", 10),
+                    ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 10),
+                    ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1B263B")),
+                    ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LINEBELOW", (0, 0), (-1, 0), 1, colors.HexColor("#1B263B")),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E9EEF4")),
+                ]
+            )
+        )
+        story.append(materials_breakdown_table)
         story.append(Spacer(1, 0.4 * inch))
 
     if job.get('equipments'):
@@ -1250,14 +1344,12 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
 
     services_list = job.get("services") if isinstance(job.get("services"), list) else []
     parts_list = job.get("parts") if isinstance(job.get("parts"), list) else []
-    labors_list = job.get("labors") if isinstance(job.get("labors"), list) else []
     materials_list = job.get("materials") if isinstance(job.get("materials"), list) else []
     equipments_list = job.get("equipments") if isinstance(job.get("equipments"), list) else []
 
     subtotal = (
-        sum(_currency_to_float(service.get("standard_price") or service.get("price")) for service in services_list)
-        + sum(_currency_to_float(part.get("unit_cost") or part.get("price")) for part in parts_list)
-        + sum(_currency_to_float(labor.get("line_total") or labor.get("hourly_rate")) for labor in labors_list)
+        sum(_currency_to_float(_service_display_price(service)) for service in services_list)
+        + sum(_currency_to_float(_part_display_amount(part)) for part in parts_list)
         + sum(_currency_to_float(material.get("line_total") or material.get("price")) for material in materials_list)
         + sum(_currency_to_float(equipment.get("line_total") or equipment.get("price")) for equipment in equipments_list)
     )

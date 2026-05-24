@@ -185,7 +185,7 @@
                 <select id="service-code-{{ loop.index }}" name="service_code[]">
                   <option value="">-- Select a service --</option>
                   {% for available_service in services %}
-                    <option value="{{ available_service.service_code }}" {% if available_service.service_code == service.code or available_service.service_name == service.type %}selected{% endif %}>{{ available_service.service_name }} ({{ available_service.service_code }})</option>
+                    <option value="{{ available_service._id }}" {% if available_service._id == service.code or available_service._id == service.service_id or available_service.service_name == service.type %}selected{% endif %}>{{ available_service.service_name }}</option>
                   {% endfor %}
                 </select>
                 {% if loop.first %}<span id="error-service-code" class="form-field-error" style="display:none;">At least one service must be selected</span>{% endif %}
@@ -215,7 +215,7 @@
                 <select id="service-code-1" name="service_code[]">
                   <option value="">-- Select a service --</option>
                   {% for service in services %}
-                    <option value="{{ service.service_code }}">{{ service.service_name }} ({{ service.service_code }})</option>
+                    <option value="{{ service._id }}">{{ service.service_name }}</option>
                   {% endfor %}
                 </select>
                 <span id="error-service-code" class="form-field-error" style="display:none;">At least one service must be selected</span>
@@ -246,7 +246,7 @@
 
         <template id="service-options-template">
           {% for service in services %}
-            <option value="{{ service.service_code }}">{{ service.service_name }} ({{ service.service_code }})</option>
+            <option value="{{ service._id }}">{{ service.service_name }}</option>
           {% endfor %}
         </template>
 
@@ -261,7 +261,7 @@
                 <select id="part-code-{{ loop.index }}" name="part_code[]">
                   <option value="">-- Select a part --</option>
                   {% for available_part in parts %}
-                    <option value="{{ available_part.part_code }}" {% if available_part.part_code == part.code or available_part.part_name == part.name %}selected{% endif %}>{{ available_part.part_name }} ({{ available_part.part_code }})</option>
+                    <option value="{{ available_part._id }}" {% if available_part._id == part.code or available_part._id == part.part_id or available_part.part_name == part.name %}selected{% endif %}>{{ available_part.part_name }}{% if available_part.sku %} ({{ available_part.sku }}){% endif %}</option>
                   {% endfor %}
                 </select>
               </div>
@@ -279,7 +279,7 @@
                 <select id="part-code-1" name="part_code[]">
                   <option value="">-- Select a part --</option>
                   {% for part in parts %}
-                    <option value="{{ part.part_code }}">{{ part.part_name }} ({{ part.part_code }})</option>
+                    <option value="{{ part._id }}">{{ part.part_name }}{% if part.sku %} ({{ part.sku }}){% endif %}</option>
                   {% endfor %}
                 </select>
               </div>
@@ -298,7 +298,7 @@
 
         <template id="part-options-template">
           {% for part in parts %}
-            <option value="{{ part.part_code }}">{{ part.part_name }} ({{ part.part_code }})</option>
+            <option value="{{ part._id }}">{{ part.part_name }}{% if part.sku %} ({{ part.sku }}){% endif %}</option>
           {% endfor %}
         </template>
 
@@ -443,7 +443,7 @@
               </div>
 
               <div class="add-customer-form-field">
-                <label for="material-quantity-used-{{ loop.index }}">Quantity Used</label>
+                <label for="material-quantity-used-{{ loop.index }}">Quantity</label>
                 <input id="material-quantity-used-{{ loop.index }}" name="material_quantity_used[]" type="number" step="0.25" min="0" placeholder="0" value="{{ material.quantity_used|default('', true) }}" />
               </div>
 
@@ -451,21 +451,18 @@
                 <label for="material-unit-of-measure-{{ loop.index }}">Unit</label>
                 <select id="material-unit-of-measure-{{ loop.index }}" name="material_unit_of_measure[]">
                   <option value="">-- Select a unit --</option>
-                  <option value="ea" {% if material.unit_of_measure == 'ea' %}selected{% endif %}>ea</option>
+                  <option value="lbs" {% if material.unit_of_measure == 'lbs' %}selected{% endif %}>lbs</option>
                   <option value="ft" {% if material.unit_of_measure == 'ft' %}selected{% endif %}>ft</option>
                   <option value="in" {% if material.unit_of_measure == 'in' %}selected{% endif %}>in</option>
-                  <option value="lb" {% if material.unit_of_measure == 'lb' %}selected{% endif %}>lb</option>
                   <option value="oz" {% if material.unit_of_measure == 'oz' %}selected{% endif %}>oz</option>
                   <option value="gal" {% if material.unit_of_measure == 'gal' %}selected{% endif %}>gal</option>
                   <option value="qt" {% if material.unit_of_measure == 'qt' %}selected{% endif %}>qt</option>
                   <option value="pt" {% if material.unit_of_measure == 'pt' %}selected{% endif %}>pt</option>
-                  <option value="L" {% if material.unit_of_measure == 'L' %}selected{% endif %}>L</option>
-                  <option value="mL" {% if material.unit_of_measure == 'mL' %}selected{% endif %}>mL</option>
-                  <option value="sq ft" {% if material.unit_of_measure == 'sq ft' %}selected{% endif %}>sq ft</option>
-                  <option value="cu ft" {% if material.unit_of_measure == 'cu ft' %}selected{% endif %}>cu ft</option>
+                  <option value="fl_oz" {% if material.unit_of_measure == 'fl_oz' %}selected{% endif %}>fl_oz</option>
+                  <option value="sq_ft" {% if material.unit_of_measure == 'sq_ft' %}selected{% endif %}>sq_ft</option>
+                  <option value="each" {% if material.unit_of_measure == 'each' %}selected{% endif %}>each</option>
                   <option value="box" {% if material.unit_of_measure == 'box' %}selected{% endif %}>box</option>
                   <option value="roll" {% if material.unit_of_measure == 'roll' %}selected{% endif %}>roll</option>
-                  <option value="set" {% if material.unit_of_measure == 'set' %}selected{% endif %}>set</option>
                 </select>
               </div>
 
@@ -488,7 +485,7 @@
               </div>
 
               <div class="add-customer-form-field">
-                <label for="material-quantity-used-1">Quantity Used</label>
+                <label for="material-quantity-used-1">Quantity</label>
                 <input id="material-quantity-used-1" name="material_quantity_used[]" type="number" step="0.25" min="0" placeholder="0" />
               </div>
 
@@ -496,21 +493,18 @@
                 <label for="material-unit-of-measure-1">Unit</label>
                 <select id="material-unit-of-measure-1" name="material_unit_of_measure[]">
                   <option value="">-- Select a unit --</option>
-                  <option value="ea">ea</option>
+                  <option value="lbs">lbs</option>
                   <option value="ft">ft</option>
                   <option value="in">in</option>
-                  <option value="lb">lb</option>
                   <option value="oz">oz</option>
                   <option value="gal">gal</option>
                   <option value="qt">qt</option>
                   <option value="pt">pt</option>
-                  <option value="L">L</option>
-                  <option value="mL">mL</option>
-                  <option value="sq ft">sq ft</option>
-                  <option value="cu ft">cu ft</option>
+                  <option value="fl_oz">fl_oz</option>
+                  <option value="sq_ft">sq_ft</option>
+                  <option value="each">each</option>
                   <option value="box">box</option>
                   <option value="roll">roll</option>
-                  <option value="set">set</option>
                 </select>
               </div>
 
@@ -534,21 +528,18 @@
 
         <template id="material-unit-options-template">
           <option value="">-- Select a unit --</option>
-          <option value="ea">ea</option>
+          <option value="lbs">lbs</option>
           <option value="ft">ft</option>
           <option value="in">in</option>
-          <option value="lb">lb</option>
           <option value="oz">oz</option>
           <option value="gal">gal</option>
           <option value="qt">qt</option>
           <option value="pt">pt</option>
-          <option value="L">L</option>
-          <option value="mL">mL</option>
-          <option value="sq ft">sq ft</option>
-          <option value="cu ft">cu ft</option>
+          <option value="fl_oz">fl_oz</option>
+          <option value="sq_ft">sq_ft</option>
+          <option value="each">each</option>
           <option value="box">box</option>
           <option value="roll">roll</option>
-          <option value="set">set</option>
         </template>
 
         <h2 class="create-job-form-section-header">Discounts</h2>

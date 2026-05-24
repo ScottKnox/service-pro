@@ -72,7 +72,6 @@
   const modalViewJob = document.getElementById("dispatch-modal-view-job");
 
   const quickModal = document.getElementById("dispatch-quick-assign-modal");
-  const quickSearch = document.getElementById("dispatch-quick-search");
   const quickJobId = document.getElementById("dispatch-quick-job-id");
   const quickEmpty = document.getElementById("dispatch-quick-empty");
   const quickTech = document.getElementById("dispatch-quick-primary-tech");
@@ -424,26 +423,13 @@
     }
   }
 
-  function populateQuickPendingOptions(searchTerm) {
+  function populateQuickPendingOptions() {
     if (!quickJobId) {
       return;
     }
 
-    const normalizedSearch = String(searchTerm || "").trim().toLowerCase();
-    const filtered = state.pendingJobs.filter((job) => {
-      if (!normalizedSearch) {
-        return true;
-      }
-      const haystack = [
-        String(job.customer_name || ""),
-        String(job.primary_service_name || ""),
-        String(job.address || ""),
-      ].join(" ").toLowerCase();
-      return haystack.includes(normalizedSearch);
-    });
-
     quickJobId.innerHTML = "";
-    filtered.forEach((job) => {
+    state.pendingJobs.forEach((job) => {
       const option = document.createElement("option");
       option.value = String(job.id || "");
       const service = String(job.primary_service_name || "No service").trim();
@@ -451,7 +437,7 @@
       quickJobId.appendChild(option);
     });
 
-    const hasRows = filtered.length > 0;
+    const hasRows = state.pendingJobs.length > 0;
     quickJobId.disabled = !hasRows;
     if (quickSave) {
       quickSave.disabled = !hasRows;
@@ -470,9 +456,6 @@
     state.quickAssign.techId = String(techId || "");
     state.quickAssign.minuteOfDay = Number(minuteOfDay || state.dayStartMinutes);
 
-    if (quickSearch) {
-      quickSearch.value = "";
-    }
     if (quickTech) {
       quickTech.value = state.quickAssign.techId;
     }
@@ -487,7 +470,7 @@
       quickError.textContent = "";
     }
 
-    populateQuickPendingOptions("");
+    populateQuickPendingOptions();
     quickModal.hidden = false;
   }
 
@@ -857,12 +840,6 @@
     if (quickModal) {
       quickModal.querySelectorAll("[data-dispatch-quick-close]").forEach((el) => {
         el.addEventListener("click", closeQuickAssignModal);
-      });
-    }
-
-    if (quickSearch) {
-      quickSearch.addEventListener("input", () => {
-        populateQuickPendingOptions(quickSearch.value);
       });
     }
 

@@ -136,7 +136,7 @@
                 <select id="service-code-{{ loop.index }}" name="service_code[]">
                   <option value="">-- Select a service --</option>
                   {% for available_service in services %}
-                    <option value="{{ available_service.service_code }}" {% if available_service.service_code == service.code or available_service.service_name == service.type %}selected{% endif %}>{{ available_service.service_name }} ({{ available_service.service_code }})</option>
+                    <option value="{{ available_service._id }}" {% if available_service._id == service.code or available_service._id == service.service_id or available_service.service_name == service.type %}selected{% endif %}>{{ available_service.service_name }}</option>
                   {% endfor %}
                 </select>
               </div>
@@ -165,7 +165,7 @@
                 <select id="service-code-1" name="service_code[]">
                   <option value="">-- Select a service --</option>
                   {% for service in services %}
-                    <option value="{{ service.service_code }}">{{ service.service_name }} ({{ service.service_code }})</option>
+                    <option value="{{ service._id }}">{{ service.service_name }}</option>
                   {% endfor %}
                 </select>
               </div>
@@ -195,7 +195,7 @@
 
         <template id="service-options-template">
           {% for service in services %}
-            <option value="{{ service.service_code }}">{{ service.service_name }} ({{ service.service_code }})</option>
+            <option value="{{ service._id }}">{{ service.service_name }}</option>
           {% endfor %}
         </template>
 
@@ -210,7 +210,7 @@
                 <select id="part-code-{{ loop.index }}" name="part_code[]">
                   <option value="">-- Select a part --</option>
                   {% for available_part in parts %}
-                    <option value="{{ available_part.part_code }}" {% if available_part.part_code == part.code or available_part.part_name == part.name %}selected{% endif %}>{{ available_part.part_name }} ({{ available_part.part_code }})</option>
+                    <option value="{{ available_part._id }}" {% if available_part._id == part.code or available_part._id == part.part_id or available_part.part_name == part.name %}selected{% endif %}>{{ available_part.part_name }}{% if available_part.sku %} ({{ available_part.sku }}){% endif %}</option>
                   {% endfor %}
                 </select>
               </div>
@@ -228,7 +228,7 @@
                 <select id="part-code-1" name="part_code[]">
                   <option value="">-- Select a part --</option>
                   {% for part in parts %}
-                    <option value="{{ part.part_code }}">{{ part.part_name }} ({{ part.part_code }})</option>
+                    <option value="{{ part._id }}">{{ part.part_name }}{% if part.sku %} ({{ part.sku }}){% endif %}</option>
                   {% endfor %}
                 </select>
               </div>
@@ -247,7 +247,7 @@
 
         <template id="part-options-template">
           {% for part in parts %}
-            <option value="{{ part.part_code }}">{{ part.part_name }} ({{ part.part_code }})</option>
+            <option value="{{ part._id }}">{{ part.part_name }}{% if part.sku %} ({{ part.sku }}){% endif %}</option>
           {% endfor %}
         </template>
 
@@ -310,68 +310,6 @@
         <template id="equipment-options-template">
           {% for equipment in equipments %}
             <option value="{{ equipment.equipment_name }}">{{ equipment.equipment_name }}{% if equipment.sku %} ({{ equipment.sku }}){% endif %}</option>
-          {% endfor %}
-        </template>
-
-        <h2 class="create-job-form-section-header">Labor</h2>
-
-        <div id="job-labors-list">
-          {% if job.labors %}
-            {% for labor in job.labors %}
-            <div class="add-customer-form-row job-labor-row" data-labor-index="{{ loop.index }}">
-              <div class="add-customer-form-field">
-                <label for="labor-description-{{ loop.index }}">Labor</label>
-                <select id="labor-description-{{ loop.index }}" name="labor_description[]">
-                  <option value="">-- Select labor --</option>
-                  {% for available_labor in labors %}
-                    <option value="{{ available_labor.labor_description }}" {% if available_labor.labor_description == labor.description %}selected{% endif %}>{{ available_labor.labor_description }} ({{ available_labor.labor_category }})</option>
-                  {% endfor %}
-                </select>
-              </div>
-
-              <div class="add-customer-form-field">
-                <label for="labor-hours-{{ loop.index }}">Hours</label>
-                <input id="labor-hours-{{ loop.index }}" name="labor_hours[]" type="number" step="0.25" min="0" placeholder="0" value="{{ labor.hours }}" />
-              </div>
-
-              <div class="add-customer-form-field">
-                <label for="labor-hourly-rate-{{ loop.index }}">Hourly Rate</label>
-                <input id="labor-hourly-rate-{{ loop.index }}" name="labor_hourly_rate[]" type="text" placeholder="$0.00" value="{{ labor.hourly_rate }}" />
-              </div>
-            </div>
-            {% endfor %}
-          {% else %}
-            <div class="add-customer-form-row job-labor-row" data-labor-index="1">
-              <div class="add-customer-form-field">
-                <label for="labor-description-1">Labor</label>
-                <select id="labor-description-1" name="labor_description[]">
-                  <option value="">-- Select labor --</option>
-                  {% for labor in labors %}
-                    <option value="{{ labor.labor_description }}">{{ labor.labor_description }} ({{ labor.labor_category }})</option>
-                  {% endfor %}
-                </select>
-              </div>
-
-              <div class="add-customer-form-field">
-                <label for="labor-hours-1">Hours</label>
-                <input id="labor-hours-1" name="labor_hours[]" type="number" step="0.25" min="0" placeholder="0" />
-              </div>
-
-              <div class="add-customer-form-field">
-                <label for="labor-hourly-rate-1">Hourly Rate</label>
-                <input id="labor-hourly-rate-1" name="labor_hourly_rate[]" type="text" placeholder="$0.00" />
-              </div>
-            </div>
-          {% endif %}
-        </div>
-
-        <div id="job-labors-actions">
-          <button id="add-job-labor-button" type="button">Add Labor</button>
-        </div>
-
-        <template id="labor-options-template">
-          {% for labor in labors %}
-            <option value="{{ labor.labor_description }}">{{ labor.labor_description }} ({{ labor.labor_category }})</option>
           {% endfor %}
         </template>
 
