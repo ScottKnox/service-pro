@@ -65,67 +65,108 @@
 
   function updatePropertyAddressPreview(propertyData) {
     if (!propertyAddressPreview) {
-      return;
+      // HVAC picker functions
+      var smartDefaultHvacSystemId = '';
+
+      function normalizeSelectedHvacId(value) {
+        if (Array.isArray(value)) {
+          return String(value[0] || '').trim();
+        }
+        return String(value || '').trim();
+      }
+
+      function resolveInitialHvacId(selectedId, useSmartDefault) {
+        var normalizedId = normalizeSelectedHvacId(selectedId);
+        if (normalizedId) {
+          return normalizedId;
+        }
+        return useSmartDefault ? smartDefaultHvacSystemId : '';
+      }
+
+      function isValidHvacId(hvacId) {
+        if (!hvacId) {
+          return false;
+        }
+        return !!(currentHvacSystems || []).find(function (system) {
+          return String((system || {}).id || '').trim() === String(hvacId).trim();
+        });
+      }
+
     }
 
-    propertyAddressPreview.innerHTML = buildPropertyAddressHTML(propertyData);
-  }
-
-  function applyPropertyAddress(propertyId) {
-    if (!propertyId) {
+          case 'service': return 'service_hvac_system_id[]';
+          case 'part': return 'part_hvac_system_id[]';
+          case 'labor': return 'labor_hvac_system_id[]';
+          case 'material': return 'material_hvac_system_id[]';
+          case 'equipment': return 'equipment_hvac_system_id[]';
       if (addressLine1Field) addressLine1Field.value = initialAddressValues.address_line_1;
       if (addressLine2Field) addressLine2Field.value = initialAddressValues.address_line_2;
       if (cityField) cityField.value = initialAddressValues.city;
       if (stateField) stateField.value = initialAddressValues.state;
-      if (zipCodeField) zipCodeField.value = initialAddressValues.zip_code;
+      function buildHvacPickerField(rowElement, hiddenInputName, selectedId, useSmartDefault) {
       updatePropertyAddressPreview(null);
       return;
     }
+
+        if (!currentHvacSystems || currentHvacSystems.length === 0) {
+          return;
+        }
 
     const selectedProperty = Array.isArray(customerProperties)
       ? customerProperties.find(function (property) {
           return String((property || {}).property_id || '').trim() === String(propertyId).trim();
         })
-      : null;
+        label.textContent = 'Tag To System';
 
     if (!selectedProperty) {
       updatePropertyAddressPreview(null);
       return;
     }
 
-    if (addressLine1Field) addressLine1Field.value = selectedProperty.address_line_1 || '';
+        hiddenInput.value = '';
     if (addressLine2Field) addressLine2Field.value = selectedProperty.address_line_2 || '';
     if (cityField) cityField.value = selectedProperty.city || '';
-    if (stateField) stateField.value = selectedProperty.state || '';
-    if (zipCodeField) zipCodeField.value = selectedProperty.zip_code || '';
-    updatePropertyAddressPreview(selectedProperty);
-  }
+        var pillsContainer = document.createElement('div');
+        pillsContainer.className = 'job-hvac-picker-pills';
 
-  if (propertySelect) {
-    propertySelect.addEventListener('change', function () {
-      applyPropertyAddress(this.value);
-      validateForm();
-      var newPropertyId = this.value;
-      if (newPropertyId && formCustomerId) {
-        fetchHvacSystemsForProperty(newPropertyId, function(systems) {
-          currentHvacSystems = systems;
-          resetAllHvacPickersForNewProperty();
+        var currentSelection = resolveInitialHvacId(selectedId, useSmartDefault);
+        if (!isValidHvacId(currentSelection)) {
+          currentSelection = '';
+        }
+        hiddenInput.value = currentSelection;
+
+        currentHvacSystems.forEach(function (system) {
+          var hvacId = String((system || {}).id || '').trim();
+          if (!hvacId) {
+            return;
+          }
+
+          var pill = document.createElement('button');
+          pill.type = 'button';
+          pill.className = 'job-hvac-chip' + (hvacId === currentSelection ? ' is-selected' : '');
+          pill.dataset.hvacId = hvacId;
+          pill.textContent = system.title || system.system_type || 'HVAC System';
+          pill.addEventListener('click', function () {
+            var nextSelection = this.dataset.hvacId || '';
+            if (hiddenInput.value === nextSelection) {
+              nextSelection = '';
+            }
+
+            hiddenInput.value = nextSelection;
+            pillsContainer.querySelectorAll('.job-hvac-chip').forEach(function (chip) {
+              var chipId = String(chip.dataset.hvacId || '').trim();
+              chip.classList.toggle('is-selected', !!nextSelection && chipId === nextSelection);
+
+            smartDefaultHvacSystemId = nextSelection || '';
+          });
+          pillsContainer.appendChild(pill);
         });
-      } else {
-        currentHvacSystems = [];
-        resetAllHvacPickersForNewProperty();
-      }
-    });
 
-    if (propertySelect.value) {
-      applyPropertyAddress(propertySelect.value);
-    }
-  }
-
-  // Track user interaction for specific fields
-  let servicesTouched = false;
+        if (currentSelection) {
+          smartDefaultHvacSystemId = currentSelection;
+        }
   let dateTouched = false;
-  let timeTouched = false;
+        field.appendChild(pillsContainer);
   let submitAttempted = false;
 
   const estimateField = document.getElementById('job-is-estimate');
@@ -750,7 +791,7 @@
 
     attachRowRemoveButton(row, 'service');
     updateRemoveButtonVisibility(row, 'service');
-    addHvacPickerToRow(row, 'service', []);
+    addHvacPickerToRow(row, 'service', '', true);
     return row;
   }
 
@@ -782,7 +823,7 @@
 
     attachRowRemoveButton(row, 'part');
     updateRemoveButtonVisibility(row, 'part');
-    addHvacPickerToRow(row, 'part', []);
+    addHvacPickerToRow(row, 'part', '', true);
     return row;
   }
 
@@ -818,7 +859,7 @@
 
     attachRowRemoveButton(row, 'labor');
     updateRemoveButtonVisibility(row, 'labor');
-    addHvacPickerToRow(row, 'labor', []);
+    addHvacPickerToRow(row, 'labor', '', true);
     return row;
   }
 
@@ -862,7 +903,7 @@
 
     attachRowRemoveButton(row, 'material');
     updateRemoveButtonVisibility(row, 'material');
-    addHvacPickerToRow(row, 'material', []);
+    addHvacPickerToRow(row, 'material', '', true);
     return row;
   }
 
@@ -976,7 +1017,7 @@
 
     attachRowRemoveButton(row, 'equipment');
     updateRemoveButtonVisibility(row, 'equipment');
-    addHvacPickerToRow(row, 'equipment', []);
+    addHvacPickerToRow(row, 'equipment', '', true);
     return row;
   }
 
@@ -1654,65 +1695,107 @@
    }
    
   // HVAC picker functions
+  var smartDefaultHvacSystemId = '';
+
+  function normalizeSelectedHvacId(value) {
+    if (Array.isArray(value)) {
+      return String(value[0] || '').trim();
+    }
+    return String(value || '').trim();
+  }
+
+  function resolveInitialHvacId(selectedId, useSmartDefault) {
+    var normalizedId = normalizeSelectedHvacId(selectedId);
+    if (normalizedId) {
+      return normalizedId;
+    }
+    return useSmartDefault ? smartDefaultHvacSystemId : '';
+  }
+
+  function isValidHvacId(hvacId) {
+    if (!hvacId) {
+      return false;
+    }
+    return !!(currentHvacSystems || []).find(function (system) {
+      return String((system || {}).id || '').trim() === String(hvacId).trim();
+    });
+  }
+
   function getHiddenInputNameForRowType(rowType) {
     switch (rowType) {
-      case 'service': return 'service_hvac_system_ids[]';
-      case 'part': return 'part_hvac_system_ids[]';
-      case 'labor': return 'labor_hvac_system_ids[]';
-      case 'material': return 'material_hvac_system_ids[]';
-      case 'equipment': return 'equipment_hvac_system_ids[]';
+      case 'service': return 'service_hvac_system_id[]';
+      case 'part': return 'part_hvac_system_id[]';
+      case 'labor': return 'labor_hvac_system_id[]';
+      case 'material': return 'material_hvac_system_id[]';
+      case 'equipment': return 'equipment_hvac_system_id[]';
       default: return null;
     }
   }
 
-  function buildHvacPickerField(rowElement, hiddenInputName, selectedIds) {
+  function buildHvacPickerField(rowElement, hiddenInputName, selectedId, useSmartDefault) {
     if (!rowElement) return;
     var existing = rowElement.querySelector('.job-hvac-picker');
     if (existing) existing.remove();
+
+    if (!currentHvacSystems || currentHvacSystems.length === 0) {
+      return;
+    }
 
     var field = document.createElement('div');
     field.className = 'add-customer-form-field job-hvac-picker';
 
     var label = document.createElement('label');
-    label.textContent = 'HVAC Systems';
+    label.textContent = 'Tag To System';
     field.appendChild(label);
 
     var hiddenInput = document.createElement('input');
     hiddenInput.type = 'hidden';
     hiddenInput.name = hiddenInputName;
     hiddenInput.className = 'job-hvac-picker-input';
-    hiddenInput.value = (selectedIds || []).join(',');
+    hiddenInput.value = '';
     field.appendChild(hiddenInput);
 
-    var chipsContainer = document.createElement('div');
-    chipsContainer.className = 'job-hvac-picker-chips';
+    var pillsContainer = document.createElement('div');
+    pillsContainer.className = 'job-hvac-picker-pills';
 
-    if (!currentHvacSystems || currentHvacSystems.length === 0) {
-      var emptyMsg = document.createElement('p');
-      emptyMsg.className = 'job-hvac-picker-empty';
-      emptyMsg.textContent = 'No HVAC systems on this property.';
-      chipsContainer.appendChild(emptyMsg);
-    } else {
-      var selectedSet = new Set((selectedIds || []).map(String));
-      currentHvacSystems.forEach(function (system) {
-        var chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = 'job-hvac-chip' + (selectedSet.has(String(system.id)) ? ' is-selected' : '');
-        chip.dataset.hvacId = String(system.id);
-        chip.textContent = system.title || system.system_type || 'HVAC System';
-        chip.addEventListener('click', function () {
-          this.classList.toggle('is-selected');
-          var ids = [];
-          chipsContainer.querySelectorAll('.job-hvac-chip.is-selected').forEach(function (c) {
-            ids.push(c.dataset.hvacId);
-          });
-          hiddenInput.value = ids.join(',');
+    var currentSelection = resolveInitialHvacId(selectedId, useSmartDefault);
+    if (!isValidHvacId(currentSelection)) {
+      currentSelection = '';
+    }
+    hiddenInput.value = currentSelection;
+
+    currentHvacSystems.forEach(function (system) {
+      var hvacId = String((system || {}).id || '').trim();
+      if (!hvacId) {
+        return;
+      }
+
+      var pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'job-hvac-chip' + (hvacId === currentSelection ? ' is-selected' : '');
+      pill.dataset.hvacId = hvacId;
+      pill.textContent = system.title || system.system_type || 'HVAC System';
+      pill.addEventListener('click', function () {
+        var nextSelection = this.dataset.hvacId || '';
+        if (hiddenInput.value === nextSelection) {
+          nextSelection = '';
+        }
+
+        hiddenInput.value = nextSelection;
+        pillsContainer.querySelectorAll('.job-hvac-chip').forEach(function (chip) {
+          var chipId = String(chip.dataset.hvacId || '').trim();
+          chip.classList.toggle('is-selected', !!nextSelection && chipId === nextSelection);
         });
-        chipsContainer.appendChild(chip);
+        smartDefaultHvacSystemId = nextSelection || '';
       });
+      pillsContainer.appendChild(pill);
+    });
+
+    if (currentSelection) {
+      smartDefaultHvacSystemId = currentSelection;
     }
 
-    field.appendChild(chipsContainer);
+    field.appendChild(pillsContainer);
     var removeWrap = rowElement.querySelector('.job-row-remove-wrap');
     if (removeWrap) {
       rowElement.insertBefore(field, removeWrap);
@@ -1721,13 +1804,14 @@
     }
   }
 
-  function addHvacPickerToRow(rowElement, rowType, selectedIds) {
+  function addHvacPickerToRow(rowElement, rowType, selectedIds, useSmartDefault) {
     var inputName = getHiddenInputNameForRowType(rowType);
     if (!inputName) return;
-    buildHvacPickerField(rowElement, inputName, selectedIds || []);
+    buildHvacPickerField(rowElement, inputName, selectedIds || '', !!useSmartDefault);
   }
 
   function resetAllHvacPickersForNewProperty() {
+    smartDefaultHvacSystemId = '';
     var lists = [
       { list: servicesList, sel: '.job-service-row', type: 'service' },
       { list: partsList, sel: '.job-part-row', type: 'part' },
@@ -1738,7 +1822,7 @@
     lists.forEach(function (entry) {
       if (entry.list) {
         entry.list.querySelectorAll(entry.sel).forEach(function (row) {
-          addHvacPickerToRow(row, entry.type, []);
+          addHvacPickerToRow(row, entry.type, '', false);
         });
       }
     });
@@ -1764,8 +1848,8 @@
     configs.forEach(function (cfg) {
       if (cfg.list) {
         cfg.list.querySelectorAll(cfg.sel).forEach(function (row, i) {
-          var selectedIds = (cfg.hvacData[i] || []).map(String);
-          addHvacPickerToRow(row, cfg.type, selectedIds);
+          var selectedId = normalizeSelectedHvacId(cfg.hvacData[i]);
+          addHvacPickerToRow(row, cfg.type, selectedId, false);
         });
       }
     });

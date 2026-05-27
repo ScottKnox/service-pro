@@ -2891,20 +2891,41 @@ def _query_hvac_systems_for_property(db, customer_id, property_id):
     result = []
     for doc in hvac_docs:
         system_type = str(doc.get("system_type") or "").strip() or "HVAC System"
+        system_nickname = str(doc.get("system_nickname") or "").strip()
+        title = f"{system_type} - {system_nickname}" if system_nickname else system_type
         result.append({
             "id": str(doc.get("_id")),
-            "title": system_type,
+            "title": title,
             "system_type": system_type,
+            "system_nickname": system_nickname,
         })
     return result
 
 
-def _apply_hvac_ids_to_components(components, form_field_values):
-    """Patch hvac_system_ids onto each component dict from comma-separated form values."""
+def _build_hvac_system_lookup_for_property(db, customer_id, property_id):
+    systems = _query_hvac_systems_for_property(db, customer_id, property_id)
+    return {
+        str(system.get("id") or "").strip(): str(system.get("title") or "").strip()
+        for system in systems
+        if str(system.get("id") or "").strip()
+    }
+
+
+def _apply_hvac_tags_to_components(components, form_field_values, hvac_lookup):
+    """Patch single HVAC tag metadata onto each component dict."""
+    normalized_lookup = hvac_lookup or {}
     for i, component in enumerate(components):
-        raw = form_field_values[i] if i < len(form_field_values) else ""
-        ids = [x.strip() for x in str(raw or "").split(",") if x.strip()]
-        component["hvac_system_ids"] = ids
+        raw_hvac_system_id = str(form_field_values[i] if i < len(form_field_values) else "").strip()
+        if raw_hvac_system_id and raw_hvac_system_id in normalized_lookup:
+            component["hvac_system_id"] = raw_hvac_system_id
+            component["hvac_system_name"] = normalized_lookup.get(raw_hvac_system_id)
+            component["tag_level"] = "system"
+        else:
+            component["hvac_system_id"] = None
+            component["hvac_system_name"] = None
+            component["tag_level"] = "property"
+        if isinstance(component, dict):
+            component.pop("hvac_system_ids", None)
     return components
 
 
@@ -2921,6 +2942,9 @@ def _create_maintenance_records(db, job_id, job_doc, business_id):
     all_hvac_ids = set()
     for comp_type in component_types:
         for comp in (job_doc.get(comp_type) or []):
+            single_tag_id = str(comp.get("hvac_system_id") or "").strip()
+            if single_tag_id:
+                all_hvac_ids.add(single_tag_id)
             for hvac_id in (comp.get("hvac_system_ids") or []):
                 if hvac_id and str(hvac_id).strip():
                     all_hvac_ids.add(str(hvac_id).strip())
@@ -2933,7 +2957,9 @@ def _create_maintenance_records(db, job_id, job_doc, business_id):
         related_components = []
         for comp_type in component_types:
             for comp in (job_doc.get(comp_type) or []):
-                if hvac_system_id in [str(x) for x in (comp.get("hvac_system_ids") or [])]:
+                single_tag_id = str(comp.get("hvac_system_id") or "").strip()
+                legacy_ids = [str(x) for x in (comp.get("hvac_system_ids") or [])]
+                if hvac_system_id == single_tag_id or hvac_system_id in legacy_ids:
                     related_components.append({
                         "component_type": comp_type,
                         "component": dict(comp),
@@ -3134,10 +3160,12 @@ def create_job(customerId):
             entered_discount_amounts,
             discount_catalog,
         )
-        _apply_hvac_ids_to_components(services, request.form.getlist("service_hvac_system_ids[]"))
-        _apply_hvac_ids_to_components(parts, request.form.getlist("part_hvac_system_ids[]"))
-        _apply_hvac_ids_to_components(materials, request.form.getlist("material_hvac_system_ids[]"))
-        _apply_hvac_ids_to_components(equipments, request.form.getlist("equipment_hvac_system_ids[]"))
+        hvac_lookup = _build_hvac_system_lookup_for_property(db, customerId, selected_property_id)
+        _apply_hvac_tags_to_components(services, request.form.getlist("service_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(parts, request.form.getlist("part_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(labors, request.form.getlist("labor_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(materials, request.form.getlist("material_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(equipments, request.form.getlist("equipment_hvac_system_id[]"), hvac_lookup)
         pricing_summary = _build_pricing_summary(
             {
                 "services": services,
@@ -3407,6 +3435,12 @@ def create_estimate(customerId):
             entered_discount_amounts,
             discount_catalog,
         )
+        hvac_lookup = _build_hvac_system_lookup_for_property(db, customerId, selected_property_id)
+        _apply_hvac_tags_to_components(services, request.form.getlist("service_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(parts, request.form.getlist("part_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(labors, request.form.getlist("labor_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(materials, request.form.getlist("material_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(equipments, request.form.getlist("equipment_hvac_system_id[]"), hvac_lookup)
         pricing_summary = _build_pricing_summary(
             {
                 "services": services,
@@ -3566,6 +3600,7 @@ def create_estimate(customerId):
     materials_by_id = {m["_id"]: m["material_name"] for m in materials}
     default_property = _resolve_default_property(customer)
     selected_property_id = str((default_property or {}).get("property_id") or "").strip()
+    initial_hvac_systems = _query_hvac_systems_for_property(db, customerId, selected_property_id)
     customer_for_view = serialize_doc(customer)
     if default_property:
         customer_for_view["address_line_1"] = (default_property or {}).get("address_line_1", "")
@@ -3580,6 +3615,7 @@ def create_estimate(customerId):
         customer=customer_for_view,
         customer_properties=_get_customer_properties(customer),
         selected_property_id=selected_property_id,
+        initial_hvac_systems=initial_hvac_systems,
         services=services,
         parts=parts,
         labors=labors,
@@ -3777,6 +3813,12 @@ def update_estimate(estimateId):
             entered_discount_amounts,
             discount_catalog,
         )
+        hvac_lookup = _build_hvac_system_lookup_for_property(db, estimate.get("customer_id"), selected_property_id)
+        _apply_hvac_tags_to_components(services, request.form.getlist("service_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(parts, request.form.getlist("part_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(labors, request.form.getlist("labor_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(materials, request.form.getlist("material_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(equipments, request.form.getlist("equipment_hvac_system_id[]"), hvac_lookup)
         customer = {}
         customer_id = estimate.get("customer_id")
         if customer_id:
@@ -3945,6 +3987,12 @@ def update_estimate(estimateId):
     proposed_job_date_value = _mmddyyyy_to_iso_date(estimate_doc.get("proposed_job_date"))
     proposed_job_time_value = str(estimate_doc.get("proposed_job_time") or "").strip()
     recurrence_state = _build_estimate_recurrence_form_state(estimate_doc)
+    initial_hvac_systems = _query_hvac_systems_for_property(db, estimate_doc.get("customer_id"), selected_property_id)
+    job_services_hvac = [str(s.get("hvac_system_id") or "").strip() for s in (estimate_doc.get("services") or [])]
+    job_parts_hvac = [str(p.get("hvac_system_id") or "").strip() for p in (estimate_doc.get("parts") or [])]
+    job_labors_hvac = [str(l.get("hvac_system_id") or "").strip() for l in (estimate_doc.get("labors") or [])]
+    job_materials_hvac = [str(m.get("hvac_system_id") or "").strip() for m in (estimate_doc.get("materials") or [])]
+    job_equipments_hvac = [str(e.get("hvac_system_id") or "").strip() for e in (estimate_doc.get("equipments") or [])]
 
     return render_template(
         "estimates/update_estimate.html",
@@ -3955,6 +4003,12 @@ def update_estimate(estimateId):
         customer=customer,
         customer_properties=_get_customer_properties(customer),
         selected_property_id=selected_property_id,
+        initial_hvac_systems=initial_hvac_systems,
+        job_services_hvac=job_services_hvac,
+        job_parts_hvac=job_parts_hvac,
+        job_labors_hvac=job_labors_hvac,
+        job_materials_hvac=job_materials_hvac,
+        job_equipments_hvac=job_equipments_hvac,
         services=services,
         parts=parts,
         labors=labors,
@@ -5125,10 +5179,12 @@ def update_job(jobId):
             entered_discount_amounts,
             discount_catalog,
         )
-        _apply_hvac_ids_to_components(services, request.form.getlist("service_hvac_system_ids[]"))
-        _apply_hvac_ids_to_components(parts, request.form.getlist("part_hvac_system_ids[]"))
-        _apply_hvac_ids_to_components(materials, request.form.getlist("material_hvac_system_ids[]"))
-        _apply_hvac_ids_to_components(equipments, request.form.getlist("equipment_hvac_system_ids[]"))
+        hvac_lookup = _build_hvac_system_lookup_for_property(db, job.get("customer_id"), selected_property_id)
+        _apply_hvac_tags_to_components(services, request.form.getlist("service_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(parts, request.form.getlist("part_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(labors, request.form.getlist("labor_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(materials, request.form.getlist("material_hvac_system_id[]"), hvac_lookup)
+        _apply_hvac_tags_to_components(equipments, request.form.getlist("equipment_hvac_system_id[]"), hvac_lookup)
         customer = {}
         customer_id = job.get("customer_id")
         if customer_id:
@@ -5364,11 +5420,11 @@ def update_job(jobId):
 
     job_doc = serialize_doc(job)
     initial_hvac_systems = _query_hvac_systems_for_property(db, reference_value(job.get("customer_id")), selected_property_id)
-    job_services_hvac = [s.get("hvac_system_ids") or [] for s in (job_doc.get("services") or [])]
-    job_parts_hvac = [p.get("hvac_system_ids") or [] for p in (job_doc.get("parts") or [])]
-    job_labors_hvac = [l.get("hvac_system_ids") or [] for l in (job_doc.get("labors") or [])]
-    job_materials_hvac = [m.get("hvac_system_ids") or [] for m in (job_doc.get("materials") or [])]
-    job_equipments_hvac = [e.get("hvac_system_ids") or [] for e in (job_doc.get("equipments") or [])]
+    job_services_hvac = [str(s.get("hvac_system_id") or "").strip() for s in (job_doc.get("services") or [])]
+    job_parts_hvac = [str(p.get("hvac_system_id") or "").strip() for p in (job_doc.get("parts") or [])]
+    job_labors_hvac = [str(l.get("hvac_system_id") or "").strip() for l in (job_doc.get("labors") or [])]
+    job_materials_hvac = [str(m.get("hvac_system_id") or "").strip() for m in (job_doc.get("materials") or [])]
+    job_equipments_hvac = [str(e.get("hvac_system_id") or "").strip() for e in (job_doc.get("equipments") or [])]
 
     return render_template(
         "jobs/update_job.html",

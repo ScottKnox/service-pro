@@ -104,7 +104,7 @@
                   <a class="view-customer-card-link view-customer-hvac-card view-customer-hvac-card--{{ system_type_slug }}" href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=propertyId) }}">
                     <div class="view-customer-hvac-card-header">
                       <p class="view-customer-hvac-card-kicker">HVAC System</p>
-                      <h4>{{ hvac_system.system_type }}</h4>
+                      <h4>{{ hvac_system.system_display_name|default(hvac_system.system_type, true) }}</h4>
                     </div>
                     {% if hvac_system.system_type in ('Split System Heat Pump with Air Handler', 'Mini Split System') %}
                     <div class="view-customer-hvac-card-row">
@@ -172,6 +172,42 @@
                 {% endfor %}
               </div>
             {% endif %}
+          </div>
+        </div>
+
+        <div class="view-customer-section-row" id="view-customer-maintenance-history">
+          <div class="view-customer-section-column view-customer-details-column">
+            <h3>Maintenance History</h3>
+            <div class="view-customer-jobs-list">
+              {% if maintenance_history_rows %}
+                {% for row in maintenance_history_rows %}
+                  <a class="view-customer-card-link" href="{{ url_for('jobs.view_job', jobId=row.job_id) }}">
+                    <div class="view-customer-hvac-card-row">
+                      <span class="view-customer-hvac-card-label">Completed</span>
+                      <span class="view-customer-hvac-card-value">{{ row.date_completed|default('-', true) }}</span>
+                    </div>
+                    <div class="view-customer-hvac-card-row">
+                      <span class="view-customer-hvac-card-label">Service</span>
+                      <span class="view-customer-hvac-card-value">{{ row.job_type|default('Service', true) }}</span>
+                    </div>
+                    <div class="view-customer-hvac-card-row">
+                      <span class="view-customer-hvac-card-label">Technician</span>
+                      <span class="view-customer-hvac-card-value">{{ row.assigned_employee|default('-', true) }}</span>
+                    </div>
+                    <div class="view-customer-hvac-card-row">
+                      <span class="view-customer-hvac-card-label">Status</span>
+                      <span class="view-customer-hvac-card-value">{{ row.status|default('-', true) }}</span>
+                    </div>
+                    <div class="view-customer-hvac-card-row">
+                      <span class="view-customer-hvac-card-label">Total</span>
+                      <span class="view-customer-hvac-card-value">{{ row.total_amount|currency }}</span>
+                    </div>
+                  </a>
+                {% endfor %}
+              {% else %}
+                <p>No completed maintenance history yet for this property.</p>
+              {% endif %}
+            </div>
           </div>
         </div>
       </section>

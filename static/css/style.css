@@ -7657,14 +7657,18 @@ p {
   display: none;
 }
 
-.job-hvac-picker-chips {
+.job-hvac-picker-pills {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.4rem;
   margin-top: 0.2rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.25rem;
 }
 
 .job-hvac-chip {
+  flex: 0 0 auto;
   appearance: none;
   -webkit-appearance: none;
   border: 1px solid #C5C7CB;

@@ -1122,6 +1122,7 @@ def _build_hvac_form_data_from_system(hvac_system):
         return form_data
 
     form_data["system_type"] = str(hvac_system.get("system_type") or "").strip()
+    form_data["system_nickname"] = str(hvac_system.get("system_nickname") or "").strip()
     form_data["system_tonnage"] = str(hvac_system.get("system_tonnage") or "").strip()
     form_data["cooling_capacity"] = str(hvac_system.get("cooling_capacity") or "").strip()
     form_data["metering_device"] = str(hvac_system.get("metering_device") or "").strip()
@@ -1208,6 +1209,10 @@ def _build_hvac_system_document(customer_id, system_type, form_data):
         "system_type": system_type,
     }
 
+    system_nickname = str(form_data.get("system_nickname") or "").strip()
+    if system_nickname:
+        document["system_nickname"] = system_nickname
+
     property_id = str(form_data.get("property_id") or "").strip()
     if property_id:
         document["property_id"] = reference_value(property_id)
@@ -1273,6 +1278,7 @@ def _validate_ductwork_data(ductwork_data):
 def _build_empty_hvac_form_data():
     return {
         "system_type": "",
+        "system_nickname": "",
         "system_tonnage": "",
         "cooling_capacity": "",
         "metering_device": "",
@@ -2019,6 +2025,9 @@ def _build_hvac_detail_payload(db, customer_id, reference_type, reference_id):
             return None
 
     serialized_system = serialize_doc(hvac_system)
+    system_type = str(serialized_system.get("system_type") or "HVAC System").strip() or "HVAC System"
+    system_nickname = str(serialized_system.get("system_nickname") or "").strip()
+    system_display_name = f"{system_type} - {system_nickname}" if system_nickname else system_type
     components = _load_hvac_components_for_system(db, customer_id, serialized_system)
     latest_diagnostic = _fetch_latest_hvac_diagnostic(db, reference_id)
     diagnostics = _build_latest_diagnostics_card(latest_diagnostic)
@@ -2041,8 +2050,10 @@ def _build_hvac_detail_payload(db, customer_id, reference_type, reference_id):
     return {
         "reference_type": "system",
         "reference_id": reference_id,
-        "title": f"{serialized_system.get('system_type', 'HVAC System')}",
-        "system_type": serialized_system.get("system_type", "HVAC System"),
+        "title": system_display_name,
+        "system_type": system_type,
+        "system_nickname": system_nickname,
+        "system_display_name": system_display_name,
         "system_tonnage": str(serialized_system.get("system_tonnage", "")).strip() or "-",
         "cooling_capacity": str(serialized_system.get("cooling_capacity", "")).strip() or "-",
         "metering_device": str(serialized_system.get("metering_device", "")).strip() or "-",
@@ -2081,6 +2092,8 @@ def _build_hvac_system_cards(db, customer_id, property_id=None):
 
     for base_system in base_systems:
         system_type = str(base_system.get("system_type", "")).strip()
+        system_nickname = str(base_system.get("system_nickname") or "").strip()
+        system_display_name = f"{system_type} - {system_nickname}" if system_nickname else (system_type or "HVAC System")
         loaded_components = _load_hvac_components_for_system(db, customer_id, base_system)
         card_ductwork_summary = _summarize_ductwork(base_system)
 
@@ -2089,6 +2102,8 @@ def _build_hvac_system_cards(db, customer_id, property_id=None):
                 "reference_type": "system",
                 "reference_id": str(base_system.get("_id", "")).strip(),
                 "system_type": system_type or "HVAC System",
+                "system_nickname": system_nickname,
+                "system_display_name": system_display_name,
                 "system_tonnage": str(base_system.get("system_tonnage", "")).strip() or "-",
                 "cooling_capacity": str(base_system.get("cooling_capacity", "")).strip() or "-",
                 "metering_device": str(base_system.get("metering_device", "")).strip() or "-",
@@ -2104,6 +2119,65 @@ def _build_hvac_system_cards(db, customer_id, property_id=None):
         )
 
     return hvac_cards
+
+
+def _sort_key_for_property_job_history(job_doc):
+    value = job_doc.get("dateCompleted") or job_doc.get("paid_at") or job_doc.get("updated_at") or job_doc.get("created_at")
+    if isinstance(value, datetime):
+        return value
+
+    raw_value = str(value or "").strip()
+    if not raw_value:
+        return datetime.min
+
+    for fmt in ("%m/%d/%Y %H:%M:%S", "%m/%d/%Y %I:%M %p", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(raw_value, fmt)
+        except ValueError:
+            continue
+
+    try:
+        return datetime.fromisoformat(raw_value.replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.min
+
+
+def _build_property_maintenance_history(db, customer_id, property_id):
+    if not customer_id or not property_id:
+        return []
+
+    query = {
+        "$and": [
+            build_reference_filter("customer_id", customer_id),
+            build_reference_filter("property_id", property_id),
+        ]
+    }
+    job_docs = list(db.jobs.find(query))
+
+    rows = []
+    for job_doc in job_docs:
+        status = str(job_doc.get("status") or "").strip().lower()
+        if status not in {"completed", "paid"}:
+            continue
+
+        serialized_job = serialize_doc(job_doc)
+        rows.append(
+            {
+                "job_id": str(serialized_job.get("_id") or "").strip(),
+                "job_type": str(serialized_job.get("job_type") or "Service").strip() or "Service",
+                "status": str(serialized_job.get("status") or "").strip() or "Completed",
+                "assigned_employee": str(serialized_job.get("assigned_employee") or "").strip(),
+                "date_completed": str(serialized_job.get("dateCompleted") or "").strip(),
+                "total_amount": serialized_job.get("total_amount"),
+                "sort_key": _sort_key_for_property_job_history(serialized_job),
+            }
+        )
+
+    rows.sort(key=lambda row: row.get("sort_key") or datetime.min, reverse=True)
+    for row in rows:
+        row.pop("sort_key", None)
+
+    return rows
 
 
 @bp.route("/customers")
@@ -2381,6 +2455,7 @@ def view_property(customerId, propertyId):
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
     hvac_systems = _build_hvac_system_cards(db, customerId, propertyId)
+    maintenance_history_rows = _build_property_maintenance_history(db, customerId, propertyId)
     sub_properties = customer_property.get("sub_properties") or []
 
     sub_properties_page_raw = request.args.get("sub_properties_page", "1")
@@ -2409,6 +2484,7 @@ def view_property(customerId, propertyId):
         property=customer_property,
         propertyId=propertyId,
         hvac_systems=hvac_systems,
+        maintenance_history_rows=maintenance_history_rows,
         sub_properties=paginated_sub_properties,
         sub_properties_page=sub_properties_page,
         sub_properties_total_pages=sub_properties_total_pages,

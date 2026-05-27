@@ -63,6 +63,10 @@
               {% endfor %}
             </select>
           </div>
+          <div class="add-customer-form-field">
+            <label for="system-nickname">System Nickname</label>
+            <input id="system-nickname" name="system_nickname" type="text" placeholder="Example: Bathrooms and hallway" value="{{ form_data.system_nickname|default('') }}">
+          </div>
           <div class="add-customer-form-field" id="cooling-capacity-wrap">
             <label for="cooling-capacity">Cooling Capacity</label>
             <select id="cooling-capacity" name="cooling_capacity">
