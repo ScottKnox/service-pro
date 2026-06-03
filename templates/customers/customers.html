@@ -3,13 +3,17 @@
 {% block title %}Customers | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="manage-customers-header" class="resource-page resource-customers">
-      <h1>Manage Customers</h1>
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="manage-customers-header" class="resource-page resource-customers">
 
-      <div id="customers-controls-row">
-        <div class="customers-controls-left">
-          <h2>Filter Customers</h2>
+          <div id="customers-controls-row">
+            <div class="customers-controls-left">
+              <h2>Filter Customers</h2>
 
           <div class="customers-filter-list">
             <details class="customers-filter-group">
@@ -34,9 +38,9 @@
           </div>
         </div>
 
-        <div class="customers-controls-right">
-          <div class="customers-controls-right-top">
-            <h2>All Customers</h2>
+            <div class="customers-controls-right">
+              <div class="customers-controls-right-top">
+                <h2>All Customers</h2>
 
             <div class="customers-controls-right-actions">
               <a href="{{ url_for('customers.add_customer') }}">Add Customer</a>
@@ -63,53 +67,96 @@
                 {% set customer_status = customer.customer_status|default('N/A', true) %}
                 {% set customer_status_normalized = customer_status|lower %}
                 {% set full_name = ((customer.first_name|default('', true) ~ ' ' ~ customer.last_name|default('', true))|trim) %}
-                {% set address_parts = [
-                  customer.address_line_1|default('', true),
-                  customer.address_line_2|default('', true),
-                  customer.city|default('', true),
-                  customer.state|default('', true),
-                  customer.zip_code|default('', true)
-                ] %}
-                {% set full_address = address_parts|reject('equalto', '')|join(', ') %}
-                <a
+                {% set city = customer.city|default('', true)|trim %}
+                {% set state = customer.state|default('', true)|trim %}
+                {% set zip_code = customer.zip_code|default('', true)|trim %}
+                {% set locality_line = ([city, state]|reject('equalto', '')|join(', ')) %}
+                {% if zip_code %}
+                  {% set locality_line = (locality_line ~ (' ' if locality_line else '') ~ zip_code) %}
+                {% endif %}
+                {% set property_count = customer.properties|default([], true)|length %}
+                <article
                   class="customer-card"
-                  href="{{ url_for('customers.view_customer', customerId=customer._id) }}"
+                  role="link"
+                  tabindex="0"
+                  data-customer-href="{{ url_for('customers.view_customer', customerId=customer._id) }}"
                   data-filter-status="{{ customer_status }}"
                   data-filter-type="{{ customer.customer_type|default('', true) }}"
                   data-filter-city="{{ customer.city|default('', true) }}"
                   data-filter-state="{{ customer.state|default('', true) }}"
                   data-search-name="{{ full_name }}"
                 >
-                  <div class="customer-card-row customer-card-row--status">
+                  <div class="customer-card-column customer-card-column--status">
                     <span class="customer-card-label">Status</span>
-                    <span class="customer-card-value">
+                    <span class="customer-card-value customer-card-value--status">
                       <span class="customer-status-chip{% if customer_status_normalized == 'lead' %} is-lead{% elif customer_status_normalized == 'active' %} is-active{% endif %}">{{ customer_status }}</span>
                     </span>
                   </div>
-                  <div class="customer-card-row">
-                    <span class="customer-card-label">Name</span>
-                    <span class="customer-card-value" data-live-card-name>{{ full_name or '-' }}</span>
+                  <div class="customer-card-column customer-card-column--name{% if not customer.company %} customer-card-column--name-only{% endif %}">
+                    <span class="customer-card-value customer-card-value--name" data-live-card-name>{{ full_name or '-' }}</span>
+                    {% if customer.company %}
+                    <span class="customer-card-value customer-card-value--company">{{ customer.company }}</span>
+                    {% endif %}
                   </div>
-                  <div class="customer-card-row">
-                    <span class="customer-card-label">Phone</span>
-                    <span class="customer-card-value">{{ customer.phone }}</span>
+                  <div class="customer-card-column customer-card-column--contact">
+                    <span class="customer-card-value customer-card-value--phone">{{ customer.phone|default('-', true) }}</span>
+                    <span class="customer-card-value customer-card-value--email">{{ customer.email|default('-', true) }}</span>
                   </div>
-                  <div class="customer-card-row customer-card-row--address">
-                    <span class="customer-card-label">Address</span>
-                    <span class="customer-card-value customer-card-value--address">{{ full_address or '-' }}</span>
+                  <div class="customer-card-column customer-card-column--address">
+                    <span class="customer-card-value customer-card-value--address-line1">{{ customer.address_line_1|default('-', true) }}</span>
+                    {% if customer.address_line_2 %}
+                    <span class="customer-card-value customer-card-value--address-line2">{{ customer.address_line_2 }}</span>
+                    {% endif %}
+                    {% if locality_line %}
+                    <span class="customer-card-value customer-card-value--address-locality">{{ locality_line }}</span>
+                    {% endif %}
                   </div>
-                </a>
+                  <div class="customer-card-column customer-card-column--type">
+                    <span class="customer-card-label">Type</span>
+                    <span class="customer-card-value customer-card-value--type">{{ customer.customer_type|default('-', true) }}</span>
+                  </div>
+                  <div class="customer-card-column customer-card-column--balance">
+                    <span class="customer-card-label">Balance</span>
+                    <span class="customer-card-value customer-card-value--balance">{{ customer.balance_due|default('$0.00', true) }}</span>
+                  </div>
+                  <div class="customer-card-column customer-card-column--properties">
+                    <span class="customer-card-label">Properties</span>
+                    <span class="customer-card-value customer-card-value--properties">{{ property_count }}</span>
+                  </div>
+                  <div class="customer-card-column customer-card-column--actions">
+                    <span class="customer-card-label">Actions</span>
+                    <details class="customer-card-actions-menu-wrapper">
+                      <summary class="customer-card-actions-trigger" aria-label="Open customer actions">...</summary>
+                      <div class="customer-card-actions-menu">
+                        {% if customer_status_normalized == 'lead' %}
+                          <span class="customer-card-action-item is-disabled" aria-disabled="true">+ Estimate</span>
+                          <span class="customer-card-action-item is-disabled" aria-disabled="true">+ Job</span>
+                        {% else %}
+                          <a class="customer-card-action-item" href="{{ url_for('jobs.create_estimate', customerId=customer._id) }}">+ Estimate</a>
+                          <a class="customer-card-action-item" href="{{ url_for('jobs.create_job', customerId=customer._id) }}">+ Job</a>
+                        {% endif %}
+                        <a class="customer-card-action-item" href="{{ url_for('customers.update_customer', customerId=customer._id) }}">Update</a>
+                        <form method="POST" action="{{ url_for('customers.delete_customer', customerId=customer._id) }}" onsubmit="return confirm('Delete this customer and all related jobs/estimates? This cannot be undone.');">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <button class="customer-card-action-item customer-card-action-delete" type="submit">Delete</button>
+                        </form>
+                      </div>
+                    </details>
+                  </div>
+                </article>
               {% endfor %}
             {% else %}
               <p>No customers found. Add your first customer to get started.</p>
             {% endif %}
           </div>
-          {% if customers %}
-            <p id="customers-filter-no-results" hidden>No customers match the selected filters.</p>
-          {% endif %}
+              {% if customers %}
+                <p id="customers-filter-no-results" hidden>No customers match the selected filters.</p>
+              {% endif %}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 {% endblock %}
 

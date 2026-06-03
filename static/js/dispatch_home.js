@@ -192,13 +192,12 @@
       card.className = "dispatch-pending-card dispatch-job-interactive";
       card.dataset.jobId = String(job.id || "");
       card.innerHTML = `
-        <div class="dispatch-pending-top">
-          <strong>${escapeHtml(job.customer_name || "Unknown Customer")}</strong>
-          <span class="dispatch-chip ${statusClass(job.status)}">${escapeHtml(job.status || "Pending")}</span>
-        </div>
         <p class="dispatch-pending-service">${escapeHtml(job.primary_service_name || "No services added")}</p>
+        <div class="dispatch-pending-top">
+          <p class="dispatch-pending-customer">${escapeHtml(job.customer_name || "Unknown Customer")}</p>
+          <p class="dispatch-pending-meta">Pending ${Number(job.pending_days || 0)} day${Number(job.pending_days || 0) === 1 ? "" : "s"}</p>
+        </div>
         ${job.primary_service_category ? `<p class="dispatch-pending-category">${escapeHtml(job.primary_service_category)}</p>` : ""}
-        <p class="dispatch-pending-meta">Pending ${Number(job.pending_days || 0)} day${Number(job.pending_days || 0) === 1 ? "" : "s"}</p>
         <p class="dispatch-pending-address">${escapeHtml(job.address || "No address")}</p>
       `;
 

@@ -7,7 +7,6 @@ from flask import Blueprint, jsonify, redirect, render_template, request, sessio
 
 from mongo import ensure_connection_or_500
 from utils.currency import currency_to_float
-from utils.invoices import collect_invoice_items
 
 bp = Blueprint("admin_bp", __name__)
 
@@ -1042,13 +1041,6 @@ def reporting_customers():
         todays_jobs_overview=None,
         yesterdays_jobs_overview=None,
     )
-
-
-@bp.route("/invoices")
-def invoices():
-    db = ensure_connection_or_500()
-    invoice_items = collect_invoice_items(db)
-    return render_template("invoices/invoices.html", invoices=invoice_items)
 
 
 @bp.route("/admin/subscription")

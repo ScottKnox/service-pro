@@ -3,9 +3,13 @@
 {% block title %}Create Job | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="create-job-panel">
-      <h1>Create Job</h1>
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="create-job-panel" class="resource-page resource-job-update resource-job-create">
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
@@ -402,6 +406,9 @@
           <button id="submit-button" type="submit">Submit</button>
         </div>
       </form>
+        </div>
+      </div>
+    </section>
     </div>
   </div>
 

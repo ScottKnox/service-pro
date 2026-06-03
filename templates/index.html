@@ -9,19 +9,24 @@
 			<h1>Welcome to Klovent</h1>
 			<p>Log in to access your jobs, customers, schedules, and invoices.</p>
 			<div id="view-customer-actions-row" style="justify-content: center; margin-top: 1rem;">
-				<a href="{{ url_for('auth.login') }}">Login</a>
+				<a href="{{ url_for('auth.login') }}">Log In</a>
 			</div>
 		</div>
 	</div>
 	{% else %}
-	<div id="main-container">
+	<div class="app-shell home-app-shell">
+		<aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+			{% include 'partials/home_sidebar_nav.html' %}
+		</aside>
+		<section class="app-content">
+	<div id="main-container" class="app-content-main-container">
 		<div class="home-view-toggle-row" aria-label="Home view">
 			<a href="{{ url_for('home', home_view='my_day') }}" class="home-view-toggle-button {% if home_view_mode == 'my_day' %}is-active{% endif %}">My Day</a>
 			<a href="{{ url_for('home', home_view='dispatch') }}" class="home-view-toggle-button {% if home_view_mode == 'dispatch' %}is-active{% endif %}">Dispatch</a>
 		</div>
 		<div class="home-scheduling-row">
 			<div class="home-jobs-column">
-				<div class="dispatch-panel-header home-jobs-panel-header">
+				<div class="dispatch-panel-header home-jobs-panel-header home-jobs-title-bar">
 					<h2>Today's Jobs</h2>
 					<span id="home-jobs-count" class="dispatch-pending-count">{{ jobs|length }}</span>
 				</div>
@@ -158,12 +163,14 @@
 						Kick back a little. You have no jobs scheduled for this day.
 					</div>
 				</div>
+				{% if jobs %}
 				<div id="home-jobs-pages">
 					<span>Page:</span>
 					<a class="is-active" href="#">1</a>
 					<a href="#">2</a>
 					<a href="#">3</a>
 				</div>
+				{% endif %}
                 
 			</div>
 			<div class="home-schedule-column">
@@ -237,7 +244,7 @@
 				{% endif %}
 			</div>
 			<div class="home-latest-column">
-				<h2>Notes</h2>
+				<h2>Job Notes</h2>
 				<div id="home-notes-list">
 					{% if started_job_for_notes %}
 						{% if notes %}
@@ -268,43 +275,35 @@
 				{% endif %}
 			</div>
 			<div class="home-latest-column">
-				<h2>Price Book</h2>
-				<div id="home-price-book-list">
-					{% if started_job_for_price_book %}
-						{% if price_book_items %}
-							{% for item in price_book_items %}
-							{% if item.view_url %}
-							<a class="home-price-book-card home-price-book-card-link" href="{{ item.view_url }}" aria-label="View price book item: {{ item.name }}" title="View {{ item.name }}">
-								<p class="home-price-book-name">{{ item.name }}</p>
-								<p class="home-price-book-amount">{{ item.amount }}</p>
-							</a>
-							{% else %}
-							<article class="home-price-book-card">
-								<p class="home-price-book-name">{{ item.name }}</p>
-								<p class="home-price-book-amount">{{ item.amount }}</p>
+				<h2>Customer Notes</h2>
+				<div id="home-customer-notes-list">
+					{% if started_job_for_notes %}
+						{% if customer_notes %}
+							{% for note in customer_notes %}
+							<article class="home-note-card">
+								<p class="home-note-text">{{ note.text }}</p>
+								{% if note.date_written %}
+								<p class="home-note-date">Written on {{ note.date_written }}</p>
+								{% endif %}
 							</article>
-							{% endif %}
 							{% endfor %}
 						{% else %}
-							<p id="home-price-book-empty-server">No services, parts, equipment, labor, or materials found for this job.</p>
+							<p id="home-customer-notes-empty-server">No internal notes for this customer.</p>
 						{% endif %}
 					{% else %}
-						<p id="home-price-book-empty-server">Start a job to see price book items for it</p>
+						<p id="home-customer-notes-empty-server">Set a job to En Route or Start it to see customer notes.</p>
 					{% endif %}
 				</div>
-				{% if price_book_total_pages|default(0, true) > 1 %}
-				<div id="home-price-book-pages">
+				{% if customer_notes_total_pages|default(0, true) > 1 %}
+				<div id="home-customer-notes-pages">
 					<span>Page:</span>
-					{% set price_book_pages = price_book_total_pages %}
-					{% set active_price_book_page = price_book_page|default(1, true) %}
-					{% for page_num in range(1, price_book_pages + 1) %}
-						<a class="{% if page_num == active_price_book_page %}is-active{% endif %}" href="{{ url_for('home', price_book_page=page_num) }}" data-page="{{ page_num }}">{{ page_num }}</a>
+					{% set customer_notes_pages = customer_notes_total_pages %}
+					{% set active_customer_notes_page = customer_notes_page|default(1, true) %}
+					{% for page_num in range(1, customer_notes_pages + 1) %}
+						<a class="{% if page_num == active_customer_notes_page %}is-active{% endif %}" href="{{ url_for('home', customer_notes_page=page_num) }}" data-page="{{ page_num }}">{{ page_num }}</a>
 					{% endfor %}
 				</div>
 				{% endif %}
-				<div class="home-latest-action">
-					<a class="home-latest-action-link" href="{{ url_for('catalog.manage_price_book') }}">View Price Book</a>
-				</div>
 			</div>
 		</div>
 
@@ -326,6 +325,8 @@
 
 		<script id="home-activity-events-data" type="application/json">{{ activity_events|tojson }}</script>
 		<script id="home-activity-config" type="application/json">{{ {"business_center_address": business_center_address}|tojson }}</script>
+	</div>
+		</section>
 	</div>
 	{% endif %}
 {% endblock %}

@@ -3,69 +3,74 @@
 {% block title %}Employees | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container" data-live-card-filter-root>
-    <div id="manage-customers-header" class="resource-page resource-employees">
-      <h1>Manage Employees</h1>
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container" data-live-card-filter-root>
+        <div id="manage-customers-header" class="resource-page resource-employees">
+      <nav id="breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+          <li aria-current="page">Manage Employees</li>
+        </ol>
+      </nav>
 
       <div id="customers-controls-row">
-        <div class="customers-controls-left">
-          <h2>Search Employees:</h2>
-          <form id="customers-search-form" action="#" method="get" data-live-card-filter-form>
-            <input
-              id="customers-search-input"
-              name="q"
-              type="search"
-              placeholder="Search by employee name"
-              aria-label="Search employees"
-              data-live-card-filter-input
-            />
-          </form>
-        </div>
-
         <div class="customers-controls-right">
-          {% set current_position = (session.get('employee_position', '')|lower) %}
-          {% if current_position in ['owner', 'co-owner', 'manager'] %}
-            <a href="{{ url_for('employees.add_employee') }}">Add Employee</a>
-            <a href="{{ url_for('employees.export_employees_csv') }}">Export CSV</a>
-          {% endif %}
+          <div class="customers-controls-right-top">
+            <h2>All Employees</h2>
+            <div class="customers-controls-right-actions">
+              {% set current_position = (session.get('employee_position', '')|lower) %}
+              {% if current_position in ['owner', 'co-owner', 'manager'] %}
+                <a href="{{ url_for('employees.add_employee') }}">Add Employee</a>
+                <a href="{{ url_for('employees.export_employees_csv') }}">Export CSV</a>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="customers-results-search">
+            <form id="customers-search-form" action="#" method="get" class="catalog-search-form" data-live-card-filter-form>
+              <label class="catalog-search-form-label" for="customers-search-input">Search Employees:</label>
+              <input
+                id="customers-search-input"
+                name="q"
+                type="search"
+                placeholder="Search by employee name"
+                aria-label="Search employees"
+                data-live-card-filter-input
+              />
+            </form>
+          </div>
         </div>
       </div>
 
-      <div id="all-customers-title-row">
-        <h2>All Employees</h2>
-      </div>
-
-      <div id="customers-list-grid" data-live-card-filter-grid>
+      <div id="customers-list-grid" class="customers-compact-list" data-live-card-filter-grid>
         {% if employees %}
           {% for employee in employees %}
             {% set employee_status = employee.status|default('N/A', true) %}
             {% set employee_status_normalized = employee_status|lower %}
+            {% set full_name = ((employee.first_name|default('', true) ~ ' ' ~ employee.last_name|default('', true))|trim) %}
             <a class="customer-card" href="{{ url_for('employees.view_employee', employeeId=employee._id) }}" data-live-card-filter-item>
-              <div class="customer-card-row">
+              <div class="customer-card-column customer-card-column--status">
                 <span class="customer-card-label">Status</span>
-                <span class="customer-card-value">
+                <span class="customer-card-value customer-card-value--status">
                   <span class="customer-status-chip{% if employee_status_normalized == 'onboarding' %} is-lead{% elif employee_status_normalized == 'active' %} is-active{% endif %}">{{ employee_status }}</span>
                 </span>
               </div>
-              <div class="customer-card-row">
-                <span class="customer-card-label">First Name</span>
-                <span class="customer-card-value" data-live-card-first-name>{{ employee.first_name }}</span>
+              <div class="customer-card-column customer-card-column--name customer-card-column--name-only">
+                <span class="customer-card-value customer-card-value--name">{{ full_name or '-' }}</span>
+                <span class="employee-card-hidden-text" data-live-card-first-name>{{ employee.first_name|default('', true) }}</span>
+                <span class="employee-card-hidden-text" data-live-card-last-name>{{ employee.last_name|default('', true) }}</span>
               </div>
-              <div class="customer-card-row">
-                <span class="customer-card-label">Last Name</span>
-                <span class="customer-card-value" data-live-card-last-name>{{ employee.last_name }}</span>
+              <div class="customer-card-column customer-card-column--contact">
+                <span class="customer-card-value customer-card-value--phone">{{ employee.phone|default('-', true) }}</span>
+                <span class="customer-card-value customer-card-value--email">{{ employee.email|default('-', true) }}</span>
               </div>
-              <div class="customer-card-row">
-                <span class="customer-card-label">Phone</span>
-                <span class="customer-card-value">{{ employee.phone }}</span>
-              </div>
-              <div class="customer-card-row">
-                <span class="customer-card-label">Email</span>
-                <span class="customer-card-value">{{ employee.email }}</span>
-              </div>
-              <div class="customer-card-row">
+              <div class="customer-card-column customer-card-column--position">
                 <span class="customer-card-label">Position</span>
-                <span class="customer-card-value">{{ employee.position }}</span>
+                <span class="customer-card-value customer-card-value--type">{{ employee.position|default('-', true) }}</span>
               </div>
             </a>
           {% endfor %}
@@ -76,7 +81,9 @@
       {% if employees %}
         <p data-live-card-filter-empty hidden>No matching employees found.</p>
       {% endif %}
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 {% endblock %}
 

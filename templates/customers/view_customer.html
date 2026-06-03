@@ -3,10 +3,14 @@
 {% block title %}View Customer | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="view-customer-panel">
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="view-customer-panel" class="resource-page resource-customers">
       {% set is_lead_customer = customer.customer_status|default('', true)|lower == 'lead' %}
-      <h1>{{ customer.first_name }} {{ customer.last_name }}</h1>
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
@@ -19,16 +23,16 @@
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
           {% if is_lead_customer %}
-            <span class="view-customer-action-link is-disabled" aria-disabled="true">Create Estimate</span>
-            <span class="view-customer-action-link is-disabled" aria-disabled="true">Create Job</span>
+            <span class="view-customer-action-link view-customer-action-primary is-disabled" aria-disabled="true">Create Estimate</span>
+            <span class="view-customer-action-link view-customer-action-primary is-disabled" aria-disabled="true">Create Job</span>
           {% else %}
-            <a href="{{ url_for('jobs.create_estimate', customerId=customerId) }}">Create Estimate</a>
-            <a href="{{ url_for('jobs.create_job', customerId=customerId) }}">Create Job</a>
+            <a class="view-customer-action-primary" href="{{ url_for('jobs.create_estimate', customerId=customerId) }}">Create Estimate</a>
+            <a class="view-customer-action-primary" href="{{ url_for('jobs.create_job', customerId=customerId) }}">Create Job</a>
           {% endif %}
-          <a href="{{ url_for('customers.update_customer', customerId=customerId) }}">Update Customer</a>
+          <a class="view-customer-action-secondary" href="{{ url_for('customers.update_customer', customerId=customerId) }}">Update Customer</a>
           <form method="POST" action="{{ url_for('customers.delete_customer', customerId=customerId) }}" onsubmit="return confirm('Delete this customer and all related jobs/estimates? This cannot be undone.');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit">Delete Customer</button>
+            <button class="view-customer-action-secondary" type="submit">Delete Customer</button>
           </form>
         </div>
         {% if is_lead_customer %}
@@ -145,7 +149,7 @@
             <div class="view-customer-jobs-list">
               {% if customer_jobs %}
                 {% for job in customer_jobs %}
-                  <a class="view-customer-card-link" href="{{ url_for('jobs.view_job', jobId=job._id) }}">
+                  <a class="view-customer-card-link view-customer-summary-card" href="{{ url_for('jobs.view_job', jobId=job._id) }}">
                     <h4>{% if job.scheduled_date %}{{ job.scheduled_date }} {{ job.scheduled_time|default('', true) }}{% else %}Unscheduled{% endif %} - {{ job.job_type }}</h4>
                     <p>Primary technician: {{ job.assigned_employee or 'Unassigned' }}</p>
                   </a>
@@ -168,7 +172,7 @@
             <div class="view-customer-payments-list">
               {% if customer_payments %}
                 {% for payment in customer_payments %}
-                  <a class="view-customer-card-link" href="#">
+                  <a class="view-customer-card-link view-customer-summary-card" href="#">
                     <h4>{{ payment.paid_at|default(payment.created_at, true)|default('N/A', true) }}</h4>
                     <p>
                       {{ payment.amount|default(0, true)|currency }}
@@ -196,7 +200,7 @@
               {% if customer_estimates %}
                 {% for estimate in customer_estimates %}
                   {% set estimate_status_normalized = estimate.status|default('', true)|lower %}
-                  <a class="view-customer-card-link" href="{{ url_for('jobs.view_estimate', estimateId=estimate._id) }}">
+                  <a class="view-customer-card-link view-customer-summary-card" href="{{ url_for('jobs.view_estimate', estimateId=estimate._id) }}">
                     <h4>{{ estimate.date_created|default('N/A', true) }} - {{ estimate.total_amount|currency }}</h4>
                     <p>
                       <span class="jobs-status-chip{% if estimate_status_normalized == 'created' %} is-pending{% elif estimate_status_normalized == 'sent' %} is-scheduled{% elif estimate_status_normalized == 'accepted' %} is-started{% elif estimate_status_normalized == 'declined' %} is-declined{% endif %}">{{ estimate.status|default('Created', true) }}</span>
@@ -230,7 +234,7 @@
                 </div>
                 {% for property in properties %}
                   <div class="view-customer-properties-row">
-                    <a class="view-customer-card-link" href="{{ url_for('customers.view_property', customerId=customerId, propertyId=property.property_id) }}">
+                    <a class="view-customer-card-link view-customer-summary-card" href="{{ url_for('customers.view_property', customerId=customerId, propertyId=property.property_id) }}">
                       <h4>{{ property.property_name|default('Property', true) }}</h4>
                       <p>
                         {{ property.address_line_1|default('-', true) }}{% if property.address_line_2 %}, {{ property.address_line_2 }}{% endif %},
@@ -302,7 +306,8 @@
           </div>
         </div>
       </section>
-      
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 {% endblock %}

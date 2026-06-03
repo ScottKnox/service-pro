@@ -9,12 +9,17 @@
       <h1>Welcome to Klovent</h1>
       <p>Log in to access your jobs, customers, schedules, and invoices.</p>
       <div id="view-customer-actions-row" style="justify-content: center; margin-top: 1rem;">
-        <a href="{{ url_for('auth.login') }}">Login</a>
+        <a href="{{ url_for('auth.login') }}">Log In</a>
       </div>
     </div>
   </div>
   {% else %}
-  <div id="main-container" class="dispatch-main-container">
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+  <div id="main-container" class="dispatch-main-container app-content-main-container">
     <div class="home-view-toggle-row" aria-label="Home view">
       <a href="{{ url_for('home', home_view='my_day') }}" class="home-view-toggle-button {% if home_view_mode == 'my_day' %}is-active{% endif %}">My Day</a>
       <a href="{{ url_for('home', home_view='dispatch') }}" class="home-view-toggle-button {% if home_view_mode == 'dispatch' %}is-active{% endif %}">Dispatch</a>
@@ -22,7 +27,7 @@
 
     <div class="dispatch-top-row">
       <section class="dispatch-panel dispatch-pending-panel" aria-label="Pending jobs queue">
-        <div class="dispatch-panel-header">
+        <div class="dispatch-panel-header dispatch-pending-header">
           <h2>Unassigned Jobs</h2>
           <span class="dispatch-pending-count" id="dispatch-pending-count">{{ dispatch_pending_jobs|length }}</span>
         </div>
@@ -52,7 +57,7 @@
     </div>
 
     <section class="dispatch-schedule-row" aria-label="Day schedule">
-      <div class="dispatch-panel-header dispatch-schedule-header-row">
+      <div class="dispatch-panel-header dispatch-schedule-header-row dispatch-schedule-title-bar">
         <h2 id="dispatch-schedule-title">Day Schedule</h2>
         <div class="dispatch-mobile-tech-picker">
           <label for="dispatch-mobile-tech-select">Technician</label>
@@ -186,6 +191,8 @@
     }|tojson }}</script>
     <script id="home-activity-events-data" type="application/json">{{ activity_events|tojson }}</script>
     <script id="home-activity-config" type="application/json">{{ {"business_center_address": business_center_address}|tojson }}</script>
+  </div>
+    </section>
   </div>
   {% endif %}
 {% endblock %}

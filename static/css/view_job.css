@@ -80,90 +80,90 @@
 
 /* Pending */
 .progress-step.step-pending.is-active .progress-step-circle {
-  background-color: #9A4D00;
+  background-color: #2D2A1C;
 }
 .progress-step.step-pending.is-done .progress-step-circle {
-  background-color: #1F6B35;
+  background-color: #2D2A1C;
 }
 .progress-step.step-pending.is-active .progress-step-label {
-  color: #9A4D00;
+  color: #2D2A1C;
 }
 .progress-step.step-pending.is-done .progress-step-label {
-  color: #1F6B35;
+  color: #2D2A1C;
 }
 
 /* Estimating */
 .progress-step.step-estimating.is-active .progress-step-circle {
-  background-color: #9A4D00;
+  background-color: #2D2A1C;
 }
 .progress-step.step-estimating.is-done .progress-step-circle {
-  background-color: #1F6B35;
+  background-color: #2D2A1C;
 }
 .progress-step.step-estimating.is-active .progress-step-label {
-  color: #9A4D00;
+  color: #2D2A1C;
 }
 .progress-step.step-estimating.is-done .progress-step-label {
-  color: #1F6B35;
+  color: #2D2A1C;
 }
 
 /* Scheduled */
 .progress-step.step-scheduled.is-active .progress-step-circle {
-  background-color: #F59E0B;
+  background-color: #1C263A;
 }
 .progress-step.step-scheduled.is-done .progress-step-circle {
-  background-color: #1F6B35;
+  background-color: #1C263A;
 }
 .progress-step.step-scheduled.is-active .progress-step-label {
-  color: #F59E0B;
+  color: #1C263A;
 }
 .progress-step.step-scheduled.is-done .progress-step-label {
-  color: #1F6B35;
+  color: #1C263A;
 }
 
 /* En Route */
 .progress-step.step-en-route.is-active .progress-step-circle {
-  background-color: #D97706;
+  background-color: #2B213B;
 }
 .progress-step.step-en-route.is-done .progress-step-circle {
-  background-color: #1F6B35;
+  background-color: #2B213B;
 }
 .progress-step.step-en-route.is-active .progress-step-label {
-  color: #D97706;
+  color: #2B213B;
 }
 .progress-step.step-en-route.is-done .progress-step-label {
-  color: #1F6B35;
+  color: #2B213B;
 }
 
 /* Started */
 .progress-step.step-started.is-active .progress-step-circle,
 .progress-step.step-started.is-done .progress-step-circle {
-  background-color: #1F6B35;
+  background-color: #162C32;
 }
 .progress-step.step-started.is-active .progress-step-label {
-  color: #1F6B35;
+  color: #162C32;
 }
 .progress-step.step-started.is-done .progress-step-label {
-  color: #1F6B35;
+  color: #162C32;
 }
 
 /* Completed */
 .progress-step.step-completed.is-active .progress-step-circle,
 .progress-step.step-completed.is-done .progress-step-circle {
-  background-color: #1F6B35;
+  background-color: #132E25;
 }
 .progress-step.step-completed.is-active .progress-step-label,
 .progress-step.step-completed.is-done .progress-step-label {
-  color: #1F6B35;
+  color: #132E25;
 }
 
 /* Paid */
 .progress-step.step-paid.is-active .progress-step-circle,
 .progress-step.step-paid.is-done .progress-step-circle {
-  background-color: #1F6B35;
+  background-color: #193022;
 }
 .progress-step.step-paid.is-active .progress-step-label,
 .progress-step.step-paid.is-done .progress-step-label {
-  color: #1F6B35;
+  color: #193022;
 }
 
 /* Estimate: Created */
@@ -270,13 +270,18 @@
 }
 
 .job-status-chip.is-pending {
-  background-color: #FDE6C8;
-  color: #9A4D00;
+  background-color: #2D2A1C;
+  color: #F2F5F3;
 }
 
 .job-status-chip.is-scheduled {
-  background-color: #DDF5E3;
-  color: #1F6B35;
+  background-color: #1C263A;
+  color: #F2F5F3;
+}
+
+.job-status-chip.is-en-route {
+  background-color: #2B213B;
+  color: #F2F5F3;
 }
 
 .job-status-chip.is-estimating {
@@ -285,18 +290,18 @@
 }
 
 .job-status-chip.is-started {
-  background-color: #DDF5E3;
-  color: #1F6B35;
+  background-color: #162C32;
+  color: #F2F5F3;
 }
 
 .job-status-chip.is-completed {
-  background-color: #D1FAE5;
-  color: #065F46;
+  background-color: #132E25;
+  color: #F2F5F3;
 }
 
 .job-status-chip.is-paid {
-  background-color: #1B263B;
-  color: #FFFFFF;
+  background-color: #193022;
+  color: #F2F5F3;
 }
 
 .estimate-card-wrapper .view-customer-card-link {

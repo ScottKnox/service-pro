@@ -3,10 +3,13 @@
 {% block title %}Manage Subscription | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="manage-jobs-header" class="resource-page resource-admin resource-subscription">
-      <h1>Manage Subscription</h1>
-
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="manage-jobs-header" class="resource-page resource-admin resource-subscription">
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><a href="{{ url_for('home') }}">Home</a></li>
@@ -50,6 +53,8 @@
           <a class="home-latest-action-link" href="{{ url_for('admin_bp.subscription') }}">Back to Subscription</a>
         </div>
       {% endif %}
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 {% endblock %}

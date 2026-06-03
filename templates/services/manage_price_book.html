@@ -3,10 +3,13 @@
 {% block title %}Manage Price Book | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="manage-jobs-header" class="resource-page resource-admin">
-      <h1>Manage Price Book</h1>
-
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="manage-jobs-header" class="resource-page resource-admin">
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
@@ -39,6 +42,8 @@
           <p>Define discount categories, percentages, and amounts your team can apply to jobs.</p>
         </a>
       </div>
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 {% endblock %}

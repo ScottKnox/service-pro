@@ -3,41 +3,31 @@
 {% block title %}{{ reporting_view_title }} | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="manage-jobs-header" class="resource-page resource-admin resource-reporting">
-      <h1>Reporting</h1>
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="manage-jobs-header" class="resource-page resource-admin resource-reporting">
 
-      <nav id="breadcrumb" aria-label="Breadcrumb">
-        <ol>
-          <li><a href="{{ url_for('home') }}">Home</a></li>
-          <li aria-current="page">Reporting</li>
-        </ol>
-      </nav>
+          <div class="reporting-layout">
+            <aside class="reporting-sidebar" aria-label="Report types">
+              <h3>Reports</h3>
+              <div class="reporting-nav-stack">
+                {% for report in report_links %}
+                  {% set is_active = report.slug == active_report_slug %}
+                  <a
+                    class="reporting-nav-link{% if is_active %} is-active{% endif %}"
+                    href="{{ url_for(report.href) }}"
+                  >
+                    {{ report.label }}
+                  </a>
+                {% endfor %}
+              </div>
+            </aside>
 
-      <div class="jobs-controls-right-top">
-        <h2>{{ reporting_view_title }}</h2>
-        {% if reporting_view_subtitle %}
-          <p class="reporting-view-subtitle">{{ reporting_view_subtitle }}</p>
-        {% endif %}
-      </div>
-
-      <div class="reporting-layout">
-        <aside class="reporting-sidebar" aria-label="Report types">
-          <h3>Reports</h3>
-          <div class="reporting-nav-stack">
-            {% for report in report_links %}
-              {% set is_active = report.slug == active_report_slug %}
-              <a
-                class="reporting-nav-link{% if is_active %} is-active{% endif %}"
-                href="{{ url_for(report.href) }}"
-              >
-                {{ report.label }}
-              </a>
-            {% endfor %}
-          </div>
-        </aside>
-
-        <section class="reporting-main" aria-label="Report content">
+            <section class="reporting-main" aria-label="Report content">
           {% if dashboard_context_message %}
             <p class="reporting-dashboard-note">{{ dashboard_context_message }}</p>
           {% endif %}
@@ -559,10 +549,12 @@
             </article>
           {% endif %}
 
-        </section>
+            </section>
+          </div>
+        </div>
       </div>
+    </section>
     </div>
-  </div>
 {% endblock %}
 
 {% block scripts %}

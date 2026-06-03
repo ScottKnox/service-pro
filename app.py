@@ -58,6 +58,35 @@ def internal_error(e):
     return render_template("error.html", error_message="An internal server error occurred. Please try again later."), 500
 
 
+@app.context_processor
+def inject_header_business_name():
+    employee_id = str(session.get("employee_id") or "").strip()
+    if not employee_id or not ObjectId.is_valid(employee_id):
+        return {"header_business_name": ""}
+
+    try:
+        db = ensure_connection_or_500()
+        employee_doc = db.employees.find_one({"_id": ObjectId(employee_id)}, {"business": 1}) or {}
+        raw_business_id = employee_doc.get("business")
+        if not raw_business_id or not ObjectId.is_valid(str(raw_business_id)):
+            return {"header_business_name": ""}
+
+        business_doc = db.businesses.find_one(
+            {"_id": ObjectId(str(raw_business_id))},
+            {"company_name": 1, "business_name": 1, "name": 1},
+        ) or {}
+        header_business_name = str(
+            business_doc.get("company_name")
+            or business_doc.get("business_name")
+            or business_doc.get("name")
+            or ""
+        ).strip()
+        return {"header_business_name": header_business_name}
+    except Exception:
+        app.logger.exception("Failed to load header business name")
+        return {"header_business_name": ""}
+
+
 @app.before_request
 def require_login():
     """Redirect unauthenticated users to login for all protected endpoints."""
@@ -123,11 +152,12 @@ def require_login():
 
 @app.route("/")
 def home():
-    db = ensure_connection_or_500()
     is_logged_in = bool(session.get("employee_id"))
 
     if not is_logged_in:
-        return render_template("index.html", is_logged_in=False)
+        return redirect(url_for("auth.login"))
+
+    db = ensure_connection_or_500()
 
     current_employee_name = (session.get("employee_name") or "").strip()
     current_employee_position = (session.get("employee_position") or "").strip().lower()
@@ -787,6 +817,56 @@ def home():
         notes_end = notes_start + notes_per_page
         notes = notes_all[notes_start:notes_end]
 
+    # Customer notes section (internal notes for customer on active job)
+    customer_notes_all = []
+    active_customer_for_notes = None
+    if started_job_for_notes:
+        active_customer_id = str(started_job_for_notes.get("customer_id") or "").strip()
+        if active_customer_id:
+            active_customer_doc = db.customers.find_one(
+                build_reference_filter("_id", active_customer_id),
+                {"notes": 1, "first_name": 1, "last_name": 1},
+            ) or {}
+
+            active_customer_for_notes = {
+                "id": active_customer_id,
+                "name": (
+                    f"{str(active_customer_doc.get('first_name') or '').strip()} "
+                    f"{str(active_customer_doc.get('last_name') or '').strip()}"
+                ).strip()
+                or "Customer",
+            }
+
+            raw_customer_notes = active_customer_doc.get("notes")
+            if isinstance(raw_customer_notes, list):
+                valid_customer_notes = [note for note in raw_customer_notes if isinstance(note, dict)]
+                valid_customer_notes.sort(key=_parse_internal_note_date, reverse=True)
+                for note in valid_customer_notes:
+                    customer_notes_all.append(
+                        {
+                            "text": str(note.get("text") or "").strip() or "-",
+                            "date_written": str(note.get("date_written") or "").strip() or "",
+                        }
+                    )
+
+    customer_notes_page_raw = request.args.get("customer_notes_page", "1")
+    try:
+        customer_notes_page = max(1, int(customer_notes_page_raw))
+    except ValueError:
+        customer_notes_page = 1
+
+    customer_notes_per_page = 5
+    customer_notes_total_pages = (len(customer_notes_all) + customer_notes_per_page - 1) // customer_notes_per_page
+    if customer_notes_total_pages == 0:
+        customer_notes_page = 1
+        customer_notes = []
+    else:
+        if customer_notes_page > customer_notes_total_pages:
+            customer_notes_page = customer_notes_total_pages
+        customer_notes_start = (customer_notes_page - 1) * customer_notes_per_page
+        customer_notes_end = customer_notes_start + customer_notes_per_page
+        customer_notes = customer_notes_all[customer_notes_start:customer_notes_end]
+
     # Current Property (HVAC Systems for Active Job)
     hvac_systems_payload = []
     current_property = None
@@ -1072,6 +1152,10 @@ def home():
         notes=notes,
         notes_page=notes_page,
         notes_total_pages=notes_total_pages,
+        customer_notes=customer_notes,
+        customer_notes_page=customer_notes_page,
+        customer_notes_total_pages=customer_notes_total_pages,
+        active_customer_for_notes=active_customer_for_notes,
         started_job_for_price_book=started_job_for_price_book,
         price_book_items=price_book_items,
         price_book_page=price_book_page,

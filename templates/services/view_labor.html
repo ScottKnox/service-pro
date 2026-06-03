@@ -3,9 +3,13 @@
 {% block title %}View Labor | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="view-part-panel">
-      <h1>{{ labor.labor_description }}</h1>
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="view-part-panel" class="resource-page resource-pricebook-view">
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
@@ -48,6 +52,8 @@
           </div>
         </div>
       </section>
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 {% endblock %}

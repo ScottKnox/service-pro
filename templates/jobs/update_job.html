@@ -3,10 +3,13 @@
 {% block title %}Update Job | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="create-job-panel">
-      <h1>Update Job</h1>
-
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="create-job-panel" class="resource-page resource-job-update">
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><a href="{{ url_for('jobs.jobs') }}">Jobs</a></li>
@@ -608,7 +611,9 @@
           <button id="submit-button" type="submit">Update Job</button>
         </div>
       </form>
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 
   <script src="{{ url_for('static', filename='js/job_form.js') }}"></script>

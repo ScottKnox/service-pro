@@ -1,0 +1,13 @@
+<nav class="app-sidebar-nav" aria-label="Home navigation">
+  {% set _sidebar_home_view = home_view_mode|default('dispatch' if session.get('employee_position', '')|lower in ['owner', 'clerk'] else 'my_day') %}
+  <ul class="app-sidebar-links">
+    <li><a class="{% if request.endpoint == 'home' %}is-active{% endif %}" href="{{ url_for('home', home_view=_sidebar_home_view) }}">Home</a></li>
+    <li><a class="{% if request.endpoint in ['customers.customers', 'customers.view_customer', 'customers.add_customer', 'customers.update_customer'] %}is-active{% endif %}" href="{{ url_for('customers.customers') }}">Customers</a></li>
+    <li><a class="{% if request.endpoint in ['jobs.estimates', 'jobs.create_estimate', 'jobs.view_estimate', 'jobs.update_estimate'] %}is-active{% endif %}" href="{{ url_for('jobs.estimates') }}">Estimates</a></li>
+    <li><a class="{% if request.endpoint in ['jobs.jobs', 'jobs.view_job', 'jobs.create_job', 'jobs.update_job'] %}is-active{% endif %}" href="{{ url_for('jobs.jobs') }}">Jobs</a></li>
+    <li><a class="{% if request.endpoint == 'admin_bp.reporting' %}is-active{% endif %}" href="{{ url_for('admin_bp.reporting') }}">Reporting</a></li>
+    {% if session.get('employee_position', '')|lower == 'owner' %}
+    <li><a class="{% if request.endpoint == 'admin_bp.admin' %}is-active{% endif %}" href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+    {% endif %}
+  </ul>
+</nav>

@@ -1,8 +1,18 @@
 <header id="header">
-  <div id="header-container">
     {% set _header_home_view = 'dispatch' if session.get('employee_position', '')|lower in ['owner', 'clerk'] else 'my_day' %}
+    {% set _endpoint = request.endpoint|default('', true) %}
+    {% set _use_sidebar_nav =
+      _endpoint in ['home', 'customers.customers', 'customers.view_customer', 'customers.add_customer', 'customers.update_customer', 'jobs.estimates', 'jobs.create_estimate', 'jobs.view_estimate', 'jobs.update_estimate', 'jobs.view_job', 'jobs.create_job', 'jobs.update_job', 'jobs.jobs', 'employees.employees']
+      or _endpoint.startswith('admin_bp.')
+      or _endpoint.startswith('business.')
+      or _endpoint.startswith('catalog.')
+    %}
+  <div id="header-container" class="{% if session.get('employee_id') and not _use_sidebar_nav %}has-header-nav{% endif %}">
     <h1><a href="{{ url_for('home', home_view=_header_home_view) }}" class="header-home-link">Klovent</a></h1>
-    {% if session.get('employee_id') %}
+    {% if header_business_name %}
+    <div id="header-business-name">{{ header_business_name }}</div>
+    {% endif %}
+    {% if session.get('employee_id') and not _use_sidebar_nav %}
     <button
       id="mobile-nav-toggle"
       type="button"
@@ -28,7 +38,22 @@
     </nav>
     {% endif %}
     {% if session.get('employee_id') and session.get('employee_name') %}
-      <a href="{{ url_for('employees.view_employee', employeeId=session.get('employee_id')) }}" id="employee-greeting-link">Hello, {{ session.get('employee_name') }}</a>
+      <div id="header-user-controls">
+        <a href="{{ url_for('employees.view_employee', employeeId=session.get('employee_id')) }}" id="employee-greeting-link">Hello, {{ session.get('employee_name') }}</a>
+        {% if _use_sidebar_nav %}
+        <button
+          id="app-nav-toggle"
+          type="button"
+          aria-expanded="true"
+          aria-controls="home-sidebar"
+          aria-label="Hide navigation"
+        >
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </button>
+        {% endif %}
+      </div>
     {% elif request.endpoint not in ['home', 'auth.login'] and not (request.endpoint == 'jobs.view_estimate' and request.args.get('token')) and not (request.endpoint == 'jobs.view_invoice' and request.args.get('token')) %}
       <a href="{{ url_for('auth.login') }}" id="login-button">Login</a>
     {% endif %}

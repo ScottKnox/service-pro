@@ -3,10 +3,13 @@
 {% block title %}Admin | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="manage-jobs-header" class="resource-page resource-admin">
-      <h1>Admin</h1>
-
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="manage-jobs-header" class="resource-page resource-admin">
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
           <li><a href="{{ url_for('home') }}">Home</a></li>
@@ -19,11 +22,6 @@
       </div>
 
       <div class="admin-links-grid">
-        <a class="admin-link-card" href="{{ url_for('admin_bp.invoices') }}">
-          <h3>Invoices</h3>
-          <p>Browse every generated invoice and open the PDF for any completed job.</p>
-        </a>
-
         <a class="admin-link-card" href="{{ url_for('employees.employees') }}">
           <h3>Manage Employees</h3>
           <p>View the employee roster and manage team member details in one place.</p>
@@ -53,6 +51,8 @@
         </a>
         {% endif %}
       </div>
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 {% endblock %}

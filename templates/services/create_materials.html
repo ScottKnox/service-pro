@@ -3,9 +3,13 @@
 {% block title %}Create Material | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="create-service-panel">
-      <h1>Create Material</h1>
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="create-service-panel" class="resource-page resource-pricebook-form resource-pricebook-create">
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
@@ -102,7 +106,9 @@
           <button type="submit">Save Material</button>
         </div>
       </form>
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 {% endblock %}
 

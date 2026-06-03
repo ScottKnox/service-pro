@@ -3,13 +3,17 @@
 {% block title %}Estimates | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="manage-jobs-header" class="resource-page resource-jobs">
-      <h1>Manage Estimates</h1>
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="manage-jobs-header" class="resource-page resource-jobs">
 
-      <div id="jobs-controls-row">
-        <div class="jobs-controls-left">
-          <h2>Filter Estimates</h2>
+          <div id="jobs-controls-row">
+            <div class="jobs-controls-left">
+              <h2>Filter Estimates</h2>
 
           <div class="jobs-filter-list">
             <details class="jobs-filter-group">
@@ -51,9 +55,9 @@
           </div>
         </div>
 
-        <div class="jobs-controls-right">
-          <div class="jobs-controls-right-top">
-            <h2>All Estimates</h2>
+            <div class="jobs-controls-right">
+              <div class="jobs-controls-right-top">
+                <h2>All Estimates</h2>
 
             <div class="jobs-controls-right-actions">
               <label for="estimates-sort-by">Sort By</label>
@@ -109,7 +113,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 {% endblock %}
 

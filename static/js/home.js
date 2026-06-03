@@ -177,6 +177,11 @@ window.homePageFilter = {
 
   updatePaginationLinks: function(visibleJobsCount) {
     const pagesContainer = document.getElementById("home-jobs-pages");
+    if (!pagesContainer) {
+      return;
+    }
+
+    pagesContainer.style.display = visibleJobsCount === 0 ? "none" : "flex";
     const totalPages = Math.ceil(visibleJobsCount / this.JOBS_PER_PAGE) || 1;
     const existingLinks = pagesContainer.querySelectorAll("a");
     
@@ -241,10 +246,12 @@ window.homePageFilter = {
     });
 
     // Update active page link
-    const pageLinks = pagesContainer.querySelectorAll("a");
-    pageLinks.forEach((link) => link.classList.remove("is-active"));
-    if (pageLinks[this.currentPage - 1]) {
-      pageLinks[this.currentPage - 1].classList.add("is-active");
+    if (pagesContainer) {
+      const pageLinks = pagesContainer.querySelectorAll("a");
+      pageLinks.forEach((link) => link.classList.remove("is-active"));
+      if (pageLinks[this.currentPage - 1]) {
+        pageLinks[this.currentPage - 1].classList.add("is-active");
+      }
     }
 
     // Show/hide empty state message

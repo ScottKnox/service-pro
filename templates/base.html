@@ -27,14 +27,29 @@
       href="{{ url_for('static', filename='css/calendar.css') }}"
     />
   </head>
-  <body>
+  {% set is_login_view = request.endpoint == 'auth.login' %}
+  {% set is_home_view = request.endpoint == 'home' %}
+  {% set _endpoint = request.endpoint|default('', true) %}
+  {% set is_sidebar_view =
+    _endpoint in ['customers.customers', 'customers.view_customer', 'customers.add_customer', 'customers.update_customer', 'jobs.estimates', 'jobs.create_estimate', 'jobs.view_estimate', 'jobs.update_estimate', 'jobs.view_job', 'jobs.create_job', 'jobs.update_job', 'jobs.jobs', 'employees.employees']
+    or _endpoint.startswith('admin_bp.')
+    or _endpoint.startswith('business.')
+    or _endpoint.startswith('catalog.')
+  %}
+  {% set body_class = 'login-view' if is_login_view else ('home-view' if is_home_view else ('sidebar-view' if is_sidebar_view else '')) %}
+  <body{% if body_class %} class="{{ body_class }}"{% endif %}>
+    {% if not is_login_view %}
     {% include 'partials/header.html' %}
+    {% endif %}
     <main>
       {% block content %}{% endblock %}
     </main>
-    
+
+      {% if not is_login_view %}
       {% include 'partials/footer.html' %}
+      {% endif %}
       <script src="{{ url_for('static', filename='js/header.js') }}" defer></script>
+      <script src="{{ url_for('static', filename='js/app_nav_toggle.js') }}" defer></script>
       <script src="{{ url_for('static', filename='js/phone_format.js') }}" defer></script>
       {% block scripts %}{% endblock %}
   </body>

@@ -15,6 +15,61 @@
   const stateOptions = document.getElementById('customers-filter-state-options');
   const searchInput = document.getElementById('customers-search-input');
   const noResultsMessage = document.getElementById('customers-filter-no-results');
+  const actionMenus = [];
+
+  function attachCardNavigation() {
+    customerCards.forEach(function (card) {
+      const targetHref = String(card.dataset.customerHref || '').trim();
+      if (!targetHref) {
+        return;
+      }
+
+      card.addEventListener('click', function (event) {
+        if (event.target.closest('a, button, summary, details, form, input, label, select, textarea')) {
+          return;
+        }
+        window.location.href = targetHref;
+      });
+
+      card.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+          return;
+        }
+        if (event.target.closest('a, button, summary, details, form, input, label, select, textarea')) {
+          return;
+        }
+        event.preventDefault();
+        window.location.href = targetHref;
+      });
+
+      const actionsMenu = card.querySelector('.customer-card-actions-menu-wrapper');
+      if (actionsMenu) {
+        actionMenus.push(actionsMenu);
+        actionsMenu.addEventListener('toggle', function () {
+          if (actionsMenu.open) {
+            actionMenus.forEach(function (otherMenu) {
+              if (otherMenu !== actionsMenu) {
+                otherMenu.open = false;
+              }
+            });
+          }
+          card.classList.toggle('is-actions-open', actionsMenu.open);
+        });
+      }
+    });
+
+    document.addEventListener('click', function (event) {
+      actionMenus.forEach(function (menu) {
+        if (!menu.open) {
+          return;
+        }
+        if (menu.contains(event.target)) {
+          return;
+        }
+        menu.open = false;
+      });
+    });
+  }
 
   function normalizeValue(value) {
     return String(value || '').trim().toLowerCase();
@@ -124,5 +179,6 @@
     searchInput.addEventListener('search', applyFilters);
   }
 
+  attachCardNavigation();
   applyFilters();
 })();
