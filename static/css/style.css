@@ -7123,7 +7123,7 @@ body.sidebar-view #footer-bg {
     flex-shrink: 0;
   }
 
-  .view-customer-card-link:hover,
+  .view-customer-card-link:not(.view-customer-hvac-card):hover,
   .view-customer-estimate-item:hover {
     background: linear-gradient(180deg, #FFFFFF 0%, #F5F9FD 100%);
     border-color: #B7C7DA;
@@ -9601,6 +9601,17 @@ body.sidebar-view #footer-bg {
   text-decoration: none;
 }
 
+.resource-customers #view-customer-actions-row .view-customer-action-danger {
+  display: inline-block;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid #7f2a2a;
+  border-radius: 4px;
+  background: #4c1f1f;
+  color: #f8d8d8;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 .resource-customers #view-customer-actions-row a:hover,
 .resource-customers #view-customer-actions-row button:hover {
   border-color: #3a6553;
@@ -9622,11 +9633,22 @@ body.sidebar-view #footer-bg {
   text-decoration: none;
 }
 
+.resource-customers #view-customer-actions-row .view-customer-action-danger:hover {
+  border-color: #9a3535;
+  background: #5e2727;
+  color: #ffe6e6;
+  text-decoration: none;
+}
+
 .resource-customers #view-customer-actions-row .view-customer-action-link.is-disabled,
 .resource-customers #view-customer-actions-row .view-customer-action-link.is-disabled:hover {
   border: 1px solid #2f5a4a;
   background: #22372d;
   color: #8C9A93;
+  cursor: not-allowed;
+  opacity: 0.95;
+  box-shadow: none;
+  text-decoration: none;
 }
 
 .resource-customers #view-customer-actions-note {
@@ -9695,10 +9717,84 @@ body.sidebar-view #footer-bg {
   background: var(--kl-surface);
 }
 
-.resource-customers#view-customer-panel .view-customer-card-link:hover,
+.resource-customers#view-customer-panel .view-customer-hvac-card {
+  display: block;
+  border-radius: 8px;
+  border-width: 1px;
+  border-top-width: 3px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.18);
+  overflow: hidden;
+  text-decoration: none;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.resource-customers#view-customer-panel .view-customer-hvac-card:hover {
+  border-color: #3a6553;
+  background: linear-gradient(180deg, #2b4a3d 0%, #223a30 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(12, 30, 23, 0.24);
+}
+
+.resource-customers#view-customer-panel .view-customer-hvac-card-header {
+  padding: 0.78rem 0.85rem 0.68rem;
+  border-bottom: 1px solid #2f5a4a;
+  background: linear-gradient(180deg, rgba(79, 126, 107, 0.18) 0%, rgba(52, 84, 71, 0.12) 100%);
+}
+
+.resource-customers#view-customer-panel .view-customer-hvac-card-kicker {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9db2aa;
+}
+
+.resource-customers#view-customer-panel .view-customer-hvac-card-header h4 {
+  margin-top: 0.15rem;
+  font-size: 1rem;
+  color: #F2F5F3;
+}
+
+.resource-customers#view-customer-panel .view-customer-hvac-card-row {
+  padding: 0.58rem 0.85rem;
+  border-bottom: 1px solid #2f5a4a;
+}
+
+.resource-customers#view-customer-panel .view-customer-hvac-card-row:last-child {
+  border-bottom: 0;
+}
+
+.resource-customers#view-customer-panel .view-customer-hvac-card-label {
+  color: #B2C0B9;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.resource-customers#view-customer-panel .view-customer-hvac-card-value,
+.resource-customers#view-customer-panel .view-customer-hvac-card-subvalue {
+  color: #F2F5F3;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.resource-customers#view-customer-panel .view-customer-hvac-card--heat-pump {
+  border-top-color: #5FA3D3;
+}
+
+.resource-customers#view-customer-panel .view-customer-hvac-card--split,
+.resource-customers#view-customer-panel .view-customer-hvac-card--mini-split,
+.resource-customers#view-customer-panel .view-customer-sub-property-card {
+  border-top-color: #14B8A6;
+}
+
+.resource-customers#view-customer-panel .view-customer-hvac-card--package {
+  border-top-color: #F59E0B;
+}
+
+.resource-customers#view-customer-panel .view-customer-card-link:not(.view-customer-hvac-card):hover,
 .resource-customers#view-customer-panel .view-customer-estimate-item:hover {
-  border-color: var(--kl-border-strong);
-  background: var(--kl-surface-soft);
+  border-color: #3a6553;
+  background: #244236;
 }
 
 .resource-customers#view-customer-panel .view-customer-properties-header,
@@ -9758,6 +9854,868 @@ body.sidebar-view #footer-bg {
 
 .resource-customers#view-customer-panel #view-customer-internal-notes-list .view-job-detail-item p {
   color: #F2F5F3;
+}
+
+.resource-customer-hvac-view h1 {
+  color: #F2F5F3;
+}
+
+.resource-customer-hvac-view .form-field-error {
+  border: 1px solid #9a3535;
+  background: #5e2727;
+  color: #ffe6e6;
+}
+
+.resource-customer-hvac-view .hvac-system-kpi-card {
+  border: 1px solid #2f5a4a;
+  border-top: 3px solid #00A86B;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+}
+
+.resource-customer-hvac-view .hvac-system-kpi-card h4,
+.resource-customer-hvac-view .hvac-system-kpi-value,
+.resource-customer-hvac-view .hvac-system-kpi-value span {
+  color: #F2F5F3;
+}
+
+.resource-customer-hvac-view .hvac-system-kpi-meta,
+.resource-customer-hvac-view .hvac-system-status-note {
+  color: #B2C0B9;
+}
+
+.resource-customer-hvac-view .hvac-component-card {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  color: #F2F5F3;
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.18);
+}
+
+.resource-customer-hvac-view .hvac-component-card:hover {
+  border-color: #3a6553;
+  background: linear-gradient(180deg, #2b4a3d 0%, #223a30 100%);
+  box-shadow: 0 10px 18px rgba(12, 30, 23, 0.24);
+}
+
+.resource-customer-hvac-view .hvac-component-card-header {
+  background: linear-gradient(180deg, rgba(79, 126, 107, 0.18) 0%, rgba(52, 84, 71, 0.12) 100%);
+  border-bottom: 1px solid #2f5a4a;
+}
+
+.resource-customer-hvac-view .hvac-component-card--report .hvac-component-card-header {
+  background: linear-gradient(180deg, rgba(79, 126, 107, 0.18) 0%, rgba(52, 84, 71, 0.12) 100%);
+}
+
+.resource-customer-hvac-view .hvac-component-card-system-type {
+  color: #9db2aa;
+}
+
+.resource-customer-hvac-view .hvac-component-card-heading-text h4,
+.resource-customer-hvac-view .hvac-component-row strong {
+  color: #F2F5F3;
+}
+
+.resource-customer-hvac-view .hvac-component-row {
+  border-bottom: 1px solid #2f5a4a;
+}
+
+.resource-customer-hvac-view .hvac-component-row span {
+  color: #B2C0B9;
+}
+
+.resource-customer-hvac-view .hvac-photos-note {
+  color: #B2C0B9;
+  background: #22372d;
+  border: 1px solid #2f5a4a;
+}
+
+.resource-customer-hvac-view .hvac-photo-tile {
+  border: 1px solid #2f5a4a;
+  background: #22372d;
+}
+
+.resource-customer-hvac-view .hvac-photo-delete-btn {
+  background: rgba(16, 24, 20, 0.82);
+  color: #F2F5F3;
+}
+
+.resource-customer-hvac-view .hvac-photo-delete-btn:hover {
+  background: #8d3232;
+}
+
+.resource-customer-hvac-view .hvac-photo-tile--add {
+  border: 1.5px dashed #3a6553;
+  color: #B2C0B9;
+}
+
+.resource-customer-hvac-view .hvac-photo-tile--add:hover {
+  border-color: #00A86B;
+  background: #244236;
+  color: #D0DDD7;
+}
+
+.resource-customer-hvac-component-view #view-customer-details .view-customer-section-column {
+  border-radius: 8px;
+}
+
+.resource-customer-hvac-component-view #view-equipment-details-columns {
+  align-items: start;
+}
+
+.resource-customer-hvac-component-view .hvac-component-card--detail-page {
+  min-height: 0;
+}
+
+.resource-customer-hvac-component-view #view-customer-actions-row {
+  gap: 0.55rem;
+}
+
+.resource-customer-hvac-component-view .hvac-component-card-icon {
+  color: #D0DDD7;
+  background-color: #1f342b;
+  border-color: #3b6a58;
+}
+
+.resource-customer-hvac-component-view .hvac-component-row strong {
+  max-width: 60%;
+  word-break: break-word;
+}
+
+.resource-customer-hvac-component-update .form-field-error,
+.resource-customer-hvac-component-update .field-validation-error.is-visible {
+  color: #f8d8d8;
+}
+
+.resource-customer-hvac-component-update .form-field-input-error {
+  border-color: #9a3535 !important;
+  box-shadow: 0 0 0 3px rgba(154, 53, 53, 0.18);
+  background: #402424;
+}
+
+.resource-customer-hvac-component-update .hvac-range-separator {
+  color: #D0DDD7;
+}
+
+.resource-customer-hvac-component-update #add-customer-form-actions button:disabled {
+  border-color: #2f5a4a;
+  background: #22372d;
+  color: #8C9A93;
+  opacity: 0.85;
+}
+
+.resource-customer-hvac-diagnostics-add .form-field-error,
+.resource-customer-hvac-diagnostics-add .field-validation-error.is-visible {
+  color: #f8d8d8;
+}
+
+.resource-customer-hvac-diagnostics-add .hvac-diagnostics-section {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #1d3329;
+}
+
+.resource-customer-hvac-diagnostics-add .hvac-diagnostics-section summary {
+  background: linear-gradient(180deg, #244236 0%, #1f382f 100%);
+  color: #F2F5F3;
+}
+
+.resource-customer-hvac-diagnostics-add .hvac-diagnostics-section summary::after {
+  background-color: rgba(247, 252, 248, 0.18);
+  color: #F2F5F3;
+}
+
+.resource-customer-hvac-diagnostics-add .hvac-diagnostics-section-content {
+  background: #1d3329;
+  align-items: start;
+  gap: 0.85rem 0.95rem;
+}
+
+.resource-customer-hvac-diagnostics-add .hvac-diagnostics-section-content .add-customer-form-row {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #223a30;
+  padding: 0.75rem;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.resource-customer-hvac-diagnostics-add .add-customer-form-field label,
+.resource-customer-hvac-diagnostics-add .hvac-diagnostic-section-photos h4 {
+  color: #D0DDD7;
+}
+
+.resource-customer-hvac-diagnostics-add .add-customer-form-field input,
+.resource-customer-hvac-diagnostics-add .add-customer-form-field select,
+.resource-customer-hvac-diagnostics-add .add-customer-form-field textarea {
+  border: 1px solid #2f5a4a;
+  background: #1f342b;
+  color: #F2F5F3;
+}
+
+.resource-customer-hvac-diagnostics-add .add-customer-form-field select {
+  border-color: #3b6a58;
+  background-color: #1f342b;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #D0DDD7 50%),
+    linear-gradient(135deg, #D0DDD7 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.05rem) calc(50% + 1px),
+    calc(100% - 0.75rem) calc(50% + 1px);
+  background-size: 0.35rem 0.35rem, 0.35rem 0.35rem;
+  background-repeat: no-repeat;
+  padding-right: 2.3rem;
+  border-radius: 8px;
+}
+
+.resource-customer-hvac-diagnostics-add .add-customer-form-field select:hover {
+  border-color: #4a7f6a;
+  background-color: #254136;
+}
+
+.resource-customer-hvac-diagnostics-add .add-customer-form-field select option {
+  background-color: #1f342b;
+  color: #F2F5F3;
+}
+
+.resource-customer-hvac-diagnostics-add .add-customer-form-field input:focus,
+.resource-customer-hvac-diagnostics-add .add-customer-form-field select:focus,
+.resource-customer-hvac-diagnostics-add .add-customer-form-field textarea:focus {
+  outline: 2px solid #5FA3D3;
+  border-color: #5FA3D3;
+}
+
+.resource-customer-hvac-diagnostics-add .hvac-photos-note {
+  color: #B2C0B9;
+  background: #22372d;
+  border: 1px solid #2f5a4a;
+}
+
+.resource-customer-hvac-diagnostics-add .hvac-photo-tile {
+  border: 1px solid #2f5a4a;
+  background: #22372d;
+}
+
+.resource-customer-hvac-diagnostics-add .hvac-photo-tile--add {
+  border: 1.5px dashed #3a6553;
+  color: #B2C0B9;
+}
+
+.resource-customer-hvac-diagnostics-add .hvac-photo-tile--add:hover {
+  border-color: #00A86B;
+  background: #244236;
+  color: #D0DDD7;
+}
+
+.resource-customer-hvac-diagnostics-add .hvac-photo-delete-btn {
+  background: rgba(16, 24, 20, 0.82);
+  color: #F2F5F3;
+}
+
+.resource-customer-hvac-diagnostics-add .hvac-photo-delete-btn:hover {
+  background: #8d3232;
+}
+
+.resource-customer-hvac-diagnostics-add #add-customer-form-actions button {
+  min-height: 40px;
+  padding: 0.6rem 1rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2d4b3f 0%, #253E33 100%);
+  color: #E4ECE8;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 3px 10px rgba(12, 30, 23, 0.2);
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.resource-customer-hvac-diagnostics-add #add-customer-form-actions button:hover {
+  border-color: #4d816d;
+  background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%);
+  color: #F2F5F3;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.26);
+}
+
+.resource-customer-sub-properties-add .sub-properties-tools-section,
+.resource-customer-sub-properties-add .sub-properties-hvac-preview,
+.resource-customer-sub-properties-add .sub-property-row {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #1d3329;
+}
+
+.resource-customer-sub-properties-add .sub-properties-tools-section,
+.resource-customer-sub-properties-add .sub-properties-hvac-preview {
+  padding: 0.85rem;
+}
+
+.resource-customer-sub-properties-add .sub-properties-tools-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.resource-customer-sub-properties-add .sub-properties-actions-divider {
+  border-top-color: #2f5a4a;
+}
+
+.resource-customer-sub-properties-add .sub-properties-primary-btn {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2d4b3f 0%, #253E33 100%);
+  color: #E4ECE8;
+  font-weight: 700;
+  box-shadow: 0 3px 10px rgba(12, 30, 23, 0.2);
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.resource-customer-sub-properties-add .sub-properties-primary-btn:hover {
+  border-color: #4d816d;
+  background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%);
+  color: #F2F5F3;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.26);
+}
+
+.resource-customer-sub-properties-add .sub-properties-action-link--secondary,
+.resource-customer-sub-properties-add .default-hvac-form-actions .btn-secondary {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #253E33;
+  color: #B2C0B9;
+}
+
+.resource-customer-sub-properties-add .sub-properties-action-link--secondary:hover,
+.resource-customer-sub-properties-add .default-hvac-form-actions .btn-secondary:hover {
+  border-color: #3a6553;
+  background: #2d4b3f;
+  color: #D0DDD7;
+}
+
+.resource-customer-sub-properties-add .sub-properties-section-title {
+  border: 1px solid #2f5a4a;
+  background: #244236;
+  color: #F2F5F3;
+}
+
+.resource-customer-sub-properties-add .sub-properties-hvac-type,
+.resource-customer-sub-properties-add .sub-property-unit-label {
+  color: #F2F5F3;
+}
+
+.resource-customer-sub-properties-add .sub-properties-hvac-note {
+  color: #B2C0B9;
+}
+
+.resource-customer-sub-properties-add .sub-property-row {
+  margin-bottom: 0.8rem;
+}
+
+.resource-customer-default-hvac-add #add-customer-form section.add-customer-panel:not(#ductwork-section):not(#refrigerant-section) .add-customer-form-row {
+  margin-top: 0.9rem;
+  margin-bottom: 0.9rem;
+}
+
+.resource-customer-default-hvac-add #add-customer-form section.add-customer-panel:not(#ductwork-section):not(#refrigerant-section) .add-customer-form-field {
+  gap: 0.5rem;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .hvac-other-field[hidden] {
+  display: none !important;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .manufactured-year-hint {
+  margin-top: 0.15rem;
+  font-size: 0.82rem;
+  color: #9bcfb9;
+  font-weight: 600;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .manufactured-year-age {
+  color: #B2C0B9;
+  font-weight: 600;
+  font-size: 0.85em;
+}
+
+.resource-customer-default-hvac-add .add-customer-panel {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #1d3329;
+}
+
+.resource-customer-default-hvac-add .add-customer-panel h2,
+.resource-customer-default-hvac-add .add-customer-panel h3 {
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #244236;
+  color: #F2F5F3;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .form-field-input-error {
+  border-color: #9a3535 !important;
+  box-shadow: 0 0 0 3px rgba(154, 53, 53, 0.18);
+  background: #402424;
+}
+
+.resource-customer-default-hvac-add .field-validation-error.is-visible,
+.resource-customer-default-hvac-add .form-field-error {
+  color: #f8d8d8;
+}
+
+.resource-customer-default-hvac-add .hvac-range-separator {
+  color: #D0DDD7;
+}
+
+.resource-customer-default-hvac-add .default-hvac-form-actions {
+  margin-top: 1rem;
+}
+
+.resource-customer-default-hvac-add .default-hvac-form-actions .btn-secondary {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #253E33;
+  color: #B2C0B9;
+}
+
+.resource-customer-default-hvac-add .default-hvac-form-actions .btn-secondary:hover {
+  border-color: #3a6553;
+  background: #2d4b3f;
+  color: #D0DDD7;
+}
+
+.invoice-public-main-container {
+  width: min(1080px, calc(100vw - 2rem));
+  margin: 1rem auto;
+}
+
+.resource-invoice-view .invoice-inline-action-form {
+  display: inline;
+}
+
+.resource-invoice-view .invoice-banner {
+  margin: 0.6rem 0 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 4px;
+  background: #223a30;
+}
+
+.resource-invoice-view .invoice-banner p {
+  margin: 0;
+  color: #F2F5F3;
+  font-weight: 600;
+}
+
+.resource-invoice-view .invoice-banner-success {
+  border-color: #2f5a4a;
+  background: #244236;
+}
+
+.resource-invoice-view .invoice-banner-neutral {
+  border-color: #3a6553;
+  background: #2d4b3f;
+}
+
+.resource-invoice-view .invoice-banner-warning {
+  border-color: #9d7b2f;
+  background: #4e3f1f;
+}
+
+.resource-invoice-view .invoice-banner-danger {
+  border-color: #8a3b3b;
+  background: #4f2a2a;
+}
+
+.resource-invoice-view .invoice-modal-stack-block {
+  margin: 0;
+}
+
+.resource-invoice-view .invoice-modal-step-text {
+  margin-bottom: 1rem;
+}
+
+.resource-invoice-view .invoice-modal-pricing-summary,
+.resource-invoice-view .invoice-modal-amount-row {
+  margin-bottom: 1rem;
+}
+
+.resource-invoice-view .invoice-payment-actions-vertical {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.resource-invoice-view .invoice-cash-balance-text {
+  margin: 0.5rem 0 1rem;
+}
+
+.resource-invoice-view .invoice-modal-actions-compact {
+  padding: 0;
+  margin-top: 0.8rem;
+}
+
+.resource-invoice-view .invoice-warning-text {
+  color: #d5b15d;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public {
+  border: 1px solid #00A86B;
+  border-radius: 0;
+  background: #1D3329;
+  padding: 0.75rem;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public #breadcrumb {
+  border-bottom: 1px solid #2f5a4a;
+  background: #1D3329;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public #breadcrumb a,
+.invoice-public-main-container #view-job-panel.resource-invoice-public #breadcrumb li,
+.invoice-public-main-container #view-job-panel.resource-invoice-public #view-job-details > h2,
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-stack-block h3,
+.invoice-public-main-container #view-job-panel.resource-invoice-public .view-job-detail-item h4,
+.invoice-public-main-container #view-job-panel.resource-invoice-public .view-job-detail-item p,
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-line-item-title,
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-line-item-amount,
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-pricing-row,
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-pricing-total,
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-customer-status-text,
+.invoice-public-main-container #view-job-panel.resource-invoice-public .note-card-text {
+  color: #F2F5F3;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-line-item-meta {
+  color: #B2C0B9;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-stack-block {
+  border: 1px solid #00A86B;
+  border-radius: 0;
+  background: #1D3329;
+  padding: 0.7rem;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-stack-block h3 {
+  text-align: center;
+  background: #00A86B;
+  color: #F2F5F3;
+  margin: -0.7rem -0.7rem 0.75rem;
+  padding: 0.6rem 0.75rem;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-pricing-summary {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #223a30;
+  padding: 0.5rem 0.7rem;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-pricing-row {
+  border-bottom: 1px solid #2f5a4a;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-pricing-total {
+  border-top-color: #2f5a4a;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-customer-actions-block {
+  text-align: left;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-customer-actions {
+  justify-content: flex-start;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-customer-action-btn {
+  min-width: 200px;
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #253E33;
+  color: #D0DDD7;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-customer-action-btn:hover {
+  border-color: #3a6553;
+  background: #2d4b3f;
+  color: #F2F5F3;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-customer-action-btn-accept {
+  border-color: #00A86B;
+  background: #00A86B;
+  color: #0B120F;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-customer-action-btn-accept:hover {
+  border-color: #009863;
+  background: #009863;
+  color: #0B120F;
+}
+
+#payment-options-modal {
+  background-color: rgba(6, 14, 10, 0.66);
+  backdrop-filter: blur(2px);
+}
+
+#payment-options-modal .modal-content {
+  width: min(640px, 94vw);
+  max-width: 640px;
+  border: 1px solid #2f5a4a;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  box-shadow: 0 20px 48px rgba(5, 15, 11, 0.45);
+}
+
+#payment-options-modal .modal-header {
+  padding: 0.95rem 1rem;
+  border-bottom: 1px solid #2f5a4a;
+  background: #244236;
+}
+
+#payment-options-modal .modal-header h2,
+#payment-options-modal .modal-close-btn,
+#payment-options-modal .estimate-customer-status-text,
+#payment-options-modal .estimate-pricing-row,
+#payment-options-modal .estimate-pricing-total,
+#payment-options-modal .add-customer-form-field label,
+#payment-options-modal .add-customer-form-field input,
+#payment-options-modal .add-customer-form-field textarea {
+  color: #F2F5F3;
+}
+
+#payment-options-modal .modal-close-btn {
+  border: 1px solid #2f5a4a;
+  border-radius: 6px;
+  background: #253E33;
+}
+
+#payment-options-modal .modal-close-btn:hover {
+  border-color: #3a6553;
+  background: #2d4b3f;
+}
+
+#payment-options-modal .estimate-stack-block {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #223a30;
+}
+
+#payment-options-modal .estimate-pricing-summary {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #1d3329;
+  padding: 0.55rem 0.7rem;
+}
+
+#payment-options-modal .estimate-pricing-row {
+  border-bottom: 1px solid #2f5a4a;
+}
+
+#payment-options-modal .estimate-pricing-row:last-child {
+  border-bottom: 0;
+}
+
+#payment-options-modal .add-customer-form-field input,
+#payment-options-modal .add-customer-form-field textarea {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #253E33;
+}
+
+#payment-options-modal .add-customer-form-field input::placeholder,
+#payment-options-modal .add-customer-form-field textarea::placeholder {
+  color: #a6b8b1;
+}
+
+#payment-options-modal .add-customer-form-field input:focus,
+#payment-options-modal .add-customer-form-field textarea:focus {
+  border-color: #5fa3d3;
+  outline: 2px solid rgba(95, 163, 211, 0.3);
+  outline-offset: 1px;
+}
+
+#payment-options-modal .estimate-customer-action-btn,
+#payment-options-modal .modal-send-btn,
+#payment-options-modal .modal-cancel-btn {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #253E33;
+  color: #D0DDD7;
+}
+
+#payment-options-modal .estimate-customer-action-btn:hover,
+#payment-options-modal .modal-send-btn:hover,
+#payment-options-modal .modal-cancel-btn:hover {
+  border-color: #3a6553;
+  background: #2d4b3f;
+  color: #F2F5F3;
+}
+
+#payment-options-modal .estimate-customer-action-btn-accept,
+#payment-options-modal .modal-send-btn {
+  border-color: #00A86B;
+  background: #00A86B;
+  color: #0B120F;
+}
+
+#payment-options-modal .estimate-customer-action-btn-accept:hover,
+#payment-options-modal .modal-send-btn:hover {
+  border-color: #009863;
+  background: #009863;
+  color: #0B120F;
+}
+
+#payment-options-modal .estimate-customer-action-btn:disabled,
+#payment-options-modal .modal-send-btn:disabled,
+#payment-options-modal .modal-cancel-btn:disabled {
+  opacity: 0.45;
+}
+
+#payment-options-modal .modal-actions {
+  border-top: 1px solid #2f5a4a;
+}
+
+.invoice-email-modal {
+  background-color: rgba(6, 14, 10, 0.66);
+  backdrop-filter: blur(2px);
+}
+
+.invoice-email-modal .modal-content {
+  width: min(700px, 94vw);
+  max-width: 700px;
+  border: 1px solid #2f5a4a;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  box-shadow: 0 20px 48px rgba(5, 15, 11, 0.45);
+}
+
+.invoice-email-modal .modal-header {
+  padding: 0.95rem 1rem;
+  border-bottom: 1px solid #2f5a4a;
+  background: #244236;
+}
+
+.invoice-email-modal .modal-header h2,
+.invoice-email-modal .modal-close-btn,
+.invoice-email-modal .form-group label,
+.invoice-email-modal .form-group input,
+.invoice-email-modal .form-group textarea {
+  color: #F2F5F3;
+}
+
+.invoice-email-modal .modal-close-btn {
+  border: 1px solid #2f5a4a;
+  border-radius: 6px;
+  background: #253E33;
+}
+
+.invoice-email-modal .modal-close-btn:hover {
+  border-color: #3a6553;
+  background: #2d4b3f;
+}
+
+.invoice-email-modal #email-estimate-form {
+  padding: 0.95rem 1rem 1rem;
+}
+
+.invoice-email-modal .form-group {
+  margin-bottom: 0.85rem;
+}
+
+.invoice-email-modal .form-group input,
+.invoice-email-modal .form-group textarea {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #253E33;
+}
+
+.invoice-email-modal .form-group input::placeholder,
+.invoice-email-modal .form-group textarea::placeholder {
+  color: #a6b8b1;
+}
+
+.invoice-email-modal .form-group input:focus,
+.invoice-email-modal .form-group textarea:focus {
+  border-color: #5fa3d3;
+  outline: 2px solid rgba(95, 163, 211, 0.3);
+  outline-offset: 1px;
+}
+
+.invoice-email-modal .email-readonly-input {
+  background: #1f342b;
+}
+
+.invoice-email-modal .modal-actions {
+  border-top: 1px solid #2f5a4a;
+  padding-top: 0.8rem;
+}
+
+.invoice-email-modal .modal-send-btn,
+.invoice-email-modal .modal-cancel-btn {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #253E33;
+  color: #D0DDD7;
+}
+
+.invoice-email-modal .modal-send-btn {
+  border-color: #00A86B;
+  background: #00A86B;
+  color: #0B120F;
+}
+
+.invoice-email-modal .modal-send-btn:hover {
+  border-color: #009863;
+  background: #009863;
+  color: #0B120F;
+}
+
+.invoice-email-modal .modal-cancel-btn:hover {
+  border-color: #3a6553;
+  background: #2d4b3f;
+  color: #F2F5F3;
+}
+
+.resource-invoice-view .estimate-line-items {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  overflow: hidden;
+}
+
+.resource-invoice-view .estimate-line-item-row {
+  border-bottom: 1px solid #2f5a4a;
+  background: transparent;
+}
+
+.resource-invoice-view .estimate-line-item-row:last-child {
+  border-bottom: 0;
+}
+
+.resource-invoice-view .estimate-line-item-title,
+.resource-invoice-view .estimate-line-item-amount,
+.resource-invoice-view .note-card-text {
+  color: #f5f8f6;
+}
+
+.resource-invoice-view .estimate-line-item-meta {
+  color: #c8d3ce;
+}
+
+.resource-invoice-view .note-card {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.18);
+}
+
+@media (max-width: 768px) {
+  .resource-customer-sub-properties-add .sub-properties-tools-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .resource-estimate-view #view-service-actions {
@@ -9872,6 +10830,29 @@ body.sidebar-view #footer-bg {
   background: transparent;
   display: grid;
   gap: 0.65rem;
+}
+
+#view-job-panel.resource-invoice-view .estimate-line-items {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  overflow: hidden;
+}
+
+#view-job-panel.resource-invoice-view .estimate-line-item-row {
+  border-bottom: 1px solid #2f5a4a;
+  background: transparent;
+}
+
+#view-job-panel.resource-invoice-view .estimate-line-item-row:last-child {
+  border-bottom: 0;
+}
+
+#view-job-panel.resource-invoice-view .note-card {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.18);
 }
 
 .resource-estimate-view .estimate-service-card {
@@ -10087,6 +11068,24 @@ body.sidebar-view #footer-bg {
 .resource-job-view #view-job-invoices-list .estimate-card-wrapper .view-customer-card-link h4,
 .resource-job-view #view-job-invoices-list .estimate-card-wrapper .view-customer-card-link p {
   color: #F2F5F3;
+}
+
+.resource-job-view #view-job-invoices-list .estimate-email-btn {
+  border-color: #2f5a4a;
+  background: #253E33;
+  color: #D0DDD7;
+  box-shadow: 0 6px 14px rgba(12, 30, 23, 0.16);
+}
+
+.resource-job-view #view-job-invoices-list .estimate-email-btn:hover {
+  border-color: #3a6553;
+  background: #2d4b3f;
+  color: #F2F5F3;
+}
+
+.resource-job-view #view-job-invoices-list .estimate-email-btn:focus-visible {
+  outline: 2px solid #5fa3d3;
+  outline-offset: 2px;
 }
 
 .resource-job-view .progress-step-circle {

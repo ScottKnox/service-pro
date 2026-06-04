@@ -3,37 +3,13 @@
 {% block title %}Add Default HVAC Systems | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="add-customer-panel">
-      <h1>Add Default HVAC Systems</h1>
-
-      <style>
-        #add-customer-form section.add-customer-panel:not(#ductwork-section):not(#refrigerant-section) .add-customer-form-row {
-          margin-top: 0.9rem;
-          margin-bottom: 0.9rem;
-        }
-
-        #add-customer-form section.add-customer-panel:not(#ductwork-section):not(#refrigerant-section) .add-customer-form-field {
-          gap: 0.5rem;
-        }
-
-        #add-customer-form .hvac-other-field[hidden] {
-          display: none !important;
-        }
-
-        #add-customer-form .manufactured-year-hint {
-          margin-top: 0.15rem;
-          font-size: 0.82rem;
-          color: #1f6b35;
-          font-weight: 600;
-        }
-
-        #add-customer-form .manufactured-year-age {
-          color: #4b5563;
-          font-weight: 600;
-          font-size: 0.85em;
-        }
-      </style>
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="add-customer-panel" class="resource-page resource-customer-update resource-customer-default-hvac-add">
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
@@ -474,7 +450,9 @@
           <button type="submit">Save Sub-Properties</button>
         </div>
       </form>
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 {% endblock %}
 

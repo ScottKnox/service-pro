@@ -4,9 +4,18 @@
 
 {% block content %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/view_job.css') }}" />
-  <div id="main-container">
-    <div id="view-job-panel">
-      <h1>Invoice {{ invoice.invoice_number|default('', true) }}</h1>
+  {% if is_staff_view %}
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="view-job-panel" class="resource-page resource-job-view resource-estimate-view resource-invoice-view">
+  {% else %}
+  <div id="main-container" class="invoice-public-main-container">
+    <div id="view-job-panel" class="resource-page resource-job-view resource-estimate-view resource-invoice-view resource-invoice-public">
+  {% endif %}
       {% set invoice_status_normalized = invoice.status|default('', true)|lower %}
       {% set invoice_is_paid = invoice_status_normalized == 'paid' %}
       {% set invoice_has_been_sent = invoice_status_normalized == 'sent' or invoice.date_sent|default('', true) or invoice.date_sent_utc|default('', true) or job.date_invoice_sent|default('', true) %}
@@ -24,44 +33,44 @@
       </nav>
 
       {% if payment_state == 'success' and not invoice_is_paid %}
-        <div id="view-job-recurring-status-note" style="border: 1px solid #B7D8C9; background-color: #EEF9F1; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
+        <div class="invoice-banner invoice-banner-success">
           {% if payment_method_state in ['cash', 'check'] %}
-            <p style="margin: 0; color: #185A37; font-weight: 600;">Payment completed successfully.</p>
+            <p>Payment completed successfully.</p>
           {% else %}
-            <p style="margin: 0; color: #185A37; font-weight: 600;">Payment session completed successfully. We are confirming the payment now.</p>
+            <p>Payment session completed successfully. We are confirming the payment now.</p>
           {% endif %}
         </div>
       {% elif payment_state == 'already_paid' %}
-        <div id="view-job-missing-scheduling-note" style="border: 1px solid #C7C9CF; background-color: #F4F5F7; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
-          <p style="color: #3E4650; font-weight: 600; margin: 0;">This invoice has already been paid in full.</p>
+        <div class="invoice-banner invoice-banner-neutral">
+          <p>This invoice has already been paid in full.</p>
         </div>
       {% elif payment_state == 'canceled' %}
-        <div id="view-job-missing-scheduling-note" style="border: 1px solid #FFA500; background-color: #FFF8DC; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
-          <p style="color: #B8860B; font-weight: 600; margin: 0;">Payment was canceled before completion.</p>
+        <div class="invoice-banner invoice-banner-warning">
+          <p>Payment was canceled before completion.</p>
         </div>
       {% elif payment_state == 'invalid' %}
-        <div id="view-job-missing-scheduling-note" style="border: 1px solid #D8B7B7; background-color: #FAEEEE; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
-          <p style="color: #7A1F1F; font-weight: 600; margin: 0;">Payment amount is invalid. Enter an amount greater than zero and no more than the current balance due.</p>
+        <div class="invoice-banner invoice-banner-danger">
+          <p>Payment amount is invalid. Enter an amount greater than zero and no more than the current balance due.</p>
         </div>
       {% endif %}
 
       {% if reminder_state == 'sent' %}
-        <div id="view-job-recurring-status-note" style="border: 1px solid #B7D8C9; background-color: #EEF9F1; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
-          <p style="margin: 0; color: #185A37; font-weight: 600;">Payment reminder sent successfully.</p>
+        <div class="invoice-banner invoice-banner-success">
+          <p>Payment reminder sent successfully.</p>
         </div>
       {% elif reminder_state == 'failed' %}
-        <div id="view-job-missing-scheduling-note" style="border: 1px solid #D8B7B7; background-color: #FAEEEE; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
-          <p style="margin: 0; color: #7A1F1F; font-weight: 600;">Manual reminder failed. Check reminder logs for details.</p>
+        <div class="invoice-banner invoice-banner-danger">
+          <p>Manual reminder failed. Check reminder logs for details.</p>
         </div>
       {% elif reminder_state == 'skipped_paid' %}
-        <div id="view-job-missing-scheduling-note" style="border: 1px solid #C7C9CF; background-color: #F4F5F7; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
-          <p style="margin: 0; color: #3E4650; font-weight: 600;">Manual reminder not sent because this invoice is already paid.</p>
+        <div class="invoice-banner invoice-banner-neutral">
+          <p>Manual reminder not sent because this invoice is already paid.</p>
         </div>
       {% endif %}
 
       {% if invoice_is_paid %}
-        <div id="view-job-recurring-status-note" style="border: 1px solid #B7D8C9; background-color: #EEF9F1; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
-          <p style="margin: 0; color: #185A37; font-weight: 600;">
+        <div class="invoice-banner invoice-banner-success">
+          <p>
             Payment received
             {% if payment_summary.payment_date %}
               on <span data-local-datetime-iso="{{ payment_summary.payment_date_iso|default('', true) }}">{{ payment_summary.payment_date }}</span>
@@ -102,7 +111,7 @@
             <a href="{{ invoice.file_path }}{% if not is_staff_view and access_token %}{% if '?' in invoice.file_path %}&{% else %}?{% endif %}token={{ access_token|urlencode }}{% endif %}" target="_blank" rel="noopener noreferrer">Open Invoice PDF</a>
           {% endif %}
           {% if invoice_has_been_sent and not invoice_is_paid %}
-            <form method="POST" action="{{ url_for('jobs.send_invoice_reminder_manually', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true)) }}" style="display: inline;">
+            <form method="POST" action="{{ url_for('jobs.send_invoice_reminder_manually', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true)) }}" class="invoice-inline-action-form">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="estimate-customer-action-btn estimate-customer-action-btn-accept">Send Payment Reminder</button>
             </form>
@@ -329,7 +338,7 @@
             {% else %}
               <p class="estimate-customer-status-text">Choose a payment method to continue.</p>
               {% if not stripe_connect_ready and stripe_connect_reason %}
-                <p class="estimate-customer-status-text" style="color: #b8860b;">{{ stripe_connect_reason }}</p>
+                <p class="estimate-customer-status-text invoice-warning-text">{{ stripe_connect_reason }}</p>
               {% endif %}
             {% endif %}
             <div class="estimate-customer-actions">
@@ -343,10 +352,17 @@
         {% endif %}
       </section>
     </div>
+  {% if is_staff_view %}
+        </div>
+      </div>
+    </section>
   </div>
+  {% else %}
+  </div>
+  {% endif %}
 
   {% if is_staff_view %}
-  <div id="email-estimate-modal" class="modal">
+  <div id="email-estimate-modal" class="modal invoice-email-modal">
     <div class="modal-content">
       <div class="modal-header">
         <h2>Email Invoice</h2>
@@ -386,33 +402,33 @@
         <h2>{% if is_staff_view %}Collect Payment{% else %}Make Payment{% endif %}</h2>
         <button class="modal-close-btn" id="payment-modal-close-btn">&times;</button>
       </div>
-      <div class="estimate-stack-block" style="margin: 0;">
+      <div class="estimate-stack-block invoice-modal-stack-block">
         {% if invoice_is_paid %}
-          <p class="estimate-customer-status-text" style="margin-bottom: 1rem;">This invoice is already paid.</p>
+          <p class="estimate-customer-status-text invoice-modal-step-text">This invoice is already paid.</p>
         {% else %}
           <div id="payment-method-step">
-            <p class="estimate-customer-status-text" style="margin-bottom: 1rem;">
+            <p class="estimate-customer-status-text invoice-modal-step-text">
               {% if is_staff_view %}
                 Choose how you want to collect this invoice payment.
               {% else %}
                 Choose your preferred payment method.
               {% endif %}
             </p>
-            <div class="estimate-pricing-summary" style="margin-bottom: 1rem;">
+            <div class="estimate-pricing-summary invoice-modal-pricing-summary">
               <div class="estimate-pricing-row"><span>Total Invoice</span><span>{{ pricing_summary.total_due_display }}</span></div>
               <div class="estimate-pricing-row"><span>Already Paid</span><span>{{ total_amount_paid|currency }}</span></div>
               <div class="estimate-pricing-row estimate-pricing-total"><span>Balance Due</span><span>{{ balance_due|currency }}</span></div>
             </div>
-            <div class="add-customer-form-row" style="margin-bottom: 1rem;">
+            <div class="add-customer-form-row invoice-modal-amount-row">
               <div class="add-customer-form-field">
                 <label for="card-amount-to-charge">Amount To Charge</label>
                 <input id="card-amount-to-charge" type="number" min="0.01" step="0.01" max="{{ '%.2f'|format(balance_due|default(0, true)) }}" value="{{ '%.2f'|format(balance_due|default(0, true)) }}" />
               </div>
             </div>
             {% if not stripe_connect_ready and stripe_connect_reason %}
-              <p class="estimate-customer-status-text" style="margin-bottom: 1rem; color: #b8860b;">{{ stripe_connect_reason }}</p>
+              <p class="estimate-customer-status-text invoice-modal-step-text invoice-warning-text">{{ stripe_connect_reason }}</p>
             {% endif %}
-            <div class="estimate-customer-actions" style="flex-direction: column; align-items: stretch;">
+            <div class="estimate-customer-actions invoice-payment-actions-vertical">
               <button type="button" id="start-stripe-card-checkout" class="estimate-customer-action-btn estimate-customer-action-btn-accept" {% if invoice_is_paid or not stripe_connect_ready %}disabled{% endif %}>Pay With Card</button>
               {% if is_staff_view %}
               <button type="button" id="open-cash-payment-form" class="estimate-customer-action-btn" {% if invoice_is_paid %}disabled{% endif %}>Pay With Cash</button>
@@ -422,7 +438,7 @@
           </div>
 
           <div id="cash-payment-step" hidden>
-            <p class="estimate-customer-status-text" style="margin-bottom: 1rem;">Enter cash payment details.</p>
+            <p class="estimate-customer-status-text invoice-modal-step-text">Enter cash payment details.</p>
             <form method="POST" id="cash-payment-form" action="{{ url_for('jobs.record_invoice_payment', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true)) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="payment_type" value="cash">
@@ -432,14 +448,14 @@
                   <input id="cash-amount-received" name="amount_received" type="number" min="0.01" max="{{ '%.2f'|format(balance_due|default(0, true)) }}" step="0.01" required placeholder="0.00" value="{{ '%.2f'|format(balance_due|default(0, true)) }}" />
                 </div>
               </div>
-              <p class="estimate-customer-status-text" style="margin: 0.5rem 0 1rem 0;">Remaining Balance After Payment: <strong id="cash-change-due">$0.00</strong></p>
+              <p class="estimate-customer-status-text invoice-cash-balance-text">Remaining Balance After Payment: <strong id="cash-change-due">$0.00</strong></p>
               <div class="add-customer-form-row payment-notes-row">
                 <div class="add-customer-form-field">
                   <label for="cash-payment-notes">Notes</label>
                   <textarea id="cash-payment-notes" name="payment_notes" rows="6" placeholder="Optional note"></textarea>
                 </div>
               </div>
-              <div class="modal-actions" style="padding: 0; margin-top: 0.8rem;">
+              <div class="modal-actions invoice-modal-actions-compact">
                 <button type="button" class="modal-cancel-btn" id="cash-payment-back-btn">Back</button>
                 <button type="submit" class="modal-send-btn">Submit Cash Payment</button>
               </div>
@@ -447,7 +463,7 @@
           </div>
 
           <div id="check-payment-step" hidden>
-            <p class="estimate-customer-status-text" style="margin-bottom: 1rem;">Enter check payment details.</p>
+            <p class="estimate-customer-status-text invoice-modal-step-text">Enter check payment details.</p>
             <form method="POST" id="check-payment-form" action="{{ url_for('jobs.record_invoice_payment', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true)) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="payment_type" value="check">
@@ -469,7 +485,7 @@
                   <textarea id="check-payment-notes" name="payment_notes" rows="6" placeholder="Optional note"></textarea>
                 </div>
               </div>
-              <div class="modal-actions" style="padding: 0; margin-top: 0.8rem;">
+              <div class="modal-actions invoice-modal-actions-compact">
                 <button type="button" class="modal-cancel-btn" id="check-payment-back-btn">Back</button>
                 <button type="submit" class="modal-send-btn">Submit Check Payment</button>
               </div>

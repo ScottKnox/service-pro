@@ -3,8 +3,13 @@
 {% block title %}Add Diagnostics | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="add-customer-panel">
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="add-customer-panel" class="resource-page resource-customer-update resource-customer-hvac-diagnostics-add">
       <h1>Add Diagnostics</h1>
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
@@ -118,7 +123,9 @@
           <button type="submit">Save Diagnostics</button>
         </div>
       </form>
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 
   <div id="diagnostic-photo-caption-modal" class="hvac-photo-modal" role="dialog" aria-modal="true" aria-label="Add photo caption" hidden>

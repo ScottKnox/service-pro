@@ -3,8 +3,13 @@
 {% block title %}Update {{ component_label }} | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="add-customer-panel">
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="add-customer-panel" class="resource-page resource-customer-update resource-customer-hvac-component-update">
       <style>
         .hvac-other-field[hidden] {
           display: none !important;
@@ -249,7 +254,9 @@
           <button type="submit">Update {{ component_label }}</button>
         </div>
       </form>
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 {% endblock %}
 

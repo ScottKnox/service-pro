@@ -3,8 +3,13 @@
 {% block title %}Add Sub-Properties | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="add-customer-panel">
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="add-customer-panel" class="resource-page resource-customer-update resource-customer-sub-properties-add">
       <h1>Add Sub-Properties</h1>
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
@@ -100,6 +105,8 @@
       </form>
 
     </div>
+      </div>
+    </section>
   </div>
 {% endblock %}
 

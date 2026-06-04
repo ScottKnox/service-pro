@@ -2146,10 +2146,10 @@ def _synchronize_job_payment_fields(db, job_id):
     total_amount_paid = payment_state["amount_paid"]
     balance_due = payment_state["balance_due"]
 
-    if total_amount_paid <= 0:
-        payment_status = "pending_paid"
-    elif balance_due <= 0:
+    if balance_due <= 0:
         payment_status = "paid"
+    elif total_amount_paid <= 0:
+        payment_status = "pending_paid"
     else:
         payment_status = "partial_paid"
 
@@ -2167,8 +2167,30 @@ def _synchronize_job_payment_fields(db, job_id):
         job_updates["paid_at"] = paid_at_value
         job_updates["datePaid"] = paid_at_value.strftime("%m/%d/%Y %H:%M:%S")
 
-    if balance_due <= 0:
+    has_completed_payment = total_amount_paid > 0 or first_paid_at is not None
+    current_status_normalized = str(job.get("status") or "").strip().lower()
+    has_completed_marker = bool(job.get("completed_at")) or bool(str(job.get("dateCompleted") or "").strip())
+    has_invoice_entry = any(isinstance(entry, dict) for entry in (job.get("invoices") or []))
+    has_free_completion_eligibility = has_completed_marker and has_invoice_entry
+
+    if balance_due <= 0 and (has_completed_payment or has_free_completion_eligibility):
         job_updates["status"] = "Paid"
+    elif balance_due <= 0 and current_status_normalized == "paid":
+        # Recover legacy free jobs that were auto-marked Paid without an actual payment.
+        has_started_marker = bool(job.get("started_at")) or bool(str(job.get("dateStarted") or "").strip())
+        has_en_route_marker = bool(job.get("en_route_at"))
+        has_schedule = bool(str(job.get("scheduled_date") or "").strip()) and bool(str(job.get("scheduled_time") or "").strip())
+
+        if has_completed_marker:
+            job_updates["status"] = "Completed"
+        elif has_started_marker:
+            job_updates["status"] = "Started"
+        elif has_en_route_marker:
+            job_updates["status"] = "En Route"
+        elif has_schedule:
+            job_updates["status"] = "Scheduled"
+        else:
+            job_updates["status"] = "Pending"
 
     db.jobs.update_one({"_id": ObjectId(job_id)}, {"$set": job_updates})
 
@@ -4896,18 +4918,20 @@ def complete_job(jobId):
     total_materials_cost = round(total_materials_cost, 2)
     gross_profit = round(completion_total_due - total_parts_cost - total_materials_cost, 2)
 
-    if existing_paid <= 0:
-        completion_payment_status = "pending_paid"
-    elif completion_balance_due <= 0:
+    if completion_balance_due <= 0:
         completion_payment_status = "paid"
+    elif existing_paid <= 0:
+        completion_payment_status = "pending_paid"
     else:
         completion_payment_status = "partial_paid"
+
+    completion_job_status = "Paid" if completion_balance_due <= 0 else "Completed"
 
     db.jobs.update_one(
         {"_id": ObjectId(jobId)},
         {
             "$set": {
-                "status": "Completed",
+                "status": completion_job_status,
                 "dateCompleted": current_timestamp,
                 "completed_at": current_timestamp_utc,
                 "updated_at": current_timestamp_utc,

@@ -3,9 +3,13 @@
 {% block title %}View Property | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="view-customer-panel">
-      <h1>{{ property.property_name|default('Property', true) }}</h1>
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="view-customer-panel" class="resource-page resource-customers resource-customer-property-view">
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
@@ -18,18 +22,18 @@
       <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
-          <a href="{{ url_for('customers.update_property', customerId=customerId, propertyId=propertyId) }}">Update Property</a>
-          <a href="{{ url_for('customers.add_sub_properties', customerId=customerId, propertyId=propertyId) }}">{% if sub_properties %}Manage Sub-Properties{% else %}Add Sub-Properties{% endif %}</a>
+          <a class="view-customer-action-primary" href="{{ url_for('customers.update_property', customerId=customerId, propertyId=propertyId) }}">Update Property</a>
+          <a class="view-customer-action-secondary" href="{{ url_for('customers.add_sub_properties', customerId=customerId, propertyId=propertyId) }}">{% if sub_properties %}Manage Sub-Properties{% else %}Add Sub-Properties{% endif %}</a>
           {% if sub_properties %}
             <form method="POST" action="{{ url_for('customers.delete_all_sub_properties', customerId=customerId, propertyId=propertyId) }}" onsubmit="return confirm('Delete all sub-properties for this property? This cannot be undone.');">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit">Delete All Sub-Properties</button>
+              <button class="view-customer-action-danger" type="submit">Delete All Sub-Properties</button>
             </form>
           {% endif %}
           {% if not property.is_seed_primary_address %}
             <form method="POST" action="{{ url_for('customers.delete_property', customerId=customerId, propertyId=propertyId) }}" onsubmit="return confirm('Delete this property? This cannot be undone.');">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit">Delete Property</button>
+              <button class="view-customer-action-danger" type="submit">Delete Property</button>
             </form>
           {% endif %}
         </div>
@@ -211,6 +215,8 @@
           </div>
         </div>
       </section>
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 {% endblock %}

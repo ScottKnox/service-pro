@@ -65,108 +65,64 @@
 
   function updatePropertyAddressPreview(propertyData) {
     if (!propertyAddressPreview) {
-      // HVAC picker functions
-      var smartDefaultHvacSystemId = '';
-
-      function normalizeSelectedHvacId(value) {
-        if (Array.isArray(value)) {
-          return String(value[0] || '').trim();
-        }
-        return String(value || '').trim();
-      }
-
-      function resolveInitialHvacId(selectedId, useSmartDefault) {
-        var normalizedId = normalizeSelectedHvacId(selectedId);
-        if (normalizedId) {
-          return normalizedId;
-        }
-        return useSmartDefault ? smartDefaultHvacSystemId : '';
-      }
-
-      function isValidHvacId(hvacId) {
-        if (!hvacId) {
-          return false;
-        }
-        return !!(currentHvacSystems || []).find(function (system) {
-          return String((system || {}).id || '').trim() === String(hvacId).trim();
-        });
-      }
-
+      return;
     }
+    propertyAddressPreview.innerHTML = buildPropertyAddressHTML(propertyData);
+  }
 
-          case 'service': return 'service_hvac_system_id[]';
-          case 'part': return 'part_hvac_system_id[]';
-          case 'labor': return 'labor_hvac_system_id[]';
-          case 'material': return 'material_hvac_system_id[]';
-          case 'equipment': return 'equipment_hvac_system_id[]';
+  function applySelectedProperty(propertyId) {
+    const normalizedPropertyId = String(propertyId || '').trim();
+    const selectedProperty = Array.isArray(customerProperties)
+      ? customerProperties.find(function (property) {
+          return String((property || {}).property_id || '').trim() === normalizedPropertyId;
+        })
+      : null;
+
+    if (!selectedProperty) {
       if (addressLine1Field) addressLine1Field.value = initialAddressValues.address_line_1;
       if (addressLine2Field) addressLine2Field.value = initialAddressValues.address_line_2;
       if (cityField) cityField.value = initialAddressValues.city;
       if (stateField) stateField.value = initialAddressValues.state;
-      function buildHvacPickerField(rowElement, hiddenInputName, selectedId, useSmartDefault) {
+      if (zipCodeField) zipCodeField.value = initialAddressValues.zip_code;
       updatePropertyAddressPreview(null);
-      return;
+      return null;
     }
 
-        if (!currentHvacSystems || currentHvacSystems.length === 0) {
-          return;
-        }
-
-    const selectedProperty = Array.isArray(customerProperties)
-      ? customerProperties.find(function (property) {
-          return String((property || {}).property_id || '').trim() === String(propertyId).trim();
-        })
-        label.textContent = 'Tag To System';
-
-    if (!selectedProperty) {
-      updatePropertyAddressPreview(null);
-      return;
-    }
-
-        hiddenInput.value = '';
+    if (addressLine1Field) addressLine1Field.value = selectedProperty.address_line_1 || '';
     if (addressLine2Field) addressLine2Field.value = selectedProperty.address_line_2 || '';
     if (cityField) cityField.value = selectedProperty.city || '';
-        var pillsContainer = document.createElement('div');
-        pillsContainer.className = 'job-hvac-picker-pills';
+    if (stateField) stateField.value = selectedProperty.state || '';
+    if (zipCodeField) zipCodeField.value = selectedProperty.zip_code || '';
+    updatePropertyAddressPreview(selectedProperty);
+    return selectedProperty;
+  }
 
-        var currentSelection = resolveInitialHvacId(selectedId, useSmartDefault);
-        if (!isValidHvacId(currentSelection)) {
-          currentSelection = '';
-        }
-        hiddenInput.value = currentSelection;
+  function refreshHvacSystemsForProperty(propertyId) {
+    if (!propertyId) {
+      currentHvacSystems = [];
+      resetAllHvacPickersForNewProperty();
+      return;
+    }
 
-        currentHvacSystems.forEach(function (system) {
-          var hvacId = String((system || {}).id || '').trim();
-          if (!hvacId) {
-            return;
-          }
+    fetchHvacSystemsForProperty(propertyId, function (hvacSystems) {
+      currentHvacSystems = Array.isArray(hvacSystems) ? hvacSystems : [];
+      resetAllHvacPickersForNewProperty();
+    });
+  }
 
-          var pill = document.createElement('button');
-          pill.type = 'button';
-          pill.className = 'job-hvac-chip' + (hvacId === currentSelection ? ' is-selected' : '');
-          pill.dataset.hvacId = hvacId;
-          pill.textContent = system.title || system.system_type || 'HVAC System';
-          pill.addEventListener('click', function () {
-            var nextSelection = this.dataset.hvacId || '';
-            if (hiddenInput.value === nextSelection) {
-              nextSelection = '';
-            }
+  if (propertySelect) {
+    applySelectedProperty(propertySelect.value);
+    propertySelect.addEventListener('change', function () {
+      const selectedPropertyId = String(propertySelect.value || '').trim();
+      applySelectedProperty(selectedPropertyId);
+      refreshHvacSystemsForProperty(selectedPropertyId);
+      validateForm();
+    });
+  } else {
+    updatePropertyAddressPreview(null);
+  }
 
-            hiddenInput.value = nextSelection;
-            pillsContainer.querySelectorAll('.job-hvac-chip').forEach(function (chip) {
-              var chipId = String(chip.dataset.hvacId || '').trim();
-              chip.classList.toggle('is-selected', !!nextSelection && chipId === nextSelection);
-
-            smartDefaultHvacSystemId = nextSelection || '';
-          });
-          pillsContainer.appendChild(pill);
-        });
-
-        if (currentSelection) {
-          smartDefaultHvacSystemId = currentSelection;
-        }
   let dateTouched = false;
-        field.appendChild(pillsContainer);
   let submitAttempted = false;
 
   const estimateField = document.getElementById('job-is-estimate');

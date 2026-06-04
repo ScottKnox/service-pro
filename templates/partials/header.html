@@ -2,7 +2,7 @@
     {% set _header_home_view = 'dispatch' if session.get('employee_position', '')|lower in ['owner', 'clerk'] else 'my_day' %}
     {% set _endpoint = request.endpoint|default('', true) %}
     {% set _use_sidebar_nav =
-      _endpoint in ['home', 'customers.customers', 'customers.view_customer', 'customers.add_customer', 'customers.update_customer', 'jobs.estimates', 'jobs.create_estimate', 'jobs.view_estimate', 'jobs.update_estimate', 'jobs.view_job', 'jobs.create_job', 'jobs.update_job', 'jobs.jobs', 'employees.employees']
+      _endpoint in ['home', 'customers.customers', 'customers.view_customer', 'customers.view_property', 'customers.update_property', 'customers.add_sub_properties', 'customers.add_default_hvac', 'customers.view_hvac_system', 'customers.view_hvac_diagnostics', 'customers.view_hvac_component', 'customers.update_hvac_component', 'customers.add_hvac_diagnostics', 'customers.add_customer', 'customers.update_customer', 'jobs.estimates', 'jobs.create_estimate', 'jobs.view_estimate', 'jobs.update_estimate', 'jobs.view_job', 'jobs.view_invoice', 'jobs.create_job', 'jobs.update_job', 'jobs.jobs', 'employees.employees']
       or _endpoint.startswith('admin_bp.')
       or _endpoint.startswith('business.')
       or _endpoint.startswith('catalog.')
