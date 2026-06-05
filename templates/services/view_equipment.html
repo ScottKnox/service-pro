@@ -43,6 +43,10 @@
             <p>{{ equipment.equipment_type|default('-', true) }}</p>
           </div>
           <div class="view-service-detail-item">
+            <h4>Model Number</h4>
+            <p>{{ equipment.model_number|default('-', true) }}</p>
+          </div>
+          <div class="view-service-detail-item">
             <h4>Manufacturer</h4>
             <p>{{ equipment.manufacturer|default('-', true) }}</p>
           </div>
@@ -59,10 +63,6 @@
             <p>{{ equipment.description|default('-', true) }}</p>
           </div>
           <div class="view-service-detail-item">
-            <h4>Notes</h4>
-            <p>{{ equipment.notes|default('-', true) }}</p>
-          </div>
-          <div class="view-service-detail-item">
             <h4>Purchase Link</h4>
             {% if equipment.purchase_link %}
               <p><a href="{{ equipment.purchase_link }}" target="_blank" rel="noopener noreferrer">{{ equipment.purchase_link }}</a></p>
@@ -71,12 +71,64 @@
             {% endif %}
           </div>
           <div class="view-service-detail-item">
-            <h4>Default Price</h4>
-            <p>{{ equipment.default_price_display }}</p>
+            <h4>Cost Price</h4>
+            <p>{{ equipment.cost_price_display }}</p>
           </div>
           <div class="view-service-detail-item">
-            <h4>Default Quantity Installed</h4>
-            <p>{{ equipment.default_quantity_installed_display }}</p>
+            <h4>Sell Price</h4>
+            <p>{{ equipment.sell_price_display }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Warranty Months</h4>
+            <p>{{ equipment.warranty_months if equipment.warranty_months != '' else '-' }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Catalog Status</h4>
+            <p>{% if equipment.is_active %}Active{% else %}Inactive{% endif %}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Sort Order</h4>
+            <p>{{ equipment.sort_order if equipment.sort_order != '' else '-' }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Cooling Capacity</h4>
+            <p>{{ equipment.cooling_capacity|default('-', true) }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>SEER Rating</h4>
+            <p>{{ equipment.seer_rating|default('-', true) }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Metering Device</h4>
+            <p>{{ equipment.metering_device|default('-', true) }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>AFUE Rating</h4>
+            <p>{{ equipment.afue_rating|default('-', true) }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>BTU Input</h4>
+            <p>{{ equipment.btu_input|default('-', true) }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>BTU Output</h4>
+            <p>{{ equipment.btu_output|default('-', true) }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Refrigerant Type</h4>
+            <p>{{ equipment.refrigerant_type|default('-', true) }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Number of Stages</h4>
+            <p>{{ equipment.stages|default('-', true) }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Blower Motor Type</h4>
+            <p>{{ equipment.blower_motor_type|default('-', true) }}</p>
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Voltage</h4>
+            <p>{{ equipment.voltage|default('-', true) }}</p>
           </div>
         </div>
       </section>

@@ -1,3 +1,5 @@
+﻿from datetime import UTC, datetime
+
 from bson import ObjectId
 from flask import Blueprint, redirect, render_template, request, session, url_for
 
@@ -13,8 +15,6 @@ SERVICE_TYPE_OPTIONS = [
     "Diagnostics",
     "Service Agreement / Contracts",
 ]
-
-PART_SUBCATEGORY_OPTIONS = ["part", "equipment"]
 
 MATERIAL_UOM_OPTIONS = [
     "lbs",
@@ -62,28 +62,51 @@ MATERIAL_UOM_GROUPS = {
 }
 
 EQUIPMENT_TYPE_OPTIONS = [
-    "Central Air Conditioner (Split)",
-    "Mini-Split",
-    "Heat Pump",
-    "Portable / Window Unit",
-    "Chiller",
-    "Air Handler",
+    "AC Condenser",
+    "Heat Pump Condenser",
     "Gas Furnace",
-    "Electric Furnace",
-    "Boiler",
-    "Radiant Heating",
-    "Space Heater / Unit Heater",
-    "Thermostat (Smart)",
-    "Thermostat (Programmable)",
-    "Zoning System / Controllers",
-    "Building Automation System",
-    "Heat Recovery Ventillator",
-    "Energy Recovery Ventillator",
-    "Rooftop Unit",
-    "Whole Home Humidifier",
-    "Whole Home Dehumidifier",
-    "Air Cleaner",
+    "Air Handler",
+    "Mini Split Outdoor Unit",
+    "Mini Split Indoor Unit",
+    "Package Unit",
     "Other",
+]
+
+EQUIPMENT_COOLING_CAPACITY_OPTIONS = [
+    ".50 Ton (6000 BTU)",
+    ".75 Ton (9000 BTU)",
+    "1 Ton (12000 BTU)",
+    "1.5 Tons (18000 BTU)",
+    "2 Ton (24000 BTU)",
+    "2.5 Tons (30000 BTU)",
+    "3 Ton (36000 BTU)",
+    "3.5 Tons (42000 BTU)",
+    "4 Ton (48000 BTU)",
+    "4.5 Ton (54000 BTU)",
+    "5 Ton (60000 BTU)",
+]
+
+EQUIPMENT_REFRIGERANT_TYPE_OPTIONS = [
+    "R-22",
+    "R-410A",
+    "R-32",
+    "R-454B",
+    "R-134a",
+    "R-407C",
+    "Other",
+]
+
+EQUIPMENT_BTU_OPTIONS = list(EQUIPMENT_COOLING_CAPACITY_OPTIONS)
+
+EQUIPMENT_STAGES_OPTIONS = [
+    "Single",
+    "Two",
+    "Modulating",
+]
+
+EQUIPMENT_BLOWER_MOTOR_TYPE_OPTIONS = [
+    "Standard PSC Motor",
+    "ECM Motor",
 ]
 
 
@@ -319,7 +342,6 @@ def _serialize_service(service):
     serialized["service_name"] = service_name
     serialized["name"] = service_name
     serialized["service_type"] = str(serialized.get("service_type") or "").strip()
-    serialized["category"] = str(serialized.get("category") or "").strip()
     serialized["price"] = service_price
     serialized["price_display"] = _format_currency_display(service_price)
     serialized["standard_price_display"] = serialized["price_display"]
@@ -472,14 +494,10 @@ def _serialize_part(part):
         sell_price = serialized.get("unit_cost")
 
     serialized["category"] = str(serialized.get("category") or "").strip()
-    serialized["subcategory"] = str(serialized.get("subcategory") or "part").strip().lower() or "part"
-    if serialized["subcategory"] not in PART_SUBCATEGORY_OPTIONS:
-        serialized["subcategory"] = "part"
+    serialized["subcategory"] = "part"
     serialized["part_name"] = part_name
     serialized["name"] = part_name
     serialized["sku"] = str(serialized.get("sku") or "").strip()
-    serialized["manufacturer"] = str(serialized.get("manufacturer") or "").strip()
-    serialized["model_number"] = str(serialized.get("model_number") or "").strip()
     serialized["cost_price"] = cost_price
     serialized["sell_price"] = sell_price
     serialized["cost_price_display"] = _format_currency_display(cost_price)
@@ -568,18 +586,40 @@ def _serialize_material(material):
 
 def _serialize_equipment(equipment):
     serialized = serialize_doc(equipment)
+    cost_price = serialized.get("cost_price")
+    sell_price = serialized.get("sell_price")
+    if cost_price is None:
+        cost_price = serialized.get("default_cost_price")
+    if sell_price is None:
+        sell_price = serialized.get("default_price")
+
     serialized["equipment_name"] = str(serialized.get("equipment_name") or "").strip()
     serialized["equipment_type"] = str(serialized.get("equipment_type") or "").strip()
     serialized["manufacturer"] = str(serialized.get("manufacturer") or "").strip()
     serialized["category"] = str(serialized.get("category") or "").strip()
     serialized["sku"] = str(serialized.get("sku") or "").strip()
+    serialized["model_number"] = str(serialized.get("model_number") or "").strip()
     serialized["description"] = str(serialized.get("description") or "").strip()
-    serialized["notes"] = str(serialized.get("notes") or "").strip()
     serialized["purchase_link"] = str(serialized.get("purchase_link") or "").strip()
-    default_quantity = serialized.get("default_quantity_installed")
-    serialized["default_quantity_installed"] = str(default_quantity or "").strip()
-    serialized["default_quantity_installed_display"] = _format_hours_display(default_quantity)
-    serialized["default_price_display"] = _format_currency_display(serialized.get("default_price"))
+    serialized["cost_price"] = cost_price
+    serialized["sell_price"] = sell_price
+    serialized["cost_price_display"] = _format_currency_display(cost_price)
+    serialized["sell_price_display"] = _format_currency_display(sell_price)
+    serialized["warranty_months"] = serialized.get("warranty_months") if serialized.get("warranty_months") is not None else ""
+    serialized["is_active"] = bool(serialized.get("is_active", True))
+    sort_order = serialized.get("sort_order")
+    serialized["sort_order"] = sort_order if sort_order is not None else ""
+
+    serialized["cooling_capacity"] = str(serialized.get("cooling_capacity") or "").strip()
+    serialized["seer_rating"] = str(serialized.get("seer_rating") or "").strip()
+    serialized["metering_device"] = str(serialized.get("metering_device") or "").strip()
+    serialized["afue_rating"] = str(serialized.get("afue_rating") or "").strip()
+    serialized["btu_input"] = str(serialized.get("btu_input") or "").strip()
+    serialized["btu_output"] = str(serialized.get("btu_output") or "").strip()
+    serialized["refrigerant_type"] = str(serialized.get("refrigerant_type") or "").strip()
+    serialized["stages"] = str(serialized.get("stages") or "").strip()
+    serialized["blower_motor_type"] = str(serialized.get("blower_motor_type") or "").strip()
+    serialized["voltage"] = str(serialized.get("voltage") or "").strip()
     return serialized
 
 
@@ -603,6 +643,113 @@ def _build_category_options(db, collection_name, field_name, business_id):
     values = db[collection_name].distinct(field_name, {"business_id": business_id})
     cleaned = sorted({str(value or "").strip() for value in values if str(value or "").strip()})
     return cleaned
+
+
+CATEGORY_TYPE_CONFIG = {
+    "part": {
+        "collection_name": "parts",
+        "field_name": "category",
+        "manage_route": "catalog.manage_parts",
+        "item_label_singular": "part",
+        "item_label_plural": "parts",
+        "section_title": "Part Categories",
+    },
+    "material": {
+        "collection_name": "materials",
+        "field_name": "category",
+        "manage_route": "catalog.manage_materials",
+        "item_label_singular": "material",
+        "item_label_plural": "materials",
+        "section_title": "Material Categories",
+    },
+    "equipment": {
+        "collection_name": "equipment",
+        "field_name": "category",
+        "manage_route": "catalog.manage_equipment",
+        "item_label_singular": "equipment item",
+        "item_label_plural": "equipment items",
+        "section_title": "Equipment Categories",
+    },
+}
+
+
+def _get_category_type_config(category_type):
+    return CATEGORY_TYPE_CONFIG.get(str(category_type or "").strip())
+
+
+def _get_managed_categories(db, category_type, business_id):
+    if not business_id or category_type not in CATEGORY_TYPE_CONFIG:
+        return []
+
+    categories = db.categories.find({"company_id": str(business_id), "type": category_type}).sort([("is_default", -1), ("sort_order", 1), ("name", 1)])
+    cleaned = []
+    for category in categories:
+        serialized = serialize_doc(category)
+        serialized["name"] = str(serialized.get("name") or "").strip()
+        if not serialized["name"]:
+            continue
+        serialized["is_default"] = bool(serialized.get("is_default"))
+        serialized["sort_order"] = int(serialized.get("sort_order") or 0)
+        cleaned.append(serialized)
+    return cleaned
+
+
+def _build_managed_category_options(db, category_type, business_id):
+    return [category["name"] for category in _get_managed_categories(db, category_type, business_id)]
+
+
+def _category_exists(db, category_type, business_id, category_name):
+    if not business_id:
+        return False
+
+    normalized_name = str(category_name or "").strip()
+    if not normalized_name:
+        return False
+
+    return db.categories.count_documents({"company_id": str(business_id), "type": category_type, "name": normalized_name}, limit=1) > 0
+
+
+def _custom_category_exists(db, category_type, business_id, category_name):
+    if not business_id:
+        return False
+
+    normalized_name = str(category_name or "").strip()
+    if not normalized_name:
+        return False
+
+    return db.categories.count_documents({"company_id": str(business_id), "type": category_type, "name": normalized_name, "is_default": False}, limit=1) > 0
+
+
+def _build_category_management_context(db, category_type, business_id):
+    config = _get_category_type_config(category_type)
+    if not config:
+        return None
+
+    categories = _get_managed_categories(db, category_type, business_id)
+    return {
+        "category_type": category_type,
+        "section_title": config["section_title"],
+        "item_label_singular": config["item_label_singular"],
+        "item_label_plural": config["item_label_plural"],
+        "default_categories": [category for category in categories if category.get("is_default")],
+        "custom_categories": [category for category in categories if not category.get("is_default")],
+        "all_categories": categories,
+    }
+
+
+def _remove_category_references_from_services(db, category_type, business_id, category_id):
+    if not business_id:
+        return
+
+    array_field = {
+        "part": "associated_part_category_ids",
+        "material": "associated_material_category_ids",
+        "equipment": "associated_equipment_category_ids",
+    }.get(category_type)
+    if not array_field:
+        return
+
+    db.services.update_many({"business_id": business_id}, {"$pull": {array_field: category_id}})
 
 
 def _get_business_markup_rules(db, business_id):
@@ -666,6 +813,48 @@ def _service_form_data(service=None):
     }
 
 
+def _service_associated_category_ids(service=None):
+    service = service or {}
+
+    return {
+        "associated_part_category_ids": [str(category_id) for category_id in service.get("associated_part_category_ids", []) if str(category_id).strip()],
+        "associated_material_category_ids": [str(category_id) for category_id in service.get("associated_material_category_ids", []) if str(category_id).strip()],
+        "associated_equipment_category_ids": [str(category_id) for category_id in service.get("associated_equipment_category_ids", []) if str(category_id).strip()],
+    }
+
+
+def _stringify_category_id_list(category_ids):
+    return [str(category_id) for category_id in (category_ids or []) if str(category_id).strip()]
+
+
+def _normalize_selected_category_ids(db, business_id, category_type, selected_category_ids):
+    normalized_ids = []
+    for raw_category_id in selected_category_ids or []:
+        category_id = str(raw_category_id or "").strip()
+        if not category_id:
+            continue
+        if not ObjectId.is_valid(category_id):
+            return None, "Please select valid categories."
+        normalized_ids.append(ObjectId(category_id))
+
+    if not normalized_ids:
+        return [], ""
+
+    categories = db.categories.find(
+        {
+            "_id": {"$in": normalized_ids},
+            "company_id": str(business_id),
+            "type": category_type,
+        },
+        {"_id": 1},
+    )
+    valid_ids = {category["_id"] for category in categories}
+    if len(valid_ids) != len(normalized_ids):
+        return None, "Please select valid categories."
+
+    return normalized_ids, ""
+
+
 def _part_form_data(part=None):
     part = part or {}
     cost_price = part.get("cost_price")
@@ -678,10 +867,7 @@ def _part_form_data(part=None):
     return {
         "part_name": str(part.get("part_name") or part.get("name") or "").strip(),
         "category": str(part.get("category") or "").strip(),
-        "subcategory": str(part.get("subcategory") or "part").strip().lower() or "part",
         "sku": str(part.get("sku") or "").strip(),
-        "manufacturer": str(part.get("manufacturer") or "").strip(),
-        "model_number": str(part.get("model_number") or "").strip(),
         "description": str(part.get("description") or "").strip(),
         "cost_price": str(cost_price or "").strip(),
         "sell_price": str(sell_price or "").strip(),
@@ -741,17 +927,38 @@ def _material_form_data(material=None):
 
 def _equipment_form_data(equipment=None):
     equipment = equipment or {}
+    cost_price = equipment.get("cost_price")
+    if cost_price is None:
+        cost_price = equipment.get("default_cost_price")
+
+    sell_price = equipment.get("sell_price")
+    if sell_price is None:
+        sell_price = equipment.get("default_price")
+
     return {
         "equipment_name": str(equipment.get("equipment_name") or "").strip(),
         "equipment_type": str(equipment.get("equipment_type") or "").strip(),
         "manufacturer": str(equipment.get("manufacturer") or "").strip(),
         "category": str(equipment.get("category") or "").strip(),
         "sku": str(equipment.get("sku") or "").strip(),
+        "model_number": str(equipment.get("model_number") or "").strip(),
         "description": str(equipment.get("description") or "").strip(),
-        "notes": str(equipment.get("notes") or "").strip(),
         "purchase_link": str(equipment.get("purchase_link") or "").strip(),
-        "default_price": str(equipment.get("default_price") or "").strip(),
-        "default_quantity_installed": str(equipment.get("default_quantity_installed") or "").strip(),
+        "cost_price": str(cost_price or "").strip(),
+        "sell_price": str(sell_price or "").strip(),
+        "warranty_months": str(equipment.get("warranty_months") or "").strip(),
+        "sort_order": str(equipment.get("sort_order") or "").strip(),
+        "is_active": "true" if bool(equipment.get("is_active", True)) else "false",
+        "cooling_capacity": str(equipment.get("cooling_capacity") or "").strip(),
+        "seer_rating": str(equipment.get("seer_rating") or "").strip(),
+        "metering_device": str(equipment.get("metering_device") or "").strip(),
+        "afue_rating": str(equipment.get("afue_rating") or "").strip(),
+        "btu_input": str(equipment.get("btu_input") or "").strip(),
+        "btu_output": str(equipment.get("btu_output") or "").strip(),
+        "refrigerant_type": str(equipment.get("refrigerant_type") or "").strip(),
+        "stages": str(equipment.get("stages") or "").strip(),
+        "blower_motor_type": str(equipment.get("blower_motor_type") or "").strip(),
+        "voltage": str(equipment.get("voltage") or "").strip(),
         "tax_override": "always" if equipment.get("tax_override") is True else ("never" if equipment.get("tax_override") is False else "default"),
     }
 
@@ -815,7 +1022,7 @@ def manage_services():
     return render_template(
         "services/manage_services.html",
         services=services,
-        service_categories=_build_filter_values(services, "category"),
+        service_types=_build_filter_values(services, "service_type"),
     )
 
 
@@ -834,15 +1041,13 @@ def manage_parts():
     business_id = _resolve_current_business_id(db)
     query = {"business_id": business_id} if business_id else {"_id": None}
     parts = [_serialize_part(part) for part in db.parts.find(query).sort("name", 1)]
-    has_unspecified_manufacturer = any(not str(part.get("manufacturer") or "").strip() for part in parts)
 
     return render_template(
         "services/manage_parts.html",
         parts=parts,
-        part_categories=_build_filter_values(parts, "category"),
-        part_subcategories=_build_filter_values(parts, "subcategory"),
-        part_manufacturers=_build_filter_values(parts, "manufacturer"),
-        has_unspecified_manufacturer=has_unspecified_manufacturer,
+        part_categories=_build_managed_category_options(db, "part", business_id),
+        category_management=_build_category_management_context(db, "part", business_id),
+        category_error=request.args.get("category_error", ""),
     )
 
 
@@ -852,7 +1057,7 @@ def export_parts_csv():
     business_id = _resolve_current_business_id(db)
     query = {"business_id": business_id} if business_id else {"_id": None}
     rows = list(db.parts.find(query).sort("name", 1))
-    return build_csv_export_response(rows, "parts_export.csv")
+    return build_csv_export_response(rows, "parts_export.csv", excluded_fields={"manufacturer", "model_number"})
 
 
 @bp.route("/labor")
@@ -896,8 +1101,10 @@ def manage_materials():
     return render_template(
         "services/manage_materials.html",
         materials=materials,
-        material_categories=_build_filter_values(materials, "category"),
+        material_categories=_build_managed_category_options(db, "material", business_id),
         material_uom_group_filters=material_uom_group_filters,
+        category_management=_build_category_management_context(db, "material", business_id),
+        category_error=request.args.get("category_error", ""),
     )
 
 
@@ -920,9 +1127,75 @@ def manage_equipment():
     return render_template(
         "services/manage_equipment.html",
         equipment_items=equipment_items,
-        equipment_categories=_build_filter_values(equipment_items, "category"),
+        equipment_categories=_build_managed_category_options(db, "equipment", business_id),
         equipment_manufacturers=_build_filter_values(equipment_items, "manufacturer"),
+        category_management=_build_category_management_context(db, "equipment", business_id),
+        category_error=request.args.get("category_error", ""),
     )
+
+
+@bp.route("/categories/<categoryType>/create", methods=["POST"])
+def create_category(categoryType):
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    config = _get_category_type_config(categoryType)
+    if not business_id or not config:
+        return redirect(url_for("catalog.manage_price_book"))
+
+    category_name = str(request.form.get("category") or "").strip()
+    if not category_name:
+        return redirect(url_for(config["manage_route"], category_error="Category name is required."))
+
+    if _custom_category_exists(db, categoryType, business_id, category_name):
+        return redirect(url_for(config["manage_route"], category_error="That custom category already exists."))
+
+    existing_categories = _get_managed_categories(db, categoryType, business_id)
+    next_sort_order = 0
+    if existing_categories:
+        next_sort_order = max(int(category.get("sort_order") or 0) for category in existing_categories) + 1
+
+    db.categories.insert_one(
+        {
+            "company_id": str(business_id),
+            "type": categoryType,
+            "name": category_name,
+            "is_default": False,
+            "sort_order": next_sort_order,
+            "created_at": datetime.now(UTC),
+        }
+    )
+    return redirect(url_for(config["manage_route"]))
+
+
+@bp.route("/categories/<categoryType>/<categoryId>/delete", methods=["POST"])
+def delete_category(categoryType, categoryId):
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    config = _get_category_type_config(categoryType)
+    if not business_id or not config or not ObjectId.is_valid(categoryId):
+        return redirect(url_for("catalog.manage_price_book"))
+
+    category = db.categories.find_one({"_id": ObjectId(categoryId), "company_id": str(business_id), "type": categoryType})
+    if not category:
+        return redirect(url_for(config["manage_route"], category_error="That category could not be found."))
+    if bool(category.get("is_default")):
+        return redirect(url_for(config["manage_route"], category_error="Default categories cannot be deleted."))
+
+    category_name = str(category.get("name") or "").strip()
+    if not category_name:
+        return redirect(url_for(config["manage_route"], category_error="That category is invalid."))
+
+    collection_name = config["collection_name"]
+    field_name = config["field_name"]
+    in_use_count = db[collection_name].count_documents({"business_id": business_id, field_name: category_name})
+    if in_use_count > 0:
+        item_label = config["item_label_plural"] if in_use_count != 1 else config["item_label_singular"]
+        error_message = f"Cannot delete {category_name}. {in_use_count} {item_label} are currently using this category. Reassign them before deleting."
+        return redirect(url_for(config["manage_route"], category_error=error_message))
+
+    db.categories.delete_one({"_id": ObjectId(categoryId), "company_id": str(business_id), "type": categoryType})
+    _remove_category_references_from_services(db, categoryType, business_id, categoryId)
+    return redirect(url_for(config["manage_route"]))
 
 
 @bp.route("/equipment/export/csv")
@@ -957,12 +1230,9 @@ def create_service():
 
     error = ""
     form_data = _service_form_data()
-    selected_part_ids = []
-    selected_material_ids = []
-    entered_part_quantities = []
-    service_part_rows = [{"part_id": "", "quantity": "", "unit_price": ""}]
-    service_material_rows = _build_service_material_rows()
-    category_options = _build_category_options(db, "services", "category", business_id)
+    selected_part_category_ids_display = []
+    selected_material_category_ids_display = []
+    selected_equipment_category_ids_display = []
     business_doc = db.businesses.find_one({"_id": business_id}, {"labor_rate_standard": 1, "labor_rate_emergency": 1}) or {}
     default_labor_rate_standard = business_doc.get("labor_rate_standard")
     default_labor_rate_display = ""
@@ -972,23 +1242,28 @@ def create_service():
     except (TypeError, ValueError):
         default_labor_rate_display = ""
 
+    part_categories = _get_managed_categories(db, "part", business_id)
+    material_categories = _get_managed_categories(db, "material", business_id)
+    equipment_categories = _get_managed_categories(db, "equipment", business_id)
+
     if request.method == "POST":
         form_data = _service_form_data(request.form)
         tax_override = _parse_tax_override(request.form.get("tax_override"))
-        selected_part_ids = request.form.getlist("part_id[]")
-        selected_material_ids = request.form.getlist("material_id[]")
-        entered_part_quantities = request.form.getlist("part_quantity[]")
-        entered_part_prices = request.form.getlist("part_price_display[]")
-        entered_material_quantities = request.form.getlist("material_default_quantity_display[]")
-        entered_material_units = request.form.getlist("material_unit_of_measure_display[]")
-        entered_material_prices = request.form.getlist("material_price_display[]")
-        service_part_rows = []
-        service_material_rows = _build_service_material_rows(
-            selected_material_ids,
-            entered_material_quantities,
-            entered_material_units,
-            entered_material_prices,
+        selected_part_category_ids_display = _stringify_category_id_list(request.form.getlist("associated_part_category_ids"))
+        selected_material_category_ids_display = _stringify_category_id_list(request.form.getlist("associated_material_category_ids"))
+        selected_equipment_category_ids_display = _stringify_category_id_list(request.form.getlist("associated_equipment_category_ids"))
+
+        selected_part_category_ids, error = _normalize_selected_category_ids(
+            db, business_id, "part", selected_part_category_ids_display,
         )
+        if not error:
+            selected_material_category_ids, error = _normalize_selected_category_ids(
+                db, business_id, "material", selected_material_category_ids_display,
+            )
+        if not error:
+            selected_equipment_category_ids, error = _normalize_selected_category_ids(
+                db, business_id, "equipment", selected_equipment_category_ids_display,
+            )
 
         if not error:
             price, error = _parse_nonnegative_float(form_data["price"], "Price")
@@ -997,101 +1272,12 @@ def create_service():
         if not error:
             labor_rate_override, error = _parse_optional_nonnegative_float(form_data["labor_rate_override"], "Labor Rate Override", default=None)
 
-        included_parts = []
-        for index, raw_part_id in enumerate(selected_part_ids):
-            normalized_part_id = str(raw_part_id or "").strip()
-            if not normalized_part_id:
-                continue
-            if not ObjectId.is_valid(normalized_part_id):
-                error = "Please select a valid included part."
-                break
-
-            raw_quantity = entered_part_quantities[index] if index < len(entered_part_quantities) else ""
-            quantity, quantity_error = _parse_nonnegative_float(raw_quantity, "Included Part Quantity")
-            if quantity_error:
-                error = quantity_error
-                break
-
-            part_doc = db.parts.find_one({"_id": ObjectId(normalized_part_id), "business_id": business_id})
-            if not part_doc:
-                error = "Please select a valid included part."
-                break
-
-            part_serialized = _serialize_part(part_doc)
-            included_parts.append(
-                {
-                    "part_id": ObjectId(normalized_part_id),
-                    "part_name": part_serialized.get("part_name"),
-                    "subcategory": part_serialized.get("subcategory", "part"),
-                    "quantity": quantity,
-                    "unit_price": part_serialized.get("sell_price"),
-                    "cost_price": part_serialized.get("cost_price"),
-                    "warranty_months": part_serialized.get("warranty_months") or None,
-                    "tax_override": part_serialized.get("tax_override"),
-                }
-            )
-
-        if not error:
-            service_material_entries, valid_material_ids, error = _parse_service_material_entries(
-                selected_material_ids,
-                entered_material_quantities,
-                entered_material_units,
-                entered_material_prices,
-            )
-        if not error:
-            for entry in service_material_entries:
-                material_oid = entry.get("material_id")
-                material_doc = db.materials.find_one({"_id": material_oid, "business_id": business_id}) if material_oid else None
-                material_name = ""
-                material_unit_label = ""
-                material_cost_per_unit = None
-                material_tax_override = None
-                if material_doc:
-                    material_name = str(material_doc.get("material_name") or "").strip()
-                    material_unit_label = str(material_doc.get("unit_label") or "").strip()
-                    material_cost_per_unit = material_doc.get("cost_price_per_unit")
-                    material_tax_override = material_doc.get("tax_override")
-                if not material_name:
-                    material_name = str(entry.get("material_name") or "").strip()
-                entry["material_name"] = material_name
-                entry["unit_label"] = entry.get("unit_label") or material_unit_label
-                included_parts.append(
-                    {
-                        "part_id": material_oid,
-                        "part_name": material_name,
-                        "subcategory": "material",
-                        "quantity": entry.get("quantity") if entry.get("quantity") is not None else (entry.get("default_quantity_used") if entry.get("default_quantity_used") is not None else 1),
-                        "unit_price": entry.get("unit_price") if entry.get("unit_price") is not None else entry.get("price"),
-                        "unit_of_measure": entry.get("unit_of_measure"),
-                        "unit_label": entry.get("unit_label"),
-                        "cost_price": material_cost_per_unit,
-                        "warranty_months": None,
-                        "tax_override": material_tax_override,
-                    }
-                )
-
-        if not service_part_rows:
-            for index, raw_part_id in enumerate(selected_part_ids):
-                raw_quantity = entered_part_quantities[index] if index < len(entered_part_quantities) else ""
-                raw_price = entered_part_prices[index] if index < len(entered_part_prices) else ""
-                service_part_rows.append(
-                    {
-                        "part_id": str(raw_part_id or "").strip(),
-                        "quantity": str(raw_quantity or "").strip(),
-                        "unit_price": str(raw_price or "").strip(),
-                    }
-                )
-        if not service_part_rows:
-            service_part_rows = [{"part_id": "", "quantity": "", "unit_price": ""}]
-
         if not error and not form_data["service_name"]:
             error = "Service Name is required."
         elif not error and not form_data["service_type"]:
             error = "Service Type is required."
         elif not error and form_data["service_type"] not in SERVICE_TYPE_OPTIONS:
             error = "Please select a valid Service Type."
-        elif not error and not form_data["category"]:
-            error = "Category is required."
         elif not error and labor_hours not in [None, 0] and (business_doc.get("labor_rate_standard") is None or business_doc.get("labor_rate_emergency") is None):
             error = "Set standard and emergency labor rates in Business Profile before creating services with labor hours."
 
@@ -1102,7 +1288,6 @@ def create_service():
                     "name": form_data["service_name"],
                     "service_name": form_data["service_name"],
                     "service_type": form_data["service_type"],
-                    "category": form_data["category"],
                     "description": form_data["description"],
                     "price": price,
                     "standard_price": price,
@@ -1111,56 +1296,24 @@ def create_service():
                     "labor_rate_override": labor_rate_override,
                     "show_labor_breakdown": _parse_boolean(form_data.get("show_labor_breakdown")),
                     "tax_override": tax_override,
-                    "included_parts": included_parts,
-                    "part_ids": [entry.get("part_id") for entry in included_parts if entry.get("part_id")],
-                    "service_parts": [
-                        {"part_id": entry.get("part_id"), "unit_cost": entry.get("unit_price")}
-                        for entry in included_parts
-                        if str(entry.get("subcategory") or "").strip().lower() != "material"
-                    ],
-                    "material_ids": valid_material_ids,
-                    "service_materials": service_material_entries,
+                    "associated_part_category_ids": selected_part_category_ids,
+                    "associated_material_category_ids": selected_material_category_ids,
+                    "associated_equipment_category_ids": selected_equipment_category_ids,
                     "is_active": True,
                 }
             )
             return redirect(url_for("catalog.manage_services"))
 
-    part_query = {"business_id": business_id}
-    material_query = {"business_id": business_id}
-    parts = [_serialize_part(part) for part in db.parts.find(part_query).sort("part_name", 1)]
-    materials = [_serialize_material(material) for material in db.materials.find(material_query).sort("material_name", 1)]
-    parts_catalog_by_id = {
-        part["_id"]: {
-            "unit_cost": part["sell_price_display"],
-            "part_name": part["part_name"],
-            "sell_price": part["sell_price"],
-        }
-        for part in parts
-    }
-    materials_catalog_by_id = {
-        material["_id"]: {
-            "material_name": material["material_name"],
-            "default_quantity_used": material["default_quantity_used_display"],
-            "unit_of_measure": material["unit_of_measure"],
-            "unit_label": material.get("unit_label", ""),
-            "price": material["sell_price_per_unit_display"],
-            "sell_price_per_unit": material.get("sell_price_per_unit"),
-        }
-        for material in materials
-    }
     return render_template(
         "services/create_service.html",
         error=error,
         form_data=form_data,
-        parts=parts,
-        materials=materials,
-        parts_catalog_by_id=parts_catalog_by_id,
-        materials_catalog_by_id=materials_catalog_by_id,
-        selected_part_ids=selected_part_ids,
-        selected_material_ids=selected_material_ids,
-        service_part_rows=service_part_rows,
-        service_material_rows=service_material_rows,
-        category_options=category_options,
+        part_categories=part_categories,
+        material_categories=material_categories,
+        equipment_categories=equipment_categories,
+        selected_part_category_ids=selected_part_category_ids_display,
+        selected_material_category_ids=selected_material_category_ids_display,
+        selected_equipment_category_ids=selected_equipment_category_ids_display,
         service_type_options=SERVICE_TYPE_OPTIONS,
         default_labor_rate_display=default_labor_rate_display,
     )
@@ -1178,53 +1331,21 @@ def view_service(serviceId):
     if not service:
         return redirect(url_for("catalog.manage_services"))
 
-    included_parts = service.get("included_parts") if isinstance(service.get("included_parts"), list) else []
-    service_part_entries = service.get("service_parts") or []
-    part_ids = [entry.get("part_id") for entry in included_parts if entry.get("part_id")]
-    if not part_ids:
-        part_ids = [entry.get("part_id") for entry in service_part_entries if entry.get("part_id")] or service.get("part_ids", [])
-
-    associated_parts = []
-    part_entry_by_id = {
-        str(entry.get("part_id")): entry
-        for entry in included_parts
-        if entry.get("part_id")
-    }
-
-    if not part_entry_by_id:
-        part_entry_by_id = {str(entry.get("part_id")): entry for entry in service_part_entries if entry.get("part_id")}
-
-    for pid in part_ids:
-        if pid and ObjectId.is_valid(str(pid)):
-            part_doc = db.parts.find_one({"_id": ObjectId(str(pid))})
-            part_entry = part_entry_by_id.get(str(pid))
-
-            if part_doc:
-                serialized_part = _serialize_part(part_doc)
-            else:
-                material_doc = db.materials.find_one({"_id": ObjectId(str(pid))})
-                if not material_doc:
-                    continue
-                serialized_material = _serialize_material(material_doc)
-                serialized_part = {
-                    "_id": serialized_material.get("_id"),
-                    "part_name": serialized_material.get("material_name"),
-                    "subcategory": "material",
-                    "unit_cost_display": serialized_material.get("price_display"),
-                }
-
-            if part_entry:
-                serialized_part["unit_cost_display"] = _format_currency_display(part_entry.get("unit_price") if "unit_price" in part_entry else part_entry.get("unit_cost"))
-                serialized_part["included_quantity_display"] = _format_hours_display(part_entry.get("quantity")) if part_entry.get("quantity") is not None else "-"
-                if str(part_entry.get("subcategory") or "").strip():
-                    serialized_part["subcategory"] = str(part_entry.get("subcategory") or "").strip().lower()
-            associated_parts.append(serialized_part)
+    service_category_ids = _service_associated_category_ids(service)
+    selected_part_category_ids = {str(category_id) for category_id in service_category_ids["associated_part_category_ids"] if str(category_id).strip()}
+    selected_material_category_ids = {str(category_id) for category_id in service_category_ids["associated_material_category_ids"] if str(category_id).strip()}
+    selected_equipment_category_ids = {str(category_id) for category_id in service_category_ids["associated_equipment_category_ids"] if str(category_id).strip()}
+    associated_part_categories = [category for category in _get_managed_categories(db, "part", business_id) if str(category.get("_id") or "") in selected_part_category_ids]
+    associated_material_categories = [category for category in _get_managed_categories(db, "material", business_id) if str(category.get("_id") or "") in selected_material_category_ids]
+    associated_equipment_categories = [category for category in _get_managed_categories(db, "equipment", business_id) if str(category.get("_id") or "") in selected_equipment_category_ids]
 
     return render_template(
         "services/view_service.html",
         serviceId=serviceId,
         service=_serialize_service(service),
-        associated_parts=associated_parts,
+        associated_part_categories=associated_part_categories,
+        associated_material_categories=associated_material_categories,
+        associated_equipment_categories=associated_equipment_categories,
     )
 
 
@@ -1242,42 +1363,20 @@ def update_service(serviceId):
 
     error = ""
     form_data = _service_form_data(service)
-    existing_included_parts = service.get("included_parts") if isinstance(service.get("included_parts"), list) else []
-    selected_part_ids = [
-        str(entry.get("part_id") or "").strip()
-        for entry in existing_included_parts
-        if str(entry.get("part_id") or "").strip() and str(entry.get("subcategory") or "").strip().lower() != "material"
-    ]
-    selected_material_ids = [str(mid) for mid in service.get("material_ids", [])]
-    service_part_rows = [
-        {
-            "part_id": str(entry.get("part_id") or "").strip(),
-            "quantity": _format_hours_display(entry.get("quantity")) if entry.get("quantity") is not None else "",
-            "unit_price": _format_currency_display(entry.get("unit_price")),
-        }
-        for entry in existing_included_parts
-        if str(entry.get("subcategory") or "").strip().lower() != "material"
-    ] or [{"part_id": "", "quantity": "", "unit_price": ""}]
-    service_material_rows = _build_service_material_rows(service_material_entries=service.get("service_materials") or [])
-    category_options = _build_category_options(db, "services", "category", business_id)
+    selected_category_ids = _service_associated_category_ids(service)
+    selected_part_category_ids_display = selected_category_ids["associated_part_category_ids"]
+    selected_material_category_ids_display = selected_category_ids["associated_material_category_ids"]
+    selected_equipment_category_ids_display = selected_category_ids["associated_equipment_category_ids"]
+    part_categories = _get_managed_categories(db, "part", business_id)
+    material_categories = _get_managed_categories(db, "material", business_id)
+    equipment_categories = _get_managed_categories(db, "equipment", business_id)
     business_doc = db.businesses.find_one({"_id": business_id}, {"labor_rate_standard": 1, "labor_rate_emergency": 1}) or {}
 
     if request.method == "POST":
         form_data = _service_form_data(request.form)
-        selected_part_ids = request.form.getlist("part_id[]")
-        selected_material_ids = request.form.getlist("material_id[]")
-        entered_part_quantities = request.form.getlist("part_quantity[]")
-        entered_part_prices = request.form.getlist("part_price_display[]")
-        entered_material_quantities = request.form.getlist("material_default_quantity_display[]")
-        entered_material_units = request.form.getlist("material_unit_of_measure_display[]")
-        entered_material_prices = request.form.getlist("material_price_display[]")
-        service_part_rows = []
-        service_material_rows = _build_service_material_rows(
-            selected_material_ids,
-            entered_material_quantities,
-            entered_material_units,
-            entered_material_prices,
-        )
+        selected_part_category_ids_display = _stringify_category_id_list(request.form.getlist("associated_part_category_ids"))
+        selected_material_category_ids_display = _stringify_category_id_list(request.form.getlist("associated_material_category_ids"))
+        selected_equipment_category_ids_display = _stringify_category_id_list(request.form.getlist("associated_equipment_category_ids"))
 
         if not error:
             price, error = _parse_nonnegative_float(form_data["price"], "Price")
@@ -1286,92 +1385,21 @@ def update_service(serviceId):
         if not error:
             labor_rate_override, error = _parse_optional_nonnegative_float(form_data["labor_rate_override"], "Labor Rate Override", default=None)
 
-        included_parts = []
-        for index, raw_part_id in enumerate(selected_part_ids):
-            normalized_part_id = str(raw_part_id or "").strip()
-            if not normalized_part_id:
-                continue
-            if not ObjectId.is_valid(normalized_part_id):
-                error = "Please select a valid included part."
-                break
-
-            raw_quantity = entered_part_quantities[index] if index < len(entered_part_quantities) else ""
-            quantity, quantity_error = _parse_nonnegative_float(raw_quantity, "Included Part Quantity")
-            if quantity_error:
-                error = quantity_error
-                break
-
-            part_doc = db.parts.find_one({"_id": ObjectId(normalized_part_id), "business_id": business_id})
-            if not part_doc:
-                error = "Please select a valid included part."
-                break
-
-            part_serialized = _serialize_part(part_doc)
-            included_parts.append(
-                {
-                    "part_id": ObjectId(normalized_part_id),
-                    "part_name": part_serialized.get("part_name"),
-                    "subcategory": part_serialized.get("subcategory", "part"),
-                    "quantity": quantity,
-                    "unit_price": part_serialized.get("sell_price"),
-                    "cost_price": part_serialized.get("cost_price"),
-                    "warranty_months": part_serialized.get("warranty_months") or None,
-                    "tax_override": part_serialized.get("tax_override"),
-                }
-            )
-
+        selected_part_category_ids = selected_category_ids["associated_part_category_ids"]
+        selected_material_category_ids = selected_category_ids["associated_material_category_ids"]
+        selected_equipment_category_ids = selected_category_ids["associated_equipment_category_ids"]
         if not error:
-            service_material_entries, valid_material_ids, error = _parse_service_material_entries(
-                selected_material_ids,
-                entered_material_quantities,
-                entered_material_units,
-                entered_material_prices,
+            selected_part_category_ids, error = _normalize_selected_category_ids(
+                db, business_id, "part", selected_part_category_ids_display,
             )
         if not error:
-            for entry in service_material_entries:
-                material_oid = entry.get("material_id")
-                material_doc = db.materials.find_one({"_id": material_oid, "business_id": business_id}) if material_oid else None
-                material_name = ""
-                material_unit_label = ""
-                material_cost_per_unit = None
-                material_tax_override = None
-                if material_doc:
-                    material_name = str(material_doc.get("material_name") or "").strip()
-                    material_unit_label = str(material_doc.get("unit_label") or "").strip()
-                    material_cost_per_unit = material_doc.get("cost_price_per_unit")
-                    material_tax_override = material_doc.get("tax_override")
-                if not material_name:
-                    material_name = str(entry.get("material_name") or "").strip()
-                entry["material_name"] = material_name
-                entry["unit_label"] = entry.get("unit_label") or material_unit_label
-                included_parts.append(
-                    {
-                        "part_id": material_oid,
-                        "part_name": material_name,
-                        "subcategory": "material",
-                        "quantity": entry.get("quantity") if entry.get("quantity") is not None else (entry.get("default_quantity_used") if entry.get("default_quantity_used") is not None else 1),
-                        "unit_price": entry.get("unit_price") if entry.get("unit_price") is not None else entry.get("price"),
-                        "unit_of_measure": entry.get("unit_of_measure"),
-                        "unit_label": entry.get("unit_label"),
-                        "cost_price": material_cost_per_unit,
-                        "warranty_months": None,
-                        "tax_override": material_tax_override,
-                    }
-                )
-
-        if not service_part_rows:
-            for index, raw_part_id in enumerate(selected_part_ids):
-                raw_quantity = entered_part_quantities[index] if index < len(entered_part_quantities) else ""
-                raw_price = entered_part_prices[index] if index < len(entered_part_prices) else ""
-                service_part_rows.append(
-                    {
-                        "part_id": str(raw_part_id or "").strip(),
-                        "quantity": str(raw_quantity or "").strip(),
-                        "unit_price": str(raw_price or "").strip(),
-                    }
-                )
-        if not service_part_rows:
-            service_part_rows = [{"part_id": "", "quantity": "", "unit_price": ""}]
+            selected_material_category_ids, error = _normalize_selected_category_ids(
+                db, business_id, "material", selected_material_category_ids_display,
+            )
+        if not error:
+            selected_equipment_category_ids, error = _normalize_selected_category_ids(
+                db, business_id, "equipment", selected_equipment_category_ids_display,
+            )
 
         if not error and not form_data["service_name"]:
             error = "Service Name is required."
@@ -1379,8 +1407,6 @@ def update_service(serviceId):
             error = "Service Type is required."
         elif not error and form_data["service_type"] not in SERVICE_TYPE_OPTIONS:
             error = "Please select a valid Service Type."
-        elif not error and not form_data["category"]:
-            error = "Category is required."
         elif not error and labor_hours not in [None, 0] and (business_doc.get("labor_rate_standard") is None or business_doc.get("labor_rate_emergency") is None):
             error = "Set standard and emergency labor rates in Business Profile before using services with labor hours."
 
@@ -1388,69 +1414,46 @@ def update_service(serviceId):
             tax_override = _parse_tax_override(request.form.get("tax_override"))
             db.services.update_one(
                 query,
-                {"$set": {
-                    "name": form_data["service_name"],
-                    "service_name": form_data["service_name"],
-                    "service_type": form_data["service_type"],
-                    "category": form_data["category"],
-                    "description": form_data["description"],
-                    "price": price,
-                    "standard_price": price,
-                    "labor_hours": labor_hours,
-                    "estimated_hours": labor_hours,
-                    "labor_rate_override": labor_rate_override,
-                    "show_labor_breakdown": _parse_boolean(form_data.get("show_labor_breakdown")),
-                    "tax_override": tax_override,
-                    "included_parts": included_parts,
-                    "part_ids": [entry.get("part_id") for entry in included_parts if entry.get("part_id")],
-                    "service_parts": [
-                        {"part_id": entry.get("part_id"), "unit_cost": entry.get("unit_price")}
-                        for entry in included_parts
-                        if str(entry.get("subcategory") or "").strip().lower() != "material"
-                    ],
-                    "material_ids": valid_material_ids,
-                    "service_materials": service_material_entries,
-                }, "$unset": {"service_code": ""}},
+                {
+                    "$set": {
+                        "name": form_data["service_name"],
+                        "service_name": form_data["service_name"],
+                        "service_type": form_data["service_type"],
+                        "description": form_data["description"],
+                        "price": price,
+                        "standard_price": price,
+                        "labor_hours": labor_hours,
+                        "estimated_hours": labor_hours,
+                        "labor_rate_override": labor_rate_override,
+                        "show_labor_breakdown": _parse_boolean(form_data.get("show_labor_breakdown")),
+                        "tax_override": tax_override,
+                        "associated_part_category_ids": selected_part_category_ids,
+                        "associated_material_category_ids": selected_material_category_ids,
+                        "associated_equipment_category_ids": selected_equipment_category_ids,
+                    },
+                    "$unset": {
+                        "service_code": "",
+                        "included_parts": "",
+                        "part_ids": "",
+                        "service_parts": "",
+                        "material_ids": "",
+                        "service_materials": "",
+                    },
+                },
             )
             return redirect(url_for("catalog.view_service", serviceId=serviceId))
 
-    part_query = {"business_id": business_id}
-    material_query = {"business_id": business_id}
-    parts = [_serialize_part(part) for part in db.parts.find(part_query).sort("part_name", 1)]
-    materials = [_serialize_material(material) for material in db.materials.find(material_query).sort("material_name", 1)]
-    parts_catalog_by_id = {
-        part["_id"]: {
-            "unit_cost": part["sell_price_display"],
-            "part_name": part["part_name"],
-            "sell_price": part["sell_price"],
-        }
-        for part in parts
-    }
-    materials_catalog_by_id = {
-        material["_id"]: {
-            "material_name": material["material_name"],
-            "default_quantity_used": material["default_quantity_used_display"],
-            "unit_of_measure": material["unit_of_measure"],
-            "unit_label": material.get("unit_label", ""),
-            "price": material["sell_price_per_unit_display"],
-            "sell_price_per_unit": material.get("sell_price_per_unit"),
-        }
-        for material in materials
-    }
     return render_template(
         "services/update_service.html",
         serviceId=serviceId,
         error=error,
         form_data=form_data,
-        parts=parts,
-        materials=materials,
-        parts_catalog_by_id=parts_catalog_by_id,
-        materials_catalog_by_id=materials_catalog_by_id,
-        selected_part_ids=selected_part_ids,
-        selected_material_ids=selected_material_ids,
-        service_part_rows=service_part_rows,
-        service_material_rows=service_material_rows,
-        category_options=category_options,
+        part_categories=part_categories,
+        material_categories=material_categories,
+        equipment_categories=equipment_categories,
+        selected_part_category_ids=selected_part_category_ids_display,
+        selected_material_category_ids=selected_material_category_ids_display,
+        selected_equipment_category_ids=selected_equipment_category_ids_display,
         service_type_options=SERVICE_TYPE_OPTIONS,
     )
 
@@ -1475,7 +1478,7 @@ def create_part():
 
     error = ""
     form_data = _part_form_data()
-    category_options = _build_category_options(db, "parts", "category", business_id)
+    category_options = _build_managed_category_options(db, "part", business_id)
     markup_rules = _get_business_markup_rules(db, business_id)
 
     if request.method == "POST":
@@ -1490,12 +1493,10 @@ def create_part():
 
         if not error and not form_data["part_name"]:
             error = "Part Name is required."
-        elif not error and not form_data["subcategory"]:
-            error = "Subcategory is required."
-        elif not error and form_data["subcategory"] not in PART_SUBCATEGORY_OPTIONS:
-            error = "Please select a valid subcategory."
         elif not error and not form_data["category"]:
             error = "Category is required."
+        elif not error and not _category_exists(db, "part", business_id, form_data["category"]):
+            error = "Please select a valid category."
 
         if not error:
             db.parts.insert_one(
@@ -1504,10 +1505,7 @@ def create_part():
                     "name": form_data["part_name"],
                     "part_name": form_data["part_name"],
                     "category": form_data["category"],
-                    "subcategory": form_data["subcategory"],
                     "sku": form_data["sku"],
-                    "manufacturer": form_data["manufacturer"],
-                    "model_number": form_data["model_number"],
                     "description": form_data["description"],
                     "cost_price": cost_price,
                     "sell_price": sell_price,
@@ -1557,7 +1555,7 @@ def update_part(partId):
 
     error = ""
     form_data = _part_form_data(part)
-    category_options = _build_category_options(db, "parts", "category", business_id)
+    category_options = _build_managed_category_options(db, "part", business_id)
     markup_rules = _get_business_markup_rules(db, business_id)
 
     if request.method == "POST":
@@ -1572,12 +1570,10 @@ def update_part(partId):
 
         if not error and not form_data["part_name"]:
             error = "Part Name is required."
-        elif not error and not form_data["subcategory"]:
-            error = "Subcategory is required."
-        elif not error and form_data["subcategory"] not in PART_SUBCATEGORY_OPTIONS:
-            error = "Please select a valid subcategory."
         elif not error and not form_data["category"]:
             error = "Category is required."
+        elif not error and not _category_exists(db, "part", business_id, form_data["category"]):
+            error = "Please select a valid category."
 
         if not error:
             db.parts.update_one(
@@ -1586,10 +1582,7 @@ def update_part(partId):
                     "name": form_data["part_name"],
                     "part_name": form_data["part_name"],
                     "category": form_data["category"],
-                    "subcategory": form_data["subcategory"],
                     "sku": form_data["sku"],
-                    "manufacturer": form_data["manufacturer"],
-                    "model_number": form_data["model_number"],
                     "description": form_data["description"],
                     "cost_price": cost_price,
                     "sell_price": sell_price,
@@ -1598,7 +1591,7 @@ def update_part(partId):
                     "purchase_link": form_data["purchase_link"],
                     "sell_price_auto_populated": sell_price_auto_populated,
                     "tax_override": tax_override,
-                }, "$unset": {"part_code": ""}},
+                }, "$unset": {"part_code": "", "manufacturer": "", "model_number": ""}},
             )
             return redirect(url_for("catalog.view_part", partId=partId))
 
@@ -1742,7 +1735,7 @@ def create_material():
     error = ""
     form_data = _material_form_data()
     uom_options = _material_uom_options()
-    category_options = _build_category_options(db, "materials", "category", business_id)
+    category_options = _build_managed_category_options(db, "material", business_id)
     markup_rules = _get_business_markup_rules(db, business_id)
 
     if request.method == "POST":
@@ -1763,6 +1756,8 @@ def create_material():
             error = "Please select a valid Unit of Measure."
         elif not error and not form_data["unit_label"]:
             error = "Unit Label is required."
+        elif not error and not _category_exists(db, "material", business_id, form_data["category"]):
+            error = "Please select a valid category."
 
         if not error:
             db.materials.insert_one(
@@ -1825,7 +1820,7 @@ def update_material(materialId):
     error = ""
     form_data = _material_form_data(material)
     uom_options = _material_uom_options()
-    category_options = _build_category_options(db, "materials", "category", business_id)
+    category_options = _build_managed_category_options(db, "material", business_id)
     markup_rules = _get_business_markup_rules(db, business_id)
 
     if request.method == "POST":
@@ -1848,6 +1843,8 @@ def update_material(materialId):
             error = "Please select a valid Unit of Measure."
         elif not error and not form_data["unit_label"]:
             error = "Unit Label is required."
+        elif not error and not _category_exists(db, "material", business_id, form_data["category"]):
+            error = "Please select a valid category."
 
         if not error:
             db.materials.update_one(
@@ -1907,17 +1904,33 @@ def create_equipment():
 
     error = ""
     form_data = _equipment_form_data()
-    category_options = _build_category_options(db, "equipment", "category", business_id)
+    category_options = _build_managed_category_options(db, "equipment", business_id)
 
     if request.method == "POST":
         form_data = _equipment_form_data(request.form)
         tax_override = _parse_tax_override(request.form.get("tax_override"))
-        default_price, error = _parse_optional_nonnegative_float(form_data["default_price"], "Default Price")
+        cost_price, error = _parse_nonnegative_float(form_data["cost_price"], "Cost Price")
         if not error:
-            default_quantity_installed, error = _parse_optional_nonnegative_float(form_data["default_quantity_installed"], "Default Quantity Installed")
+            sell_price, error = _parse_nonnegative_float(form_data["sell_price"], "Sell Price")
+        if not error:
+            warranty_months, error = _parse_optional_integer(form_data["warranty_months"], "Warranty Months")
+        if not error:
+            sort_order, error = _parse_optional_integer(form_data["sort_order"], "Sort Order")
+        if not error:
+            seer_rating, error = _parse_optional_nonnegative_float(form_data["seer_rating"], "SEER Rating", default=None)
+        if not error:
+            afue_rating, error = _parse_optional_nonnegative_float(form_data["afue_rating"], "AFUE Rating", default=None)
 
         if not error and not form_data["equipment_name"]:
             error = "Equipment Name is required."
+        elif not error and not form_data["equipment_type"]:
+            error = "Equipment Type is required."
+        elif not error and form_data["equipment_type"] not in EQUIPMENT_TYPE_OPTIONS:
+            error = "Please select a valid Equipment Type."
+        elif not error and not form_data["category"]:
+            error = "Category is required."
+        elif not error and not _category_exists(db, "equipment", business_id, form_data["category"]):
+            error = "Please select a valid category."
 
         if not error:
             db.equipment.insert_one(
@@ -1928,17 +1941,41 @@ def create_equipment():
                     "manufacturer": form_data["manufacturer"],
                     "category": form_data["category"],
                     "sku": form_data["sku"],
+                    "model_number": form_data["model_number"],
                     "description": form_data["description"],
-                    "notes": form_data["notes"],
                     "purchase_link": form_data["purchase_link"],
-                    "default_price": default_price,
-                    "default_quantity_installed": default_quantity_installed,
+                    "cost_price": cost_price,
+                    "sell_price": sell_price,
+                    "warranty_months": warranty_months,
+                    "is_active": _parse_boolean(form_data.get("is_active")),
+                    "sort_order": sort_order if sort_order is not None else 0,
+                    "cooling_capacity": form_data["cooling_capacity"],
+                    "seer_rating": seer_rating,
+                    "metering_device": form_data["metering_device"],
+                    "afue_rating": afue_rating,
+                    "btu_input": form_data["btu_input"],
+                    "btu_output": form_data["btu_output"],
+                    "refrigerant_type": form_data["refrigerant_type"],
+                    "stages": form_data["stages"],
+                    "blower_motor_type": form_data["blower_motor_type"],
+                    "voltage": form_data["voltage"],
                     "tax_override": tax_override,
                 }
             )
             return redirect(url_for("catalog.manage_equipment"))
 
-    return render_template("services/create_equipment.html", error=error, form_data=form_data, category_options=category_options, equipment_type_options=EQUIPMENT_TYPE_OPTIONS)
+    return render_template(
+        "services/create_equipment.html",
+        error=error,
+        form_data=form_data,
+        category_options=category_options,
+        equipment_type_options=EQUIPMENT_TYPE_OPTIONS,
+        equipment_cooling_capacity_options=EQUIPMENT_COOLING_CAPACITY_OPTIONS,
+        equipment_refrigerant_type_options=EQUIPMENT_REFRIGERANT_TYPE_OPTIONS,
+        equipment_btu_options=EQUIPMENT_BTU_OPTIONS,
+        equipment_stages_options=EQUIPMENT_STAGES_OPTIONS,
+        equipment_blower_motor_type_options=EQUIPMENT_BLOWER_MOTOR_TYPE_OPTIONS,
+    )
 
 
 @bp.route("/equipment/<equipmentId>")
@@ -1968,17 +2005,33 @@ def update_equipment(equipmentId):
 
     error = ""
     form_data = _equipment_form_data(equipment)
-    category_options = _build_category_options(db, "equipment", "category", business_id)
+    category_options = _build_managed_category_options(db, "equipment", business_id)
 
     if request.method == "POST":
         form_data = _equipment_form_data(request.form)
         tax_override = _parse_tax_override(request.form.get("tax_override"))
-        default_price, error = _parse_optional_nonnegative_float(form_data["default_price"], "Default Price")
+        cost_price, error = _parse_nonnegative_float(form_data["cost_price"], "Cost Price")
         if not error:
-            default_quantity_installed, error = _parse_optional_nonnegative_float(form_data["default_quantity_installed"], "Default Quantity Installed")
+            sell_price, error = _parse_nonnegative_float(form_data["sell_price"], "Sell Price")
+        if not error:
+            warranty_months, error = _parse_optional_integer(form_data["warranty_months"], "Warranty Months")
+        if not error:
+            sort_order, error = _parse_optional_integer(form_data["sort_order"], "Sort Order")
+        if not error:
+            seer_rating, error = _parse_optional_nonnegative_float(form_data["seer_rating"], "SEER Rating", default=None)
+        if not error:
+            afue_rating, error = _parse_optional_nonnegative_float(form_data["afue_rating"], "AFUE Rating", default=None)
 
         if not error and not form_data["equipment_name"]:
             error = "Equipment Name is required."
+        elif not error and not form_data["equipment_type"]:
+            error = "Equipment Type is required."
+        elif not error and form_data["equipment_type"] not in EQUIPMENT_TYPE_OPTIONS:
+            error = "Please select a valid Equipment Type."
+        elif not error and not form_data["category"]:
+            error = "Category is required."
+        elif not error and not _category_exists(db, "equipment", business_id, form_data["category"]):
+            error = "Please select a valid category."
 
         if not error:
             db.equipment.update_one(
@@ -1990,18 +2043,43 @@ def update_equipment(equipmentId):
                         "manufacturer": form_data["manufacturer"],
                         "category": form_data["category"],
                         "sku": form_data["sku"],
+                        "model_number": form_data["model_number"],
                         "description": form_data["description"],
-                        "notes": form_data["notes"],
                         "purchase_link": form_data["purchase_link"],
-                        "default_price": default_price,
-                        "default_quantity_installed": default_quantity_installed,
+                        "cost_price": cost_price,
+                        "sell_price": sell_price,
+                        "warranty_months": warranty_months,
+                        "is_active": _parse_boolean(form_data.get("is_active")),
+                        "sort_order": sort_order if sort_order is not None else 0,
+                        "cooling_capacity": form_data["cooling_capacity"],
+                        "seer_rating": seer_rating,
+                        "metering_device": form_data["metering_device"],
+                        "afue_rating": afue_rating,
+                        "btu_input": form_data["btu_input"],
+                        "btu_output": form_data["btu_output"],
+                        "refrigerant_type": form_data["refrigerant_type"],
+                        "stages": form_data["stages"],
+                        "blower_motor_type": form_data["blower_motor_type"],
+                        "voltage": form_data["voltage"],
                         "tax_override": tax_override,
                     }
                 },
             )
             return redirect(url_for("catalog.view_equipment", equipmentId=equipmentId))
 
-    return render_template("services/update_equipment.html", equipmentId=equipmentId, error=error, form_data=form_data, category_options=category_options, equipment_type_options=EQUIPMENT_TYPE_OPTIONS)
+    return render_template(
+        "services/update_equipment.html",
+        equipmentId=equipmentId,
+        error=error,
+        form_data=form_data,
+        category_options=category_options,
+        equipment_type_options=EQUIPMENT_TYPE_OPTIONS,
+        equipment_cooling_capacity_options=EQUIPMENT_COOLING_CAPACITY_OPTIONS,
+        equipment_refrigerant_type_options=EQUIPMENT_REFRIGERANT_TYPE_OPTIONS,
+        equipment_btu_options=EQUIPMENT_BTU_OPTIONS,
+        equipment_stages_options=EQUIPMENT_STAGES_OPTIONS,
+        equipment_blower_motor_type_options=EQUIPMENT_BLOWER_MOTOR_TYPE_OPTIONS,
+    )
 
 
 @bp.route("/equipment/<equipmentId>/delete", methods=["POST"])
@@ -2134,3 +2212,4 @@ def delete_discount(discountId):
         query["business_id"] = business_id
     db.discounts.delete_one(query)
     return redirect(url_for("catalog.manage_discounts"))
+

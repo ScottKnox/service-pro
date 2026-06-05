@@ -29,7 +29,12 @@
 
         <a class="admin-link-card" href="{{ url_for('catalog.manage_parts') }}">
           <h3>Manage Parts</h3>
-          <p>Maintain parts and equipment options with cost and sell pricing.</p>
+          <p>Maintain parts with category, manufacturer, and cost/sell pricing.</p>
+        </a>
+
+        <a class="admin-link-card" href="{{ url_for('catalog.manage_equipment') }}">
+          <h3>Manage Equipment</h3>
+          <p>Maintain equipment catalog entries and HVAC-specific details used in jobs and estimates.</p>
         </a>
 
         <a class="admin-link-card" href="{{ url_for('catalog.manage_materials') }}">

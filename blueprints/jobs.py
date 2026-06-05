@@ -11,6 +11,7 @@ from flask import Blueprint, current_app, has_request_context, jsonify, redirect
 from flask_mail import Message
 import stripe
 
+from config import get_notification_base_url
 from invoice_generator import generate_estimate, generate_invoice
 from mongo import build_reference_filter, coerce_object_id, ensure_connection_or_500, object_id_or_404, reference_value, serialize_doc
 from utils.catalog import (
@@ -53,6 +54,155 @@ RECURRING_END_TYPE_OPTIONS = (
 )
 
 RECURRING_END_TYPE_LABELS = dict(RECURRING_END_TYPE_OPTIONS)
+
+JOB_EQUIPMENT_HVAC_SYSTEM_CONFIG = {
+    "AC Condenser": {"system_type": "Split System AC with Gas Furnace", "collection_name": "condensers"},
+    "Heat Pump Condenser": {"system_type": "Split System Heat Pump with Air Handler", "collection_name": "condensers"},
+    "Gas Furnace": {"system_type": "Split System AC with Gas Furnace", "collection_name": "furnaces"},
+    "Air Handler": {"system_type": "Split System Heat Pump with Air Handler", "collection_name": "airHandlers"},
+    "Mini Split Outdoor Unit": {"system_type": "Mini Split System", "collection_name": "miniSplits"},
+    "Mini Split Indoor Unit": {"system_type": "Mini Split System", "collection_name": "miniSplits"},
+    "Package Unit": {"system_type": "Package Unit", "collection_name": "packageUnits"},
+}
+
+
+def _serialize_part_without_legacy_fields(part):
+    serialized = serialize_doc(part)
+    serialized.pop("manufacturer", None)
+    serialized.pop("model_number", None)
+    return serialized
+
+
+def _build_hvac_system_prompt_items(job_doc):
+    prompt_items = []
+    for index, equipment in enumerate(job_doc.get("equipments") or []):
+        if not isinstance(equipment, dict):
+            continue
+
+        if str(equipment.get("hvac_system_id") or "").strip():
+            continue
+
+        prompt_items.append(
+            {
+                "index": index,
+                "equipment_name": str(equipment.get("equipment_name") or equipment.get("description") or "Equipment").strip() or "Equipment",
+                "equipment_type": str(equipment.get("equipment_type") or "").strip() or "Equipment",
+                "system_type": JOB_EQUIPMENT_HVAC_SYSTEM_CONFIG.get(str(equipment.get("equipment_type") or "").strip(), {}).get("system_type", "HVAC System"),
+                "serial_number": str(equipment.get("serial_number") or "").strip(),
+                "manufacturer": str(equipment.get("manufacturer") or "").strip(),
+                "model_number": str(equipment.get("model_number") or "").strip(),
+                "cooling_capacity": str(equipment.get("cooling_capacity") or "").strip(),
+                "seer_rating": str(equipment.get("seer_rating") or "").strip(),
+                "metering_device": str(equipment.get("metering_device") or "").strip(),
+                "afue_rating": str(equipment.get("afue_rating") or "").strip(),
+                "btu_input": str(equipment.get("btu_input") or "").strip(),
+                "btu_output": str(equipment.get("btu_output") or "").strip(),
+                "refrigerant_type": str(equipment.get("refrigerant_type") or "").strip(),
+                "stages": str(equipment.get("stages") or "").strip(),
+                "blower_motor_type": str(equipment.get("blower_motor_type") or "").strip(),
+                "voltage": str(equipment.get("voltage") or "").strip(),
+                "warranty_months": str(equipment.get("warranty_months") or "").strip(),
+                "quantity_installed": str(equipment.get("quantity_installed") or equipment.get("quantity") or "").strip() or "1",
+            }
+        )
+
+    return prompt_items
+
+
+def _build_hvac_system_creation_payload_from_job_equipment(job, equipment, serial_number):
+    equipment_type = str(equipment.get("equipment_type") or "").strip()
+    creation_config = JOB_EQUIPMENT_HVAC_SYSTEM_CONFIG.get(equipment_type)
+    system_type = creation_config["system_type"] if creation_config else "HVAC System"
+    collection_name = creation_config["collection_name"] if creation_config else None
+    equipment_name = str(equipment.get("equipment_name") or equipment.get("description") or "Equipment").strip() or "Equipment"
+    manufacturer = str(equipment.get("manufacturer") or "").strip()
+    model_number = str(equipment.get("model_number") or "").strip()
+    current_serial = str(serial_number or equipment.get("serial_number") or "").strip()
+    completed_at = job.get("completed_at") if isinstance(job, dict) else None
+    if not completed_at:
+        completed_at = datetime.now(UTC)
+
+    hvac_system_document = {
+        "customer_id": reference_value(job.get("customer_id")),
+        "property_id": reference_value(job.get("property_id")) if str(job.get("property_id") or "").strip() else None,
+        "system_type": system_type,
+        "system_nickname": equipment_name,
+        "equipment_type": equipment_type,
+        "manufacturer": manufacturer,
+        "model_number": model_number,
+        "serial_number": current_serial,
+        "cooling_capacity": str(equipment.get("cooling_capacity") or "").strip(),
+        "seer_rating": str(equipment.get("seer_rating") or "").strip(),
+        "metering_device": str(equipment.get("metering_device") or "").strip(),
+        "afue_rating": str(equipment.get("afue_rating") or "").strip(),
+        "btu_input": str(equipment.get("btu_input") or "").strip(),
+        "btu_output": str(equipment.get("btu_output") or "").strip(),
+        "refrigerant_type": str(equipment.get("refrigerant_type") or "").strip(),
+        "stages": str(equipment.get("stages") or "").strip(),
+        "blower_motor_type": str(equipment.get("blower_motor_type") or "").strip(),
+        "voltage": str(equipment.get("voltage") or "").strip(),
+        "warranty_months": _safe_float(equipment.get("warranty_months") or 0, 0),
+        "install_date": completed_at,
+        "source_job_id": reference_value(job.get("_id")),
+        "source_job_equipment_index": int(equipment.get("source_job_equipment_index") or 0),
+        "created_at": datetime.now(UTC),
+        "updated_at": datetime.now(UTC),
+    }
+    hvac_system_document = {key: value for key, value in hvac_system_document.items() if value not in {None, ""}}
+
+    if collection_name == "condensers":
+        component_document = {
+            "serial_number": current_serial,
+            "model_number": model_number,
+            "manufacturer": manufacturer,
+            "manufacturer_other": "",
+            "manufactured_year": "",
+            "seer_rating": str(equipment.get("seer_rating") or "").strip(),
+            "refrigerant_type": str(equipment.get("refrigerant_type") or "").strip(),
+            "notes": "Created from job completion.",
+        }
+    elif collection_name == "furnaces":
+        component_document = {
+            "serial_number": current_serial,
+            "model_number": model_number,
+            "manufacturer": manufacturer,
+            "manufacturer_other": "",
+            "manufactured_year": "",
+            "blower_motor_type": str(equipment.get("blower_motor_type") or "").strip(),
+            "afue_rating": str(equipment.get("afue_rating") or "").strip(),
+            "btu_input": str(equipment.get("btu_input") or "").strip(),
+            "btu_output": str(equipment.get("btu_output") or "").strip(),
+            "number_of_stages": str(equipment.get("stages") or "").strip(),
+            "notes": "Created from job completion.",
+        }
+    elif collection_name == "airHandlers":
+        component_document = {
+            "serial_number": current_serial,
+            "model_number": model_number,
+            "manufacturer": manufacturer,
+            "manufacturer_other": "",
+            "manufactured_year": "",
+            "blower_motor_type": str(equipment.get("blower_motor_type") or "").strip(),
+            "notes": "Created from job completion.",
+        }
+    elif collection_name in {"miniSplits", "packageUnits"}:
+        component_document = {
+            "serial_number": current_serial,
+            "model_number": model_number,
+            "manufacturer": manufacturer,
+            "manufacturer_other": "",
+            "manufactured_year": "",
+            "unit_type": equipment_type,
+            "seer_rating": str(equipment.get("seer_rating") or "").strip(),
+            "notes": "Created from job completion.",
+        }
+    else:
+        component_document = None
+
+    if component_document is not None and collection_name:
+        hvac_system_document["components"] = {collection_name: component_document}
+
+    return hvac_system_document
 
 
 def _parse_mmddyyyy_date(date_text):
@@ -1330,7 +1480,7 @@ def _extract_client_ip():
 
 
 def _notification_base_url():
-    configured_base_url = str(os.getenv("NOTIFICATION_BASE_URL") or "").strip().rstrip("/")
+    configured_base_url = get_notification_base_url()
     if configured_base_url:
         return configured_base_url
 
@@ -2951,64 +3101,59 @@ def _apply_hvac_tags_to_components(components, form_field_values, hvac_lookup):
     return components
 
 
-def _create_maintenance_records(db, job_id, job_doc, business_id):
-    """Create one maintenanceRecord per HVAC system touched in a completed job."""
-    property_id = str(job_doc.get("property_id") or "").strip()
-    customer_id = job_doc.get("customer_id")
-    completed_at = datetime.now(UTC)
-    date_completed = datetime.now().strftime("%m/%d/%Y")
+def _collect_tagged_hvac_system_ids(job_doc):
+    component_types = ("services", "parts", "labors", "materials", "equipments")
+    hvac_system_ids = set()
 
-    component_types = ["services", "parts", "labors", "materials", "equipments"]
+    for component_type in component_types:
+        for component in (job_doc.get(component_type) or []):
+            if not isinstance(component, dict):
+                continue
 
-    # Collect all referenced HVAC system IDs
-    all_hvac_ids = set()
-    for comp_type in component_types:
-        for comp in (job_doc.get(comp_type) or []):
-            single_tag_id = str(comp.get("hvac_system_id") or "").strip()
+            single_tag_id = str(component.get("hvac_system_id") or "").strip()
             if single_tag_id:
-                all_hvac_ids.add(single_tag_id)
-            for hvac_id in (comp.get("hvac_system_ids") or []):
-                if hvac_id and str(hvac_id).strip():
-                    all_hvac_ids.add(str(hvac_id).strip())
+                hvac_system_ids.add(single_tag_id)
 
-    if not all_hvac_ids:
-        return
+            for hvac_id in (component.get("hvac_system_ids") or []):
+                normalized_hvac_id = str(hvac_id or "").strip()
+                if normalized_hvac_id:
+                    hvac_system_ids.add(normalized_hvac_id)
 
-    records = []
-    for hvac_system_id in all_hvac_ids:
-        related_components = []
-        for comp_type in component_types:
-            for comp in (job_doc.get(comp_type) or []):
-                single_tag_id = str(comp.get("hvac_system_id") or "").strip()
-                legacy_ids = [str(x) for x in (comp.get("hvac_system_ids") or [])]
-                if hvac_system_id == single_tag_id or hvac_system_id in legacy_ids:
-                    related_components.append({
-                        "component_type": comp_type,
-                        "component": dict(comp),
-                    })
+    return hvac_system_ids
 
-        records.append({
-            "job_id": str(job_id),
-            "hvac_system_id": hvac_system_id,
-            "property_id": property_id,
-            "customer_id": customer_id,
-            "business_id": business_id,
-            "assigned_employee": str(job_doc.get("assigned_employee") or "").strip(),
-            "date_completed": date_completed,
-            "completed_at": completed_at,
-            "scheduled_date": str(job_doc.get("scheduled_date") or "").strip(),
-            "components": related_components,
-            "total_amount": float(job_doc.get("total_amount") or 0.0),
-            "address_line_1": str(job_doc.get("address_line_1") or "").strip(),
-            "address_line_2": str(job_doc.get("address_line_2") or "").strip(),
-            "city": str(job_doc.get("city") or "").strip(),
-            "state": str(job_doc.get("state") or "").strip(),
-            "zip_code": str(job_doc.get("zip_code") or "").strip(),
-            "created_at": completed_at,
-        })
 
-    if records:
-        db.maintenanceRecords.insert_many(records)
+def _mark_hvac_systems_serviced(db, job_doc, completed_at):
+    customer_id = (job_doc or {}).get("customer_id")
+    if not customer_id:
+        return 0
+
+    hvac_system_ids = _collect_tagged_hvac_system_ids(job_doc or {})
+    if not hvac_system_ids:
+        return 0
+
+    assigned_employee = str((job_doc or {}).get("assigned_employee") or "").strip()
+    updated_count = 0
+
+    for hvac_system_id in hvac_system_ids:
+        hvac_query = {
+            "$and": [
+                build_reference_filter("_id", hvac_system_id),
+                build_reference_filter("customer_id", customer_id),
+            ]
+        }
+        result = db.hvacSystems.update_one(
+            hvac_query,
+            {
+                "$set": {
+                    "last_serviced_at": completed_at,
+                    "last_serviced_by": assigned_employee,
+                    "updated_at": completed_at,
+                }
+            },
+        )
+        updated_count += int(result.modified_count or 0)
+
+    return updated_count
 
 
 @bp.route("/api/hvac-systems-for-property")
@@ -3130,6 +3275,7 @@ def create_job(customerId):
         selected_equipment_names = request.form.getlist("equipment_name[]")
         entered_equipment_quantities = request.form.getlist("equipment_quantity_installed[]")
         entered_equipment_prices = request.form.getlist("equipment_price[]")
+        entered_equipment_serial_numbers = request.form.getlist("equipment_serial_number[]")
         selected_discount_names = request.form.getlist("discount_name[]")
         entered_discount_percentages = request.form.getlist("discount_percentage[]")
         entered_discount_amounts = request.form.getlist("discount_amount[]")
@@ -3139,7 +3285,7 @@ def create_job(customerId):
         equipment_query = {"business_id": business_id} if business_id else {"_id": None}
         discount_query = {"business_id": business_id} if business_id else {"_id": None}
         service_docs = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
-        part_docs = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
+        part_docs = [_serialize_part_without_legacy_fields(part) for part in db.parts.find(part_query).sort("part_name", 1)]
         material_docs = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
         equipment_docs = [serialize_doc(equipment) for equipment in db.equipment.find(equipment_query).sort("equipment_name", 1)]
         discount_docs = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
@@ -3162,7 +3308,7 @@ def create_job(customerId):
             entered_part_prices,
             part_catalog,
         )
-        labors, labor_total = [], 0.0
+        labors = []
         materials, materials_total = build_job_materials_from_form(
             selected_material_names,
             entered_material_quantities,
@@ -3174,6 +3320,7 @@ def create_job(customerId):
             selected_equipment_names,
             entered_equipment_quantities,
             entered_equipment_prices,
+            entered_equipment_serial_numbers,
             equipment_catalog,
         )
         discounts, discounts_total = build_job_discounts_from_form(
@@ -3185,7 +3332,6 @@ def create_job(customerId):
         hvac_lookup = _build_hvac_system_lookup_for_property(db, customerId, selected_property_id)
         _apply_hvac_tags_to_components(services, request.form.getlist("service_hvac_system_id[]"), hvac_lookup)
         _apply_hvac_tags_to_components(parts, request.form.getlist("part_hvac_system_id[]"), hvac_lookup)
-        _apply_hvac_tags_to_components(labors, request.form.getlist("labor_hvac_system_id[]"), hvac_lookup)
         _apply_hvac_tags_to_components(materials, request.form.getlist("material_hvac_system_id[]"), hvac_lookup)
         _apply_hvac_tags_to_components(equipments, request.form.getlist("equipment_hvac_system_id[]"), hvac_lookup)
         pricing_summary = _build_pricing_summary(
@@ -3310,20 +3456,21 @@ def create_job(customerId):
     business_id = resolve_current_business_id(db)
     service_query = {"business_id": business_id} if business_id else {"_id": None}
     part_query = {"business_id": business_id} if business_id else {"_id": None}
-    labor_query = {"business_id": business_id} if business_id else {"_id": None}
     material_query = {"business_id": business_id} if business_id else {"_id": None}
     equipment_query = {"business_id": business_id} if business_id else {"_id": None}
     discount_query = {"business_id": business_id} if business_id else {"_id": None}
+    category_query = {"company_id": str(business_id)} if business_id else {"_id": None}
     services = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
-    parts = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
-    labors = [serialize_doc(labor) for labor in db.labors.find(labor_query).sort("labor_description", 1)]
+    parts = [_serialize_part_without_legacy_fields(part) for part in db.parts.find(part_query).sort("part_name", 1)]
     materials = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
     equipments = [serialize_doc(equipment) for equipment in db.equipment.find(equipment_query).sort("equipment_name", 1)]
     discounts = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
+    part_categories = [serialize_doc(category) for category in db.categories.find({**category_query, "type": "part"}).sort("name", 1)]
+    material_categories = [serialize_doc(category) for category in db.categories.find({**category_query, "type": "material"}).sort("name", 1)]
+    equipment_categories = [serialize_doc(category) for category in db.categories.find({**category_query, "type": "equipment"}).sort("name", 1)]
     employee_options = build_employee_options(db)
     services_catalog = build_service_catalog(services)
     parts_catalog = build_part_catalog(parts)
-    labors_catalog = build_labor_catalog(labors)
     materials_catalog = build_material_catalog(materials)
     equipments_catalog = build_equipment_catalog(equipments)
     discounts_catalog = build_discount_catalog(discounts)
@@ -3354,14 +3501,15 @@ def create_job(customerId):
         initial_hvac_systems=initial_hvac_systems,
         services=services,
         parts=parts,
-        labors=labors,
         materials=materials,
         equipments=equipments,
         discounts=discounts,
+        part_categories=part_categories,
+        material_categories=material_categories,
+        equipment_categories=equipment_categories,
         employee_options=employee_options,
         services_catalog=services_catalog,
         parts_catalog=parts_catalog,
-        labors_catalog=labors_catalog,
         materials_catalog=materials_catalog,
         equipments_catalog=equipments_catalog,
         discounts_catalog=discounts_catalog,
@@ -3403,6 +3551,7 @@ def create_estimate(customerId):
         selected_equipment_names = request.form.getlist("equipment_name[]")
         entered_equipment_quantities = request.form.getlist("equipment_quantity_installed[]")
         entered_equipment_prices = request.form.getlist("equipment_price[]")
+        entered_equipment_serial_numbers = request.form.getlist("equipment_serial_number[]")
         selected_discount_names = request.form.getlist("discount_name[]")
         entered_discount_percentages = request.form.getlist("discount_percentage[]")
         entered_discount_amounts = request.form.getlist("discount_amount[]")
@@ -3413,7 +3562,7 @@ def create_estimate(customerId):
         equipment_query = {"business_id": business_id} if business_id else {"_id": None}
         discount_query = {"business_id": business_id} if business_id else {"_id": None}
         service_docs = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
-        part_docs = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
+        part_docs = [_serialize_part_without_legacy_fields(part) for part in db.parts.find(part_query).sort("part_name", 1)]
         material_docs = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
         equipment_docs = [serialize_doc(equipment) for equipment in db.equipment.find(equipment_query).sort("equipment_name", 1)]
         discount_docs = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
@@ -3437,7 +3586,7 @@ def create_estimate(customerId):
             entered_part_prices,
             part_catalog,
         )
-        labors, labor_total = [], 0.0
+        labors = []
         materials, materials_total = build_job_materials_from_form(
             selected_material_names,
             entered_material_quantities,
@@ -3449,6 +3598,7 @@ def create_estimate(customerId):
             selected_equipment_names,
             entered_equipment_quantities,
             entered_equipment_prices,
+            entered_equipment_serial_numbers,
             equipment_catalog,
         )
         discounts, discounts_total = build_job_discounts_from_form(
@@ -3460,7 +3610,6 @@ def create_estimate(customerId):
         hvac_lookup = _build_hvac_system_lookup_for_property(db, customerId, selected_property_id)
         _apply_hvac_tags_to_components(services, request.form.getlist("service_hvac_system_id[]"), hvac_lookup)
         _apply_hvac_tags_to_components(parts, request.form.getlist("part_hvac_system_id[]"), hvac_lookup)
-        _apply_hvac_tags_to_components(labors, request.form.getlist("labor_hvac_system_id[]"), hvac_lookup)
         _apply_hvac_tags_to_components(materials, request.form.getlist("material_hvac_system_id[]"), hvac_lookup)
         _apply_hvac_tags_to_components(equipments, request.form.getlist("equipment_hvac_system_id[]"), hvac_lookup)
         pricing_summary = _build_pricing_summary(
@@ -3601,20 +3750,21 @@ def create_estimate(customerId):
     default_estimate_expiration_days = _resolve_default_estimate_expiration_days(db)
     service_query = {"business_id": business_id} if business_id else {"_id": None}
     part_query = {"business_id": business_id} if business_id else {"_id": None}
-    labor_query = {"business_id": business_id} if business_id else {"_id": None}
     material_query = {"business_id": business_id} if business_id else {"_id": None}
     equipment_query = {"business_id": business_id} if business_id else {"_id": None}
     discount_query = {"business_id": business_id} if business_id else {"_id": None}
+    category_query = {"company_id": str(business_id)} if business_id else {"_id": None}
     services = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
-    parts = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
-    labors = [serialize_doc(labor) for labor in db.labors.find(labor_query).sort("labor_description", 1)]
+    parts = [_serialize_part_without_legacy_fields(part) for part in db.parts.find(part_query).sort("part_name", 1)]
     materials = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
     equipments = [serialize_doc(equipment) for equipment in db.equipment.find(equipment_query).sort("equipment_name", 1)]
     discounts = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
+    part_categories = [serialize_doc(category) for category in db.categories.find({**category_query, "type": "part"}).sort("name", 1)]
+    material_categories = [serialize_doc(category) for category in db.categories.find({**category_query, "type": "material"}).sort("name", 1)]
+    equipment_categories = [serialize_doc(category) for category in db.categories.find({**category_query, "type": "equipment"}).sort("name", 1)]
     employee_options = build_employee_options(db)
     services_catalog = build_service_catalog(services)
     parts_catalog = build_part_catalog(parts)
-    labors_catalog = build_labor_catalog(labors)
     materials_catalog = build_material_catalog(materials)
     equipments_catalog = build_equipment_catalog(equipments)
     discounts_catalog = build_discount_catalog(discounts)
@@ -3640,14 +3790,15 @@ def create_estimate(customerId):
         initial_hvac_systems=initial_hvac_systems,
         services=services,
         parts=parts,
-        labors=labors,
         materials=materials,
         equipments=equipments,
         discounts=discounts,
+        part_categories=part_categories,
+        material_categories=material_categories,
+        equipment_categories=equipment_categories,
         employee_options=employee_options,
         services_catalog=services_catalog,
         parts_catalog=parts_catalog,
-        labors_catalog=labors_catalog,
         materials_catalog=materials_catalog,
         equipments_catalog=equipments_catalog,
         discounts_catalog=discounts_catalog,
@@ -3781,6 +3932,7 @@ def update_estimate(estimateId):
         selected_equipment_names = request.form.getlist("equipment_name[]")
         entered_equipment_quantities = request.form.getlist("equipment_quantity_installed[]")
         entered_equipment_prices = request.form.getlist("equipment_price[]")
+        entered_equipment_serial_numbers = request.form.getlist("equipment_serial_number[]")
         selected_discount_names = request.form.getlist("discount_name[]")
         entered_discount_percentages = request.form.getlist("discount_percentage[]")
         entered_discount_amounts = request.form.getlist("discount_amount[]")
@@ -3791,7 +3943,7 @@ def update_estimate(estimateId):
         equipment_query = {"business_id": business_id} if business_id else {"_id": None}
         discount_query = {"business_id": business_id} if business_id else {"_id": None}
         service_docs = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
-        part_docs = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
+        part_docs = [_serialize_part_without_legacy_fields(part) for part in db.parts.find(part_query).sort("part_name", 1)]
         material_docs = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
         equipment_docs = [serialize_doc(equipment) for equipment in db.equipment.find(equipment_query).sort("equipment_name", 1)]
         discount_docs = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
@@ -3815,7 +3967,7 @@ def update_estimate(estimateId):
             entered_part_prices,
             part_catalog,
         )
-        labors, labor_total = [], 0.0
+        labors = []
         materials, materials_total = build_job_materials_from_form(
             selected_material_names,
             entered_material_quantities,
@@ -3827,6 +3979,7 @@ def update_estimate(estimateId):
             selected_equipment_names,
             entered_equipment_quantities,
             entered_equipment_prices,
+            entered_equipment_serial_numbers,
             equipment_catalog,
         )
         discounts, discounts_total = build_job_discounts_from_form(
@@ -3838,7 +3991,6 @@ def update_estimate(estimateId):
         hvac_lookup = _build_hvac_system_lookup_for_property(db, estimate.get("customer_id"), selected_property_id)
         _apply_hvac_tags_to_components(services, request.form.getlist("service_hvac_system_id[]"), hvac_lookup)
         _apply_hvac_tags_to_components(parts, request.form.getlist("part_hvac_system_id[]"), hvac_lookup)
-        _apply_hvac_tags_to_components(labors, request.form.getlist("labor_hvac_system_id[]"), hvac_lookup)
         _apply_hvac_tags_to_components(materials, request.form.getlist("material_hvac_system_id[]"), hvac_lookup)
         _apply_hvac_tags_to_components(equipments, request.form.getlist("equipment_hvac_system_id[]"), hvac_lookup)
         customer = {}
@@ -3975,20 +4127,21 @@ def update_estimate(estimateId):
     business_id = resolve_current_business_id(db)
     service_query = {"business_id": business_id} if business_id else {"_id": None}
     part_query = {"business_id": business_id} if business_id else {"_id": None}
-    labor_query = {"business_id": business_id} if business_id else {"_id": None}
     material_query = {"business_id": business_id} if business_id else {"_id": None}
     equipment_query = {"business_id": business_id} if business_id else {"_id": None}
     discount_query = {"business_id": business_id} if business_id else {"_id": None}
+    category_query = {"company_id": str(business_id)} if business_id else {"_id": None}
     services = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
-    parts = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
-    labors = [serialize_doc(labor) for labor in db.labors.find(labor_query).sort("labor_description", 1)]
+    parts = [_serialize_part_without_legacy_fields(part) for part in db.parts.find(part_query).sort("part_name", 1)]
     materials = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
     equipments = [serialize_doc(equipment) for equipment in db.equipment.find(equipment_query).sort("equipment_name", 1)]
     discounts = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
+    part_categories = [serialize_doc(category) for category in db.categories.find({**category_query, "type": "part"}).sort("name", 1)]
+    material_categories = [serialize_doc(category) for category in db.categories.find({**category_query, "type": "material"}).sort("name", 1)]
+    equipment_categories = [serialize_doc(category) for category in db.categories.find({**category_query, "type": "equipment"}).sort("name", 1)]
     employee_options = build_employee_options(db)
     services_catalog = build_service_catalog(services)
     parts_catalog = build_part_catalog(parts)
-    labors_catalog = build_labor_catalog(labors)
     materials_catalog = build_material_catalog(materials)
     equipments_catalog = build_equipment_catalog(equipments)
     discounts_catalog = build_discount_catalog(discounts)
@@ -4028,19 +4181,19 @@ def update_estimate(estimateId):
         initial_hvac_systems=initial_hvac_systems,
         job_services_hvac=job_services_hvac,
         job_parts_hvac=job_parts_hvac,
-        job_labors_hvac=job_labors_hvac,
         job_materials_hvac=job_materials_hvac,
         job_equipments_hvac=job_equipments_hvac,
         services=services,
         parts=parts,
-        labors=labors,
         materials=materials,
         equipments=equipments,
         discounts=discounts,
+        part_categories=part_categories,
+        material_categories=material_categories,
+        equipment_categories=equipment_categories,
         employee_options=employee_options,
         services_catalog=services_catalog,
         parts_catalog=parts_catalog,
-        labors_catalog=labors_catalog,
         materials_catalog=materials_catalog,
         equipments_catalog=equipments_catalog,
         discounts_catalog=discounts_catalog,
@@ -4565,6 +4718,12 @@ def view_job(jobId):
             customer = serialize_doc(customer_doc)
 
     job_doc = serialize_doc(job)
+    pending_hvac_system_prompt_job_id = str(session.get("pending_hvac_system_prompt_job_id") or "").strip()
+    hvac_system_prompt_items = []
+    if pending_hvac_system_prompt_job_id and pending_hvac_system_prompt_job_id == str(jobId):
+        hvac_system_prompt_items = _build_hvac_system_prompt_items(job_doc)
+        if not hvac_system_prompt_items:
+            session.pop("pending_hvac_system_prompt_job_id", None)
     job_business = {}
     job_business_id = str(job_doc.get("business_id") or "").strip()
     if not job_business_id:
@@ -4601,6 +4760,7 @@ def view_job(jobId):
         "jobs/view_job.html",
         jobId=jobId,
         job=job_doc,
+        hvac_system_prompt_items=hvac_system_prompt_items,
         payment_history=payment_history,
         job_series=serialize_doc(job_series) if job_series else None,
         customer=customer,
@@ -4860,6 +5020,15 @@ def complete_job(jobId):
     current_timestamp_utc = datetime.now(UTC)
     time_spent_str = ""
 
+    def _add_months_utc(base_dt, month_count):
+        if month_count <= 0:
+            return None
+
+        target_year = base_dt.year + ((base_dt.month - 1 + month_count) // 12)
+        target_month = ((base_dt.month - 1 + month_count) % 12) + 1
+        target_day = min(base_dt.day, calendar.monthrange(target_year, target_month)[1])
+        return base_dt.replace(year=target_year, month=target_month, day=target_day)
+
     date_started = job.get("dateStarted")
     if date_started:
         try:
@@ -4884,6 +5053,18 @@ def complete_job(jobId):
     completion_total_due = round(_safe_float(completion_pricing_summary.get("total_due"), _safe_float(job.get("total_amount"), 0.0)), 2)
     existing_paid = round(_safe_float(job.get("total_amount_paid"), 0.0), 2)
     completion_balance_due = round(max(0.0, completion_total_due - existing_paid), 2)
+
+    finalized_equipments = []
+    for equipment in (job.get("equipments") or []):
+        if not isinstance(equipment, dict):
+            continue
+
+        equipment_row = dict(equipment)
+        warranty_months = int(_safe_float(equipment_row.get("warranty_months"), 0.0))
+        warranty_expires_at = _add_months_utc(current_timestamp_utc, warranty_months)
+        equipment_row["warranty_months"] = warranty_months if warranty_months > 0 else None
+        equipment_row["warranty_expires"] = warranty_expires_at if warranty_expires_at else None
+        finalized_equipments.append(equipment_row)
 
     total_parts_cost = 0.0
     for part in (job.get("parts") or []):
@@ -4914,9 +5095,23 @@ def complete_job(jobId):
                 str(material.get("material_name") or material.get("description") or ""),
             )
 
+    total_equipment_cost = 0.0
+    for equipment in finalized_equipments:
+        if not isinstance(equipment, dict):
+            continue
+
+        quantity_value = _safe_float(equipment.get("quantity_installed") or equipment.get("quantity") or 0.0)
+        if quantity_value <= 0:
+            quantity_value = 1.0
+
+        equipment_cost = _safe_float(equipment.get("cost_price") or equipment.get("cost") or 0.0)
+        if equipment_cost > 0:
+            total_equipment_cost += quantity_value * equipment_cost
+
     total_parts_cost = round(total_parts_cost, 2)
     total_materials_cost = round(total_materials_cost, 2)
-    gross_profit = round(completion_total_due - total_parts_cost - total_materials_cost, 2)
+    total_equipment_cost = round(total_equipment_cost, 2)
+    gross_profit = round(completion_total_due - total_parts_cost - total_materials_cost - total_equipment_cost, 2)
 
     if completion_balance_due <= 0:
         completion_payment_status = "paid"
@@ -4940,8 +5135,10 @@ def complete_job(jobId):
                 "total_amount_paid": existing_paid,
                 "balance_due": completion_balance_due,
                 "payment_status": completion_payment_status,
+                "equipments": finalized_equipments,
                 "total_parts_cost": total_parts_cost,
                 "total_materials_cost": total_materials_cost,
+                "total_equipment_cost": total_equipment_cost,
                 "gross_profit": gross_profit,
             },
             "$push": {
@@ -4959,9 +5156,21 @@ def complete_job(jobId):
     )
 
     try:
-        _create_maintenance_records(db, jobId, job, business_id)
-    except Exception as _maint_exc:
-        current_app.logger.error("Maintenance records failed: job_id=%s error=%s", jobId, _maint_exc)
+        serviced_count = _mark_hvac_systems_serviced(db, job, current_timestamp_utc)
+        if serviced_count:
+            current_app.logger.info("Updated last_serviced metadata for %s HVAC systems on job_id=%s", serviced_count, jobId)
+    except Exception as hvac_update_exc:
+        current_app.logger.error("HVAC last_serviced update failed: job_id=%s error=%s", jobId, hvac_update_exc)
+
+    remaining_unlinked_equipment_indexes = [
+        index
+        for index, equipment in enumerate(finalized_equipments)
+        if isinstance(equipment, dict) and not str(equipment.get("hvac_system_id") or "").strip()
+    ]
+    if remaining_unlinked_equipment_indexes:
+        session["pending_hvac_system_prompt_job_id"] = str(jobId)
+    else:
+        session.pop("pending_hvac_system_prompt_job_id", None)
 
     if str(job.get("job_kind") or "").strip() == "recurring_occurrence" and job.get("series_id"):
         series_doc = db.recurring_job_series.find_one({"_id": coerce_object_id(job.get("series_id"))})
@@ -4979,6 +5188,93 @@ def complete_job(jobId):
         _refresh_customer_balance_from_jobs(db, customer_oid)
 
     return redirect(next_url if next_url else url_for("jobs.view_job", jobId=jobId))
+
+
+@bp.route("/jobs/<jobId>/equipment-hvac-systems", methods=["POST"])
+def create_hvac_systems_from_job_equipment(jobId):
+    db = ensure_connection_or_500()
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    prompt_job_id = str(session.get("pending_hvac_system_prompt_job_id") or "").strip()
+    if prompt_job_id and prompt_job_id != str(jobId):
+        session.pop("pending_hvac_system_prompt_job_id", None)
+
+    if str(request.form.get("skip_hvac_system_prompt") or "").strip():
+        session.pop("pending_hvac_system_prompt_job_id", None)
+        return redirect(url_for("jobs.view_job", jobId=jobId))
+
+    equipment_rows = list(job.get("equipments") or [])
+    selected_indexes = {
+        str(index).strip()
+        for index in request.form.getlist("create_hvac_system[]")
+        if str(index or "").strip()
+    }
+    if not selected_indexes:
+        session.pop("pending_hvac_system_prompt_job_id", None)
+        return redirect(url_for("jobs.view_job", jobId=jobId))
+
+    updated_equipment_rows = []
+    created_count = 0
+    for index, equipment in enumerate(equipment_rows):
+        if not isinstance(equipment, dict):
+            updated_equipment_rows.append(equipment)
+            continue
+
+        equipment_copy = dict(equipment)
+        index_text = str(index)
+        if index_text not in selected_indexes:
+            updated_equipment_rows.append(equipment_copy)
+            continue
+
+        serial_field_name = f"equipment_serial_number_{index}"
+        entered_serial_number = str(request.form.get(serial_field_name) or equipment_copy.get("serial_number") or "").strip()
+        equipment_copy["serial_number"] = entered_serial_number
+        equipment_copy["source_job_equipment_index"] = index
+
+        creation_payload = _build_hvac_system_creation_payload_from_job_equipment(job, equipment_copy, entered_serial_number)
+        if not creation_payload:
+            updated_equipment_rows.append(equipment_copy)
+            continue
+
+        inserted_system = db.hvacSystems.insert_one(creation_payload)
+        system_id = str(inserted_system.inserted_id)
+        system_name = str(creation_payload.get("system_nickname") or "HVAC System").strip() or "HVAC System"
+        system_type = str(creation_payload.get("system_type") or "HVAC System").strip() or "HVAC System"
+        equipment_copy["hvac_system_id"] = system_id
+        equipment_copy["hvac_system_name"] = f"{system_type} - {system_name}" if system_name else system_type
+        created_count += 1
+        updated_equipment_rows.append(equipment_copy)
+
+    db.jobs.update_one(
+        {"_id": ObjectId(jobId)},
+        {
+            "$set": {
+                "equipments": updated_equipment_rows,
+                "updated_at": datetime.now(UTC),
+            }
+        },
+    )
+
+    remaining_unlinked = [
+        equipment_row
+        for equipment_row in updated_equipment_rows
+        if isinstance(equipment_row, dict) and not str(equipment_row.get("hvac_system_id") or "").strip()
+    ]
+    if remaining_unlinked:
+        session["pending_hvac_system_prompt_job_id"] = str(jobId)
+    else:
+        session.pop("pending_hvac_system_prompt_job_id", None)
+
+    current_app.logger.info(
+        "Created HVAC systems from completed job equipment: job_id=%s created_count=%s by employee_id=%s",
+        jobId,
+        created_count,
+        session.get("employee_id"),
+    )
+
+    return redirect(url_for("jobs.view_job", jobId=jobId))
 
 
 @bp.route("/jobs/<jobId>/email-estimate", methods=["POST"])
@@ -5151,6 +5447,7 @@ def update_job(jobId):
         selected_equipment_names = request.form.getlist("equipment_name[]")
         entered_equipment_quantities = request.form.getlist("equipment_quantity_installed[]")
         entered_equipment_prices = request.form.getlist("equipment_price[]")
+        entered_equipment_serial_numbers = request.form.getlist("equipment_serial_number[]")
         selected_discount_names = request.form.getlist("discount_name[]")
         entered_discount_percentages = request.form.getlist("discount_percentage[]")
         entered_discount_amounts = request.form.getlist("discount_amount[]")
@@ -5160,7 +5457,7 @@ def update_job(jobId):
         equipment_query = {"business_id": business_id} if business_id else {"_id": None}
         discount_query = {"business_id": business_id} if business_id else {"_id": None}
         service_docs = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
-        part_docs = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
+        part_docs = [_serialize_part_without_legacy_fields(part) for part in db.parts.find(part_query).sort("part_name", 1)]
         material_docs = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
         equipment_docs = [serialize_doc(equipment) for equipment in db.equipment.find(equipment_query).sort("equipment_name", 1)]
         discount_docs = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
@@ -5183,7 +5480,7 @@ def update_job(jobId):
             entered_part_prices,
             part_catalog,
         )
-        labors, labor_total = [], 0.0
+        labors = []
         materials, materials_total = build_job_materials_from_form(
             selected_material_names,
             entered_material_quantities,
@@ -5195,6 +5492,7 @@ def update_job(jobId):
             selected_equipment_names,
             entered_equipment_quantities,
             entered_equipment_prices,
+            entered_equipment_serial_numbers,
             equipment_catalog,
         )
         discounts, discounts_total = build_job_discounts_from_form(
@@ -5206,7 +5504,6 @@ def update_job(jobId):
         hvac_lookup = _build_hvac_system_lookup_for_property(db, job.get("customer_id"), selected_property_id)
         _apply_hvac_tags_to_components(services, request.form.getlist("service_hvac_system_id[]"), hvac_lookup)
         _apply_hvac_tags_to_components(parts, request.form.getlist("part_hvac_system_id[]"), hvac_lookup)
-        _apply_hvac_tags_to_components(labors, request.form.getlist("labor_hvac_system_id[]"), hvac_lookup)
         _apply_hvac_tags_to_components(materials, request.form.getlist("material_hvac_system_id[]"), hvac_lookup)
         _apply_hvac_tags_to_components(equipments, request.form.getlist("equipment_hvac_system_id[]"), hvac_lookup)
         customer = {}
@@ -5416,20 +5713,21 @@ def update_job(jobId):
     business_id = resolve_current_business_id(db)
     service_query = {"business_id": business_id} if business_id else {"_id": None}
     part_query = {"business_id": business_id} if business_id else {"_id": None}
-    labor_query = {"business_id": business_id} if business_id else {"_id": None}
     material_query = {"business_id": business_id} if business_id else {"_id": None}
     equipment_query = {"business_id": business_id} if business_id else {"_id": None}
     discount_query = {"business_id": business_id} if business_id else {"_id": None}
+    category_query = {"company_id": str(business_id)} if business_id else {"_id": None}
     services = [serialize_doc(service) for service in db.services.find(service_query).sort("service_name", 1)]
-    parts = [serialize_doc(part) for part in db.parts.find(part_query).sort("part_name", 1)]
-    labors = [serialize_doc(labor) for labor in db.labors.find(labor_query).sort("labor_description", 1)]
+    parts = [_serialize_part_without_legacy_fields(part) for part in db.parts.find(part_query).sort("part_name", 1)]
     materials = [serialize_doc(material) for material in db.materials.find(material_query).sort("material_name", 1)]
     equipments = [serialize_doc(equipment) for equipment in db.equipment.find(equipment_query).sort("equipment_name", 1)]
     discounts = [serialize_doc(discount) for discount in db.discounts.find(discount_query).sort("discount_name", 1)]
+    part_categories = [serialize_doc(category) for category in db.categories.find({**category_query, "type": "part"}).sort("name", 1)]
+    material_categories = [serialize_doc(category) for category in db.categories.find({**category_query, "type": "material"}).sort("name", 1)]
+    equipment_categories = [serialize_doc(category) for category in db.categories.find({**category_query, "type": "equipment"}).sort("name", 1)]
     employee_options = build_employee_options(db)
     services_catalog = build_service_catalog(services)
     parts_catalog = build_part_catalog(parts)
-    labors_catalog = build_labor_catalog(labors)
     materials_catalog = build_material_catalog(materials)
     equipments_catalog = build_equipment_catalog(equipments)
     discounts_catalog = build_discount_catalog(discounts)
@@ -5462,19 +5760,19 @@ def update_job(jobId):
         initial_hvac_systems=initial_hvac_systems,
         job_services_hvac=job_services_hvac,
         job_parts_hvac=job_parts_hvac,
-        job_labors_hvac=job_labors_hvac,
         job_materials_hvac=job_materials_hvac,
         job_equipments_hvac=job_equipments_hvac,
         services=services,
         parts=parts,
-        labors=labors,
         materials=materials,
         equipments=equipments,
         discounts=discounts,
+        part_categories=part_categories,
+        material_categories=material_categories,
+        equipment_categories=equipment_categories,
         employee_options=employee_options,
         services_catalog=services_catalog,
         parts_catalog=parts_catalog,
-        labors_catalog=labors_catalog,
         materials_catalog=materials_catalog,
         equipments_catalog=equipments_catalog,
         discounts_catalog=discounts_catalog,

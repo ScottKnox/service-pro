@@ -102,6 +102,51 @@
       </div>
       {% endif %}
 
+      {% if hvac_system_prompt_items %}
+      <section id="view-job-hvac-prompt" aria-labelledby="view-job-hvac-prompt-header" style="border: 1px solid #B7D8C9; background: linear-gradient(180deg, #F7FBF8 0%, #EEF8F1 100%); padding: 1rem; border-radius: 10px; margin: 1rem 0; box-shadow: 0 10px 24px rgba(12, 48, 29, 0.08);">
+        <h2 id="view-job-hvac-prompt-header" style="margin-top: 0;">Equipment Installed</h2>
+        <p style="margin-top: 0;">Create HVAC system records for the installed equipment below? You can confirm or update serial numbers first.</p>
+
+        <form method="POST" action="{{ url_for('jobs.create_hvac_systems_from_job_equipment', jobId=jobId) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div style="display: grid; gap: 0.75rem;">
+            {% for equipment in hvac_system_prompt_items %}
+            <article class="maintenance-history-card" style="padding: 0.9rem 1rem; display: grid; gap: 0.75rem;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                <label style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; margin: 0;">
+                  <input type="checkbox" name="create_hvac_system[]" value="{{ equipment.index }}" checked>
+                  Create system record
+                </label>
+                <span style="font-weight: 700;">{{ equipment.system_type }}</span>
+              </div>
+
+              <div>
+                <div style="font-weight: 600;">{{ equipment.equipment_name }}</div>
+                <div style="color: #5C6B63; margin-top: 0.25rem;">{{ equipment.manufacturer|default('-', true) }}{% if equipment.model_number %} &middot; {{ equipment.model_number }}{% endif %}</div>
+                <div style="color: #5C6B63; margin-top: 0.25rem;">{% if equipment.cooling_capacity %}{{ equipment.cooling_capacity }}{% endif %}{% if equipment.seer_rating %}{% if equipment.cooling_capacity %} &middot; {% endif %}{{ equipment.seer_rating }} SEER{% endif %}{% if equipment.afue_rating %}{% if equipment.cooling_capacity or equipment.seer_rating %} &middot; {% endif %}{{ equipment.afue_rating }} AFUE{% endif %}{% if equipment.refrigerant_type %}{% if equipment.cooling_capacity or equipment.seer_rating or equipment.afue_rating %} &middot; {% endif %}{{ equipment.refrigerant_type }}{% endif %}</div>
+              </div>
+
+              <div style="display: grid; gap: 0.35rem; max-width: 28rem;">
+                <label for="equipment-serial-number-{{ equipment.index }}" style="font-weight: 600;">Serial Number</label>
+                <input id="equipment-serial-number-{{ equipment.index }}" name="equipment_serial_number_{{ equipment.index }}" type="text" value="{{ equipment.serial_number|default('', true) }}" placeholder="Optional">
+              </div>
+            </article>
+            {% endfor %}
+          </div>
+
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
+            <button type="submit">Create HVAC system records</button>
+          </div>
+        </form>
+
+        <form method="POST" action="{{ url_for('jobs.create_hvac_systems_from_job_equipment', jobId=jobId) }}" style="margin-top: 0.75rem;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="skip_hvac_system_prompt" value="1">
+          <button type="submit" class="view-job-action-blocked">Skip for now</button>
+        </form>
+      </section>
+      {% endif %}
+
       {% if job_status_normalized == "pending" and (not job.scheduled_date or not job.scheduled_time) %}
       <div id="view-job-missing-scheduling-note" style="border: 1px solid #FFA500; background-color: #FFF8DC; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
         <p style="color: #B8860B; font-weight: 600; margin: 0;">You must add a scheduled date and time for a job before marking it started.</p>

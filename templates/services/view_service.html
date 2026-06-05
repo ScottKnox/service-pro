@@ -43,10 +43,6 @@
             <p>{{ service.service_type or '-' }}</p>
           </div>
           <div class="view-service-detail-item">
-            <h4>Category</h4>
-            <p>{{ service.category }}</p>
-          </div>
-          <div class="view-service-detail-item">
             <h4>Description</h4>
             <p>{{ service.description or '-' }}</p>
           </div>
@@ -69,35 +65,36 @@
         </div>
       </section>
 
-      <section id="view-service-parts" aria-label="Included parts">
-        <h2>Included Parts</h2>
-        {% if associated_parts %}
-          <div id="view-service-parts-grid">
-            {% for part in associated_parts %}
-              <a class="jobs-card" href="{{ url_for('catalog.view_part', partId=part._id) }}" aria-label="View part {{ part.part_name }}">
-                <div class="jobs-card-row">
-                  <span class="jobs-card-label">Part</span>
-                  <span class="jobs-card-value">{{ part.part_name }}</span>
-                </div>
-                <div class="jobs-card-row">
-                  <span class="jobs-card-label">Subcategory</span>
-                  <span class="jobs-card-value">{{ part.subcategory|title }}</span>
-                </div>
-                <div class="jobs-card-row">
-                  <span class="jobs-card-label">Qty</span>
-                  <span class="jobs-card-value">{{ part.included_quantity_display|default('-', true) }}</span>
-                </div>
-                <div class="jobs-card-row">
-                  <span class="jobs-card-label">Unit Price</span>
-                  <span class="jobs-card-value">{{ part.unit_cost_display }}</span>
-                </div>
-              </a>
-            {% endfor %}
+      <section id="view-service-associated-categories" aria-label="Associated categories">
+        <h2>Associated Categories</h2>
+        <div id="view-service-associated-categories-content">
+          <div class="view-service-detail-item">
+            <h4>Part Categories</h4>
+            {% if associated_part_categories %}
+              <p>{{ associated_part_categories | map(attribute='name') | join(', ') }}</p>
+            {% else %}
+              <p>-</p>
+            {% endif %}
           </div>
-        {% else %}
-          <p>No included parts configured for this service.</p>
-        {% endif %}
+          <div class="view-service-detail-item">
+            <h4>Material Categories</h4>
+            {% if associated_material_categories %}
+              <p>{{ associated_material_categories | map(attribute='name') | join(', ') }}</p>
+            {% else %}
+              <p>-</p>
+            {% endif %}
+          </div>
+          <div class="view-service-detail-item">
+            <h4>Equipment Categories</h4>
+            {% if associated_equipment_categories %}
+              <p>{{ associated_equipment_categories | map(attribute='name') | join(', ') }}</p>
+            {% else %}
+              <p>-</p>
+            {% endif %}
+          </div>
+        </div>
       </section>
+
         </div>
       </div>
     </section>

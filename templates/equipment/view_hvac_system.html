@@ -24,9 +24,9 @@
       <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
-          <a class="view-customer-action-primary" href="{{ url_for('customers.add_hvac_diagnostics', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id) }}">Add Diagnostics</a>
+          <a class="view-customer-action-primary" href="{{ url_for('customers.add_hvac_diagnostics', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id, job_id=job_id) }}">Add Diagnostics</a>
           {% if hvac_system.diagnostics %}
-            <a class="view-customer-action-secondary" href="{{ url_for('customers.view_hvac_diagnostics', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id) }}">View System Diagnostics</a>
+            <a class="view-customer-action-secondary" href="{{ url_for('customers.view_hvac_diagnostics', customerId=customerId, reference_type=hvac_system.reference_type, reference_id=hvac_system.reference_id, property_id=property_id, job_id=job_id) }}">View System Diagnostics</a>
           {% else %}
             <span class="view-customer-action-secondary view-customer-action-link is-disabled" aria-disabled="true">View System Diagnostics</span>
           {% endif %}
@@ -364,6 +364,85 @@
                 {% endfor %}
               {% else %}
                 <p>No HVAC system details have been saved yet.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="view-customer-section-row" id="view-hvac-history-columns">
+          <div class="view-customer-section-column view-customer-details-column" id="view-hvac-service-history">
+            <h3>Service History</h3>
+            <div class="view-customer-jobs-list">
+              {% if hvac_system.service_history %}
+                {% for visit in hvac_system.service_history %}
+                  {% set raw_completed = visit.date_completed|default('', true) %}
+                  {% set date_part = raw_completed.split(' ')[0] if raw_completed else '' %}
+                  {% set date_tokens = date_part.split('/') if date_part and '/' in date_part else [] %}
+                  {% set month_names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] %}
+                  {% if date_tokens|length == 3 %}
+                    {% set month_index = (date_tokens[0]|int) - 1 %}
+                    {% if month_index >= 0 and month_index < 12 %}
+                      {% set completed_display = month_names[month_index] ~ ' ' ~ (date_tokens[1]|int) ~ ', ' ~ date_tokens[2] %}
+                    {% else %}
+                      {% set completed_display = visit.date_completed|default('-', true) %}
+                    {% endif %}
+                  {% else %}
+                    {% set completed_display = visit.date_completed|default('-', true) %}
+                  {% endif %}
+
+                  <a class="view-customer-card-link maintenance-history-card" href="{{ url_for('jobs.view_job', jobId=visit.job_id) }}" aria-label="View completed job {{ visit.job_id }}">
+                    <p class="maintenance-history-card-header">Completed {{ completed_display }} &middot; {{ visit.assigned_employee|default('-', true) }}</p>
+                    {% for line_item in visit['items'] %}
+                      <div class="maintenance-history-line-item">
+                        <span class="maintenance-history-line-item-name">{{ line_item.label|default('Item', true) }}</span>
+                        <span class="maintenance-history-line-item-amount">{{ line_item.amount|currency }}</span>
+                      </div>
+                    {% endfor %}
+                    <div class="maintenance-history-total-row">
+                      <span>Total on this system</span>
+                      <span>{{ visit.system_total|currency }}</span>
+                    </div>
+                  </a>
+                {% endfor %}
+              {% else %}
+                <p>No service history recorded for this system.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="view-customer-section-column view-customer-details-column" id="view-hvac-parts-history">
+            <h3>Components History</h3>
+            <div class="view-customer-jobs-list">
+              {% if hvac_system.parts_history %}
+                {% for part_row in hvac_system.parts_history %}
+                  {% set raw_completed = part_row.date_completed|default('', true) %}
+                  {% set date_part = raw_completed.split(' ')[0] if raw_completed else '' %}
+                  {% set date_tokens = date_part.split('/') if date_part and '/' in date_part else [] %}
+                  {% set month_names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] %}
+                  {% if date_tokens|length == 3 %}
+                    {% set month_index = (date_tokens[0]|int) - 1 %}
+                    {% if month_index >= 0 and month_index < 12 %}
+                      {% set completed_display = month_names[month_index] ~ ' ' ~ (date_tokens[1]|int) ~ ', ' ~ date_tokens[2] %}
+                    {% else %}
+                      {% set completed_display = part_row.date_completed|default('-', true) %}
+                    {% endif %}
+                  {% else %}
+                    {% set completed_display = part_row.date_completed|default('-', true) %}
+                  {% endif %}
+
+                  <article class="view-customer-card-link maintenance-history-card">
+                    <p class="maintenance-history-card-header">Completed {{ completed_display }} &middot; {{ part_row.assigned_employee|default('-', true) }}</p>
+                    <div class="maintenance-history-line-item">
+                      <span class="maintenance-history-line-item-name">{{ part_row.label|default('Part', true) }}</span>
+                      <span class="maintenance-history-line-item-amount">{{ part_row.amount|currency }}</span>
+                    </div>
+                    <div class="maintenance-history-links-row">
+                      <a href="{{ url_for('jobs.view_job', jobId=part_row.job_id) }}">View Job</a>
+                    </div>
+                  </article>
+                {% endfor %}
+              {% else %}
+                <p class="maintenance-history-empty-state">No components recorded for this system yet. Add parts or equipment line items on future jobs to track what's been installed here.</p>
               {% endif %}
             </div>
           </div>

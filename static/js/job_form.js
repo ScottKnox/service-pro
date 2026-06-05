@@ -964,6 +964,10 @@
       '<div class="add-customer-form-field">' +
         '<label for="equipment-price-' + nextIndex + '">Price</label>' +
         '<input id="equipment-price-' + nextIndex + '" name="equipment_price[]" type="text" placeholder="$0.00" />' +
+      '</div>' +
+      '<div class="add-customer-form-field">' +
+        '<label for="equipment-serial-number-' + nextIndex + '">Serial Number</label>' +
+        '<input id="equipment-serial-number-' + nextIndex + '" name="equipment_serial_number[]" type="text" placeholder="Optional" />' +
       '</div>';
 
     const newSelect = row.querySelector('select');
@@ -1465,8 +1469,8 @@
       }
 
       if (priceInput) {
-        if (equipmentDetails && equipmentDetails.default_price) {
-          priceInput.value = equipmentDetails.default_price;
+        if (equipmentDetails && equipmentDetails.sell_price) {
+          priceInput.value = equipmentDetails.sell_price;
         } else if (!selectedEquipment) {
           priceInput.value = '$0.00';
         }

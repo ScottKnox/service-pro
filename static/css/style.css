@@ -5157,6 +5157,317 @@ body.sidebar-view #footer-bg {
     gap: 1rem;
   }
 
+  .service-contextual-prompts {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 0.35rem;
+  }
+
+  .contextual-prompt {
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    background: #FFFFFF;
+    overflow: hidden;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  .contextual-prompt > summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0.58rem 0.75rem;
+    background: linear-gradient(180deg, #F8FAFC 0%, #EEF2F7 100%);
+    color: #1B263B;
+    font-size: 0.96rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .contextual-prompt > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .contextual-prompt > summary::after {
+    content: ">";
+    font-size: 0.85rem;
+    line-height: 1;
+    color: #4B5563;
+    transform: rotate(90deg);
+    transition: transform 0.18s ease;
+  }
+
+  .contextual-prompt[open] > summary::after {
+    transform: rotate(270deg);
+  }
+
+  .contextual-prompt > summary:focus-visible {
+    outline: 2px solid #5FA3D3;
+    outline-offset: -2px;
+  }
+
+  .contextual-prompt-items {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.6rem 0.7rem 0.7rem;
+    border-top: 1px solid #E5E7EB;
+    background: #FFFFFF;
+  }
+
+  .contextual-prompt-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    background: #F9FBFD;
+  }
+
+  .contextual-prompt-item-name {
+    color: #1F2937;
+    font-size: 0.94rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .contextual-prompt-item-add {
+    flex-shrink: 0;
+    min-width: 72px;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #1B263B;
+    border-radius: 6px;
+    background: #FFFFFF;
+    color: #1B263B;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .contextual-prompt-item-add:hover {
+    background: #F1F5F9;
+  }
+
+  .contextual-prompt-item-add:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .service-sub-items {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 0.55rem;
+    margin-top: 0.35rem;
+  }
+
+  .service-sub-item-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.6rem 0.9rem;
+    align-items: start;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F9FBFD 100%);
+  }
+
+  .service-sub-item-row.is-entering {
+    animation: serviceSubItemIn 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes serviceSubItemIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.995);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .service-sub-item-name {
+    color: #1F2937;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+    align-self: center;
+  }
+
+  .service-sub-item-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    justify-self: end;
+  }
+
+  .service-sub-item-price {
+    width: 106px;
+    min-height: 36px;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid #C5C7CB;
+    border-radius: 6px;
+    background: #FFFFFF;
+    color: #1B263B;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-align: right;
+  }
+
+  .service-sub-item-price:focus {
+    outline: 2px solid #5FA3D3;
+    outline-offset: 1px;
+    border-color: #5FA3D3;
+  }
+
+  .service-sub-item-included {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid #7DBA98;
+    border-radius: 999px;
+    background: #E7F6EE;
+    color: #18563A;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .service-sub-item-remove {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #B91C1C;
+    border-radius: 999px;
+    background: #FEF2F2;
+    color: #991B1B;
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .service-sub-item-remove:hover {
+    background: #FEE2E2;
+    border-color: #991B1B;
+  }
+
+  .service-sub-item-remove:focus-visible {
+    outline: 2px solid #5FA3D3;
+    outline-offset: 2px;
+  }
+
+  .service-sub-item-serial-wrap {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 0.35rem;
+    padding-top: 0.15rem;
+  }
+
+  .service-sub-item-serial-wrap label {
+    color: #4B5563;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .service-sub-item-serial-wrap input {
+    width: 100%;
+    max-width: 260px;
+    min-height: 38px;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #C5C7CB;
+    border-radius: 6px;
+    background: #FFFFFF;
+    color: #1F2937;
+  }
+
+  .service-sub-item-serial-wrap input:focus {
+    outline: 2px solid #5FA3D3;
+    outline-offset: 1px;
+    border-color: #5FA3D3;
+  }
+
+  .service-sub-item-hidden-inputs {
+    display: none;
+  }
+
+  #create-job-form .standalone-items-toggle {
+    margin: 1rem 0 0.85rem;
+    border: 1px solid #C5C7CB;
+    border-radius: 4px;
+    background: #F8FAFC;
+    overflow: hidden;
+  }
+
+  #create-job-form .standalone-items-toggle > summary {
+    list-style: none;
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    color: var(--kl-accent-contrast);
+    font-size: 1.05rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  #create-job-form .standalone-items-toggle > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  #create-job-form .standalone-items-toggle > summary::after {
+    content: ">";
+    font-size: 0.95rem;
+    line-height: 1;
+    transform: rotate(90deg);
+    transition: transform 0.18s ease;
+  }
+
+  #create-job-form .standalone-items-toggle[open] > summary::after {
+    transform: rotate(270deg);
+  }
+
+  #create-job-form .standalone-items-toggle > summary:focus-visible {
+    outline: 2px solid #5FA3D3;
+    outline-offset: -2px;
+  }
+
+  #create-job-form .standalone-items-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 0.75rem;
+    border-top: 1px solid #D1D5DB;
+    background: #FFFFFF;
+  }
+
+  #job-standalone-items-list {
+    display: grid;
+    gap: 1rem;
+    padding: 0 0.75rem 0.75rem;
+    border-top: 1px solid #D1D5DB;
+    background: #FFFFFF;
+  }
+
+  #job-standalone-items-list:empty {
+    display: none;
+  }
+
   #job-materials-list .job-material-row {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: start;
@@ -5260,6 +5571,21 @@ body.sidebar-view #footer-bg {
     #job-discounts-list .job-discount-row .add-customer-form-field:nth-child(1) {
       grid-column: auto;
     }
+
+    .service-sub-item-row {
+      grid-template-columns: 1fr;
+    }
+
+    .service-sub-item-controls {
+      width: 100%;
+      justify-self: stretch;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .service-sub-item-price {
+      width: 120px;
+    }
   }
 
   #job-services-actions,
@@ -5280,6 +5606,9 @@ body.sidebar-view #footer-bg {
   #add-job-material-button,
   #add-job-equipment-button,
   #add-job-discount-button,
+  #add-standalone-part-button,
+  #add-standalone-material-button,
+  #add-standalone-equipment-button,
   #add-service-part-button,
   #add-service-material-button {
     padding: 0.55rem 0.95rem;
@@ -5299,6 +5628,9 @@ body.sidebar-view #footer-bg {
   #add-job-material-button:hover,
   #add-job-equipment-button:hover,
   #add-job-discount-button:hover,
+  #add-standalone-part-button:hover,
+  #add-standalone-material-button:hover,
+  #add-standalone-equipment-button:hover,
   #add-service-part-button:hover,
   #add-service-material-button:hover {
     background-color: #F1F5F9;
@@ -6424,6 +6756,10 @@ body.sidebar-view #footer-bg {
   }
 
   /* System Photos */
+  #view-hvac-photos {
+    margin-top: 1rem;
+  }
+
   .hvac-photos-note {
     font-size: 0.8rem;
     color: #5A677A;
@@ -9755,6 +10091,218 @@ body.sidebar-view #footer-bg {
   color: #F2F5F3;
 }
 
+.resource-customer-property-view #view-customer-maintenance-history .maintenance-history-card {
+  display: block;
+  padding: 0.85rem 0.95rem;
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.resource-customer-property-view #view-customer-maintenance-history .maintenance-history-card:hover {
+  border-color: #4b7d68;
+  background: linear-gradient(180deg, #2b4a3d 0%, #223a30 100%);
+}
+
+.resource-customer-property-view #view-customer-maintenance-history .maintenance-history-card-header {
+  margin: 0 0 0.8rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid #2f5a4a;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #d7e4de;
+}
+
+.resource-customer-property-view #view-customer-maintenance-history .maintenance-history-system-name {
+  margin: 0.7rem 0 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #8fb4a4;
+}
+
+.resource-customer-property-view #view-customer-maintenance-history .maintenance-history-line-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.28rem 0;
+}
+
+.resource-customer-property-view #view-customer-maintenance-history .maintenance-history-line-item-name {
+  color: #f2f5f3;
+  font-size: 0.93rem;
+  font-weight: 500;
+}
+
+.resource-customer-property-view #view-customer-maintenance-history .maintenance-history-line-item-amount {
+  color: #f2f5f3;
+  font-size: 0.93rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.resource-customer-property-view #view-customer-maintenance-history .maintenance-history-total-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-top: 0.7rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid #2f5a4a;
+  color: #e6f0eb;
+  font-size: 0.93rem;
+  font-weight: 700;
+}
+
+.resource-customer-property-view #view-customer-maintenance-history .maintenance-history-links-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.7rem;
+}
+
+.resource-customer-property-view #view-customer-maintenance-history .maintenance-history-links-row a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 132px;
+  min-height: 34px;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #3a6553;
+  border-radius: 6px;
+  background: #274439;
+  color: #d8efe3;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.resource-customer-property-view #view-customer-maintenance-history .maintenance-history-links-row a:hover {
+  border-color: #4b7d68;
+  background: #2f5245;
+  color: #f2f5f3;
+  text-decoration: none;
+}
+
+.resource-customer-hvac-view #view-hvac-history-columns {
+  align-items: stretch;
+}
+
+.resource-customer-hvac-view #view-hvac-service-history .maintenance-history-card,
+.resource-customer-hvac-view #view-hvac-parts-history .maintenance-history-card {
+  display: block;
+  padding: 0.85rem 0.95rem;
+  border-radius: 8px;
+  border: 1px solid #3a6553;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  text-decoration: none;
+}
+
+.resource-customer-hvac-view #view-hvac-service-history .maintenance-history-card-header,
+.resource-customer-hvac-view #view-hvac-parts-history .maintenance-history-card-header {
+  margin: 0 0 0.8rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid #2f5a4a;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #d7e4de;
+}
+
+.resource-customer-hvac-view #view-hvac-service-history .maintenance-history-line-item,
+.resource-customer-hvac-view #view-hvac-parts-history .maintenance-history-line-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.28rem 0;
+}
+
+.resource-customer-hvac-view #view-hvac-service-history .maintenance-history-line-item-name,
+.resource-customer-hvac-view #view-hvac-parts-history .maintenance-history-line-item-name {
+  color: #f2f5f3;
+  font-size: 0.93rem;
+  font-weight: 500;
+}
+
+.resource-customer-hvac-view #view-hvac-service-history .maintenance-history-line-item-amount,
+.resource-customer-hvac-view #view-hvac-parts-history .maintenance-history-line-item-amount {
+  color: #f2f5f3;
+  font-size: 0.93rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.resource-customer-hvac-view #view-hvac-service-history .maintenance-history-total-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-top: 0.7rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid #2f5a4a;
+  color: #e6f0eb;
+  font-size: 0.93rem;
+  font-weight: 700;
+}
+
+.resource-customer-hvac-view #view-hvac-service-history .maintenance-history-links-row,
+.resource-customer-hvac-view #view-hvac-parts-history .maintenance-history-links-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.7rem;
+}
+
+.resource-customer-hvac-view #view-hvac-service-history .maintenance-history-links-row a,
+.resource-customer-hvac-view #view-hvac-parts-history .maintenance-history-links-row a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 132px;
+  min-height: 34px;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #3a6553;
+  border-radius: 6px;
+  background: #274439;
+  color: #d8efe3;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.resource-customer-hvac-view #view-hvac-service-history .maintenance-history-links-row a:hover,
+.resource-customer-hvac-view #view-hvac-parts-history .maintenance-history-links-row a:hover {
+  border-color: #4b7d68;
+  background: #2f5245;
+  color: #f2f5f3;
+  text-decoration: none;
+}
+
+.resource-customer-hvac-view #view-hvac-service-history .maintenance-history-empty-state,
+.resource-customer-hvac-view #view-hvac-parts-history .maintenance-history-empty-state {
+  margin: 0.25rem auto 0;
+  width: 80%;
+  max-width: 520px;
+  padding: 0.9rem 1rem;
+  border: 1px dashed #3a6553;
+  border-radius: 8px;
+  background: rgba(32, 55, 44, 0.55);
+  color: #d7e4de;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+@media (max-width: 980px) {
+  .resource-customer-hvac-view #view-hvac-history-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
 .resource-customers#view-customer-panel .view-customer-hvac-card-row {
   padding: 0.58rem 0.85rem;
   border-bottom: 1px solid #2f5a4a;
@@ -9789,6 +10337,46 @@ body.sidebar-view #footer-bg {
 
 .resource-customers#view-customer-panel .view-customer-hvac-card--package {
   border-top-color: #F59E0B;
+}
+
+.resource-customers#view-customer-panel #view-customer-maintenance-history .view-customer-card-link {
+  display: block;
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  border-top-width: 3px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.18);
+  overflow: hidden;
+  text-decoration: none;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.resource-customers#view-customer-panel #view-customer-maintenance-history .view-customer-card-link:hover {
+  border-color: #3a6553;
+  background: linear-gradient(180deg, #2b4a3d 0%, #223a30 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(12, 30, 23, 0.24);
+}
+
+.resource-customers#view-customer-panel #view-customer-maintenance-history .view-customer-hvac-card-row {
+  padding: 0.58rem 0.85rem;
+  border-bottom: 1px solid #2f5a4a;
+}
+
+.resource-customers#view-customer-panel #view-customer-maintenance-history .view-customer-hvac-card-row:last-child {
+  border-bottom: 0;
+}
+
+.resource-customers#view-customer-panel #view-customer-maintenance-history .view-customer-hvac-card-label {
+  color: #B2C0B9;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.resource-customers#view-customer-panel #view-customer-maintenance-history .view-customer-hvac-card-value {
+  color: #F2F5F3;
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .resource-customers#view-customer-panel .view-customer-card-link:not(.view-customer-hvac-card):hover,
@@ -10144,7 +10732,8 @@ body.sidebar-view #footer-bg {
 .resource-customer-sub-properties-add .sub-property-row {
   border: 1px solid #2f5a4a;
   border-radius: 8px;
-  background: #1d3329;
+  background: linear-gradient(180deg, #1f3b31 0%, #1d3329 100%);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.16);
 }
 
 .resource-customer-sub-properties-add .sub-properties-tools-section,
@@ -10182,15 +10771,16 @@ body.sidebar-view #footer-bg {
 .resource-customer-sub-properties-add .default-hvac-form-actions .btn-secondary {
   border: 1px solid #2f5a4a;
   border-radius: 8px;
-  background: #253E33;
-  color: #B2C0B9;
+  background: linear-gradient(180deg, #253E33 0%, #22372d 100%);
+  color: #D0DDD7;
+  box-shadow: 0 3px 10px rgba(12, 30, 23, 0.14);
 }
 
 .resource-customer-sub-properties-add .sub-properties-action-link--secondary:hover,
 .resource-customer-sub-properties-add .default-hvac-form-actions .btn-secondary:hover {
   border-color: #3a6553;
-  background: #2d4b3f;
-  color: #D0DDD7;
+  background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%);
+  color: #F2F5F3;
 }
 
 .resource-customer-sub-properties-add .sub-properties-section-title {
@@ -10199,13 +10789,29 @@ body.sidebar-view #footer-bg {
   color: #F2F5F3;
 }
 
+.resource-customer-sub-properties-add .sub-properties-hvac-preview {
+  overflow: hidden;
+}
+
+.resource-customer-sub-properties-add .sub-properties-hvac-preview .sub-properties-section-title {
+  margin: -0.85rem -0.85rem 0.85rem;
+  border-radius: 8px 8px 0 0;
+}
+
 .resource-customer-sub-properties-add .sub-properties-hvac-type,
 .resource-customer-sub-properties-add .sub-property-unit-label {
   color: #F2F5F3;
 }
 
+.resource-customer-sub-properties-add .sub-properties-hvac-type {
+  margin-top: 0.1rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
 .resource-customer-sub-properties-add .sub-properties-hvac-note {
   color: #B2C0B9;
+  line-height: 1.5;
 }
 
 .resource-customer-sub-properties-add .sub-property-row {
@@ -10215,6 +10821,63 @@ body.sidebar-view #footer-bg {
 .resource-customer-default-hvac-add #add-customer-form section.add-customer-panel:not(#ductwork-section):not(#refrigerant-section) .add-customer-form-row {
   margin-top: 0.9rem;
   margin-bottom: 0.9rem;
+}
+
+.resource-customer-default-hvac-add #add-customer-form > .add-customer-form-row {
+  margin-bottom: 1rem;
+}
+
+.resource-customer-default-hvac-add #add-customer-panel {
+  border: 1px solid #2f5a4a;
+  border-radius: 0;
+  background: #1d3329;
+  box-shadow: none;
+}
+
+.resource-customer-default-hvac-add #add-customer-form {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  gap: 0.95rem;
+}
+
+.resource-customer-default-hvac-add #add-customer-form > .add-customer-form-row:first-of-type {
+  margin-top: 0.25rem;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-row {
+  gap: 0.9rem;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field {
+  gap: 0.5rem;
+}
+
+.resource-customer-default-hvac-add #add-customer-form section.add-customer-panel {
+  margin-top: 0.25rem;
+  padding: 0.85rem;
+}
+
+.resource-customer-default-hvac-add #breadcrumb {
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid #2f5a4a;
+  background: #223a30;
+  border-radius: 0;
+}
+
+.resource-customer-default-hvac-add #breadcrumb a,
+.resource-customer-default-hvac-add #breadcrumb li {
+  color: #F2F5F3;
+}
+
+.resource-customer-default-hvac-add #breadcrumb li + li::before {
+  color: #9db2aa;
+}
+
+.resource-customer-default-hvac-add #breadcrumb a:hover {
+  color: #D0DDD7;
+  text-decoration: underline;
 }
 
 .resource-customer-default-hvac-add #add-customer-form section.add-customer-panel:not(#ductwork-section):not(#refrigerant-section) .add-customer-form-field {
@@ -10241,7 +10904,8 @@ body.sidebar-view #footer-bg {
 .resource-customer-default-hvac-add .add-customer-panel {
   border: 1px solid #2f5a4a;
   border-radius: 8px;
-  background: #1d3329;
+  background: linear-gradient(180deg, #1f3b31 0%, #1d3329 100%);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.16);
 }
 
 .resource-customer-default-hvac-add .add-customer-panel h2,
@@ -10252,6 +10916,60 @@ body.sidebar-view #footer-bg {
   border-radius: 8px;
   background: #244236;
   color: #F2F5F3;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field label {
+  color: #F2F5F3;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field input,
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field select,
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field textarea {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #223a30 !important;
+  color: #F2F5F3;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  color-scheme: dark;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #D0DDD7 50%),
+    linear-gradient(135deg, #D0DDD7 50%, transparent 50%);
+  background-color: #223a30 !important;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field input {
+  background-color: #223a30 !important;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field textarea {
+  background-color: #223a30 !important;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field select option {
+  background: #1d3329;
+  color: #F2F5F3;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field textarea {
+  min-height: 44px;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field input::placeholder,
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field textarea::placeholder {
+  color: #9db2aa;
+}
+
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field input:focus,
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field select:focus,
+.resource-customer-default-hvac-add #add-customer-form .add-customer-form-field textarea:focus {
+  outline: 2px solid #00A86B;
+  outline-offset: 1px;
+  border-color: #00A86B;
 }
 
 .resource-customer-default-hvac-add #add-customer-form .form-field-input-error {
@@ -10278,6 +10996,32 @@ body.sidebar-view #footer-bg {
   border-radius: 8px;
   background: #253E33;
   color: #B2C0B9;
+}
+
+.resource-customer-default-hvac-add #add-customer-form-actions button {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2d4b3f 0%, #253E33 100%);
+  color: #E4ECE8;
+  font-weight: 700;
+  box-shadow: 0 3px 10px rgba(12, 30, 23, 0.2);
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.resource-customer-default-hvac-add #add-customer-form-actions button:hover {
+  border-color: #4d816d;
+  background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%);
+  color: #F2F5F3;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.26);
+}
+
+.resource-customer-default-hvac-add #add-customer-form-actions button:disabled {
+  border-color: #2f5a4a;
+  background: #22372d;
+  color: #8C9A93;
+  box-shadow: none;
+  transform: none;
 }
 
 .resource-customer-default-hvac-add .default-hvac-form-actions .btn-secondary:hover {
@@ -10815,6 +11559,25 @@ body.sidebar-view #footer-bg {
   background: var(--kl-surface);
 }
 
+.resource-estimate-view .note-card {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.18);
+  padding: 1rem 1.05rem;
+  margin: 0;
+}
+
+.resource-estimate-view .note-card-text {
+  color: #f5f8f6;
+  font-size: 0.96rem;
+  line-height: 1.55;
+}
+
+.resource-estimate-view .estimate-stack-block > .note-card {
+  margin-top: 0.05rem;
+}
+
 .resource-estimate-view .progress-step-circle {
   background-color: #253E33;
   border-color: #2f5a4a;
@@ -11290,12 +12053,18 @@ body.sidebar-view #footer-bg {
 .resource-job-update #add-job-material-button,
 .resource-job-update #add-job-equipment-button,
 .resource-job-update #add-job-discount-button,
+.resource-job-update #add-standalone-part-button,
+.resource-job-update #add-standalone-material-button,
+.resource-job-update #add-standalone-equipment-button,
 .resource-estimate-update #add-job-service-button,
 .resource-estimate-update #add-job-part-button,
 .resource-estimate-update #add-job-labor-button,
 .resource-estimate-update #add-job-material-button,
 .resource-estimate-update #add-job-equipment-button,
 .resource-estimate-update #add-job-discount-button,
+.resource-estimate-update #add-standalone-part-button,
+.resource-estimate-update #add-standalone-material-button,
+.resource-estimate-update #add-standalone-equipment-button,
 .resource-job-update #clear-date-time,
 .resource-estimate-update #clear-date-time {
   padding: 0.55rem 0.95rem;
@@ -11315,12 +12084,18 @@ body.sidebar-view #footer-bg {
 .resource-job-update #add-job-material-button:hover,
 .resource-job-update #add-job-equipment-button:hover,
 .resource-job-update #add-job-discount-button:hover,
+.resource-job-update #add-standalone-part-button:hover,
+.resource-job-update #add-standalone-material-button:hover,
+.resource-job-update #add-standalone-equipment-button:hover,
 .resource-estimate-update #add-job-service-button:hover,
 .resource-estimate-update #add-job-part-button:hover,
 .resource-estimate-update #add-job-labor-button:hover,
 .resource-estimate-update #add-job-material-button:hover,
 .resource-estimate-update #add-job-equipment-button:hover,
 .resource-estimate-update #add-job-discount-button:hover,
+.resource-estimate-update #add-standalone-part-button:hover,
+.resource-estimate-update #add-standalone-material-button:hover,
+.resource-estimate-update #add-standalone-equipment-button:hover,
 .resource-job-update #clear-date-time:hover,
 .resource-estimate-update #clear-date-time:hover {
   border-color: #4d816d;
@@ -11336,16 +12111,142 @@ body.sidebar-view #footer-bg {
 .resource-job-update #add-job-material-button:focus-visible,
 .resource-job-update #add-job-equipment-button:focus-visible,
 .resource-job-update #add-job-discount-button:focus-visible,
+.resource-job-update #add-standalone-part-button:focus-visible,
+.resource-job-update #add-standalone-material-button:focus-visible,
+.resource-job-update #add-standalone-equipment-button:focus-visible,
 .resource-estimate-update #add-job-service-button:focus-visible,
 .resource-estimate-update #add-job-part-button:focus-visible,
 .resource-estimate-update #add-job-labor-button:focus-visible,
 .resource-estimate-update #add-job-material-button:focus-visible,
 .resource-estimate-update #add-job-equipment-button:focus-visible,
 .resource-estimate-update #add-job-discount-button:focus-visible,
+.resource-estimate-update #add-standalone-part-button:focus-visible,
+.resource-estimate-update #add-standalone-material-button:focus-visible,
+.resource-estimate-update #add-standalone-equipment-button:focus-visible,
 .resource-job-update #clear-date-time:focus-visible,
 .resource-estimate-update #clear-date-time:focus-visible {
   outline: 2px solid #5FA3D3;
   outline-offset: 2px;
+}
+
+.resource-job-update .contextual-prompt,
+.resource-estimate-update .contextual-prompt {
+  border-color: #2f5a4a;
+  background: #1f342b;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.resource-job-update .contextual-prompt > summary,
+.resource-estimate-update .contextual-prompt > summary {
+  background: linear-gradient(180deg, #2a4639 0%, #21382e 100%);
+  color: #E4ECE8;
+}
+
+.resource-job-update .contextual-prompt > summary::after,
+.resource-estimate-update .contextual-prompt > summary::after {
+  color: #BFD0C8;
+}
+
+.resource-job-update .contextual-prompt-items,
+.resource-estimate-update .contextual-prompt-items {
+  border-top-color: #2f5a4a;
+  background: #1f342b;
+}
+
+.resource-job-update .contextual-prompt-item,
+.resource-estimate-update .contextual-prompt-item {
+  border-color: #355b4b;
+  background: #223a30;
+}
+
+.resource-job-update .contextual-prompt-item-name,
+.resource-estimate-update .contextual-prompt-item-name {
+  color: #DCE7E2;
+}
+
+.resource-job-update .contextual-prompt-item-add,
+.resource-estimate-update .contextual-prompt-item-add {
+  border-color: #3d6b5a;
+  background: linear-gradient(180deg, #2d4b3f 0%, #253E33 100%);
+  color: #E4ECE8;
+}
+
+.resource-job-update .contextual-prompt-item-add:hover,
+.resource-estimate-update .contextual-prompt-item-add:hover {
+  border-color: #4d816d;
+  background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%);
+  color: #F2F5F3;
+}
+
+.resource-job-update .service-sub-item-row,
+.resource-estimate-update .service-sub-item-row {
+  border-color: #355b4b;
+  background: linear-gradient(180deg, #223a30 0%, #1f342b 100%);
+}
+
+.resource-job-update .service-sub-item-name,
+.resource-estimate-update .service-sub-item-name {
+  color: #E4ECE8;
+}
+
+.resource-job-update .service-sub-item-price,
+.resource-estimate-update .service-sub-item-price,
+.resource-job-update .service-sub-item-serial-wrap input,
+.resource-estimate-update .service-sub-item-serial-wrap input {
+  border-color: #3d6b5a;
+  background: #1f342b;
+  color: #F2F5F3;
+}
+
+.resource-job-update .service-sub-item-included,
+.resource-estimate-update .service-sub-item-included {
+  border-color: #4d816d;
+  background: #244236;
+  color: #CDE4D8;
+}
+
+.resource-job-update .service-sub-item-remove,
+.resource-estimate-update .service-sub-item-remove {
+  border-color: #9a3535;
+  background: #4c1f1f;
+  color: #f8d8d8;
+}
+
+.resource-job-update .service-sub-item-remove:hover,
+.resource-estimate-update .service-sub-item-remove:hover {
+  background: #5e2727;
+  border-color: #b24646;
+}
+
+.resource-job-update .service-sub-item-serial-wrap label,
+.resource-estimate-update .service-sub-item-serial-wrap label {
+  color: #BFD0C8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .service-sub-item-row.is-entering {
+    animation: none;
+  }
+}
+
+.resource-job-update #create-job-form .standalone-items-toggle,
+.resource-estimate-update #create-job-form .standalone-items-toggle {
+  border-color: #2f5a4a;
+  background: #223a30;
+}
+
+.resource-job-update #create-job-form .standalone-items-toggle > summary,
+.resource-estimate-update #create-job-form .standalone-items-toggle > summary {
+  background: #00A86B;
+  color: #F2F5F3;
+}
+
+.resource-job-update #create-job-form .standalone-items-actions,
+.resource-job-update #job-standalone-items-list,
+.resource-estimate-update #create-job-form .standalone-items-actions,
+.resource-estimate-update #job-standalone-items-list {
+  border-top-color: #2f5a4a;
+  background: #1f342b;
 }
 
 .resource-job-update .job-row-remove-button,
@@ -11588,6 +12489,107 @@ body.sidebar-view #footer-bg {
   border-color: #4d816d;
   background: #2d4b3f;
   color: #F2F5F3;
+}
+
+/* Service category pill selectors */
+.service-category-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.service-category-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid #3d6b5a;
+  border-radius: 999px;
+  background: transparent;
+  color: #9bb5a8;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.service-category-pill input[type="checkbox"] {
+  display: none;
+}
+
+.service-category-pill:hover {
+  border-color: #4d816d;
+  background: #1e3028;
+  color: #d0e5da;
+}
+
+.service-category-pill--selected {
+  border-color: #4d816d;
+  background: linear-gradient(180deg, #2d4b3f 0%, #253E33 100%);
+  color: #E4ECE8;
+}
+
+.resource-category-management {
+  margin-top: 1rem;
+}
+
+.resource-category-management .category-management-column + .category-management-column {
+  margin-top: 0.9rem;
+}
+
+.category-management-plain-list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.category-management-plain-list li + li {
+  margin-top: 0.3rem;
+}
+
+.category-management-custom-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.category-management-custom-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.category-management-custom-list form {
+  margin: 0;
+}
+
+.category-management-inline-add {
+  margin-top: 1rem;
+}
+
+.category-management-inline-add > summary {
+  cursor: pointer;
+  display: inline-block;
+}
+
+.category-management-inline-form {
+  margin-top: 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.category-management-inline-form input[type="text"] {
+  min-width: 240px;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  color: #d0e5da;
 }
 
 .resource-pricebook-form #create-service-form-actions button,

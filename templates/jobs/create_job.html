@@ -18,7 +18,7 @@
         </ol>
       </nav>
 
-      <form id="create-job-form" action="{{ url_for('jobs.create_job', customerId=customerId) }}" method="post" data-services-catalog='{{ services_catalog|tojson }}' data-parts-catalog='{{ parts_catalog|tojson }}' data-labors-catalog='{{ labors_catalog|tojson }}' data-materials-catalog='{{ materials_catalog|tojson }}' data-equipments-catalog='{{ equipments_catalog|tojson }}' data-discounts-catalog='{{ discounts_catalog|tojson }}' data-parts-by-id='{{ parts_by_id|tojson }}' data-materials-by-id='{{ materials_by_id|tojson }}' data-customer-properties='{{ customer_properties|tojson }}' data-initial-hvac-systems='{{ initial_hvac_systems|tojson }}' data-customer-id='{{ customerId }}' data-schedule-required="false">
+      <form id="create-job-form" action="{{ url_for('jobs.create_job', customerId=customerId) }}" method="post" data-services='{{ services|tojson }}' data-parts='{{ parts|tojson }}' data-materials='{{ materials|tojson }}' data-equipments='{{ equipments|tojson }}' data-part-categories='{{ part_categories|tojson }}' data-material-categories='{{ material_categories|tojson }}' data-equipment-categories='{{ equipment_categories|tojson }}' data-services-catalog='{{ services_catalog|tojson }}' data-parts-catalog='{{ parts_catalog|tojson }}' data-materials-catalog='{{ materials_catalog|tojson }}' data-equipments-catalog='{{ equipments_catalog|tojson }}' data-discounts-catalog='{{ discounts_catalog|tojson }}' data-customer-properties='{{ customer_properties|tojson }}' data-initial-hvac-systems='{{ initial_hvac_systems|tojson }}' data-customer-id='{{ customerId }}' data-schedule-required="false">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="customer_id" value="{{ customerId }}" />
 
@@ -192,179 +192,15 @@
           {% endfor %}
         </template>
 
-        <h2 class="create-job-form-section-header">Parts Used</h2>
-
-        <div id="job-parts-list">
-          <div class="add-customer-form-row job-part-row" data-part-index="1">
-            <div class="add-customer-form-field">
-              <label for="part-code-1">Part</label>
-              <select id="part-code-1" name="part_code[]">
-                <option value="">-- Select a part --</option>
-                {% for part in parts %}
-                  <option value="{{ part._id }}">{{ part.part_name }}{% if part.sku %} ({{ part.sku }}){% endif %}</option>
-                {% endfor %}
-              </select>
-            </div>
-
-            <div class="add-customer-form-field">
-              <label for="part-unit-cost-1">Unit Cost</label>
-              <input id="part-unit-cost-1" name="part_unit_cost[]" type="text" placeholder="$0.00" />
-            </div>
+        <details id="standalone-items-toggle" class="standalone-items-toggle">
+          <summary>ADD STANDALONE ITEMS</summary>
+          <div class="standalone-items-actions">
+            <button id="add-standalone-part-button" type="button">+ Add part</button>
+            <button id="add-standalone-material-button" type="button">+ Add material</button>
+            <button id="add-standalone-equipment-button" type="button">+ Add equipment</button>
           </div>
-        </div>
-
-        <div id="job-parts-actions">
-          <button id="add-job-part-button" type="button">Add Part</button>
-        </div>
-
-        <template id="part-options-template">
-          {% for part in parts %}
-            <option value="{{ part._id }}">{{ part.part_name }}{% if part.sku %} ({{ part.sku }}){% endif %}</option>
-          {% endfor %}
-        </template>
-
-        <h2 class="create-job-form-section-header">Equipment Installed</h2>
-
-        <div id="job-equipments-list">
-          <div class="add-customer-form-row job-equipment-row" data-equipment-index="1">
-            <div class="add-customer-form-field">
-              <label for="equipment-name-1">Equipment</label>
-              <select id="equipment-name-1" name="equipment_name[]">
-                <option value="">-- Select equipment --</option>
-                {% for equipment in equipments %}
-                  <option value="{{ equipment.equipment_name }}">{{ equipment.equipment_name }}{% if equipment.sku %} ({{ equipment.sku }}){% endif %}</option>
-                {% endfor %}
-              </select>
-            </div>
-
-            <div class="add-customer-form-field">
-              <label for="equipment-quantity-installed-1">Quantity Installed</label>
-              <input id="equipment-quantity-installed-1" name="equipment_quantity_installed[]" type="number" step="0.25" min="0" placeholder="0" />
-            </div>
-
-            <div class="add-customer-form-field">
-              <label for="equipment-price-1">Price</label>
-              <input id="equipment-price-1" name="equipment_price[]" type="text" placeholder="$0.00" />
-            </div>
-          </div>
-        </div>
-
-        <div id="job-equipments-actions">
-          <button id="add-job-equipment-button" type="button">Add Equipment</button>
-        </div>
-
-        <template id="equipment-options-template">
-          {% for equipment in equipments %}
-            <option value="{{ equipment.equipment_name }}">{{ equipment.equipment_name }}{% if equipment.sku %} ({{ equipment.sku }}){% endif %}</option>
-          {% endfor %}
-        </template>
-
-        <h2 class="create-job-form-section-header">Labor</h2>
-
-        <div id="job-labors-list">
-          <div class="add-customer-form-row job-labor-row" data-labor-index="1">
-            <div class="add-customer-form-field">
-              <label for="labor-description-1">Labor</label>
-              <select id="labor-description-1" name="labor_description[]">
-                <option value="">-- Select labor --</option>
-                {% for labor in labors %}
-                  <option value="{{ labor.labor_description }}">{{ labor.labor_description }} ({{ labor.labor_category }})</option>
-                {% endfor %}
-              </select>
-            </div>
-
-            <div class="add-customer-form-field">
-              <label for="labor-hours-1">Hours</label>
-              <input id="labor-hours-1" name="labor_hours[]" type="number" step="0.25" min="0" placeholder="0" />
-            </div>
-
-            <div class="add-customer-form-field">
-              <label for="labor-hourly-rate-1">Hourly Rate</label>
-              <input id="labor-hourly-rate-1" name="labor_hourly_rate[]" type="text" placeholder="$0.00" />
-            </div>
-          </div>
-        </div>
-
-        <div id="job-labors-actions">
-          <button id="add-job-labor-button" type="button">Add Labor</button>
-        </div>
-
-        <template id="labor-options-template">
-          {% for labor in labors %}
-            <option value="{{ labor.labor_description }}">{{ labor.labor_description }} ({{ labor.labor_category }})</option>
-          {% endfor %}
-        </template>
-
-        <h2 class="create-job-form-section-header">Materials</h2>
-
-        <div id="job-materials-list">
-          <div class="add-customer-form-row job-material-row" data-material-index="1">
-            <div class="add-customer-form-field">
-              <label for="material-name-1">Material</label>
-              <select id="material-name-1" name="material_name[]">
-                <option value="">-- Select material --</option>
-                {% for material in materials %}
-                  <option value="{{ material.material_name }}">{{ material.material_name }}{% if material.part_number %} ({{ material.part_number }}){% endif %}</option>
-                {% endfor %}
-              </select>
-            </div>
-
-            <div class="add-customer-form-field">
-              <label for="material-quantity-used-1">Quantity</label>
-              <input id="material-quantity-used-1" name="material_quantity_used[]" type="number" step="0.25" min="0" placeholder="0" />
-            </div>
-
-            <div class="add-customer-form-field">
-              <label for="material-unit-of-measure-1">Unit</label>
-              <select id="material-unit-of-measure-1" name="material_unit_of_measure[]">
-                <option value="">-- Select a unit --</option>
-                <option value="lbs">lbs</option>
-                <option value="ft">ft</option>
-                <option value="in">in</option>
-                <option value="oz">oz</option>
-                <option value="gal">gal</option>
-                <option value="qt">qt</option>
-                <option value="pt">pt</option>
-                <option value="fl_oz">fl_oz</option>
-                <option value="sq_ft">sq_ft</option>
-                <option value="each">each</option>
-                <option value="box">box</option>
-                <option value="roll">roll</option>
-              </select>
-            </div>
-
-            <div class="add-customer-form-field">
-              <label for="material-price-1">Price</label>
-              <input id="material-price-1" name="material_price[]" type="text" placeholder="$0.00" />
-            </div>
-          </div>
-        </div>
-
-        <div id="job-materials-actions">
-          <button id="add-job-material-button" type="button">Add Material</button>
-        </div>
-
-        <template id="material-options-template">
-          {% for material in materials %}
-            <option value="{{ material.material_name }}">{{ material.material_name }}{% if material.part_number %} ({{ material.part_number }}){% endif %}</option>
-          {% endfor %}
-        </template>
-
-        <template id="material-unit-options-template">
-          <option value="">-- Select a unit --</option>
-          <option value="lbs">lbs</option>
-          <option value="ft">ft</option>
-          <option value="in">in</option>
-          <option value="oz">oz</option>
-          <option value="gal">gal</option>
-          <option value="qt">qt</option>
-          <option value="pt">pt</option>
-          <option value="fl_oz">fl_oz</option>
-          <option value="sq_ft">sq_ft</option>
-          <option value="each">each</option>
-          <option value="box">box</option>
-          <option value="roll">roll</option>
-        </template>
+          <div id="job-standalone-items-list"></div>
+        </details>
 
         <h2 class="create-job-form-section-header">Discounts</h2>
 
@@ -412,5 +248,5 @@
     </div>
   </div>
 
-  <script src="{{ url_for('static', filename='js/job_form.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/create_job_contextual.js') }}"></script>
 {% endblock %}

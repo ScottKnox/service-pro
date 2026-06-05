@@ -20,7 +20,7 @@
             <li><a href="{{ url_for('customers.view_property', customerId=customerId, propertyId=property_id) }}">View Property</a></li>
           {% endif %}
           <li>
-            <a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id) }}">View HVAC System</a>
+            <a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id, job_id=job_id) }}">View HVAC System</a>
           </li>
           <li aria-current="page">View Diagnostics</li>
         </ol>
@@ -49,7 +49,7 @@
             <h3>All Results</h3>
             <div class="hvac-diagnostic-sections-grid">
               {% for diagnostic in diagnostics %}
-                <a class="hvac-component-card hvac-component-card--diagnostics hvac-diagnostic-section-card" href="{{ url_for('customers.view_hvac_diagnostic', customerId=customerId, reference_type=reference_type, reference_id=reference_id, diagnostic_index=diagnostic.diagnostic_index, property_id=property_id) }}">
+                <a class="hvac-component-card hvac-component-card--diagnostics hvac-diagnostic-section-card" href="{{ url_for('customers.view_hvac_diagnostic', customerId=customerId, reference_type=reference_type, reference_id=reference_id, diagnostic_index=diagnostic.diagnostic_index, property_id=property_id, job_id=job_id) }}">
                   <div class="hvac-component-card-header">
                     <div class="hvac-component-card-icon hvac-component-card-icon--diagnostics" aria-hidden="true">
                       <svg viewBox="0 0 24 24" width="20" height="20" focusable="false"><path d="M4 6h16v12H4z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 10h10M7 14h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>

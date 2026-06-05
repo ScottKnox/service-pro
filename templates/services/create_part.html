@@ -36,14 +36,6 @@
           </div>
 
           <div class="add-customer-form-field">
-            <label for="part-subcategory">Subcategory</label>
-            <select id="part-subcategory" name="subcategory" required>
-              <option value="part" {% if form_data.subcategory == 'part' %}selected{% endif %}>Part</option>
-              <option value="equipment" {% if form_data.subcategory == 'equipment' %}selected{% endif %}>Equipment</option>
-            </select>
-          </div>
-
-          <div class="add-customer-form-field">
             <label for="part-category">Category</label>
             <div class="category-input-toggle" data-category-field>
               <select id="part-category" name="category" data-category-select required>
@@ -82,16 +74,6 @@
             <label for="sell-price">Sell Price</label>
             <input id="sell-price" name="sell_price" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.sell_price|default('', true) }}" required />
             <p id="markup-autofill-message" class="form-field-note" style="margin-top: 0.35rem;"></p>
-          </div>
-
-          <div class="add-customer-form-field">
-            <label for="part-manufacturer">Manufacturer</label>
-            <input id="part-manufacturer" name="manufacturer" type="text" placeholder="Enter manufacturer" value="{{ form_data.manufacturer|default('', true) }}" />
-          </div>
-
-          <div class="add-customer-form-field">
-            <label for="part-model-number">Model Number</label>
-            <input id="part-model-number" name="model_number" type="text" placeholder="Model number (equipment often uses this)" value="{{ form_data.model_number|default('', true) }}" />
           </div>
 
           <div class="add-customer-form-field">

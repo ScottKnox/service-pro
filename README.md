@@ -11,33 +11,78 @@
 4. Create a local env file:
 	cp .env.example .env
 
-5. Set MongoDB connection settings in `.env`:
+## Local MongoDB Setup
 
-	Option A: provide a full URI (recommended for MongoDB Atlas)
+Use one of these options before running the app in local mode.
+
+Option A: MongoDB Community Server (installed locally on your machine)
+
+Windows:
+1. Install MongoDB Community Server from MongoDB docs.
+2. Start the MongoDB service.
+3. Confirm MongoDB is running on localhost:27017.
+
+macOS (Homebrew):
+1. Install MongoDB Community Edition tap and packages.
+	brew tap mongodb/brew
+	brew install mongodb-community@8.0
+2. Start service.
+	brew services start mongodb-community@8.0
+
+Linux (Ubuntu):
+1. Install MongoDB Community Server from MongoDB docs.
+2. Start service.
+	sudo systemctl start mongod
+3. Enable service on boot (optional).
+	sudo systemctl enable mongod
+
+Option B: Docker (quickest if Docker Desktop is already installed)
+1. Start a local MongoDB container:
+	docker run --name service-pro-mongo -p 27017:27017 -d mongo:8
+2. Verify container is running:
+	docker ps
+
+Optional: create the local database name up front (Mongo also auto-creates on first write)
+1. Open Mongo shell:
+	mongosh "mongodb://localhost:27017"
+2. Create/switch DB:
+	use service_pro
+3. Exit shell:
+	exit
+
+Quick connection check:
+1. Run:
+	mongosh "mongodb://localhost:27017" --eval "db.runCommand({ ping: 1 })"
+2. You should see an `ok: 1` result.
+
+5. Set environment mode and MongoDB settings in `.env`:
+
+	Local mode (default): app connects to local MongoDB
+	APP_ENV="local"
+	MONGODB_LOCAL_HOST="localhost"
+	MONGODB_LOCAL_PORT="27017"
+	MONGODB_LOCAL_DB_NAME="service_pro"
+	MONGODB_LOCAL_USERNAME=""
+	MONGODB_LOCAL_PASSWORD=""
+	NOTIFICATION_LOCAL_BASE_URL="http://127.0.0.1:5000"
+
+	Optional local URI override:
+	MONGODB_LOCAL_URI="mongodb://localhost:27017"
+
+	Note: keep local username/password blank unless your local Mongo instance has authentication enabled.
+	Note: local invoice/email links use `NOTIFICATION_LOCAL_BASE_URL`. Change it if you access the app through a different local address.
+
+	Production mode: app uses your current hosted Mongo configuration
+	APP_ENV="production"
 	MONGODB_URI="mongodb://username:password@host:27017/?authSource=admin"
 	MONGODB_DB_NAME="service_pro"
-
-	Option B: provide host and auth variables separately
-	MONGODB_HOST="localhost"
-	MONGODB_PORT="27017"
-	MONGODB_USERNAME="your_username"
-	MONGODB_PASSWORD="your_password"
-	MONGODB_AUTH_SOURCE="admin"
-	MONGODB_DB_NAME="service_pro"
+	NOTIFICATION_BASE_URL="https://your-production-app.example.com"
 
 	If your username or password includes special characters, they are URL-encoded by the app when building the URI.
 6. Start the Flask app:
 	python app.py
 7. Open:
 	http://127.0.0.1:5000/
-
-## MongoDB collections
-
-The app reads and writes these collections in the configured database:
-
-- customers
-- jobs
-- services
 
 ## Stripe test payments (local)
 

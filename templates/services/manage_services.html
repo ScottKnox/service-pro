@@ -24,20 +24,19 @@
 
           <div class="jobs-filter-list">
             <details class="jobs-filter-group" open>
-              <summary>Category</summary>
+              <summary>Service Type</summary>
               <div class="jobs-filter-content">
-                {% if service_categories %}
-                  {% for category in service_categories %}
-                    <label for="service-category-{{ loop.index }}">
-                      <input id="service-category-{{ loop.index }}" type="checkbox" name="filter_category" value="{{ category }}" /> {{ category }}
+                {% if service_types %}
+                  {% for service_type in service_types %}
+                    <label for="service-type-{{ loop.index }}">
+                      <input id="service-type-{{ loop.index }}" type="checkbox" name="filter_code" value="{{ service_type }}" /> {{ service_type }}
                     </label>
                   {% endfor %}
                 {% else %}
-                  <p>No categories available.</p>
+                  <p>No service types available.</p>
                 {% endif %}
               </div>
             </details>
-
           </div>
         </div>
 
@@ -72,15 +71,15 @@
                       href="{{ url_for('catalog.view_service', serviceId=service._id) }}"
                       data-catalog-card
                       data-filter-name="{{ service.service_name }}"
-                      data-filter-category="{{ service.category }}"
+                      data-filter-code="{{ service.service_type }}"
                     >
                       <div class="jobs-card-row">
                         <span class="jobs-card-label">Service</span>
                         <span class="jobs-card-value">{{ service.service_name }}</span>
                       </div>
                       <div class="jobs-card-row">
-                        <span class="jobs-card-label">Category</span>
-                        <span class="jobs-card-value">{{ service.category }}</span>
+                        <span class="jobs-card-label">Service Type</span>
+                        <span class="jobs-card-value">{{ service.service_type or '-' }}</span>
                       </div>
                       <div class="jobs-card-row">
                         <span class="jobs-card-label">Labor Hours</span>

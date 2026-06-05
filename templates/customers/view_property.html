@@ -125,6 +125,14 @@
                       <span class="view-customer-hvac-card-label">Metering Device</span>
                       <span class="view-customer-hvac-card-value">{{ hvac_system.metering_device|default('-', true) }}</span>
                     </div>
+                    <div class="view-customer-hvac-card-row">
+                      <span class="view-customer-hvac-card-label">Last Serviced</span>
+                      <span class="view-customer-hvac-card-value">{{ hvac_system.last_serviced_at|default('Never serviced', true) }}</span>
+                    </div>
+                    <div class="view-customer-hvac-card-row">
+                      <span class="view-customer-hvac-card-label">Serviced By</span>
+                      <span class="view-customer-hvac-card-value">{{ hvac_system.last_serviced_by|default('-', true) }}</span>
+                    </div>
                     {% if hvac_system.components %}
                       {% for component in hvac_system.components %}
                         <div class="view-customer-hvac-card-row">
@@ -185,33 +193,62 @@
             <div class="view-customer-jobs-list">
               {% if maintenance_history_rows %}
                 {% for row in maintenance_history_rows %}
-                  <a class="view-customer-card-link" href="{{ url_for('jobs.view_job', jobId=row.job_id) }}">
-                    <div class="view-customer-hvac-card-row">
-                      <span class="view-customer-hvac-card-label">Completed</span>
-                      <span class="view-customer-hvac-card-value">{{ row.date_completed|default('-', true) }}</span>
+                  {% set raw_completed = row.date_completed|default('', true) %}
+                  {% set date_part = raw_completed.split(' ')[0] if raw_completed else '' %}
+                  {% set date_tokens = date_part.split('/') if date_part and '/' in date_part else [] %}
+                  {% set month_names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] %}
+                  {% if date_tokens|length == 3 %}
+                    {% set month_index = (date_tokens[0]|int) - 1 %}
+                    {% if month_index >= 0 and month_index < 12 %}
+                      {% set completed_display = month_names[month_index] ~ ' ' ~ (date_tokens[1]|int) ~ ', ' ~ date_tokens[2] %}
+                    {% else %}
+                      {% set completed_display = row.date_completed|default('-', true) %}
+                    {% endif %}
+                  {% else %}
+                    {% set completed_display = row.date_completed|default('-', true) %}
+                  {% endif %}
+
+                  <a class="view-customer-card-link maintenance-history-card" href="{{ url_for('jobs.view_job', jobId=row.job_id) }}" aria-label="View completed job {{ row.job_id }}">
+                    <p class="maintenance-history-card-header">Completed {{ completed_display }} &middot; {{ row.assigned_employee|default('-', true) }}</p>
+
+                    {% for system_group in row.system_groups %}
+                      <p class="maintenance-history-system-name">{{ system_group.system_name|default('Deleted HVAC System', true) }}</p>
+                      {% for line_item in system_group['items'] %}
+                        <div class="maintenance-history-line-item">
+                          <span class="maintenance-history-line-item-name">{{ line_item.label|default('Item', true) }}</span>
+                          <span class="maintenance-history-line-item-amount">{{ line_item.amount|currency }}</span>
+                        </div>
+                      {% endfor %}
+                    {% endfor %}
+
+                    {% if row.ungrouped_items %}
+                      {% for line_item in row.ungrouped_items %}
+                        <div class="maintenance-history-line-item">
+                          <span class="maintenance-history-line-item-name">{{ line_item.label|default('Item', true) }}</span>
+                          <span class="maintenance-history-line-item-amount">{{ line_item.amount|currency }}</span>
+                        </div>
+                      {% endfor %}
+                    {% endif %}
+
+                    <div class="maintenance-history-total-row">
+                      <span>Visit total</span>
+                      <span>{{ row.visit_total|currency }}</span>
                     </div>
-                    <div class="view-customer-hvac-card-row">
-                      <span class="view-customer-hvac-card-label">Service</span>
-                      <span class="view-customer-hvac-card-value">{{ row.job_type|default('Service', true) }}</span>
-                    </div>
-                    <div class="view-customer-hvac-card-row">
-                      <span class="view-customer-hvac-card-label">Technician</span>
-                      <span class="view-customer-hvac-card-value">{{ row.assigned_employee|default('-', true) }}</span>
-                    </div>
-                    <div class="view-customer-hvac-card-row">
-                      <span class="view-customer-hvac-card-label">Status</span>
-                      <span class="view-customer-hvac-card-value">{{ row.status|default('-', true) }}</span>
-                    </div>
-                    <div class="view-customer-hvac-card-row">
-                      <span class="view-customer-hvac-card-label">Total</span>
-                      <span class="view-customer-hvac-card-value">{{ row.total_amount|currency }}</span>
-                    </div>
+
                   </a>
                 {% endfor %}
               {% else %}
                 <p>No completed maintenance history yet for this property.</p>
               {% endif %}
             </div>
+            {% if maintenance_total_pages|default(0, true) > 1 %}
+              <div class="list-pages">
+                <span>Page:</span>
+                {% for page_num in range(1, maintenance_total_pages + 1) %}
+                  <a class="{% if page_num == maintenance_page %}is-active{% endif %}" href="{{ url_for('customers.view_property', customerId=customerId, propertyId=propertyId, maintenance_page=page_num, sub_properties_page=sub_properties_page) }}">{{ page_num }}</a>
+                {% endfor %}
+              </div>
+            {% endif %}
           </div>
         </div>
       </section>

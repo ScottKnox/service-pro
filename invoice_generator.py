@@ -42,6 +42,10 @@ def _format_currency(value):
     return f"{sign}${abs(amount):,.2f}"
 
 
+def _is_effectively_zero(value):
+    return abs(_currency_to_float(value)) < 0.000001
+
+
 def _format_display_hours(value):
     text = str(value or "").strip()
     if not text:
@@ -676,14 +680,20 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
     for part in job.get("parts", []) or []:
         if not isinstance(part, dict):
             continue
+        amount = _part_display_amount(part)
+        if _is_effectively_zero(amount):
+            continue
         parts_rows.append([
             str(_part_display_name(part)),
-            str(_part_display_amount(part)),
+            str(amount),
         ])
 
     material_rows = []
     for material in job.get("materials", []) or []:
         if not isinstance(material, dict):
+            continue
+        amount = material.get("line_total") or "$0.00"
+        if _is_effectively_zero(amount):
             continue
         qty = _format_display_hours(material.get("quantity_used") or "0")
         unit = str(material.get("unit_of_measure") or "").strip()
@@ -691,7 +701,7 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
         material_rows.append([
             str(material.get("material_name") or "Material"),
             qty_display or "0",
-            str(material.get("line_total") or "$0.00"),
+            str(amount),
         ])
 
     equipment_rows = []
@@ -1257,60 +1267,69 @@ def generate_quote(job_id, job, customer, business_logo_path="", business=None):
     story.append(Spacer(1, 0.4 * inch))
 
     if job.get('parts'):
-        story.append(Paragraph("Parts", heading_style))
         parts_data = [["Part", "Price"]]
         for part in job.get('parts', []):
             if not isinstance(part, dict):
                 continue
-            parts_data.append([str(_part_display_name(part)), str(_part_display_amount(part))])
+            amount = _part_display_amount(part)
+            if _is_effectively_zero(amount):
+                continue
+            parts_data.append([str(_part_display_name(part)), str(amount)])
 
-        parts_breakdown_table = Table(parts_data, colWidths=[4.0 * inch, 1.5 * inch])
-        parts_breakdown_table.setStyle(
-            TableStyle(
-                [
-                    ("FONT", (0, 0), (-1, -1), "Helvetica", 10),
-                    ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 10),
-                    ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1B263B")),
-                    ("ALIGN", (0, 0), (0, -1), "LEFT"),
-                    ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, colors.HexColor("#1B263B")),
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E9EEF4")),
-                ]
+        if len(parts_data) > 1:
+            story.append(Paragraph("Parts", heading_style))
+            parts_breakdown_table = Table(parts_data, colWidths=[4.0 * inch, 1.5 * inch])
+            parts_breakdown_table.setStyle(
+                TableStyle(
+                    [
+                        ("FONT", (0, 0), (-1, -1), "Helvetica", 10),
+                        ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 10),
+                        ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1B263B")),
+                        ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("LINEBELOW", (0, 0), (-1, 0), 1, colors.HexColor("#1B263B")),
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E9EEF4")),
+                    ]
+                )
             )
-        )
-        story.append(parts_breakdown_table)
-        story.append(Spacer(1, 0.4 * inch))
+            story.append(parts_breakdown_table)
+            story.append(Spacer(1, 0.4 * inch))
 
     if job.get('materials'):
-        story.append(Paragraph("Materials", heading_style))
         materials_data = [["Material", "Quantity", "Price", "Line Total"]]
         for material in job.get('materials', []):
-            if isinstance(material, dict) and material.get('material_name'):
-                materials_data.append([
-                    material.get('material_name', ''),
-                    f"{material.get('quantity_used', '')} {material.get('unit_of_measure', '')}".strip(),
-                    material.get('price', '$0.00'),
-                    material.get('line_total', '$0.00'),
-                ])
+            if not (isinstance(material, dict) and material.get('material_name')):
+                continue
+            line_total = material.get('line_total', '$0.00')
+            if _is_effectively_zero(line_total):
+                continue
+            materials_data.append([
+                material.get('material_name', ''),
+                f"{material.get('quantity_used', '')} {material.get('unit_of_measure', '')}".strip(),
+                material.get('price', '$0.00'),
+                line_total,
+            ])
 
-        materials_breakdown_table = Table(materials_data, colWidths=[2.2 * inch, 1.0 * inch, 1.0 * inch, 1.3 * inch])
-        materials_breakdown_table.setStyle(
-            TableStyle(
-                [
-                    ("FONT", (0, 0), (-1, -1), "Helvetica", 10),
-                    ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 10),
-                    ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1B263B")),
-                    ("ALIGN", (0, 0), (0, -1), "LEFT"),
-                    ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
-                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("LINEBELOW", (0, 0), (-1, 0), 1, colors.HexColor("#1B263B")),
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E9EEF4")),
-                ]
+        if len(materials_data) > 1:
+            story.append(Paragraph("Materials", heading_style))
+            materials_breakdown_table = Table(materials_data, colWidths=[2.2 * inch, 1.0 * inch, 1.0 * inch, 1.3 * inch])
+            materials_breakdown_table.setStyle(
+                TableStyle(
+                    [
+                        ("FONT", (0, 0), (-1, -1), "Helvetica", 10),
+                        ("FONT", (0, 0), (-1, 0), "Helvetica-Bold", 10),
+                        ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1B263B")),
+                        ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                        ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("LINEBELOW", (0, 0), (-1, 0), 1, colors.HexColor("#1B263B")),
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E9EEF4")),
+                    ]
+                )
             )
-        )
-        story.append(materials_breakdown_table)
-        story.append(Spacer(1, 0.4 * inch))
+            story.append(materials_breakdown_table)
+            story.append(Spacer(1, 0.4 * inch))
 
     if job.get('equipments'):
         story.append(Paragraph("Equipment", heading_style))

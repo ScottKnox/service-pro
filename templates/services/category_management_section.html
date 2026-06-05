@@ -1,0 +1,50 @@
+{% if category_management %}
+  <section id="category-management-{{ category_management.category_type }}" class="resource-category-management">
+    <h2>{{ category_management.section_title }}</h2>
+
+    {% if category_error %}
+      <p class="form-field-error">{{ category_error }}</p>
+    {% endif %}
+
+    <div class="category-management-column">
+      <h3>Default Categories</h3>
+      {% if category_management.default_categories %}
+        <ul class="category-management-plain-list">
+          {% for category in category_management.default_categories %}
+            <li>{{ category.name }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No default categories available.</p>
+      {% endif %}
+    </div>
+
+    <div class="category-management-column">
+      <h3>Custom Categories</h3>
+      {% if category_management.custom_categories %}
+        <ul class="category-management-plain-list category-management-custom-list">
+          {% for category in category_management.custom_categories %}
+            <li>
+              <span>{{ category.name }}</span>
+              <form method="post" action="{{ url_for('catalog.delete_category', categoryType=category_management.category_type, categoryId=category._id) }}" onsubmit="return confirm('Delete {{ category.name }}?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">Delete</button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No custom categories yet.</p>
+      {% endif %}
+    </div>
+
+    <details class="category-management-inline-add" {% if category_error %}open{% endif %}>
+      <summary>+ Add custom category</summary>
+      <form class="category-management-inline-form" method="post" action="{{ url_for('catalog.create_category', categoryType=category_management.category_type) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input id="category-management-input-{{ category_management.category_type }}" type="text" name="category" placeholder="Enter custom category" required>
+        <button type="submit">Save</button>
+      </form>
+    </details>
+  </section>
+{% endif %}

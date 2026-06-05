@@ -15,10 +15,10 @@
             <li><a href="{{ url_for('customers.view_property', customerId=customerId, propertyId=property_id) }}">View Property</a></li>
           {% endif %}
           <li>
-            <a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id) }}">View HVAC System</a>
+            <a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id, job_id=job_id) }}">View HVAC System</a>
           </li>
           <li>
-            <a href="{{ url_for('customers.view_hvac_diagnostics', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id) }}">View Diagnostics</a>
+            <a href="{{ url_for('customers.view_hvac_diagnostics', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id, job_id=job_id) }}">View Diagnostics</a>
           </li>
           <li aria-current="page">View Diagnostic</li>
         </ol>
@@ -27,9 +27,10 @@
       <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
-          <form method="POST" action="{{ url_for('customers.generate_hvac_system_report', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id) }}">
+          <form method="POST" action="{{ url_for('customers.generate_hvac_system_report', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id, job_id=job_id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="diagnostic_index" value="{{ diagnostic.diagnostic_index }}">
+            <input type="hidden" name="job_id" value="{{ job_id|default('', true) }}">
             <button type="submit" class="hvac-generate-report-button">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
                 <path d="M6 2h8l4 4v16H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
@@ -114,7 +115,7 @@
                               {% endif %}
 
                               <div class="hvac-diagnostic-photo-actions">
-                                <form method="POST" action="{{ url_for('customers.delete_hvac_diagnostic_photo', customerId=customerId, reference_type=reference_type, reference_id=reference_id, diagnosticId=diagnostic.diagnostic_id, property_id=property_id) }}" onsubmit="return confirm('Delete this photo? This cannot be undone.');">
+                                <form method="POST" action="{{ url_for('customers.delete_hvac_diagnostic_photo', customerId=customerId, reference_type=reference_type, reference_id=reference_id, diagnosticId=diagnostic.diagnostic_id, property_id=property_id, job_id=job_id) }}" onsubmit="return confirm('Delete this photo? This cannot be undone.');">
 
                                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                   <input type="hidden" name="diagnostic_index" value="{{ diagnostic.diagnostic_index }}">
@@ -165,7 +166,7 @@
       <form
         id="email-estimate-form"
         method="POST"
-        data-send-url="{{ url_for('customers.send_hvac_report_email', customerId=customerId, reference_type=reference_type, reference_id=reference_id, diagnostic_index=diagnostic.diagnostic_index, property_id=property_id) }}"
+        data-send-url="{{ url_for('customers.send_hvac_report_email', customerId=customerId, reference_type=reference_type, reference_id=reference_id, diagnostic_index=diagnostic.diagnostic_index, property_id=property_id, job_id=job_id) }}"
         data-quote-template="{{ report_email_template|default('', true)|e }}"
         data-invoice-template=""
       >

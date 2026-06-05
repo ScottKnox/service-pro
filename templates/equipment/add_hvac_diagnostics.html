@@ -19,7 +19,7 @@
           {% if property_id %}
             <li><a href="{{ url_for('customers.view_property', customerId=customerId, propertyId=property_id) }}">View Property</a></li>
           {% endif %}
-          <li><a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id) }}">View HVAC System</a></li>
+          <li><a href="{{ url_for('customers.view_hvac_system', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id, job_id=job_id) }}">View HVAC System</a></li>
           <li aria-current="page">Add Diagnostics</li>
         </ol>
       </nav>
@@ -28,8 +28,9 @@
         <p class="form-field-error">{{ error }}</p>
       {% endif %}
 
-      <form id="add-customer-form" action="{{ url_for('customers.add_hvac_diagnostics', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id) }}" method="post" enctype="multipart/form-data">
+      <form id="add-customer-form" action="{{ url_for('customers.add_hvac_diagnostics', customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id, job_id=job_id) }}" method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="job_id" value="{{ job_id|default('', true) }}">
 
         {% for section_label, fields in diagnostics_sections %}
           {% set section_key = section_label|lower|replace(' ', '_') %}

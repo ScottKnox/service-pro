@@ -28,7 +28,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Equipment Details</h2>
 
-        <div class="add-customer-form-row">
+        <div class="add-customer-form-row equipment-spec-row" {% if not form_data.equipment_type %}style="display:none;"{% endif %}>
           <div class="add-customer-form-field">
             <label for="equipment-name">Equipment Name</label>
             <input id="equipment-name" name="equipment_name" type="text" placeholder="Enter equipment name" value="{{ form_data.equipment_name|default('', true) }}" required />
@@ -36,7 +36,7 @@
 
           <div class="add-customer-form-field">
             <label for="equipment-type">Equipment Type</label>
-            <select id="equipment-type" name="equipment_type">
+            <select id="equipment-type" name="equipment_type" required>
               <option value="">-- Select a type --</option>
               {% for opt in equipment_type_options %}
                 <option value="{{ opt }}" {% if form_data.equipment_type == opt %}selected{% endif %}>{{ opt }}</option>
@@ -45,7 +45,7 @@
           </div>
         </div>
 
-        <div class="add-customer-form-row">
+        <div class="add-customer-form-row equipment-spec-row" {% if not form_data.equipment_type %}style="display:none;"{% endif %}>
           <div class="add-customer-form-field">
             <label for="equipment-manufacturer">Manufacturer</label>
             <input id="equipment-manufacturer" name="manufacturer" type="text" placeholder="Enter manufacturer" value="{{ form_data.manufacturer|default('', true) }}" />
@@ -53,7 +53,7 @@
           <div class="add-customer-form-field">
             <label for="equipment-category">Category</label>
             <div class="category-input-toggle" data-category-field>
-              <select id="equipment-category" name="category" data-category-select>
+              <select id="equipment-category" name="category" data-category-select required>
                 <option value="">-- Select a category --</option>
                 {% for category in category_options %}
                   <option value="{{ category }}" {% if form_data.category == category %}selected{% endif %}>{{ category }}</option>
@@ -68,8 +68,8 @@
           </div>
 
           <div class="add-customer-form-field">
-            <label for="equipment-sku">SKU</label>
-            <input id="equipment-sku" name="sku" type="text" placeholder="Enter SKU" value="{{ form_data.sku|default('', true) }}" />
+            <label for="equipment-model-number">Model Number</label>
+            <input id="equipment-model-number" name="model_number" type="text" placeholder="Enter model number" value="{{ form_data.model_number|default('', true) }}" />
           </div>
         </div>
 
@@ -80,15 +80,25 @@
           </div>
 
           <div class="add-customer-form-field">
-            <label for="equipment-notes">Notes</label>
-            <textarea id="equipment-notes" name="notes" rows="4" placeholder="Installation notes, warranty details, and reminders">{{ form_data.notes|default('', true) }}</textarea>
+            <label for="equipment-sku">SKU</label>
+            <input id="equipment-sku" name="sku" type="text" placeholder="Enter SKU" value="{{ form_data.sku|default('', true) }}" />
           </div>
         </div>
 
-        <div class="add-customer-form-row">
+        <div class="add-customer-form-row equipment-spec-row" {% if not form_data.equipment_type %}style="display:none;"{% endif %}>
           <div class="add-customer-form-field">
-            <label for="equipment-default-price">Default Price</label>
-            <input id="equipment-default-price" name="default_price" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.default_price|default('', true) }}" />
+            <label for="equipment-cost-price">Cost Price</label>
+            <input id="equipment-cost-price" name="cost_price" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.cost_price|default('', true) }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="equipment-sell-price">Sell Price</label>
+            <input id="equipment-sell-price" name="sell_price" type="number" step="0.01" min="0" placeholder="0.00" value="{{ form_data.sell_price|default('', true) }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="equipment-warranty-months">Warranty Months</label>
+            <input id="equipment-warranty-months" name="warranty_months" type="number" step="1" min="0" placeholder="Optional" value="{{ form_data.warranty_months|default('', true) }}" />
           </div>
 
           <div class="add-customer-form-field">
@@ -97,10 +107,18 @@
           </div>
         </div>
 
-        <div class="add-customer-form-row">
+        <div class="add-customer-form-row equipment-spec-row" {% if not form_data.equipment_type %}style="display:none;"{% endif %}>
           <div class="add-customer-form-field">
-            <label for="equipment-default-quantity">Default Quantity Installed</label>
-            <input id="equipment-default-quantity" name="default_quantity_installed" type="number" step="0.25" min="0" placeholder="0" value="{{ form_data.default_quantity_installed|default('', true) }}" />
+            <label for="equipment-sort-order">Sort Order</label>
+            <input id="equipment-sort-order" name="sort_order" type="number" step="1" min="0" placeholder="0" value="{{ form_data.sort_order|default('', true) }}" />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="equipment-is-active">Catalog Status</label>
+            <select id="equipment-is-active" name="is_active">
+              <option value="true" {% if form_data.is_active|default('true', true) == 'true' %}selected{% endif %}>Active</option>
+              <option value="false" {% if form_data.is_active == 'false' %}selected{% endif %}>Inactive</option>
+            </select>
           </div>
 
           <div class="add-customer-form-field">
@@ -110,6 +128,97 @@
               <option value="always" {% if form_data.tax_override == 'always' %}selected{% endif %}>Always tax this item</option>
               <option value="never" {% if form_data.tax_override == 'never' %}selected{% endif %}>Never tax this item</option>
             </select>
+          </div>
+        </div>
+
+        <h2 class="create-job-form-section-header">Specifications</h2>
+
+        <p id="equipment-spec-empty-state" class="form-field-note">No Equipment Type Selected.</p>
+
+        <div class="add-customer-form-row equipment-spec-row">
+          <div class="add-customer-form-field">
+            <label for="equipment-cooling-capacity">Cooling Capacity</label>
+            <select id="equipment-cooling-capacity" name="cooling_capacity">
+              <option value="">-- Select cooling capacity --</option>
+              {% for option in equipment_cooling_capacity_options|default([]) %}
+                <option value="{{ option }}" {% if form_data.cooling_capacity|default('') == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="add-customer-form-field">
+            <label for="equipment-seer-rating">SEER Rating</label>
+            <input id="equipment-seer-rating" name="seer_rating" type="number" step="0.1" min="0" placeholder="e.g. 16" value="{{ form_data.seer_rating|default('', true) }}" />
+          </div>
+          <div class="add-customer-form-field">
+            <label for="equipment-metering-device">Metering Device</label>
+            <select id="equipment-metering-device" name="metering_device">
+              <option value="">-- Select metering device --</option>
+              {% for option in equipment_metering_device_options|default([]) %}
+                <option value="{{ option }}" {% if form_data.metering_device|default('') == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="add-customer-form-row equipment-spec-row">
+          <div class="add-customer-form-field">
+            <label for="equipment-afue-rating">AFUE Rating</label>
+            <input id="equipment-afue-rating" name="afue_rating" type="number" step="0.1" min="0" placeholder="e.g. 80" value="{{ form_data.afue_rating|default('', true) }}" />
+          </div>
+          <div class="add-customer-form-field">
+            <label for="equipment-btu-input">BTU Input</label>
+            <select id="equipment-btu-input" name="btu_input">
+              <option value="">-- Select BTU input --</option>
+              {% for option in equipment_btu_options|default([]) %}
+                <option value="{{ option }}" {% if form_data.btu_input|default('') == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="add-customer-form-field">
+            <label for="equipment-btu-output">BTU Output</label>
+            <select id="equipment-btu-output" name="btu_output">
+              <option value="">-- Select BTU output --</option>
+              {% for option in equipment_btu_options|default([]) %}
+                <option value="{{ option }}" {% if form_data.btu_output|default('') == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="add-customer-form-row equipment-spec-row">
+          <div class="add-customer-form-field">
+            <label for="equipment-refrigerant-type">Refrigerant Type</label>
+            <select id="equipment-refrigerant-type" name="refrigerant_type">
+              <option value="">-- Select refrigerant type --</option>
+              {% for option in equipment_refrigerant_type_options|default([]) %}
+                <option value="{{ option }}" {% if form_data.refrigerant_type|default('') == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="add-customer-form-field">
+            <label for="equipment-stages">Number of Stages</label>
+            <select id="equipment-stages" name="stages">
+              <option value="">-- Select number of stages --</option>
+              {% for option in equipment_stages_options|default([]) %}
+                <option value="{{ option }}" {% if form_data.stages|default('') == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="add-customer-form-field">
+            <label for="equipment-blower-motor-type">Blower Motor Type</label>
+            <select id="equipment-blower-motor-type" name="blower_motor_type">
+              <option value="">-- Select blower motor type --</option>
+              {% for option in equipment_blower_motor_type_options|default([]) %}
+                <option value="{{ option }}" {% if form_data.blower_motor_type|default('') == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="add-customer-form-row equipment-spec-row">
+          <div class="add-customer-form-field">
+            <label for="equipment-voltage">Voltage</label>
+            <input id="equipment-voltage" name="voltage" type="text" placeholder="e.g. 208/230V" value="{{ form_data.voltage|default('', true) }}" />
           </div>
         </div>
 
@@ -125,4 +234,5 @@
 
 {% block scripts %}
   <script src="{{ url_for('static', filename='js/category_field_toggle.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/equipment_type_field_visibility.js') }}"></script>
 {% endblock %}

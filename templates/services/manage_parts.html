@@ -37,45 +37,6 @@
                 {% endif %}
               </div>
             </details>
-
-            <details class="jobs-filter-group" open>
-              <summary>Subcategory (Part, Equipment)</summary>
-              <div class="jobs-filter-content">
-                {% if part_subcategories %}
-                  {% for subcategory in part_subcategories %}
-                    <label for="part-subcategory-{{ loop.index }}">
-                      <input id="part-subcategory-{{ loop.index }}" type="checkbox" name="filter_code" value="{{ subcategory }}" /> {{ subcategory|title }}
-                    </label>
-                  {% endfor %}
-                {% else %}
-                  <p>No subcategories available.</p>
-                {% endif %}
-              </div>
-            </details>
-
-            <details class="jobs-filter-group" open>
-              <summary>Manufacturer</summary>
-              <div class="jobs-filter-content">
-                {% if part_manufacturers %}
-                  {% for manufacturer in part_manufacturers %}
-                    <label for="part-manufacturer-{{ loop.index }}">
-                      <input id="part-manufacturer-{{ loop.index }}" type="checkbox" name="filter_manufacturer" value="{{ manufacturer }}" /> {{ manufacturer }}
-                    </label>
-                  {% endfor %}
-                  {% if has_unspecified_manufacturer %}
-                    <label for="part-manufacturer-unspecified">
-                      <input id="part-manufacturer-unspecified" type="checkbox" name="filter_manufacturer" value="" /> Unspecified
-                    </label>
-                  {% endif %}
-                {% elif has_unspecified_manufacturer %}
-                  <label for="part-manufacturer-unspecified">
-                    <input id="part-manufacturer-unspecified" type="checkbox" name="filter_manufacturer" value="" /> Unspecified
-                  </label>
-                {% else %}
-                  <p>No manufacturers available.</p>
-                {% endif %}
-              </div>
-            </details>
           </div>
         </div>
 
@@ -111,8 +72,6 @@
                       data-card-link-url="{{ url_for('catalog.view_part', partId=part._id) }}"
                       data-filter-name="{{ part.part_name }}"
                       data-filter-category="{{ part.category }}"
-                      data-filter-code="{{ part.subcategory }}"
-                      data-filter-manufacturer="{{ part.manufacturer|default('', true) }}"
                       role="link"
                       tabindex="0"
                       aria-label="View part {{ part.part_name }}"
@@ -122,16 +81,8 @@
                         <span class="jobs-card-value">{{ part.part_name }}</span>
                       </div>
                       <div class="jobs-card-row">
-                        <span class="jobs-card-label">Subcategory</span>
-                        <span class="jobs-card-value">{{ part.subcategory|title }}</span>
-                      </div>
-                      <div class="jobs-card-row">
                         <span class="jobs-card-label">Category</span>
                         <span class="jobs-card-value">{{ part.category }}</span>
-                      </div>
-                      <div class="jobs-card-row">
-                        <span class="jobs-card-label">Manufacturer</span>
-                        <span class="jobs-card-value">{{ part.manufacturer or '-' }}</span>
                       </div>
                       <div class="jobs-card-row">
                         <span class="jobs-card-label">Cost Price</span>
@@ -161,6 +112,7 @@
               {% endif %}
             </div>
           </div>
+          {% include 'services/category_management_section.html' %}
         </div>
       </div>
         </div>

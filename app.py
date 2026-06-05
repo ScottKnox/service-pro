@@ -12,24 +12,33 @@ from flask_wtf.csrf import CSRFProtect
 import stripe
 
 from blueprints import register_blueprints
+from config import (
+    APP_ENV,
+    get_mail_config,
+    get_secret_key,
+    scheduler_enabled_flag,
+    scheduler_interval_minutes,
+    validate_startup_config,
+)
 from mongo import build_reference_filter, ensure_connection_or_500, serialize_doc
 from utils.currency import normalize_currency
+
+validate_startup_config()
 
 app = Flask(__name__)
 
 # Session Configuration
-_secret_key = os.getenv("SECRET_KEY")
-if not _secret_key:
-    raise RuntimeError("SECRET_KEY environment variable is not set")
+_secret_key = get_secret_key()
 app.secret_key = _secret_key
 
 # Flask-Mail Configuration
-app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER", "smtp.gmail.com")
-app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", 587))
-app.config["MAIL_USE_TLS"] = os.getenv("MAIL_USE_TLS", "true").lower() == "true"
-app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
-app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
-app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER")
+_mail_config = get_mail_config()
+app.config["MAIL_SERVER"] = _mail_config["MAIL_SERVER"]
+app.config["MAIL_PORT"] = _mail_config["MAIL_PORT"]
+app.config["MAIL_USE_TLS"] = _mail_config["MAIL_USE_TLS"]
+app.config["MAIL_USERNAME"] = _mail_config["MAIL_USERNAME"]
+app.config["MAIL_PASSWORD"] = _mail_config["MAIL_PASSWORD"]
+app.config["MAIL_DEFAULT_SENDER"] = _mail_config["MAIL_DEFAULT_SENDER"]
 
 mail = Mail(app)
 csrf = CSRFProtect(app)
@@ -45,6 +54,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+app.logger.info("Application environment mode: %s", APP_ENV)
 
 
 @app.errorhandler(404)
@@ -1338,8 +1348,7 @@ def stripe_webhook():
 
 
 def _invoice_reminder_scheduler_enabled():
-    enabled_flag = str(os.getenv("INVOICE_REMINDER_SCHEDULER_ENABLED", "true") or "").strip().lower()
-    if enabled_flag in {"0", "false", "no", "off"}:
+    if not scheduler_enabled_flag():
         return False
 
     if os.getenv("PYTEST_CURRENT_TEST"):
@@ -1352,12 +1361,7 @@ def _invoice_reminder_scheduler_enabled():
 
 
 def _invoice_reminder_scheduler_interval_minutes():
-    raw_value = str(os.getenv("INVOICE_REMINDER_SCHEDULER_INTERVAL_MINUTES", "60") or "").strip()
-    try:
-        interval_minutes = int(raw_value)
-    except (TypeError, ValueError):
-        interval_minutes = 60
-    return max(1, interval_minutes)
+    return scheduler_interval_minutes()
 
 
 def _run_invoice_reminder_scheduler_tick():

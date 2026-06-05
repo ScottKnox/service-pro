@@ -244,6 +244,12 @@ def _build_customer_notes_for_view(db, customer):
 
 
 def _safe_float(value, default=0.0):
+    if isinstance(value, str):
+        normalized_value = value.strip().replace("$", "").replace(",", "")
+        if normalized_value.startswith("(") and normalized_value.endswith(")"):
+            normalized_value = f"-{normalized_value[1:-1]}"
+        value = normalized_value
+
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -1758,11 +1764,17 @@ def _fetch_latest_hvac_diagnostic(db, hvac_system_id):
     return serialize_doc(latest) if latest else None
 
 
-def _fetch_hvac_diagnostics_history(db, hvac_system_id):
+def _fetch_hvac_diagnostics_history(db, hvac_system_id, job_id=None):
+    query_filters = [build_reference_filter("hvac_system_id", hvac_system_id)]
+    normalized_job_id = str(job_id or "").strip()
+    if normalized_job_id:
+        query_filters.append(build_reference_filter("job_id", normalized_job_id))
+
+    query = {"$and": query_filters}
     return [
         serialize_doc(entry)
         for entry in db.hvacDiagnostics.find(
-            build_reference_filter("hvac_system_id", hvac_system_id)
+            query
         ).sort([("created_at", -1), ("_id", -1)])
     ]
 
@@ -2047,6 +2059,15 @@ def _build_hvac_detail_payload(db, customer_id, reference_type, reference_id):
     if serialized_system.get("system_type") in DUCTWORK_SYSTEM_TYPES:
         components.append(_build_hvac_ductwork_component(serialized_system))
 
+    system_property_id = str(serialized_system.get("property_id", "")).strip()
+    service_history = _build_hvac_system_service_history(
+        db,
+        customer_id,
+        str(reference_id or "").strip(),
+        property_id=system_property_id,
+    )
+    parts_history = _build_hvac_system_parts_history(service_history)
+
     return {
         "reference_type": "system",
         "reference_id": reference_id,
@@ -2061,6 +2082,8 @@ def _build_hvac_detail_payload(db, customer_id, reference_type, reference_id):
         "components": components,
         "diagnostics": diagnostics,
         "reports": reports,
+        "service_history": service_history,
+        "parts_history": parts_history,
         "photos": [
             {
                 "url": _build_hvac_photo_url(photo.get("filename") or photo.get("url")),
@@ -2096,6 +2119,17 @@ def _build_hvac_system_cards(db, customer_id, property_id=None):
         system_display_name = f"{system_type} - {system_nickname}" if system_nickname else (system_type or "HVAC System")
         loaded_components = _load_hvac_components_for_system(db, customer_id, base_system)
         card_ductwork_summary = _summarize_ductwork(base_system)
+        last_serviced_at = base_system.get("last_serviced_at")
+        if isinstance(last_serviced_at, datetime):
+            last_serviced_display = last_serviced_at.strftime("%m/%d/%Y %I:%M %p")
+        else:
+            last_serviced_display = str(last_serviced_at or "").strip()
+        if not last_serviced_display:
+            last_serviced_display = "Never serviced"
+
+        last_serviced_by = str(base_system.get("last_serviced_by") or "").strip()
+        if not last_serviced_by:
+            last_serviced_by = "-"
 
         hvac_cards.append(
             {
@@ -2107,6 +2141,8 @@ def _build_hvac_system_cards(db, customer_id, property_id=None):
                 "system_tonnage": str(base_system.get("system_tonnage", "")).strip() or "-",
                 "cooling_capacity": str(base_system.get("cooling_capacity", "")).strip() or "-",
                 "metering_device": str(base_system.get("metering_device", "")).strip() or "-",
+                "last_serviced_at": last_serviced_display,
+                "last_serviced_by": last_serviced_by,
                 "ductwork_summary": card_ductwork_summary,
                 "components": [
                     {
@@ -2142,42 +2178,306 @@ def _sort_key_for_property_job_history(job_doc):
         return datetime.min
 
 
-def _build_property_maintenance_history(db, customer_id, property_id):
-    if not customer_id or not property_id:
-        return []
+def _history_line_item_label(component_type, component):
+    normalized_type = str(component_type or "").strip().lower()
+    component = component or {}
 
-    query = {
-        "$and": [
-            build_reference_filter("customer_id", customer_id),
-            build_reference_filter("property_id", property_id),
+    if normalized_type == "services":
+        return str(component.get("service_name") or component.get("type") or component.get("description") or "Service").strip() or "Service"
+    if normalized_type == "parts":
+        return str(component.get("part_name") or component.get("name") or component.get("description") or "Part").strip() or "Part"
+    if normalized_type == "labors":
+        return str(component.get("description") or component.get("labor_description") or component.get("name") or "Labor").strip() or "Labor"
+    if normalized_type == "materials":
+        return str(component.get("material_name") or component.get("description") or component.get("name") or "Material").strip() or "Material"
+    if normalized_type == "equipments":
+        return str(component.get("equipment_name") or component.get("description") or component.get("name") or "Equipment").strip() or "Equipment"
+    return str(component.get("description") or component.get("name") or "Item").strip() or "Item"
+
+
+def _history_line_item_amount(component_type, component):
+    normalized_type = str(component_type or "").strip().lower()
+    component = component or {}
+
+    if normalized_type == "services":
+        return _safe_float(component.get("price") or component.get("line_total") or component.get("total"), 0.0)
+
+    if normalized_type == "parts":
+        return _safe_float(component.get("price") or component.get("unit_cost") or component.get("line_total") or component.get("total"), 0.0)
+
+    if normalized_type in {"labors", "materials", "equipments"}:
+        line_total = component.get("line_total")
+        if line_total not in (None, ""):
+            return _safe_float(line_total, 0.0)
+
+    if normalized_type == "materials":
+        total_value = component.get("total")
+        if total_value not in (None, ""):
+            return _safe_float(total_value, 0.0)
+        quantity_value = _safe_float(component.get("quantity") or component.get("quantity_used"), 0.0)
+        unit_price_value = _safe_float(component.get("unit_price") or component.get("price"), 0.0)
+        return round(quantity_value * unit_price_value, 2)
+
+    if normalized_type == "equipments":
+        quantity_value = _safe_float(component.get("quantity_installed"), 0.0)
+        unit_price_value = _safe_float(component.get("price"), 0.0)
+        if quantity_value > 0 and unit_price_value > 0:
+            return round(quantity_value * unit_price_value, 2)
+
+    return _safe_float(component.get("price") or component.get("total") or component.get("line_total"), 0.0)
+
+
+def _build_job_history_items(serialized_job):
+    component_types = ("services", "parts", "labors", "materials", "equipments")
+    items = []
+
+    for component_type in component_types:
+        for component in (serialized_job.get(component_type) or []):
+            if not isinstance(component, dict):
+                continue
+
+            hvac_system_id = str(component.get("hvac_system_id") or "").strip()
+            hvac_system_name = str(component.get("hvac_system_name") or "").strip()
+            amount_value = round(_history_line_item_amount(component_type, component), 2)
+
+            items.append(
+                {
+                    "item_type": component_type,
+                    "label": _history_line_item_label(component_type, component),
+                    "amount": amount_value,
+                    "hvac_system_id": hvac_system_id,
+                    "hvac_system_name": hvac_system_name,
+                }
+            )
+
+    return items
+
+
+def _resolve_property_history_scope_filter(db):
+    business_id = _resolve_current_business_id(db)
+    if not business_id:
+        return {"_id": None}
+
+    return {
+        "$or": [
+            build_reference_filter("business_id", business_id),
+            build_reference_filter("company_id", business_id),
         ]
     }
-    job_docs = list(db.jobs.find(query))
 
-    rows = []
+
+def _resolve_property_report_link(db, serialized_job, customer_id, property_id, business_scope_filter):
+    job_id = str(serialized_job.get("_id") or "").strip()
+    if not job_id:
+        return ""
+
+    report_filters = [
+        build_reference_filter("job_id", job_id),
+        build_reference_filter("customer_id", customer_id),
+        build_reference_filter("property_id", property_id),
+    ]
+    if business_scope_filter:
+        report_filters.append(business_scope_filter)
+
+    report_doc = db.hvacDiagnostics.find_one(
+        {"$and": report_filters},
+        {"_id": 1, "hvac_system_id": 1},
+    )
+    if not report_doc:
+        return ""
+
+    report_hvac_system_id = str(report_doc.get("hvac_system_id") or "").strip()
+    if not report_hvac_system_id:
+        return ""
+
+    return url_for(
+        "customers.view_hvac_diagnostics",
+        customerId=customer_id,
+        reference_type="system",
+        reference_id=report_hvac_system_id,
+        property_id=property_id,
+        job_id=job_id,
+    )
+
+
+def _resolve_hvac_system_report_link(db, serialized_job, customer_id, hvac_system_id, business_scope_filter, property_id=""):
+    job_id = str(serialized_job.get("_id") or "").strip()
+    if not job_id:
+        return ""
+
+    report_filters = [
+        build_reference_filter("job_id", job_id),
+        build_reference_filter("customer_id", customer_id),
+        build_reference_filter("hvac_system_id", hvac_system_id),
+    ]
+    if business_scope_filter:
+        report_filters.append(business_scope_filter)
+
+    report_doc = db.hvacDiagnostics.find_one(
+        {"$and": report_filters},
+        {"_id": 1},
+    )
+    if not report_doc:
+        return ""
+
+    return url_for(
+        "customers.view_hvac_diagnostics",
+        customerId=customer_id,
+        reference_type="system",
+        reference_id=hvac_system_id,
+        property_id=property_id,
+        job_id=job_id,
+    )
+
+
+def _build_hvac_system_service_history(db, customer_id, hvac_system_id, property_id=""):
+    if not customer_id or not hvac_system_id:
+        return []
+
+    business_scope_filter = _resolve_property_history_scope_filter(db)
+    query_filters = [
+        build_reference_filter("customer_id", customer_id),
+        {"status": {"$in": ["Completed", "completed", "Paid", "paid"]}},
+        {
+            "$or": [
+                build_reference_filter("services.hvac_system_id", hvac_system_id),
+                build_reference_filter("parts.hvac_system_id", hvac_system_id),
+                build_reference_filter("labors.hvac_system_id", hvac_system_id),
+                build_reference_filter("materials.hvac_system_id", hvac_system_id),
+                build_reference_filter("equipments.hvac_system_id", hvac_system_id),
+            ]
+        },
+    ]
+    if business_scope_filter:
+        query_filters.append(business_scope_filter)
+
+    query = {"$and": query_filters}
+    job_docs = list(db.jobs.find(query).sort([("completed_at", -1), ("_id", -1)]))
+
+    history_rows = []
     for job_doc in job_docs:
-        status = str(job_doc.get("status") or "").strip().lower()
-        if status not in {"completed", "paid"}:
+        serialized_job = serialize_doc(job_doc)
+        tagged_items = []
+
+        for history_item in _build_job_history_items(serialized_job):
+            if str(history_item.get("hvac_system_id") or "").strip() != hvac_system_id:
+                continue
+            tagged_items.append(history_item)
+
+        if not tagged_items:
             continue
 
-        serialized_job = serialize_doc(job_doc)
-        rows.append(
+        history_rows.append(
             {
                 "job_id": str(serialized_job.get("_id") or "").strip(),
-                "job_type": str(serialized_job.get("job_type") or "Service").strip() or "Service",
-                "status": str(serialized_job.get("status") or "").strip() or "Completed",
-                "assigned_employee": str(serialized_job.get("assigned_employee") or "").strip(),
-                "date_completed": str(serialized_job.get("dateCompleted") or "").strip(),
-                "total_amount": serialized_job.get("total_amount"),
-                "sort_key": _sort_key_for_property_job_history(serialized_job),
+                "date_completed": str(serialized_job.get("dateCompleted") or "").strip() or "-",
+                "assigned_employee": str(serialized_job.get("assigned_employee") or "").strip() or "-",
+                "items": tagged_items,
+                "system_total": round(sum(_safe_float(item.get("amount"), 0.0) for item in tagged_items), 2),
+                "report_url": _resolve_hvac_system_report_link(
+                    db,
+                    serialized_job,
+                    customer_id,
+                    hvac_system_id,
+                    business_scope_filter,
+                    property_id=property_id,
+                ),
             }
         )
 
-    rows.sort(key=lambda row: row.get("sort_key") or datetime.min, reverse=True)
-    for row in rows:
-        row.pop("sort_key", None)
+    return history_rows
+
+
+def _build_hvac_system_parts_history(service_history_rows):
+    rows = []
+    for visit in service_history_rows:
+        for item in (visit.get("items") or []):
+            item_type = str(item.get("item_type") or "").strip().lower()
+            if item_type not in {"parts", "materials", "equipments"}:
+                continue
+
+            default_label = "Component"
+            if item_type == "parts":
+                default_label = "Part"
+            elif item_type == "materials":
+                default_label = "Material"
+            elif item_type == "equipments":
+                default_label = "Equipment"
+
+            rows.append(
+                {
+                    "date_completed": str(visit.get("date_completed") or "-").strip() or "-",
+                    "assigned_employee": str(visit.get("assigned_employee") or "-").strip() or "-",
+                    "label": str(item.get("label") or default_label).strip() or default_label,
+                    "amount": round(_safe_float(item.get("amount"), 0.0), 2),
+                    "job_id": str(visit.get("job_id") or "").strip(),
+                }
+            )
 
     return rows
+
+
+def _build_property_maintenance_history(db, customer_id, property_id, page=1, page_size=20):
+    if not customer_id or not property_id:
+        return [], 1, 1
+
+    business_scope_filter = _resolve_property_history_scope_filter(db)
+    query_filters = [
+        build_reference_filter("customer_id", customer_id),
+        build_reference_filter("property_id", property_id),
+        {"status": {"$in": ["Completed", "completed", "Paid", "paid"]}},
+    ]
+    if business_scope_filter:
+        query_filters.append(business_scope_filter)
+
+    query = {"$and": query_filters}
+
+    total_visits = db.jobs.count_documents(query)
+    total_pages = max(1, (total_visits + page_size - 1) // page_size)
+    normalized_page = max(1, min(int(page or 1), total_pages))
+    skip_count = (normalized_page - 1) * page_size
+
+    job_docs = list(
+        db.jobs.find(query)
+        .sort([("completed_at", -1), ("_id", -1)])
+        .skip(skip_count)
+        .limit(page_size)
+    )
+
+    visits = []
+    for job_doc in job_docs:
+        serialized_job = serialize_doc(job_doc)
+        history_items = _build_job_history_items(serialized_job)
+        system_groups = {}
+        untagged_items = []
+
+        for history_item in history_items:
+            hvac_system_id = str(history_item.get("hvac_system_id") or "").strip()
+            if not hvac_system_id:
+                untagged_items.append(history_item)
+                continue
+
+            if hvac_system_id not in system_groups:
+                system_groups[hvac_system_id] = {
+                    "system_id": hvac_system_id,
+                    "system_name": str(history_item.get("hvac_system_name") or "").strip() or "Deleted HVAC System",
+                    "items": [],
+                }
+            system_groups[hvac_system_id]["items"].append(history_item)
+
+        visits.append(
+            {
+                "job_id": str(serialized_job.get("_id") or "").strip(),
+                "date_completed": str(serialized_job.get("dateCompleted") or "").strip() or "-",
+                "assigned_employee": str(serialized_job.get("assigned_employee") or "").strip() or "-",
+                "visit_total": round(_safe_float(serialized_job.get("total_amount"), 0.0), 2),
+                "system_groups": list(system_groups.values()),
+                "ungrouped_items": untagged_items,
+                "report_url": _resolve_property_report_link(db, serialized_job, customer_id, property_id, business_scope_filter),
+            }
+        )
+
+    return visits, normalized_page, total_pages
 
 
 @bp.route("/customers")
@@ -2455,7 +2755,18 @@ def view_property(customerId, propertyId):
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
     hvac_systems = _build_hvac_system_cards(db, customerId, propertyId)
-    maintenance_history_rows = _build_property_maintenance_history(db, customerId, propertyId)
+    maintenance_page_raw = request.args.get("maintenance_page", "1")
+    try:
+        maintenance_page = max(1, int(maintenance_page_raw))
+    except (TypeError, ValueError):
+        maintenance_page = 1
+    maintenance_history_rows, maintenance_page, maintenance_total_pages = _build_property_maintenance_history(
+        db,
+        customerId,
+        propertyId,
+        page=maintenance_page,
+        page_size=20,
+    )
     sub_properties = customer_property.get("sub_properties") or []
 
     sub_properties_page_raw = request.args.get("sub_properties_page", "1")
@@ -2485,6 +2796,8 @@ def view_property(customerId, propertyId):
         propertyId=propertyId,
         hvac_systems=hvac_systems,
         maintenance_history_rows=maintenance_history_rows,
+        maintenance_page=maintenance_page,
+        maintenance_total_pages=maintenance_total_pages,
         sub_properties=paginated_sub_properties,
         sub_properties_page=sub_properties_page,
         sub_properties_total_pages=sub_properties_total_pages,
@@ -2952,6 +3265,24 @@ def view_hvac_system(customerId, reference_type, reference_id):
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
     property_id = str(request.args.get("property_id") or "").strip()
+    context_job_id = str(request.args.get("job_id") or "").strip()
+
+    if context_job_id:
+        if not ObjectId.is_valid(context_job_id):
+            return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        context_job = db.jobs.find_one(
+            {
+                "$and": [
+                    {"_id": ObjectId(context_job_id)},
+                    build_reference_filter("customer_id", customerId),
+                ]
+            },
+            {"_id": 1, "property_id": 1},
+        )
+        if not context_job:
+            return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        if property_id and str(context_job.get("property_id") or "").strip() != property_id:
+            return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
 
     return render_template(
         "equipment/view_hvac_system.html",
@@ -2959,6 +3290,7 @@ def view_hvac_system(customerId, reference_type, reference_id):
         customer=serialize_doc(customer),
         hvac_system=hvac_system,
         property_id=property_id,
+        job_id=context_job_id,
     )
 
 
@@ -2969,6 +3301,7 @@ def view_hvac_diagnostics(customerId, reference_type, reference_id):
     if not customer:
         return redirect(url_for("customers.customers"))
     property_id = str(request.args.get("property_id") or "").strip()
+    context_job_id = str(request.args.get("job_id") or "").strip()
     if reference_type != "system":
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -2980,8 +3313,25 @@ def view_hvac_diagnostics(customerId, reference_type, reference_id):
         if str(hvac_system.get("property_id") or "").strip() != property_id:
             return redirect(url_for("customers.view_customer", customerId=customerId))
 
+    if context_job_id:
+        if not ObjectId.is_valid(context_job_id):
+            return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        context_job = db.jobs.find_one(
+            {
+                "$and": [
+                    {"_id": ObjectId(context_job_id)},
+                    build_reference_filter("customer_id", customerId),
+                ]
+            },
+            {"_id": 1, "property_id": 1},
+        )
+        if not context_job:
+            return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        if property_id and str(context_job.get("property_id") or "").strip() != property_id:
+            return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+
     serialized_system = serialize_doc(hvac_system)
-    diagnostics_entries = _sort_diagnostics_by_date_desc(_fetch_hvac_diagnostics_history(db, reference_id))
+    diagnostics_entries = _sort_diagnostics_by_date_desc(_fetch_hvac_diagnostics_history(db, reference_id, job_id=context_job_id))
     if not diagnostics_entries:
         return redirect(
             url_for(
@@ -2990,6 +3340,7 @@ def view_hvac_diagnostics(customerId, reference_type, reference_id):
                 reference_type=reference_type,
                 reference_id=reference_id,
                 property_id=property_id,
+                job_id=context_job_id,
             )
         )
 
@@ -3005,6 +3356,7 @@ def view_hvac_diagnostics(customerId, reference_type, reference_id):
                 "diagnostic_index": diagnostic_index,
                 "date_performed": str(entry.get("date_performed", "")).strip() or "-",
                 "system_type": serialized_system.get("system_type", "HVAC System"),
+                "job_id": str(entry.get("job_id") or "").strip(),
                 "result_count": sum(
                     1
                     for field_name, _field_label in HVAC_DIAGNOSTIC_FIELDS
@@ -3015,6 +3367,7 @@ def view_hvac_diagnostics(customerId, reference_type, reference_id):
         ],
         latest_date_performed=str(diagnostics_entries[0].get("date_performed", "")).strip() or "-",
         property_id=property_id,
+        job_id=context_job_id,
     )
 
 
@@ -3025,6 +3378,7 @@ def view_hvac_diagnostic(customerId, reference_type, reference_id, diagnostic_in
     if not customer:
         return redirect(url_for("customers.customers"))
     property_id = str(request.args.get("property_id") or "").strip()
+    context_job_id = str(request.args.get("job_id") or "").strip()
     if reference_type != "system":
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -3036,8 +3390,25 @@ def view_hvac_diagnostic(customerId, reference_type, reference_id, diagnostic_in
         if str(hvac_system.get("property_id") or "").strip() != property_id:
             return redirect(url_for("customers.view_customer", customerId=customerId))
 
+    if context_job_id:
+        if not ObjectId.is_valid(context_job_id):
+            return redirect(url_for("customers.view_hvac_diagnostics", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        context_job = db.jobs.find_one(
+            {
+                "$and": [
+                    {"_id": ObjectId(context_job_id)},
+                    build_reference_filter("customer_id", customerId),
+                ]
+            },
+            {"_id": 1, "property_id": 1},
+        )
+        if not context_job:
+            return redirect(url_for("customers.view_hvac_diagnostics", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        if property_id and str(context_job.get("property_id") or "").strip() != property_id:
+            return redirect(url_for("customers.view_hvac_diagnostics", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+
     serialized_system = serialize_doc(hvac_system)
-    diagnostics_entries = _sort_diagnostics_by_date_desc(_fetch_hvac_diagnostics_history(db, reference_id))
+    diagnostics_entries = _sort_diagnostics_by_date_desc(_fetch_hvac_diagnostics_history(db, reference_id, job_id=context_job_id))
     diagnostic_detail = _build_hvac_diagnostic_detail(diagnostics_entries, diagnostic_index)
     if not diagnostic_detail:
         return redirect(
@@ -3047,6 +3418,7 @@ def view_hvac_diagnostic(customerId, reference_type, reference_id, diagnostic_in
                 reference_type=reference_type,
                 reference_id=reference_id,
                 property_id=property_id,
+                job_id=context_job_id,
             )
         )
 
@@ -3079,6 +3451,7 @@ def view_hvac_diagnostic(customerId, reference_type, reference_id, diagnostic_in
         latest_report_file=latest_report_file,
         report_email_template=report_email_template,
         property_id=property_id,
+        job_id=context_job_id,
     )
 
 
@@ -3089,6 +3462,7 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
     if not customer:
         return redirect(url_for("customers.customers"))
     property_id = str(request.args.get("property_id") or "").strip()
+    context_job_id = str((request.form.get("job_id") if request.method == "POST" else request.args.get("job_id")) or "").strip()
     if reference_type != "system":
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -3099,6 +3473,23 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
     if property_id:
         if str(hvac_system.get("property_id") or "").strip() != property_id:
             return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    if context_job_id:
+        if not ObjectId.is_valid(context_job_id):
+            return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        context_job = db.jobs.find_one(
+            {
+                "$and": [
+                    {"_id": ObjectId(context_job_id)},
+                    build_reference_filter("customer_id", customerId),
+                ]
+            },
+            {"_id": 1, "property_id": 1},
+        )
+        if not context_job:
+            return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        if property_id and str(context_job.get("property_id") or "").strip() != property_id:
+            return redirect(url_for("customers.view_hvac_system", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
 
     error = ""
     form_data = {
@@ -3193,6 +3584,7 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
                 form_data=form_data,
                 diagnostics_sections=HVAC_DIAGNOSTIC_SECTIONS,
                 property_id=property_id,
+                job_id=context_job_id,
             )
 
         diagnostics_entry = _build_hvac_diagnostics_entry(form_data)
@@ -3200,6 +3592,7 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
             {
                 "hvac_system_id": reference_value(reference_id),
                 "customer_id": reference_value(customerId),
+                "job_id": reference_value(context_job_id) if context_job_id else None,
                 "property_id": reference_value(property_id) if property_id else None,
                 "section_photos": section_photos,
                 "created_at": datetime.now(UTC),
@@ -3215,6 +3608,7 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
                 reference_type=reference_type,
                 reference_id=reference_id,
                 property_id=property_id,
+                job_id=context_job_id,
             )
         )
 
@@ -3229,6 +3623,7 @@ def add_hvac_diagnostics(customerId, reference_type, reference_id):
         form_data=form_data,
         diagnostics_sections=HVAC_DIAGNOSTIC_SECTIONS,
         property_id=property_id,
+        job_id=context_job_id,
     )
 
 
@@ -3239,6 +3634,7 @@ def update_hvac_diagnostic_photo_caption(customerId, reference_type, reference_i
     if not customer:
         return redirect(url_for("customers.customers"))
     property_id = str(request.args.get("property_id") or "").strip()
+    context_job_id = str(request.args.get("job_id") or "").strip()
     if reference_type != "system":
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -3247,6 +3643,23 @@ def update_hvac_diagnostic_photo_caption(customerId, reference_type, reference_i
         return redirect(url_for("customers.view_customer", customerId=customerId))
     if property_id and str(hvac_system.get("property_id") or "").strip() != property_id:
         return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    if context_job_id:
+        if not ObjectId.is_valid(context_job_id):
+            return redirect(url_for("customers.view_hvac_diagnostics", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        context_job = db.jobs.find_one(
+            {
+                "$and": [
+                    {"_id": ObjectId(context_job_id)},
+                    build_reference_filter("customer_id", customerId),
+                ]
+            },
+            {"_id": 1, "property_id": 1},
+        )
+        if not context_job:
+            return redirect(url_for("customers.view_hvac_diagnostics", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        if property_id and str(context_job.get("property_id") or "").strip() != property_id:
+            return redirect(url_for("customers.view_hvac_diagnostics", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
 
     diagnostic = db.hvacDiagnostics.find_one(
         {
@@ -3265,6 +3678,7 @@ def update_hvac_diagnostic_photo_caption(customerId, reference_type, reference_i
                 reference_type=reference_type,
                 reference_id=reference_id,
                 property_id=property_id,
+                job_id=context_job_id,
             )
         )
 
@@ -3307,6 +3721,7 @@ def update_hvac_diagnostic_photo_caption(customerId, reference_type, reference_i
             reference_id=reference_id,
             diagnostic_index=diagnostic_index,
             property_id=property_id,
+            job_id=context_job_id,
         )
     )
 
@@ -3318,6 +3733,7 @@ def delete_hvac_diagnostic_photo(customerId, reference_type, reference_id, diagn
     if not customer:
         return redirect(url_for("customers.customers"))
     property_id = str(request.args.get("property_id") or "").strip()
+    context_job_id = str(request.args.get("job_id") or "").strip()
     if reference_type != "system":
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -3326,6 +3742,23 @@ def delete_hvac_diagnostic_photo(customerId, reference_type, reference_id, diagn
         return redirect(url_for("customers.view_customer", customerId=customerId))
     if property_id and str(hvac_system.get("property_id") or "").strip() != property_id:
         return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    if context_job_id:
+        if not ObjectId.is_valid(context_job_id):
+            return redirect(url_for("customers.view_hvac_diagnostics", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        context_job = db.jobs.find_one(
+            {
+                "$and": [
+                    {"_id": ObjectId(context_job_id)},
+                    build_reference_filter("customer_id", customerId),
+                ]
+            },
+            {"_id": 1, "property_id": 1},
+        )
+        if not context_job:
+            return redirect(url_for("customers.view_hvac_diagnostics", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        if property_id and str(context_job.get("property_id") or "").strip() != property_id:
+            return redirect(url_for("customers.view_hvac_diagnostics", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
 
     diagnostic = db.hvacDiagnostics.find_one(
         {
@@ -3344,6 +3777,7 @@ def delete_hvac_diagnostic_photo(customerId, reference_type, reference_id, diagn
                 reference_type=reference_type,
                 reference_id=reference_id,
                 property_id=property_id,
+                job_id=context_job_id,
             )
         )
 
@@ -3386,6 +3820,7 @@ def delete_hvac_diagnostic_photo(customerId, reference_type, reference_id, diagn
             reference_id=reference_id,
             diagnostic_index=diagnostic_index,
             property_id=property_id,
+            job_id=context_job_id,
         )
     )
 
@@ -3397,6 +3832,7 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
     if not customer:
         return redirect(url_for("customers.customers"))
     property_id = str(request.args.get("property_id") or "").strip()
+    context_job_id = str(request.form.get("job_id") or request.args.get("job_id") or "").strip()
     if reference_type != "system":
         return redirect(url_for("customers.view_customer", customerId=customerId))
 
@@ -3408,8 +3844,25 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
         if str(hvac_system.get("property_id") or "").strip() != property_id:
             return redirect(url_for("customers.view_customer", customerId=customerId))
 
+    if context_job_id:
+        if not ObjectId.is_valid(context_job_id):
+            return redirect(url_for("customers.view_hvac_diagnostics", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        context_job = db.jobs.find_one(
+            {
+                "$and": [
+                    {"_id": ObjectId(context_job_id)},
+                    build_reference_filter("customer_id", customerId),
+                ]
+            },
+            {"_id": 1, "property_id": 1},
+        )
+        if not context_job:
+            return redirect(url_for("customers.view_hvac_diagnostics", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+        if property_id and str(context_job.get("property_id") or "").strip() != property_id:
+            return redirect(url_for("customers.view_hvac_diagnostics", customerId=customerId, reference_type=reference_type, reference_id=reference_id, property_id=property_id))
+
     serialized_system = serialize_doc(hvac_system)
-    diagnostics_entries = _sort_diagnostics_by_date_desc(_fetch_hvac_diagnostics_history(db, reference_id))
+    diagnostics_entries = _sort_diagnostics_by_date_desc(_fetch_hvac_diagnostics_history(db, reference_id, job_id=context_job_id))
     diagnostic_index_raw = request.form.get("diagnostic_index", "").strip()
     selected_index = 0
     if diagnostic_index_raw:
@@ -3428,6 +3881,7 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
                 reference_type=reference_type,
                 reference_id=reference_id,
                 property_id=property_id,
+                job_id=context_job_id,
             )
         )
 
@@ -3440,6 +3894,7 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
                 reference_type=reference_type,
                 reference_id=reference_id,
                 property_id=property_id,
+                job_id=context_job_id,
             )
         )
 
@@ -3460,6 +3915,7 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
                 reference_type=reference_type,
                 reference_id=reference_id,
                 property_id=property_id,
+                job_id=context_job_id,
             )
         )
 
@@ -3482,6 +3938,7 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
         "file_path": url_for("download_invoice", filename=filename),
         "date_generated": datetime.now().strftime("%m/%d/%Y"),
         "diagnostics_date_performed": diagnostics_card.get("date_performed", "-"),
+        "job_id": str(context_job_id or "").strip() or None,
     }
 
     db.hvacDiagnostics.update_one(
@@ -3489,6 +3946,7 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
         {
             "$set": {
                 "reports": [report_item, *reports_history],
+                "job_id": reference_value(context_job_id) if context_job_id else diagnostic_doc.get("job_id"),
                 "updated_at": datetime.now(UTC),
             }
         },
@@ -3502,6 +3960,7 @@ def generate_hvac_system_report(customerId, reference_type, reference_id):
             reference_id=reference_id,
             diagnostic_index=selected_index,
             property_id=property_id,
+            job_id=context_job_id,
         )
     )
 
@@ -3514,6 +3973,7 @@ def send_hvac_report_email(customerId, reference_type, reference_id, diagnostic_
         return jsonify({"success": False, "error": "Customer not found"}), 404
 
     property_id = str(request.args.get("property_id") or "").strip()
+    context_job_id = str(request.args.get("job_id") or "").strip()
     if reference_type != "system":
         return jsonify({"success": False, "error": "Unsupported reference type"}), 400
 
@@ -3523,7 +3983,24 @@ def send_hvac_report_email(customerId, reference_type, reference_id, diagnostic_
     if property_id and str(hvac_system.get("property_id") or "").strip() != property_id:
         return jsonify({"success": False, "error": "Invalid property"}), 403
 
-    diagnostics_entries = _sort_diagnostics_by_date_desc(_fetch_hvac_diagnostics_history(db, reference_id))
+    if context_job_id:
+        if not ObjectId.is_valid(context_job_id):
+            return jsonify({"success": False, "error": "Invalid job context"}), 400
+        context_job = db.jobs.find_one(
+            {
+                "$and": [
+                    {"_id": ObjectId(context_job_id)},
+                    build_reference_filter("customer_id", customerId),
+                ]
+            },
+            {"_id": 1, "property_id": 1},
+        )
+        if not context_job:
+            return jsonify({"success": False, "error": "Job context not found"}), 404
+        if property_id and str(context_job.get("property_id") or "").strip() != property_id:
+            return jsonify({"success": False, "error": "Invalid job property context"}), 403
+
+    diagnostics_entries = _sort_diagnostics_by_date_desc(_fetch_hvac_diagnostics_history(db, reference_id, job_id=context_job_id))
     if diagnostic_index < 0 or diagnostic_index >= len(diagnostics_entries):
         return jsonify({"success": False, "error": "Diagnostic not found"}), 404
 

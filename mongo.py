@@ -1,67 +1,96 @@
-import os
 import logging
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from urllib.parse import parse_qsl, quote_plus, urlencode, urlsplit, urlunsplit
 
 from bson import ObjectId
-from dotenv import load_dotenv
 from flask import abort
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError, OperationFailure
 
-load_dotenv()
+from config import get_mongo_settings
 
 logger = logging.getLogger(__name__)
-
-MONGODB_HOST = os.getenv("MONGODB_HOST", "localhost")
-MONGODB_PORT = os.getenv("MONGODB_PORT", "27017")
-MONGODB_USERNAME = os.getenv("MONGODB_USERNAME", "")
-MONGODB_PASSWORD = os.getenv("MONGODB_PASSWORD", "")
-MONGODB_AUTH_SOURCE = os.getenv("MONGODB_AUTH_SOURCE", "admin")
-MONGODB_URI = os.getenv("MONGODB_URI", "")
-MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME")
 
 _mongo_client = None
 _validators_initialized = False
 
+DEFAULT_PRICE_BOOK_CATEGORIES = {
+    "part": [
+        "Capacitors",
+        "Contactors",
+        "Motors — Condenser Fan",
+        "Motors — Blower",
+        "Igniters and Sensors",
+        "Gas Valves",
+        "Control Boards",
+        "Thermostats and Controls",
+        "Filters",
+        "Refrigerant Components",
+        "Electrical Components",
+        "Miscellaneous Parts",
+    ],
+    "equipment": [
+        "AC Systems",
+        "Heat Pump Systems",
+        "Gas Furnaces",
+        "Air Handlers",
+        "Mini Split Systems",
+        "Package Units",
+        "Other Equipment",
+    ],
+    "material": [
+        "Refrigerant",
+        "Duct Materials",
+        "Sealants and Adhesives",
+        "Drain and Condensate",
+        "Chemicals and Cleaners",
+        "Wire and Electrical",
+        "Insulation",
+        "Miscellaneous Materials",
+    ],
+}
+
 
 def _inject_credentials_into_uri(uri: str) -> str:
-    if not (MONGODB_USERNAME and MONGODB_PASSWORD):
+    settings = get_mongo_settings()
+    if not (settings.username and settings.password):
         return uri
 
     parts = urlsplit(uri)
     if "@" in parts.netloc:
         return uri
 
-    username = quote_plus(MONGODB_USERNAME)
-    password = quote_plus(MONGODB_PASSWORD)
+    username = quote_plus(settings.username)
+    password = quote_plus(settings.password)
     netloc = f"{username}:{password}@{parts.netloc}"
 
     query = parts.query
-    if MONGODB_AUTH_SOURCE and parts.scheme == "mongodb":
+    if settings.auth_source and parts.scheme == "mongodb":
         query_items = dict(parse_qsl(query, keep_blank_values=True))
-        query_items.setdefault("authSource", MONGODB_AUTH_SOURCE)
+        query_items.setdefault("authSource", settings.auth_source)
         query = urlencode(query_items)
 
     return urlunsplit((parts.scheme, netloc, parts.path, query, parts.fragment))
 
 
 def build_mongodb_uri() -> str:
-    if MONGODB_URI:
-        return _inject_credentials_into_uri(MONGODB_URI)
+    settings = get_mongo_settings()
 
-    if MONGODB_HOST.startswith("mongodb://") or MONGODB_HOST.startswith("mongodb+srv://"):
-        return _inject_credentials_into_uri(MONGODB_HOST)
+    if settings.uri:
+        return _inject_credentials_into_uri(settings.uri)
+
+    if settings.host.startswith("mongodb://") or settings.host.startswith("mongodb+srv://"):
+        return _inject_credentials_into_uri(settings.host)
 
     credentials = ""
-    if MONGODB_USERNAME and MONGODB_PASSWORD:
-        username = quote_plus(MONGODB_USERNAME)
-        password = quote_plus(MONGODB_PASSWORD)
+    if settings.username and settings.password:
+        username = quote_plus(settings.username)
+        password = quote_plus(settings.password)
         credentials = f"{username}:{password}@"
 
-    uri = f"mongodb://{credentials}{MONGODB_HOST}:{MONGODB_PORT}"
+    uri = f"mongodb://{credentials}{settings.host}:{settings.port}"
     if credentials:
-        uri = f"{uri}/?authSource={quote_plus(MONGODB_AUTH_SOURCE)}"
+        uri = f"{uri}/?authSource={quote_plus(settings.auth_source)}"
     return uri
 
 
@@ -70,7 +99,8 @@ def get_db():
     global _validators_initialized
     if _mongo_client is None:
         _mongo_client = MongoClient(build_mongodb_uri(), serverSelectionTimeoutMS=3000)
-    db = _mongo_client[MONGODB_DB_NAME]
+    mongo_settings = get_mongo_settings()
+    db = _mongo_client[mongo_settings.db_name]
     if not _validators_initialized:
         ensure_collection_validators(db)
         _validators_initialized = True
@@ -148,7 +178,12 @@ def reference_value(value):
 def _ensure_collection_with_validator(db, collection_name, validator):
     existing_names = db.list_collection_names()
     if collection_name not in existing_names:
-        db.create_collection(collection_name, validator=validator)
+        db.create_collection(
+            collection_name,
+            validator=validator,
+            validationLevel="moderate",
+            validationAction="warn",
+        )
         return
 
     try:
@@ -162,6 +197,42 @@ def _ensure_collection_with_validator(db, collection_name, validator):
         )
     except OperationFailure:
         logger.warning("Unable to apply validator for collection %s", collection_name)
+
+
+def _seed_default_price_book_categories(db):
+    if "businesses" not in db.list_collection_names():
+        return
+
+    if "categories" not in db.list_collection_names():
+        return
+
+    category_collection = db.categories
+    now = datetime.now(UTC)
+
+    for business in db.businesses.find({}, {"_id": 1}):
+        company_id = str(business.get("_id") or "").strip()
+        if not company_id:
+            continue
+
+        if category_collection.count_documents({"company_id": company_id}, limit=1):
+            continue
+
+        documents = []
+        for category_type, category_names in DEFAULT_PRICE_BOOK_CATEGORIES.items():
+            for sort_order, category_name in enumerate(category_names):
+                documents.append(
+                    {
+                        "company_id": company_id,
+                        "type": category_type,
+                        "name": category_name,
+                        "is_default": True,
+                        "sort_order": sort_order,
+                        "created_at": now,
+                    }
+                )
+
+        if documents:
+            category_collection.insert_many(documents)
 
 
 def ensure_collection_validators(db):
@@ -365,6 +436,21 @@ def ensure_collection_validators(db):
         }
     }
 
+    categories_validator = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["company_id", "type", "name", "is_default", "sort_order", "created_at"],
+            "properties": {
+                "company_id": {"bsonType": "string"},
+                "type": {"enum": ["part", "equipment", "material"]},
+                "name": {"bsonType": "string"},
+                "is_default": {"bsonType": "bool"},
+                "sort_order": {"bsonType": ["int", "long"]},
+                "created_at": {"bsonType": ["date"]},
+            },
+        }
+    }
+
     _ensure_collection_with_validator(db, "jobs", jobs_validator)
     _ensure_collection_with_validator(db, "payments", payments_validator)
     _ensure_collection_with_validator(db, "recurring_job_series", recurring_job_series_validator)
@@ -373,10 +459,28 @@ def ensure_collection_validators(db):
     _ensure_collection_with_validator(db, "hvacSystems", hvac_systems_validator)
     _ensure_collection_with_validator(db, "hvacDiagnostics", hvac_diagnostics_validator)
     _ensure_collection_with_validator(db, "subscriptions", subscriptions_validator)
+    _ensure_collection_with_validator(db, "categories", categories_validator)
 
     db.hvacDiagnostics.create_index([("hvac_system_id", 1), ("created_at", -1)])
     db.hvacDiagnostics.create_index([("customer_id", 1), ("created_at", -1)])
+    db.jobs.create_index([("customer_id", 1), ("property_id", 1), ("status", 1), ("completed_at", -1)])
+    db.jobs.create_index([("customer_id", 1), ("status", 1), ("completed_at", -1)])
+    db.jobs.create_index([("business_id", 1), ("property_id", 1), ("status", 1), ("completed_at", -1)])
+    db.jobs.create_index([("company_id", 1), ("property_id", 1), ("status", 1), ("completed_at", -1)])
+    db.jobs.create_index([("business_id", 1), ("services.hvac_system_id", 1), ("status", 1), ("completed_at", -1)])
+    db.jobs.create_index([("business_id", 1), ("parts.hvac_system_id", 1), ("status", 1), ("completed_at", -1)])
+    db.jobs.create_index([("business_id", 1), ("labors.hvac_system_id", 1), ("status", 1), ("completed_at", -1)])
+    db.jobs.create_index([("business_id", 1), ("materials.hvac_system_id", 1), ("status", 1), ("completed_at", -1)])
+    db.jobs.create_index([("business_id", 1), ("equipments.hvac_system_id", 1), ("status", 1), ("completed_at", -1)])
+    db.jobs.create_index([("company_id", 1), ("services.hvac_system_id", 1), ("status", 1), ("completed_at", -1)])
+    db.jobs.create_index([("company_id", 1), ("parts.hvac_system_id", 1), ("status", 1), ("completed_at", -1)])
+    db.jobs.create_index([("company_id", 1), ("labors.hvac_system_id", 1), ("status", 1), ("completed_at", -1)])
+    db.jobs.create_index([("company_id", 1), ("materials.hvac_system_id", 1), ("status", 1), ("completed_at", -1)])
+    db.jobs.create_index([("company_id", 1), ("equipments.hvac_system_id", 1), ("status", 1), ("completed_at", -1)])
+    db.categories.create_index([("company_id", 1), ("type", 1), ("sort_order", 1)])
     db.payments.create_index([("job_id", 1), ("paid_at", -1)])
     db.payments.create_index([("customer_id", 1), ("paid_at", -1)])
     db.payments.create_index([("invoice_id", 1), ("paid_at", -1)])
     db.payments.create_index([("status", 1), ("paid_at", -1)])
+
+    _seed_default_price_book_categories(db)

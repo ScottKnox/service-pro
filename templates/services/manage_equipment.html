@@ -103,8 +103,12 @@
                         <span class="jobs-card-value">{{ equipment.sku|default('-', true) }}</span>
                       </div>
                       <div class="jobs-card-row">
-                        <span class="jobs-card-label">Default Price</span>
-                        <span class="jobs-card-value">{{ equipment.default_price_display }}</span>
+                        <span class="jobs-card-label">Model Number</span>
+                        <span class="jobs-card-value">{{ equipment.model_number|default('-', true) }}</span>
+                      </div>
+                      <div class="jobs-card-row">
+                        <span class="jobs-card-label">Sell Price</span>
+                        <span class="jobs-card-value">{{ equipment.sell_price_display }}</span>
                       </div>
                     </a>
                   {% endfor %}
@@ -117,6 +121,7 @@
               {% endif %}
             </div>
           </div>
+          {% include 'services/category_management_section.html' %}
         </div>
       </div>
     </div>

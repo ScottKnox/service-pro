@@ -375,26 +375,27 @@ button[disabled] {
   pointer-events: none;
 }
 
-.note-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 1rem;
+#view-job-panel.resource-job-view .note-card {
+  border: 1px solid #2e5d4b;
+  border-left: 4px solid #00a86b;
+  border-radius: 10px;
+  padding: 1rem 1.05rem;
   margin-bottom: 0.5rem;
-  background-color: #f9fafb;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(180deg, #1f3b31 0%, #1b332b 100%);
+  box-shadow: 0 8px 18px rgba(7, 21, 16, 0.24);
 }
 
-.note-card-date {
-  font-size: 0.75rem;
-  color: #6b7280;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
+#view-job-panel.resource-job-view .note-card-date {
+  font-size: 0.78rem;
+  color: #b9ddcf;
+  margin-bottom: 0.55rem;
+  font-weight: 600;
 }
 
-.note-card-text {
-  color: #1f2937;
-  font-size: 0.95rem;
-  line-height: 1.5;
+#view-job-panel.resource-job-view .note-card-text {
+  color: #eef8f2;
+  font-size: 0.96rem;
+  line-height: 1.55;
   word-wrap: break-word;
 }
 

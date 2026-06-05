@@ -157,13 +157,15 @@ def build_equipment_catalog(equipments):
 
         catalog[equipment_name] = {
             "equipment_name": equipment_name,
+            "equipment_type": str(equipment.get("equipment_type") or "").strip(),
             "manufacturer": str(equipment.get("manufacturer") or "").strip(),
+            "model_number": str(equipment.get("model_number") or "").strip(),
             "category": str(equipment.get("category") or "").strip(),
             "sku": str(equipment.get("sku") or "").strip(),
             "description": str(equipment.get("description") or "").strip(),
-            "notes": str(equipment.get("notes") or "").strip(),
-            "default_price": normalize_currency(equipment.get("default_price", 0)),
-            "default_quantity_installed": _format_hours_value(equipment.get("default_quantity_installed", "")),
+            "cost_price": normalize_currency(equipment.get("cost_price", equipment.get("default_cost_price", 0))),
+            "sell_price": normalize_currency(equipment.get("sell_price", equipment.get("default_price", 0))),
+            "warranty_months": equipment.get("warranty_months"),
             "tax_override": parse_tax_override(equipment.get("tax_override")),
         }
 
@@ -415,6 +417,7 @@ def build_job_equipments_from_form(
     equipment_names,
     equipment_quantities,
     equipment_prices,
+    equipment_serial_numbers,
     equipment_catalog,
 ):
     """
@@ -434,12 +437,13 @@ def build_job_equipments_from_form(
         catalog_entry = equipment_catalog.get(equipment_name, {})
         entered_quantity = equipment_quantities[index] if index < len(equipment_quantities) else ""
         entered_price = equipment_prices[index] if index < len(equipment_prices) else ""
+        entered_serial_number = equipment_serial_numbers[index] if index < len(equipment_serial_numbers) else ""
 
         quantity = _format_hours_value(
-            entered_quantity if (entered_quantity or "").strip() else catalog_entry.get("default_quantity_installed", "")
+            entered_quantity if (entered_quantity or "").strip() else 1
         )
         unit_price = normalize_currency(
-            entered_price if (entered_price or "").strip() else catalog_entry.get("default_price", "$0.00")
+            entered_price if (entered_price or "").strip() else catalog_entry.get("sell_price", "$0.00")
         )
 
         try:
@@ -452,11 +456,16 @@ def build_job_equipments_from_form(
         equipments.append(
             {
                 "equipment_name": equipment_name,
+                "equipment_type": catalog_entry.get("equipment_type", ""),
                 "manufacturer": catalog_entry.get("manufacturer", ""),
+                "model_number": catalog_entry.get("model_number", ""),
                 "category": catalog_entry.get("category", ""),
                 "sku": catalog_entry.get("sku", ""),
                 "quantity_installed": quantity,
                 "price": unit_price,
+                "serial_number": str(entered_serial_number or "").strip(),
+                "cost_price": catalog_entry.get("cost_price", "$0.00"),
+                "warranty_months": catalog_entry.get("warranty_months"),
                 "line_total": normalize_currency(line_total),
                 "tax_override": parse_tax_override(catalog_entry.get("tax_override")),
             }
