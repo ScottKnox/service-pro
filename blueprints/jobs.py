@@ -32,6 +32,7 @@ from utils.currency import currency_to_float, normalize_currency
 from utils.csv_export import build_csv_export_response
 from utils.formatters import format_date
 from utils.notifications import normalize_phone_for_twilio, send_sms_via_twilio, sms_features_enabled
+from utils.qr_codes import generate_payment_qr
 from utils.taxes import build_line_item_tax_inputs, calculate_itemized_tax, normalize_business_tax_rates
 
 bp = Blueprint("jobs", __name__)
@@ -1532,6 +1533,10 @@ def _build_invoice_view_url(job_id, invoice_ref, access_token=None, external=Fal
     if token_value:
         route_kwargs["token"] = token_value
     return _build_notification_url("jobs.view_invoice", external=external, **route_kwargs)
+
+
+def _display_payment_link(payment_url):
+    return str(payment_url or "").replace("https://", "").replace("http://", "")
 
 
 def _issue_estimate_access_token(db, estimate_id, recipient_email=""):
@@ -4392,6 +4397,7 @@ def view_invoice(jobId, invoiceRef):
     payment_state = str(request.args.get("payment") or "").strip().lower()
     payment_method_state = str(request.args.get("payment_method") or "").strip().lower()
     reminder_state = str(request.args.get("reminder") or "").strip().lower()
+    payment_link_state = str(request.args.get("payment_link") or "").strip().lower()
     returned_session_id = str(request.args.get("session_id") or "").strip()
     is_staff_view = _is_authenticated_employee()
     has_customer_token = _verify_invoice_access_token(invoice, token_value)
@@ -4419,6 +4425,26 @@ def view_invoice(jobId, invoiceRef):
     invoice_sent_iso = _resolve_invoice_sent_iso(invoice, job_doc)
     invoice_status_normalized = invoice_status.lower()
     invoice_is_paid = invoice_status_normalized == "paid"
+    payment_url = ""
+    payment_url_display = ""
+    invoice_qr_code = ""
+    customer_qr_code = ""
+
+    if not invoice_is_paid and token_value:
+        payment_url = _build_invoice_view_url(jobId, invoiceRef, access_token=token_value, external=True)
+        payment_url_display = _display_payment_link(payment_url)
+        try:
+            invoice_qr_code = generate_payment_qr(payment_url)
+            customer_qr_code = invoice_qr_code
+        except Exception as exc:
+            current_app.logger.warning(
+                "Invoice QR generation failed: job_id=%s invoice_ref=%s error=%s",
+                jobId,
+                invoiceRef,
+                exc,
+            )
+            invoice_qr_code = ""
+            customer_qr_code = ""
 
     # Fallback: if webhook is delayed/missed, finalize payment from returned Checkout Session.
     if (
@@ -4536,9 +4562,49 @@ def view_invoice(jobId, invoiceRef):
         payment_state=payment_state,
         payment_method_state=payment_method_state,
         reminder_state=reminder_state,
+        payment_link_state=payment_link_state,
         stripe_publishable_key=_resolve_stripe_publishable_key(),
         stripe_connect_ready=stripe_connect_ready,
         stripe_connect_reason=stripe_connect_reason,
+        payment_url=payment_url,
+        payment_url_display=payment_url_display,
+        invoice_qr_code=invoice_qr_code,
+        customer_qr_code=customer_qr_code,
+    )
+
+
+@bp.route("/jobs/<jobId>/invoices/<invoiceRef>/payment-link", methods=["POST"])
+def generate_invoice_payment_link(jobId, invoiceRef):
+    if not _is_authenticated_employee():
+        return redirect(url_for("auth.login"))
+
+    db = ensure_connection_or_500()
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    job_doc = serialize_doc(job)
+    invoice = _find_invoice_entry(job_doc, invoice_ref=invoiceRef)
+    if not invoice:
+        return redirect(url_for("jobs.view_job", jobId=jobId))
+
+    invoice_status = _resolve_invoice_status(invoice, job_doc)
+    if str(invoice_status or "").strip().lower() == "paid":
+        return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment_link="paid"))
+
+    resolved_invoice_ref = _resolve_invoice_ref(invoice, fallback_ref=invoiceRef)
+    access_token = _issue_invoice_access_token(db, jobId, resolved_invoice_ref)
+    if not access_token:
+        return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, payment_link="failed"))
+
+    return redirect(
+        url_for(
+            "jobs.view_invoice",
+            jobId=jobId,
+            invoiceRef=invoiceRef,
+            token=access_token,
+            payment_link="generated",
+        )
     )
 
 
@@ -5314,13 +5380,8 @@ def send_estimate_email(jobId):
             if not estimate_file and resolved_invoice_entry:
                 estimate_file = str(resolved_invoice_entry.get("file_path") or "").strip()
 
-        filepath = estimate_pdf_absolute_path_from_url(estimate_file)
-        if not filepath or not os.path.exists(filepath):
-            if email_type == "invoice":
-                return jsonify({"success": False, "error": "Invoice file not found"}), 404
-            return jsonify({"success": False, "error": "Estimate file not found"}), 404
-
-        filename = os.path.basename(filepath)
+        filepath = ""
+        filename = ""
 
         appended_body = body
         if email_type == "invoice":
@@ -5340,6 +5401,81 @@ def send_estimate_email(jobId):
                         "You can also view this invoice online here:\n"
                         f"{invoice_link}"
                     )
+
+                    # Rebuild invoice PDF with the latest tokenized payment URL so
+                    # attached invoices include a scannable payment QR code.
+                    try:
+                        customer_for_pdf = {}
+                        customer_ref = job.get("customer_id")
+                        if customer_ref:
+                            customer_doc = db.customers.find_one(build_reference_filter("_id", customer_ref))
+                            if customer_doc:
+                                customer_for_pdf = serialize_doc(customer_doc)
+
+                        business_for_pdf = {}
+                        business_id = str(job.get("business_id") or "").strip()
+                        if not business_id:
+                            sole_business = db.businesses.find_one({}, {"_id": 1})
+                            if sole_business:
+                                business_id = str(sole_business.get("_id") or "").strip()
+                        if business_id:
+                            business_doc = db.businesses.find_one(
+                                build_reference_filter("_id", business_id),
+                                {
+                                    "company_name": 1,
+                                    "business_name": 1,
+                                    "address_line_1": 1,
+                                    "address_line_2": 1,
+                                    "city": 1,
+                                    "state": 1,
+                                    "zip_code": 1,
+                                    "phone_number": 1,
+                                    "fax_number": 1,
+                                    "email": 1,
+                                    "website": 1,
+                                    "license_number": 1,
+                                    "warranty_info": 1,
+                                    "tax_rates": 1,
+                                },
+                            )
+                            if business_doc:
+                                business_for_pdf = serialize_doc(business_doc)
+
+                        business_logo_path = resolve_current_business_logo_path(db)
+                        invoice_pdf_payload = _hydrate_service_descriptions_for_pdf(
+                            db,
+                            job,
+                            business_id=job.get("business_id") or resolve_current_business_id(db),
+                        )
+                        regenerated_invoice_path = generate_invoice(
+                            jobId,
+                            invoice_pdf_payload,
+                            customer_for_pdf,
+                            business_logo_path=business_logo_path,
+                            business=business_for_pdf,
+                            payment_url=invoice_link,
+                        )
+                        filename = os.path.basename(regenerated_invoice_path)
+                        filepath = regenerated_invoice_path
+                        estimate_file = url_for("download_invoice", filename=filename)
+                    except Exception as exc:
+                        current_app.logger.warning(
+                            "Invoice PDF regeneration with payment QR failed: job_id=%s invoice_ref=%s error=%s",
+                            jobId,
+                            invoice_ref,
+                            exc,
+                        )
+
+        if not filepath:
+            filepath = estimate_pdf_absolute_path_from_url(estimate_file)
+
+        if not filepath or not os.path.exists(filepath):
+            if email_type == "invoice":
+                return jsonify({"success": False, "error": "Invoice file not found"}), 404
+            return jsonify({"success": False, "error": "Estimate file not found"}), 404
+
+        if not filename:
+            filename = os.path.basename(filepath)
 
         msg = Message(
             subject=subject,
@@ -5381,6 +5517,8 @@ def send_estimate_email(jobId):
                     updated_entry["sent_at"] = sent_at_utc.isoformat()
                     updated_entry["due_date"] = due_date
                     updated_entry["status"] = "Sent"
+                    if estimate_file:
+                        updated_entry["file_path"] = estimate_file
                 updated_invoices.append(updated_entry)
 
             db.jobs.update_one(

@@ -22,14 +22,14 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h2 class="create-job-form-section-header">Client Details</h2>
 
-        <div class="add-customer-form-row add-customer-form-row--top-aligned">
-          <div class="add-customer-form-field">
+        <div class="form-row add-customer-form-row add-customer-form-row--top-aligned">
+          <div class="form-field add-customer-form-field">
             <p class="job-client-inline"><span class="job-client-label">Customer:</span> <span class="job-client-name">{{ job.customer_name }}</span></p>
             <span class="job-client-label">Job Address:</span>
             <div class="job-property-address-preview" data-job-property-address>Select a property above to see the job address.</div>
           </div>
 
-          <div class="add-customer-form-field">
+          <div class="form-field add-customer-form-field">
             <label for="job-property-id">Property</label>
             <select id="job-property-id" name="job_property_id" data-job-property-select>
               {% for property in customer_properties %}
@@ -49,9 +49,9 @@
         <h2 class="create-job-form-section-header">Job Details</h2>
         <p class="form-field-note form-field-note--compact">* Leave Scheduled Date / Time blank if you'll schedule this job later.</p>
 
-        <div class="add-customer-form-row job-details-layout">
+        <div class="form-row add-customer-form-row job-details-layout">
           <div class="job-details-stack">
-            <div class="add-customer-form-field">
+            <div class="form-field add-customer-form-field">
               <label for="job-date">Scheduled Date</label>
               {% set date_parts = job.scheduled_date.split('/') %}
               {% set job_date_value = date_parts[2] + '-' + date_parts[0] + '-' + date_parts[1] if date_parts|length == 3 else '' %}
@@ -59,21 +59,21 @@
               <span id="error-date" class="form-field-error" style="display:none;">Scheduled Date is required</span>
             </div>
 
-            <div class="add-customer-form-field">
+            <div class="form-field add-customer-form-field">
               <label for="job-time">Scheduled Time</label>
               <input id="job-time" name="job_time" type="time" value="{{ job.scheduled_time|default('', true) }}" />
               <span id="error-time" class="form-field-error" style="display:none;">Scheduled Time is required</span>
               <button id="clear-date-time" type="button">Clear Date and Time</button>
             </div>
 
-            <div class="add-customer-form-field">
+            <div class="form-field add-customer-form-field">
               <label for="payment-due-days">Payment Due Days</label>
               <input id="payment-due-days" name="payment_due_days" type="number" min="1" step="1" value="{{ payment_due_days_value|default(30, true) }}" required />
             </div>
           </div>
 
           <div class="job-details-stack">
-            <div class="add-customer-form-field">
+            <div class="form-field add-customer-form-field">
               <label for="job-schedule-type">Job Type</label>
               {% if recurrence_locked %}
                 <input type="hidden" name="job_schedule_type" value="recurring" />
@@ -88,7 +88,7 @@
               {% endif %}
             </div>
 
-            <div class="add-customer-form-field">
+            <div class="form-field add-customer-form-field">
               <label for="primary-technician-id">Primary Technician</label>
               <select id="primary-technician-id" name="primary_technician_id">
                 <option value="">-- No primary technician --</option>
@@ -98,15 +98,15 @@
               </select>
             </div>
 
-            <div class="add-customer-form-field">
+            <div class="form-field add-customer-form-field">
               <label for="invoice-notes">Invoice Notes</label>
               <textarea id="invoice-notes" name="invoice_notes" rows="4" placeholder="Example: Payment terms, permit details, parts/labor summary, completion scope, and customer care instructions shown on the invoice.">{{ job.invoice_notes|default('', true) }}</textarea>
             </div>
           </div>
         </div>
 
-        <div class="add-customer-form-row add-customer-form-row--single job-additional-technicians-row">
-          <div class="add-customer-form-field">
+        <div class="form-row add-customer-form-row add-customer-form-row--single job-additional-technicians-row">
+          <div class="form-field add-customer-form-field">
             <label>Additional Technicians</label>
             <div class="job-additional-technicians-list">
               {% for employee in employee_options %}
@@ -122,8 +122,8 @@
           </div>
         </div>
 
-        <div class="add-customer-form-row add-customer-form-row--top-aligned" id="job-recurring-settings" {% if recurrence_state.schedule_type != 'recurring' %}hidden{% endif %}>
-          <div class="add-customer-form-field">
+        <div class="form-row add-customer-form-row add-customer-form-row--top-aligned" id="job-recurring-settings" {% if recurrence_state.schedule_type != 'recurring' %}hidden{% endif %}>
+          <div class="form-field add-customer-form-field">
             <label for="recurring-frequency">Frequency</label>
             <select id="recurring-frequency" name="recurring_frequency">
               <option value="">-- Select frequency --</option>
@@ -134,7 +134,7 @@
             <span id="error-recurring-frequency" class="form-field-error" style="display:none;">Frequency is required</span>
           </div>
 
-          <div class="add-customer-form-field">
+          <div class="form-field add-customer-form-field">
             <label for="recurring-end-type">Ends</label>
             <select id="recurring-end-type" name="recurring_end_type">
               {% for end_value, end_label in recurring_end_type_options %}
@@ -144,13 +144,13 @@
             <span id="error-recurring-end-type" class="form-field-error" style="display:none;">Ends is required</span>
           </div>
 
-          <div class="add-customer-form-field" id="recurring-end-date-wrap" {% if recurrence_state.schedule_type != 'recurring' or recurrence_state.end_type != 'on_date' %}hidden{% endif %}>
+          <div class="form-field add-customer-form-field" id="recurring-end-date-wrap" {% if recurrence_state.schedule_type != 'recurring' or recurrence_state.end_type != 'on_date' %}hidden{% endif %}>
             <label for="recurring-end-date">End Date</label>
             <input id="recurring-end-date" name="recurring_end_date" type="date" value="{% if recurrence_state.end_date %}{% set recurring_end_parts = recurrence_state.end_date.split('/') %}{% if recurring_end_parts|length == 3 %}{{ recurring_end_parts[2] }}-{{ recurring_end_parts[0] }}-{{ recurring_end_parts[1] }}{% endif %}{% endif %}" />
             <span id="error-recurring-end-date" class="form-field-error" style="display:none;">End Date is required</span>
           </div>
 
-          <div class="add-customer-form-field" id="recurring-end-after-wrap" {% if recurrence_state.schedule_type != 'recurring' or recurrence_state.end_type != 'after_occurrences' %}hidden{% endif %}>
+          <div class="form-field add-customer-form-field" id="recurring-end-after-wrap" {% if recurrence_state.schedule_type != 'recurring' or recurrence_state.end_type != 'after_occurrences' %}hidden{% endif %}>
             <label for="recurring-end-after">Number of Visits</label>
             <input id="recurring-end-after" name="recurring_end_after" type="number" min="1" step="1" value="{{ recurrence_state.max_occurrences }}" />
             <span id="error-recurring-end-after" class="form-field-error" style="display:none;">Number of Visits is required</span>
@@ -162,8 +162,8 @@
         {% endif %}
 
         {% if job.notes and job.notes|length > 0 %}
-        <div class="add-customer-form-row add-customer-form-row--single">
-          <div class="add-customer-form-field">
+        <div class="form-row add-customer-form-row add-customer-form-row--single">
+          <div class="form-field add-customer-form-field">
             <label>Communication Notes</label>
             <div style="border: 1px solid #ddd; padding: 1rem; border-radius: 4px; background-color: #f9f9f9;">
               {% for note in job.notes %}
@@ -182,8 +182,8 @@
         <div id="job-services-list">
           {% if job.services %}
             {% for service in job.services %}
-            <div class="add-customer-form-row job-service-row" data-service-index="{{ loop.index }}">
-              <div class="add-customer-form-field">
+            <div class="form-row add-customer-form-row job-service-row" data-service-index="{{ loop.index }}">
+              <div class="form-field add-customer-form-field">
                 <label for="service-code-{{ loop.index }}">Service</label>
                 <select id="service-code-{{ loop.index }}" name="service_code[]">
                   <option value="">-- Select a service --</option>
@@ -194,17 +194,17 @@
                 {% if loop.first %}<span id="error-service-code" class="form-field-error" style="display:none;">At least one service must be selected</span>{% endif %}
               </div>
 
-              <div class="add-customer-form-field">
+              <div class="form-field add-customer-form-field">
                 <label for="service-price-{{ loop.index }}">Price</label>
                 <input id="service-price-{{ loop.index }}" name="service_price[]" type="text" placeholder="$0.00" value="{{ service.price }}" />
               </div>
 
-              <div class="add-customer-form-field">
+              <div class="form-field add-customer-form-field">
                 <label for="service-hours-{{ loop.index }}">Hours</label>
                 <input id="service-hours-{{ loop.index }}" name="service_hours[]" type="number" step="0.25" min="0" placeholder="0" value="{{ service.estimated_hours|default(service.duration, true) }}" />
               </div>
 
-              <div class="add-customer-form-field service-emergency-call-field">
+              <div class="form-field add-customer-form-field service-emergency-call-field">
                 <label for="service-emergency-call-{{ loop.index }}">Emergency Call?</label>
                 <input type="hidden" id="service-emergency-call-hidden-{{ loop.index }}" name="service_emergency_call[]" value="{% if service.emergency_call %}yes{% else %}no{% endif %}" />
                 <input id="service-emergency-call-{{ loop.index }}" class="service-emergency-call-toggle" data-service-index="{{ loop.index }}" type="checkbox" {% if service.emergency_call %}checked{% endif %} />
@@ -212,8 +212,8 @@
             </div>
             {% endfor %}
           {% else %}
-            <div class="add-customer-form-row job-service-row" data-service-index="1">
-              <div class="add-customer-form-field">
+            <div class="form-row add-customer-form-row job-service-row" data-service-index="1">
+              <div class="form-field add-customer-form-field">
                 <label for="service-code-1">Service</label>
                 <select id="service-code-1" name="service_code[]">
                   <option value="">-- Select a service --</option>
@@ -224,17 +224,17 @@
                 <span id="error-service-code" class="form-field-error" style="display:none;">At least one service must be selected</span>
               </div>
 
-              <div class="add-customer-form-field">
+              <div class="form-field add-customer-form-field">
                 <label for="service-price-1">Price</label>
                 <input id="service-price-1" name="service_price[]" type="text" placeholder="$0.00" />
               </div>
 
-              <div class="add-customer-form-field">
+              <div class="form-field add-customer-form-field">
                 <label for="service-hours-1">Hours</label>
                 <input id="service-hours-1" name="service_hours[]" type="number" step="0.25" min="0" placeholder="0" />
               </div>
 
-              <div class="add-customer-form-field service-emergency-call-field">
+              <div class="form-field add-customer-form-field service-emergency-call-field">
                 <label for="service-emergency-call-1">Emergency Call?</label>
                 <input type="hidden" id="service-emergency-call-hidden-1" name="service_emergency_call[]" value="no" />
                 <input id="service-emergency-call-1" class="service-emergency-call-toggle" data-service-index="1" type="checkbox" />
@@ -268,8 +268,8 @@
         <div id="job-discounts-list">
           {% if job.discounts %}
             {% for discount in job.discounts %}
-            <div class="add-customer-form-row job-discount-row" data-discount-index="{{ loop.index }}">
-              <div class="add-customer-form-field">
+            <div class="form-row add-customer-form-row job-discount-row" data-discount-index="{{ loop.index }}">
+              <div class="form-field add-customer-form-field">
                 <label for="discount-name-{{ loop.index }}">Discount</label>
                 <select id="discount-name-{{ loop.index }}" name="discount_name[]">
                   <option value="">-- Select discount --</option>
@@ -279,20 +279,20 @@
                 </select>
               </div>
 
-              <div class="add-customer-form-field">
+              <div class="form-field add-customer-form-field">
                 <label for="discount-percentage-{{ loop.index }}">Discount Percentage</label>
                 <input id="discount-percentage-{{ loop.index }}" name="discount_percentage[]" type="number" step="0.01" min="0" max="100" placeholder="0" value="{{ discount.discount_percentage|default('', true) }}" />
               </div>
 
-              <div class="add-customer-form-field">
+              <div class="form-field add-customer-form-field">
                 <label for="discount-amount-{{ loop.index }}">Discount Amount</label>
                 <input id="discount-amount-{{ loop.index }}" name="discount_amount[]" type="text" placeholder="$0.00" value="{{ discount.discount_amount|default('', true) }}" />
               </div>
             </div>
             {% endfor %}
           {% else %}
-            <div class="add-customer-form-row job-discount-row" data-discount-index="1">
-              <div class="add-customer-form-field">
+            <div class="form-row add-customer-form-row job-discount-row" data-discount-index="1">
+              <div class="form-field add-customer-form-field">
                 <label for="discount-name-1">Discount</label>
                 <select id="discount-name-1" name="discount_name[]">
                   <option value="">-- Select discount --</option>
@@ -302,12 +302,12 @@
                 </select>
               </div>
 
-              <div class="add-customer-form-field">
+              <div class="form-field add-customer-form-field">
                 <label for="discount-percentage-1">Discount Percentage</label>
                 <input id="discount-percentage-1" name="discount_percentage[]" type="number" step="0.01" min="0" max="100" placeholder="0" />
               </div>
 
-              <div class="add-customer-form-field">
+              <div class="form-field add-customer-form-field">
                 <label for="discount-amount-1">Discount Amount</label>
                 <input id="discount-amount-1" name="discount_amount[]" type="text" placeholder="$0.00" />
               </div>
@@ -336,3 +336,4 @@
 
   <script src="{{ url_for('static', filename='js/create_job_contextual.js') }}"></script>
 {% endblock %}
+

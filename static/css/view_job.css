@@ -1,6 +1,5 @@
 /* ── Job Status Progress Bar ── */
 #view-job-progress {
-  padding: 1.25rem 0 0.5rem;
   margin-bottom: 0.5rem;
 }
 
@@ -8,6 +7,13 @@
   display: flex;
   align-items: flex-start;
   width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 0.85rem 0.95rem 0.75rem;
+  border-radius: 14px;
+  border: 1px solid #2A4437;
+  background: #121F19;
+  box-shadow: 0 10px 24px rgba(10, 30, 18, 0.55);
 }
 
 .progress-step {
@@ -27,9 +33,9 @@
   justify-content: center;
   font-weight: 700;
   font-size: 0.85rem;
-  background-color: #F3F4F6;
-  border: 2px solid #D1D5DB;
-  color: #9CA3AF;
+  background-color: #12482b;
+  border: 2px solid #23884F;
+  color: #b6dfc6;
   flex-shrink: 0;
   position: relative;
   z-index: 1;
@@ -39,7 +45,7 @@
 .progress-step-connector {
   flex: 1;
   height: 3px;
-  background-color: #E5E7EB;
+  background-color: #1a5c36;
   margin-top: 17px;
   min-width: 12px;
   transition: background-color 0.2s;
@@ -50,17 +56,21 @@
 }
 
 .progress-step-connector.is-active-right {
-  background-color: #E5E7EB;
+  background-color: #1a5c36;
 }
 
 .progress-step-label {
   margin-top: 0.45rem;
   font-size: 0.78rem;
   font-weight: 500;
-  color: #9CA3AF;
+  color: #b6dfc6;
   text-align: center;
   white-space: nowrap;
   line-height: 1.2;
+  border-radius: 999px;
+  padding: 0.2rem 0.48rem;
+  background: #12482b;
+  border: 1px solid #23884F;
 }
 
 /* Active / Done shared */
@@ -72,10 +82,16 @@
 
 .progress-step.is-active .progress-step-label {
   font-weight: 700;
+  color: #ffffff;
+  background: #23884F;
+  border-color: #23884F;
 }
 
 .progress-step.is-done .progress-step-label {
   font-weight: 600;
+  color: #d4f0df;
+  background: #17643C;
+  border-color: #17643C;
 }
 
 /* Pending */
@@ -212,6 +228,11 @@
 
 /* Mobile */
 @media (max-width: 520px) {
+  .progress-steps {
+    padding: 0.7rem 0.55rem 0.6rem;
+    border-radius: 12px;
+  }
+
   .progress-step-circle {
     width: 28px;
     height: 28px;
@@ -225,6 +246,7 @@
 
   .progress-step-label {
     font-size: 0.58rem;
+    padding: 0.18rem 0.35rem;
   }
 
   .progress-step {
@@ -758,6 +780,65 @@ button[disabled] {
   color: #475569;
 }
 
+.invoice-payment-qr-block {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #E4E7EC;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.invoice-payment-qr-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1B263B;
+}
+
+.invoice-payment-link {
+  color: #1557A0;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.invoice-payment-link:hover {
+  text-decoration: underline;
+}
+
+.invoice-payment-qr-image {
+  width: 150px;
+  height: 150px;
+}
+
+.invoice-payment-qr-caption {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #556070;
+}
+
+.invoice-payment-link-fallback {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #E4E7EC;
+  text-align: center;
+}
+
+.customer-payment-qr-desktop {
+  display: none;
+  margin: 0 0 1rem;
+  align-items: center;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.customer-payment-qr-image {
+  width: 120px;
+  height: 120px;
+}
+
 .estimate-customer-actions {
   display: flex;
   align-items: center;
@@ -870,5 +951,11 @@ button[disabled] {
 
   .estimate-signature-actions button {
     width: 100%;
+  }
+}
+
+@media (min-width: 701px) {
+  .customer-payment-qr-desktop {
+    display: flex;
   }
 }

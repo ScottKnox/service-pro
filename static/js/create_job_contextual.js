@@ -174,7 +174,7 @@
   }
 
   function makeField(labelText, html) {
-    return '<div class="add-customer-form-field">' +
+    return '<div class="form-field add-customer-form-field">' +
       '<label>' + labelText + '</label>' +
       html +
       '</div>';
@@ -586,7 +586,7 @@
     let hvacField = row.querySelector('[name="service_hvac_system_id[]"]');
     if (!hvacField) {
       const hvacWrap = document.createElement("div");
-      hvacWrap.className = "add-customer-form-field";
+      hvacWrap.className = "form-field add-customer-form-field";
       hvacWrap.innerHTML = '<label>Tag To System</label><select data-hvac-select="1" name="service_hvac_system_id[]">' + buildHvacOptions("") + '</select>';
       row.appendChild(hvacWrap);
       hvacField = hvacWrap.querySelector('[name="service_hvac_system_id[]"]');
@@ -608,7 +608,7 @@
 
   function createServiceRow(index) {
     const row = document.createElement("div");
-    row.className = "add-customer-form-row job-service-row job-service-context-row";
+    row.className = "form-row add-customer-form-row job-service-row job-service-context-row";
     row.dataset.serviceIndex = String(index);
 
     row.innerHTML =
@@ -642,7 +642,7 @@
     }
 
     const row = document.createElement("div");
-    row.className = "add-customer-form-row standalone-item-row";
+    row.className = "form-row add-customer-form-row standalone-item-row";
 
     const prefillHvacId = prefill ? String(prefill.hvac_system_id || "").trim() : "";
     const hvacSelectHtml = '<select data-hvac-select="1" name="' + type + '_hvac_system_id[]">' + buildHvacOptions(prefillHvacId) + "</select>";

@@ -1,35 +1,3 @@
-:root {
-  --kl-bg: #0B120F;
-  --kl-surface: #ffffff;
-  --kl-surface-soft: #eef6f1;
-  --kl-surface-softer: #e5f0e8;
-  --kl-border: #c7d4cb;
-  --kl-border-strong: #9caea2;
-  --kl-text: #F2F5F3;
-  --kl-text-muted: #C8D2CD;
-  --kl-header: #10261d;
-  --kl-header-soft: #18382a;
-  --kl-accent: #1e7a46;
-  --kl-accent-strong: #145534;
-  --kl-accent-soft: #e4f5ea;
-  --kl-accent-soft-strong: #d5ecdd;
-  --kl-accent-contrast: #f7fcf8;
-  --kl-focus: #67c98f;
-  --kl-shadow: rgba(10, 34, 22, 0.1);
-  --kl-warm: #d97706;
-  --kl-warm-soft: #fde6c8;
-  --kl-danger: #b91c1c;
-  --kl-muted: #AAB8B1;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  background-color: var(--kl-bg);
-  color: var(--kl-text);
-  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-}
-
 #header {
   width: 100%;
   background: #1D3329;
@@ -103,11 +71,6 @@ body {
   margin: 5px 0;
   background-color: var(--kl-accent-contrast);
   border-radius: 999px;
-}
-
-p {
-  font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  font-size: 1rem;
 }
 
 #header-nav {
@@ -1732,6 +1695,7 @@ p {
   color: var(--kl-text-muted);
   font-size: 0.88rem;
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
@@ -2787,180 +2751,6 @@ body.login-view main {
 .admin-link-card:hover {
   background-color: #F8FAFC;
   box-shadow: 0 2px 8px rgba(27, 38, 59, 0.1);
-}
-
-.admin-link-card h3 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-.admin-link-card p {
-  margin: 0;
-  color: #4B5563;
-  font-size: 0.95rem;
-}
-
-/* Unified card language across resource pages */
-.jobs-card,
-.customer-card,
-.admin-link-card,
-.view-customer-card-link,
-.view-customer-estimate-item,
-.home-job,
-.home-call-cell,
-.home-payment-cell,
-.home-estimate-cell,
-.equipment-part-card-link,
-.note-card {
-  border: 1px solid #D8E0EA;
-  border-radius: 12px;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
-  box-shadow: 0 4px 12px rgba(16, 33, 55, 0.06);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.jobs-card:hover,
-.customer-card:hover,
-.admin-link-card:hover,
-.view-customer-card-link:hover,
-.view-customer-estimate-item:hover,
-.home-job:hover,
-.home-call-cell:hover,
-.home-payment-cell:hover,
-.home-estimate-cell:hover,
-.equipment-part-card-link:hover,
-.note-card:hover {
-  border-color: #B7C7DA;
-  box-shadow: 0 10px 22px rgba(16, 45, 77, 0.12);
-  transform: translateY(-1px);
-}
-
-.jobs-card,
-.customer-card,
-.admin-link-card,
-.view-customer-card-link,
-.view-customer-estimate-item,
-.home-job,
-.home-call-cell,
-.home-payment-cell,
-.home-estimate-cell,
-.equipment-part-card-link {
-  overflow: hidden;
-}
-
-.jobs-card {
-  border-top: 3px solid #1B4D8C;
-}
-
-.customer-card {
-  border-top: 3px solid #0F766E;
-}
-
-.admin-link-card {
-  border-top: 3px solid #7C3AED;
-}
-
-.view-customer-card-link,
-.view-customer-estimate-item,
-.home-job,
-.home-call-cell,
-.home-payment-cell,
-.home-estimate-cell,
-.equipment-part-card-link {
-  border-top: 3px solid #2563EB;
-}
-
-/* Keep My Day job cards on the dark dispatch-inspired theme. */
-#home-jobs-list .home-job {
-  border: 1px solid #2f5a4a;
-  border-top: 3px solid #00A86B;
-  border-radius: 8px;
-  background: #244236;
-  box-shadow: none;
-}
-
-#home-jobs-list .home-job:hover {
-  border-color: #00A86B;
-  background: #2b4f42;
-  box-shadow: none;
-  transform: none;
-}
-
-.jobs-card-row,
-.customer-card-row {
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #E3EAF2;
-}
-
-.jobs-card-row:last-child,
-.customer-card-row:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
-}
-
-.jobs-card-label,
-.customer-card-label {
-  color: #4B5E76;
-  letter-spacing: 0.06em;
-}
-
-.jobs-card-value,
-.customer-card-value {
-  color: #102237;
-  font-weight: 700;
-}
-
-.admin-link-card h3 {
-  font-size: 1.15rem;
-  color: #122238;
-}
-
-.admin-link-card p {
-  color: #41536A;
-  line-height: 1.45;
-}
-
-.view-customer-card-link,
-.view-customer-estimate-item {
-  padding: 0.7rem 0.85rem;
-}
-
-.view-customer-card-link h4,
-.view-customer-estimate-item h4 {
-  color: #11243A;
-  font-size: 1.02rem;
-  margin-bottom: 0.25rem;
-}
-
-.view-customer-card-link p,
-.view-customer-estimate-item p {
-  color: #41536A;
-}
-
-.home-job-card-content,
-.home-call-cell,
-.home-payment-cell,
-.home-estimate-cell {
-  line-height: 1.5;
-}
-
-.home-job-card-column--left {
-  border-right: 1px solid #E3EAF2;
-}
-
-.note-card {
-  border-top: 3px solid #4F46E5;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F8F9FF 100%);
-}
-
-.note-card-date {
-  color: #5E6B82;
-  font-size: 0.78rem;
-  letter-spacing: 0.03em;
-}
-
-.note-card-text {
-  color: #1C2D42;
 }
 
 /* Resource-specific card polish */
@@ -4780,7 +4570,8 @@ body.sidebar-view #footer-bg {
 
 }
 
-  #create-job-form .create-job-form-section-header {
+  #create-job-form .create-job-form-section-header,
+  #create-job-form .form-section-header {
     margin: 1rem 0 0.75rem;
     padding: 0.5rem 0.75rem;
     color: var(--kl-accent-contrast);
@@ -4791,7 +4582,8 @@ body.sidebar-view #footer-bg {
     border-radius: 4px;
   }
 
-  #add-customer-form .create-job-form-section-header {
+  #add-customer-form .create-job-form-section-header,
+  #add-customer-form .form-section-header {
     margin: 1rem 0 0.75rem;
     padding: 0.5rem 0.75rem;
     color: var(--kl-accent-contrast);
@@ -4802,21 +4594,25 @@ body.sidebar-view #footer-bg {
     border-radius: 4px;
   }
 
+  .form-row,
   .add-customer-form-row {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 1rem;
   }
 
+  .form-row[hidden],
   .add-customer-form-row[hidden],
   .add-customer-form-field[hidden] {
     display: none !important;
   }
 
+  .form-row--top-aligned,
   .add-customer-form-row--top-aligned {
     align-items: start;
   }
 
+  .form-row--single,
   .add-customer-form-row--single {
     grid-template-columns: minmax(0, 1fr);
     max-width: calc(50% - 0.5rem);
@@ -4837,23 +4633,29 @@ body.sidebar-view #footer-bg {
     }
   }
 
+  .form-field,
   .add-customer-form-field {
     display: grid;
     gap: 0.4rem;
   }
 
+  .form-field:has(> button),
   .add-customer-form-field:has(> button) {
     width: auto;
   }
 
+  .form-field label,
   .add-customer-form-field label {
     color: #1B263B;
     font-size: 1rem;
     font-weight: 600;
   }
 
+  .form-field input,
   .add-customer-form-field input,
+  .form-field select,
   .add-customer-form-field select,
+  .form-field textarea,
   .add-customer-form-field textarea {
     width: 100%;
     box-sizing: border-box;
@@ -4866,12 +4668,15 @@ body.sidebar-view #footer-bg {
     font-family: inherit;
   }
 
+  .form-field input,
   .add-customer-form-field input,
+  .form-field select,
   .add-customer-form-field select {
     min-height: 44px;
     line-height: 1.2;
   }
 
+  .form-field select,
   .add-customer-form-field select {
     display: block;
     appearance: none;
@@ -4917,8 +4722,11 @@ body.sidebar-view #footer-bg {
     background-color: #F1F5F9;
   }
 
+  .form-field input:focus,
   .add-customer-form-field input:focus,
+  .form-field select:focus,
   .add-customer-form-field select:focus,
+  .form-field textarea:focus,
   .add-customer-form-field textarea:focus {
     outline: 2px solid #5FA3D3;
     outline-offset: 1px;
@@ -4933,6 +4741,7 @@ body.sidebar-view #footer-bg {
     cursor: not-allowed;
   }
 
+  .form-field textarea,
   .add-customer-form-field textarea {
     resize: vertical;
     font-family: inherit;
@@ -5468,20 +5277,13 @@ body.sidebar-view #footer-bg {
     display: none;
   }
 
-  #job-materials-list .job-material-row {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    align-items: start;
-  }
-
+  #job-materials-list .job-material-row,
   #service-materials-list .service-material-row {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: start;
   }
 
-  #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
-    grid-column: span 2;
-  }
-
+  #job-materials-list .job-material-row .add-customer-form-field:nth-child(1),
   #service-materials-list .service-material-row .add-customer-form-field:nth-child(1) {
     grid-column: span 2;
   }
@@ -5496,18 +5298,12 @@ body.sidebar-view #footer-bg {
   }
 
   @media (max-width: 1280px) {
-    #job-materials-list .job-material-row {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
+    #job-materials-list .job-material-row,
     #service-materials-list .service-material-row {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
-      grid-column: span 3;
-    }
-
+    #job-materials-list .job-material-row .add-customer-form-field:nth-child(1),
     #service-materials-list .service-material-row .add-customer-form-field:nth-child(1) {
       grid-column: span 3;
     }
@@ -5522,18 +5318,12 @@ body.sidebar-view #footer-bg {
   }
 
   @media (max-width: 900px) {
-    #job-materials-list .job-material-row {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
+    #job-materials-list .job-material-row,
     #service-materials-list .service-material-row {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
-      grid-column: span 2;
-    }
-
+    #job-materials-list .job-material-row .add-customer-form-field:nth-child(1),
     #service-materials-list .service-material-row .add-customer-form-field:nth-child(1) {
       grid-column: span 2;
     }
@@ -5548,18 +5338,12 @@ body.sidebar-view #footer-bg {
   }
 
   @media (max-width: 640px) {
-    #job-materials-list .job-material-row {
-      grid-template-columns: 1fr;
-    }
-
+    #job-materials-list .job-material-row,
     #service-materials-list .service-material-row {
       grid-template-columns: 1fr;
     }
 
-    #job-materials-list .job-material-row .add-customer-form-field:nth-child(1) {
-      grid-column: auto;
-    }
-
+    #job-materials-list .job-material-row .add-customer-form-field:nth-child(1),
     #service-materials-list .service-material-row .add-customer-form-field:nth-child(1) {
       grid-column: auto;
     }
@@ -5600,101 +5384,13 @@ body.sidebar-view #footer-bg {
     justify-content: flex-start;
   }
 
-  #add-job-service-button,
-  #add-job-part-button,
-  #add-job-labor-button,
-  #add-job-material-button,
-  #add-job-equipment-button,
-  #add-job-discount-button,
-  #add-standalone-part-button,
-  #add-standalone-material-button,
-  #add-standalone-equipment-button,
-  #add-service-part-button,
-  #add-service-material-button {
-    padding: 0.55rem 0.95rem;
-    border: 1px solid #1B263B;
-    border-radius: 4px;
-    background-color: #FFFFFF;
-    color: #1B263B;
-    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
 
-  #add-job-service-button:hover,
-  #add-job-part-button:hover,
-  #add-job-labor-button:hover,
-  #add-job-material-button:hover,
-  #add-job-equipment-button:hover,
-  #add-job-discount-button:hover,
-  #add-standalone-part-button:hover,
-  #add-standalone-material-button:hover,
-  #add-standalone-equipment-button:hover,
-  #add-service-part-button:hover,
-  #add-service-material-button:hover {
-    background-color: #F1F5F9;
-  }
-
-  .job-row-remove-wrap {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  .job-row-remove-button {
-    padding: 0.45rem 0.75rem;
-    border: 1px solid #B91C1C;
-    border-radius: 4px;
-    background-color: #FEF2F2;
-    color: #991B1B;
-    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  .job-row-remove-button:hover {
-    background-color: #FEE2E2;
-  }
 
   #create-job-form #job-date,
   #create-job-form #job-time {
     height: 44px;
   }
 
-  .job-details-layout {
-    align-items: start;
-  }
-
-  .job-details-stack {
-    display: grid;
-    gap: 1rem;
-  }
-
-  .job-additional-technicians-row {
-    grid-column: 1 / -1;
-    max-width: none;
-  }
-
-  .job-additional-technicians-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem 1rem;
-    align-items: center;
-  }
-
-  .job-additional-technician-option {
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .job-additional-technician-option label {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    cursor: pointer;
-  }
 
   #clear-date-time {
     margin-top: 0.5rem;
@@ -5720,141 +5416,6 @@ body.sidebar-view #footer-bg {
   #clear-date-time:focus {
     outline: 2px solid #5FA3D3;
     outline-offset: 1px;
-  }
-
-  #add-customer-form-actions,
-  #create-job-form-actions,
-  #create-service-form-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 1.5rem;
-  }
-
-  #add-customer-form-actions button,
-  #create-job-form-actions button,
-  #create-service-form-actions button {
-    padding: 0.65rem 1.1rem;
-    border: 1px solid #1B263B;
-    border-radius: 4px;
-    background-color: #1B263B;
-    color: #F8F9FA;
-    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  #add-customer-form-actions button:hover,
-  #create-job-form-actions button:hover,
-  #create-service-form-actions button:hover {
-    background-color: #27364F;
-    border-color: #27364F;
-  }
-
-  #add-customer-form-actions button:disabled,
-  #create-job-form-actions button:disabled,
-  #create-service-form-actions button:disabled {
-    background-color: #C5C7CB;
-    border-color: #C5C7CB;
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-
-  .form-field-error {
-    display: block;
-    color: #D32F2F;
-    font-size: 0.875rem;
-    font-weight: 500;
-    margin-top: 0.35rem;
-    margin-bottom: 0.35rem;
-  }
-
-  .form-field-note {
-    margin: 0.5rem 0;
-    color: #4B5563;
-    font-size: 0.9rem;
-  }
-
-  .form-field-note--compact {
-    margin-top: 0.2rem;
-    margin-bottom: 0.2rem;
-  }
-
-  .service-emergency-warning {
-    padding: 0.45rem 0.6rem;
-    border: 1px solid #e7c98b;
-    border-radius: 8px;
-    background-color: #fff6df;
-    color: #8a5a00;
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
-
-  .service-emergency-call-field {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 0.5rem !important;
-  }
-
-  .service-emergency-call-field label {
-    margin-bottom: 0;
-  }
-
-  .service-emergency-call-toggle {
-    width: 1.4rem !important;
-    height: 1.4rem !important;
-    min-width: 1.4rem;
-    cursor: pointer;
-    accent-color: #1B263B;
-  }
-
-  .field-validation-error {
-    min-height: 1.1rem;
-    margin: 0.2rem 0 0;
-    color: #D32F2F;
-    font-size: 0.875rem;
-    font-weight: 500;
-    line-height: 1.2;
-    visibility: hidden;
-  }
-
-  .field-validation-error.is-visible {
-    visibility: visible;
-  }
-
-  .form-field-input-error {
-    border-color: #D32F2F !important;
-    box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.12);
-    background: linear-gradient(180deg, #FFF8F8 0%, #FFFFFF 100%);
-  }
-
-  .customer-status-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.18rem 0.65rem;
-    border-radius: 999px;
-    background-color: #E5E7EB;
-    color: #1F2937;
-    font-size: 0.9rem;
-    font-weight: 700;
-    line-height: 1.2;
-  }
-
-  .customer-status-chip.is-lead {
-    background-color: #2D2A1C;
-    color: #F2F5F3;
-  }
-
-  .customer-status-chip.is-active {
-    background-color: #14B8A6;
-    color: #F2F5F3;
-  }
-
-  .employee-status-chip {
-    padding: 0.24rem 0.8rem;
-    font-size: 1.15rem;
   }
 
   #error-services {
@@ -5960,20 +5521,6 @@ body.sidebar-view #footer-bg {
     color: var(--kl-header-soft);
   }
 
-  .view-customer-section-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    border-top: 1px solid #808080;
-  }
-
-  .view-customer-section-row--full {
-    grid-template-columns: 1fr;
-  }
-
-  .view-customer-section-row--full .view-customer-section-column:first-child {
-    border-right: 0;
-  }
-
   #view-profile-details-columns {
     grid-template-columns: 1fr;
   }
@@ -6044,52 +5591,11 @@ body.sidebar-view #footer-bg {
     border-right: 0;
   }
 
-  .view-customer-section-column {
-    padding: 0 0.75rem 0.75rem;
-  }
-
-  .view-customer-section-column:first-child {
-    border-right: 1px solid #F8F9FA;
-  }
-
-  .view-customer-section-column > h3 {
-    text-align: center;
-    background: linear-gradient(135deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
-    color: var(--kl-accent-contrast);
-    margin: 0 -0.75rem 0.75rem;
-    padding: 0.5rem 0.75rem;
-  }
-
   #view-customer-details-list,
   #view-customer-account-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.9rem;
-    padding: 0.25rem 0;
-  }
-
-  .view-customer-detail-item {
-    padding: 0;
-  }
-
-  .view-customer-detail-item h4 {
-    margin: 0 0 0.2rem;
-    color: #1B263B;
-    font-size: 1rem;
-    font-weight: 700;
-  }
-
-  .view-customer-detail-item p {
-    margin: 0;
-    color: #1B263B;
-    font-size: 1.25rem;
-  }
-
-  #view-customer-estimates-list {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
     padding: 0.25rem 0;
   }
 
@@ -6119,57 +5625,10 @@ body.sidebar-view #footer-bg {
     font-size: 1rem;
   }
 
-  .view-customer-jobs-list,
-  .view-customer-payments-list,
-  .view-customer-estimates-list {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.25rem 0;
-  }
-
-  .view-customer-properties-list {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.25rem 0;
-  }
-
   #view-customer-notes-section {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-  }
-
-  .view-customer-internal-note-form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .view-customer-internal-note-form textarea {
-    width: 100%;
-    min-height: 112px;
-    padding: 0.85rem 0.95rem;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    box-sizing: border-box;
-    font: inherit;
-    color: #1f2937;
-    background: #ffffff;
-    resize: vertical;
-  }
-
-  .view-customer-internal-note-form textarea:focus {
-    outline: 2px solid #1d4ed8;
-    outline-offset: 1px;
-  }
-
-  .view-customer-internal-note-actions {
-    display: flex;
-    justify-content: flex-start;
   }
 
   #view-customer-internal-notes-list {
@@ -6178,1173 +5637,9 @@ body.sidebar-view #footer-bg {
     gap: 0.75rem;
   }
 
-  .view-customer-internal-note-card {
-    margin-bottom: 0;
-    padding: 1.25rem;
-  }
-
-  .view-customer-internal-note-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .view-customer-internal-note-header .note-card-date {
-    margin-bottom: 0;
-  }
-
-  .view-customer-internal-note-header .note-card-date a {
-    color: #1d4ed8;
-    text-decoration: none;
-    font-weight: 600;
-  }
-
-  .view-customer-internal-note-header .note-card-date a:hover {
-    text-decoration: underline;
-  }
-
-  .view-customer-internal-note-delete {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border: 1px solid #fecaca;
-    border-radius: 8px;
-    background: #fff5f5;
-    color: #b91c1c;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
-
-  .view-customer-internal-note-delete:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-  }
-
-  .view-customer-properties-header,
-  .view-customer-properties-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 88px;
-    gap: 0.75rem;
-    align-items: center;
-  }
-
-  .view-customer-properties-header {
-    color: #344054;
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    padding: 0 0.25rem;
-  }
-
-  .view-customer-properties-header span:last-child {
-    text-align: center;
-  }
-
-  .view-customer-property-default-form {
-    display: flex;
-    justify-content: center;
-  }
-
-  .view-customer-property-default-toggle {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-  }
-
-  .view-customer-property-default-toggle input {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .view-customer-property-default-toggle span {
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    border: 1px solid #98A2B3;
-    background: #FFFFFF;
-    box-shadow: inset 0 1px 1px rgba(16, 24, 40, 0.04);
-    transition: background-color 0.15s ease, border-color 0.15s ease;
-  }
-
-  .view-customer-property-default-toggle input:checked + span {
-    border-color: #14532D;
-    background: #15803D;
-  }
-
-  .view-customer-property-default-toggle input:checked + span::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 5px;
-    height: 10px;
-    border-right: 2px solid #FFFFFF;
-    border-bottom: 2px solid #FFFFFF;
-    transform: translate(-50%, -55%) rotate(45deg);
-  }
-
-  .view-customer-property-default-toggle input:focus-visible + span {
-    outline: 2px solid #1D4ED8;
-    outline-offset: 2px;
-  }
-
-  @media (max-width: 720px) {
-    .view-customer-properties-header,
-    .view-customer-properties-row {
-      grid-template-columns: minmax(0, 1fr) 72px;
-    }
-  }
-
-  .view-customer-hvac-card {
-    padding: 0;
-    overflow: hidden;
-    border-radius: 14px;
-    border: 1px solid #D3DBE6;
-    background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
-    box-shadow: 0 4px 14px rgba(22, 44, 77, 0.08);
-  }
-
-  .view-customer-hvac-card-header {
-    padding: 0.8rem 0.9rem 0.72rem;
-    border-bottom: 1px solid #DDE5F0;
-    background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-accent-soft) 100%);
-  }
-
-  .view-customer-hvac-card-kicker {
-    margin: 0;
-    font-size: 0.74rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--kl-text-muted);
-  }
-
-  .view-customer-hvac-card-header h4 {
-    margin: 0.2rem 0 0;
-    font-size: 1.2rem;
-    font-weight: 800;
-    color: var(--kl-text);
-  }
-
-  .view-customer-hvac-card-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.8rem;
-    align-items: center;
-    padding: 0.66rem 0.9rem;
-    border-bottom: 1px solid #E4EAF2;
-  }
-
-  .view-customer-hvac-card-row:last-child {
-    border-bottom: 0;
-  }
-
-  .view-customer-hvac-card-label {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: #344054;
-  }
-
-  .view-customer-hvac-card-value {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: #1B263B;
-    text-align: right;
-  }
-
-  .view-customer-hvac-card--heat-pump {
-    border-top: 3px solid #2563EB;
-  }
-
-  .view-customer-hvac-card--heat-pump .view-customer-hvac-card-header {
-    background: linear-gradient(180deg, #EFF6FF 0%, #E4EEFF 100%);
-  }
-
-  .view-customer-hvac-card--heat-pump .view-customer-hvac-card-kicker {
-    color: #1E3A8A;
-  }
-
-  .view-customer-hvac-card--split {
-    border-top: 3px solid #0F766E;
-  }
-
-  .view-customer-hvac-card--split .view-customer-hvac-card-header {
-    background: linear-gradient(180deg, #ECFDF5 0%, #DFF7EE 100%);
-  }
-
-  .view-customer-hvac-card--split .view-customer-hvac-card-kicker {
-    color: #115E59;
-  }
-
-  .view-customer-hvac-card--package {
-    border-top: 3px solid #D97706;
-  }
-
-  .view-customer-sub-property-card {
-    border-top: 3px solid #0F766E;
-  }
-
-  .view-customer-sub-property-card .view-customer-hvac-card-header {
-    background: linear-gradient(180deg, #ECFDF5 0%, #DFF7EE 100%);
-  }
-
-  .view-customer-sub-property-card .view-customer-hvac-card-kicker {
-    color: #115E59;
-  }
-
-  .view-customer-hvac-card--package .view-customer-hvac-card-header {
-    background: linear-gradient(180deg, #FFFBEB 0%, #FFF3D8 100%);
-  }
-
-  .view-customer-hvac-card--package .view-customer-hvac-card-kicker {
-    color: #92400E;
-  }
-
-  .view-customer-hvac-card--mini-split {
-    border-top: 3px solid #7C3AED;
-  }
-
-  .view-customer-hvac-card--mini-split .view-customer-hvac-card-header {
-    background: linear-gradient(180deg, #F5F3FF 0%, #ECE7FF 100%);
-  }
-
-  .view-customer-hvac-card--mini-split .view-customer-hvac-card-kicker {
-    color: #5B21B6;
-  }
-
-  .hvac-diagnostics-row {
-    display: flex;
-    align-items: stretch;
-    gap: 0.5rem;
-  }
-
-  .hvac-system-diagnostics-link {
-    display: block;
-    text-decoration: none;
-    color: inherit;
-  }
-
-  .hvac-system-diagnostics-link .hvac-component-card {
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-  }
-
-  .hvac-system-diagnostics-link:hover .hvac-component-card,
-  .hvac-system-diagnostics-link:focus-visible .hvac-component-card {
-    border-color: #AFC6E4;
-    box-shadow: 0 8px 18px rgba(15, 76, 129, 0.14);
-    transform: translateY(-1px);
-  }
-
-  .hvac-system-diagnostics-link:focus-visible {
-    outline: none;
-  }
-
-  .hvac-system-diagnostics-card {
-    flex: 1;
-    border-radius: 12px;
-    box-shadow: 0 4px 14px rgba(22, 44, 77, 0.08);
-  }
-
-  .hvac-system-diagnostics-card .hvac-component-card-header {
-    background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-accent-soft) 100%);
-  }
-
-  .hvac-system-diagnostics-card .hvac-component-row span {
-    font-weight: 600;
-  }
-
-  .hvac-system-diagnostics-card .hvac-component-row strong {
-    font-weight: 700;
-  }
-
-  .hvac-diagnostic-sections-grid {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.8rem;
-    padding: 0.25rem 0;
-  }
-
-  .hvac-diagnostic-section-card {
-    border-radius: 12px;
-    box-shadow: 0 4px 14px rgba(22, 44, 77, 0.08);
-  }
-
-  .hvac-components-grid {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.8rem;
-    padding: 0.25rem 0;
-  }
-
-  .hvac-component-card {
-    display: block;
-    border: 1px solid #D6DCE5;
-    border-radius: 10px;
-    background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
-    color: inherit;
-    text-decoration: none;
-    overflow: hidden;
-    transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .hvac-component-card--detail-page {
-    min-height: 100%;
-  }
-
-  .hvac-component-card--air-handler {
-    border-top: 3px solid #2B6CB0;
-  }
-
-  .hvac-component-card--condenser {
-    border-top: 3px solid #0F766E;
-  }
-
-  .hvac-component-card--unit-package {
-    border-top: 3px solid #92400E;
-  }
-
-  .hvac-component-card--unit-mini {
-    border-top: 3px solid #7C3AED;
-  }
-
-  .hvac-component-card--ductwork {
-    border-top: 3px solid #4B5563;
-  }
-
-  .hvac-component-card--diagnostics {
-    border-top: 3px solid #1B4D8C;
-  }
-
-  .hvac-component-card--report {
-    border-top: 3px solid #0B5E55;
-  }
-
-  .hvac-component-card:hover {
-    border-color: #B9C7DA;
-    box-shadow: 0 2px 8px rgba(27, 38, 59, 0.08);
-  }
-
-  .hvac-component-card-header {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    gap: 0.7rem;
-    padding: 0.75rem 0.85rem;
-    border-bottom: 1px solid #DDE4EE;
-  }
-
-  .hvac-component-card-icon {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #1B263B;
-    background-color: #EAF1F8;
-    border: 1px solid #C9D7E7;
-    flex-shrink: 0;
-  }
-
-  .hvac-component-card-icon--air-handler {
-    color: #1D4E89;
-    background-color: #E7F0FA;
-    border-color: #B7CEE9;
-  }
-
-  .hvac-component-card-icon--condenser {
-    color: #115E59;
-    background-color: #E6F5F3;
-    border-color: #B9E1DC;
-  }
-
-  .hvac-component-card-icon--unit-package {
-    color: #7C2D12;
-    background-color: #FFF1E7;
-    border-color: #F6D0B5;
-  }
-
-  .hvac-component-card-icon--unit-mini {
-    color: #5B21B6;
-    background-color: #F2EBFF;
-    border-color: #D9C3FF;
-  }
-
-  .hvac-component-card-icon--ductwork {
-    color: #374151;
-    background-color: #F0F3F6;
-    border-color: #D6DCE5;
-  }
-
-  .hvac-component-card-icon--diagnostics {
-    color: #0F4C81;
-    background-color: #E8F2FD;
-    border-color: #BDD8F6;
-  }
-
-  .hvac-component-card-icon--report {
-    color: #0B5E55;
-    background-color: #E8F8F5;
-    border-color: #B8E5DC;
-  }
-
-  .hvac-component-card-system-type {
-    margin: 0;
-    font-size: 0.76rem;
-    font-weight: 700;
-    color: #475467;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .hvac-component-card-heading-text h4 {
-    margin: 0.15rem 0 0;
-    font-size: 1.15rem;
-    font-weight: 800;
-    color: var(--kl-text);
-  }
-
-  .hvac-component-card-body {
-    padding: 0.1rem 0.85rem;
-  }
-
-  .hvac-component-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.8rem;
-    padding: 0.62rem 0;
-    border-bottom: 1px solid #E4E9F0;
-  }
-
-  .hvac-component-row:last-child {
-    border-bottom: 0;
-  }
-
-  .hvac-component-row span {
-    font-size: 0.92rem;
-    color: #344054;
-  }
-
-  .hvac-component-row strong {
-    font-size: 0.92rem;
-    color: #1B263B;
-    font-weight: 700;
-    text-align: right;
-  }
-
-  .hvac-component-row--notes {
-    align-items: flex-start;
-  }
-
-  .hvac-component-row--notes span {
-    color: #0B5E55;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  .hvac-component-row--notes span::before {
-    content: "i";
-    width: 1rem;
-    height: 1rem;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.68rem;
-    font-weight: 800;
-    color: #0B5E55;
-    background: #EAF8F4;
-    border: 1px solid #BEE9DD;
-    flex-shrink: 0;
-  }
-
-  .hvac-component-row--notes strong {
-    max-width: 62%;
-    text-align: left;
-    white-space: normal;
-    word-break: break-word;
-  }
-
-  .hvac-component-card--diagnostics .hvac-component-row strong {
-    max-width: 58%;
-    word-break: break-word;
-  }
-
-  .hvac-component-card--report .hvac-component-card-header {
-    background: linear-gradient(180deg, #F5FCFA 0%, #EAF8F4 100%);
-  }
-
-  .hvac-component-card--report .hvac-component-row strong {
-    max-width: 62%;
-    word-break: break-word;
-  }
-
-  .hvac-component-card--report .hvac-report-open-row span {
-    color: #1F4B46;
-    font-weight: 700;
-  }
-
-  .hvac-report-open-affordance {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    color: #0B5E55;
-    font-weight: 800;
-    letter-spacing: 0.01em;
-  }
-
-  .hvac-report-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
-  }
-
-  .hvac-report-action-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    color: #0B5E55;
-    font-weight: 800;
-    letter-spacing: 0.01em;
-    text-decoration: none;
-  }
-
-  .hvac-report-action-link:hover,
-  .hvac-report-action-link:focus-visible {
-    color: #084C45;
-    text-decoration: underline;
-  }
-
-  .hvac-component-card--report:hover .hvac-report-open-affordance,
-  .hvac-component-card--report:focus-visible .hvac-report-open-affordance {
-    color: #084C45;
-  }
-
-  .hvac-component-card--report:hover,
-  .hvac-component-card--report:focus-visible {
-    border-color: #92CFC1;
-    box-shadow: 0 8px 18px rgba(11, 94, 85, 0.14);
-    transform: translateY(-1px);
-  }
-
-  .hvac-system-kpi-grid {
-    margin-top: 0.95rem;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.75rem;
-  }
-
-  .hvac-system-status-note {
-    margin: 0.45rem 0 0;
-    font-size: 0.78rem;
-    color: #5A677A;
-    text-align: left;
-  }
-
   /* System Photos */
   #view-hvac-photos {
     margin-top: 1rem;
-  }
-
-  .hvac-photos-note {
-    font-size: 0.8rem;
-    color: #5A677A;
-    background: #F4F6FA;
-    border: 1px solid #D6DCE5;
-    border-radius: 6px;
-    padding: 0.55rem 0.85rem;
-    margin-bottom: 0.95rem;
-    line-height: 1.5;
-  }
-
-  .hvac-photos-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 0.75rem;
-  }
-
-  .hvac-diagnostic-section-photos {
-    margin-top: 0.85rem;
-    border-top: 1px dashed #D6DCE5;
-    padding-top: 0.8rem;
-  }
-
-  .hvac-diagnostic-section-photos h4,
-  .hvac-diagnostic-section-photos-preview h5 {
-    margin: 0 0 0.55rem;
-    font-size: 0.9rem;
-    color: #2A3A54;
-  }
-
-  .hvac-diagnostic-section-photos .hvac-photos-note {
-    margin-top: 0;
-  }
-
-  .hvac-photo-tile {
-    position: relative;
-    aspect-ratio: 1 / 1;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #D6DCE5;
-    background: #F4F6FA;
-  }
-
-  .hvac-photo-thumb-link {
-    display: block;
-    width: 100%;
-    height: 100%;
-    border: none;
-    background: none;
-    padding: 0;
-    cursor: zoom-in;
-  }
-
-  .hvac-photo-thumb {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  .hvac-diagnostic-photo-caption {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 0.33rem 0.45rem;
-    font-size: 0.72rem;
-    line-height: 1.3;
-    color: #fff;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(5, 8, 14, 0.82) 90%);
-  }
-
-  .hvac-photo-delete-form {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-  }
-
-  .hvac-photo-delete-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(0, 0, 0, 0.55);
-    color: #fff;
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-    transition: background 0.15s;
-  }
-
-  .hvac-photo-delete-btn:hover {
-    background: rgba(200, 40, 40, 0.85);
-  }
-
-  .hvac-photo-tile--add {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    border: 1.5px dashed #A4B0C0;
-    cursor: pointer;
-    color: #5A677A;
-    font-size: 0.78rem;
-    font-weight: 500;
-    transition: border-color 0.15s, background 0.15s;
-    user-select: none;
-  }
-
-  .hvac-photo-tile--add:hover {
-    border-color: #4A90D9;
-    background: #EBF3FC;
-    color: #2B6CB0;
-  }
-
-  .hvac-photo-file-input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  /* Photo lightbox modal */
-  .hvac-photo-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 9000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .hvac-photo-modal[hidden] {
-    display: none;
-  }
-
-  .hvac-photo-modal-backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.88);
-    cursor: pointer;
-  }
-
-  .hvac-photo-modal-content {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    max-width: min(92vw, 1000px);
-    max-height: 92dvh;
-    padding: 0.5rem;
-  }
-
-  .hvac-photo-caption-modal-content {
-    width: min(92vw, 640px);
-    background: #0E1827;
-    border: 1px solid rgba(169, 190, 214, 0.25);
-    border-radius: 10px;
-    padding: 0.8rem;
-  }
-
-  .hvac-photo-caption-label {
-    width: 100%;
-    margin: 0.75rem 0 0.35rem;
-    color: #D5E4F6;
-    font-size: 0.82rem;
-    font-weight: 700;
-  }
-
-  .hvac-photo-caption-input {
-    width: 100%;
-    max-width: 100%;
-    min-height: 86px;
-    resize: vertical;
-    border-radius: 8px;
-    border: 1px solid #2A3F59;
-    background: #122136;
-    color: #fff;
-    padding: 0.55rem 0.65rem;
-    font-size: 0.86rem;
-    line-height: 1.45;
-  }
-
-  .hvac-photo-caption-input:focus {
-    outline: 2px solid #4A90D9;
-    outline-offset: 1px;
-  }
-
-  .hvac-photo-caption-actions {
-    width: 100%;
-    margin-top: 0.75rem;
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.55rem;
-  }
-
-  .hvac-photo-caption-actions button {
-    border-radius: 7px;
-    border: 1px solid #355374;
-    background: #173150;
-    color: #E8F0FA;
-    padding: 0.42rem 0.75rem;
-    font-size: 0.8rem;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  .hvac-photo-caption-actions button:hover,
-  .hvac-photo-caption-actions button:focus-visible {
-    background: #1D3D63;
-    border-color: #4A90D9;
-  }
-
-  .hvac-photo-caption-actions .secondary-button {
-    background: transparent;
-    border-color: #516982;
-  }
-
-  .hvac-photo-caption-actions .secondary-button:hover,
-  .hvac-photo-caption-actions .secondary-button:focus-visible {
-    background: rgba(108, 135, 164, 0.2);
-  }
-
-  .hvac-diagnostic-section-photos-preview {
-    margin-top: 0.85rem;
-    padding-top: 0.8rem;
-    border-top: 1px dashed #D6DCE5;
-  }
-
-  .hvac-diagnostic-section-photos-preview .hvac-photo-tile {
-    aspect-ratio: auto;
-    overflow: visible;
-    background: #fff;
-    display: flex;
-    flex-direction: column;
-    padding: 0.5rem;
-    gap: 0.4rem;
-  }
-
-  .hvac-diagnostic-section-photos-preview .hvac-photo-thumb-link {
-    height: 120px;
-  }
-
-  .hvac-diagnostic-section-photos-preview .hvac-photo-thumb {
-    border-bottom: 1px solid #D6DCE5;
-  }
-
-  .hvac-diagnostic-section-photos-preview .hvac-diagnostic-photo-caption {
-    position: static;
-    color: #1E293B;
-    background: #F8FAFD;
-    border-bottom: 1px solid #E2E8F0;
-    min-height: 2.15rem;
-  }
-
-  .hvac-diagnostic-photo-actions {
-    padding: 0.45rem;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.4rem;
-  }
-
-  .hvac-diagnostic-photo-gallery-actions {
-    margin-top: 0.75rem;
-    display: flex;
-    justify-content: center;
-  }
-
-  .hvac-diagnostic-photo-gallery-more-btn {
-    border: 1px solid #355374;
-    border-radius: 999px;
-    background: #173150;
-    color: #E8F0FA;
-    font-size: 0.78rem;
-    font-weight: 700;
-    padding: 0.45rem 0.85rem;
-    cursor: pointer;
-  }
-
-  .hvac-diagnostic-photo-gallery-more-btn:hover,
-  .hvac-diagnostic-photo-gallery-more-btn:focus-visible {
-    background: #1D3D63;
-    border-color: #4A90D9;
-  }
-
-  .hvac-diagnostic-photo-actions form {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  .hvac-diagnostic-photo-actions input[type="text"] {
-    flex: 1;
-    min-width: 0;
-    border: 1px solid #CBD5E1;
-    border-radius: 6px;
-    padding: 0.3rem 0.45rem;
-    font-size: 0.76rem;
-  }
-
-  .hvac-diagnostic-photo-save-btn {
-    border: 1px solid #355374;
-    border-radius: 6px;
-    background: #173150;
-    color: #E8F0FA;
-    font-size: 0.74rem;
-    font-weight: 700;
-    padding: 0.28rem 0.52rem;
-    cursor: pointer;
-  }
-
-  .hvac-diagnostic-photo-save-btn:hover,
-  .hvac-diagnostic-photo-save-btn:focus-visible {
-    background: #1D3D63;
-    border-color: #4A90D9;
-  }
-
-  .hvac-photo-modal-close {
-    position: absolute;
-    top: -2.25rem;
-    right: 0;
-    background: rgba(255, 255, 255, 0.15);
-    border: none;
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    cursor: pointer;
-    transition: background 0.15s;
-    padding: 0;
-    flex-shrink: 0;
-  }
-
-  .hvac-photo-modal-close:hover,
-  .hvac-photo-modal-close:focus-visible {
-    background: rgba(255, 255, 255, 0.3);
-    outline: none;
-  }
-
-  .hvac-photo-modal-img {
-    display: block;
-    max-width: 100%;
-    max-height: calc(92dvh - 3rem);
-    border-radius: 6px;
-    object-fit: contain;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-  }
-
-  .hvac-photo-modal-caption {
-    margin: 0.6rem 0 0;
-    font-size: 0.82rem;
-    color: rgba(255, 255, 255, 0.7);
-    text-align: center;
-  }
-
-  .hvac-system-kpi-card {
-    border: 1px solid #D6DCE5;
-    border-radius: 8px;
-    background: linear-gradient(180deg, #FFFFFF 0%, #F7FAFC 100%);
-    padding: 0.8rem 0.85rem;
-  }
-
-  .hvac-system-kpi-card h4 {
-    margin: 0 0 0.35rem;
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    color: #2A3A54;
-  }
-
-  .hvac-system-kpi-value {
-    margin: 0;
-    font-size: 1.7rem;
-    font-weight: 800;
-    color: #1B263B;
-    line-height: 1.1;
-  }
-
-  .hvac-system-kpi-value span {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #2A3A54;
-    margin-left: 0.25rem;
-  }
-
-  .hvac-system-kpi-meta {
-    margin: 0.45rem 0 0.55rem;
-    font-size: 0.9rem;
-    color: #3E4A59;
-  }
-
-  .hvac-system-kpi-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 0.2rem 0.6rem;
-    border-radius: 999px;
-    border: 1px solid transparent;
-    font-size: 0.78rem;
-    font-weight: 700;
-  }
-
-  .hvac-system-kpi-chip.is-normal {
-    color: #1F6B35;
-    background-color: #EAF6EE;
-    border-color: #B8DDBF;
-  }
-
-  .hvac-system-kpi-chip.is-high {
-    color: #8E4A06;
-    background-color: #FFF3E4;
-    border-color: #F4C996;
-  }
-
-  .hvac-system-kpi-chip.is-low {
-    color: #0D4E8C;
-    background-color: #E6F1FB;
-    border-color: #B9D7F2;
-  }
-
-  .hvac-system-kpi-chip.is-alert {
-    color: #9B1C1C;
-    background-color: #FDECEC;
-    border-color: #F4B7B7;
-  }
-
-  .hvac-system-kpi-chip.is-info {
-    color: #0D4E8C;
-    background-color: #E6F1FB;
-    border-color: #B9D7F2;
-  }
-
-  .hvac-system-kpi-chip.is-no-data {
-    color: #4B5563;
-    background-color: #F3F4F6;
-    border-color: #D1D5DB;
-  }
-
-  .hvac-diagnostics-section {
-    border: 1px solid #C5C7CB;
-    border-radius: 6px;
-    background-color: #FFFFFF;
-    margin-bottom: 0.9rem;
-    overflow: hidden;
-  }
-
-  .hvac-diagnostics-section summary {
-    list-style: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    min-height: 48px;
-    padding: 0.75rem 0.9rem;
-    background: linear-gradient(90deg, var(--kl-header) 0%, var(--kl-header-soft) 100%);
-    color: var(--kl-accent-contrast);
-    font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 1rem;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-  }
-
-  .hvac-diagnostics-section summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .hvac-diagnostics-section summary::after {
-    content: "+";
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.4rem;
-    height: 1.4rem;
-    border-radius: 999px;
-    background-color: rgba(247, 252, 248, 0.22);
-    color: var(--kl-accent-contrast);
-    font-weight: 700;
-    line-height: 1;
-  }
-
-  .hvac-diagnostics-section[open] summary::after {
-    content: "-";
-  }
-
-  .hvac-diagnostics-section-content {
-    padding: 0.9rem 0.9rem 0.4rem;
-    background-color: #F9FBFD;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem 0.9rem;
-  }
-
-  .hvac-diagnostics-section-content .add-customer-form-row {
-    grid-template-columns: minmax(0, 1fr);
-    width: 100%;
-    margin-bottom: 0;
-  }
-
-  .hvac-diagnostics-section-content .hvac-diagnostics-row-full {
-    grid-column: 1 / -1;
-  }
-
-  .hvac-diagnostics-section-content .hvac-diagnostic-section-photos {
-    grid-column: 1 / -1;
-  }
-
-  .hvac-diagnostics-row-checkbox .add-customer-form-field {
-    display: block;
-  }
-
-  .hvac-diagnostics-checkbox-card {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    min-height: 58px;
-    padding: 0.85rem 0.95rem;
-    border: 1px solid #C9D6E8;
-    border-radius: 12px;
-    background: linear-gradient(180deg, #FFFFFF 0%, #F5F9FF 100%);
-    box-shadow: 0 2px 8px rgba(25, 48, 82, 0.08);
-    cursor: pointer;
-    user-select: none;
-    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-  }
-
-  .hvac-diagnostics-checkbox-card:hover {
-    border-color: #AFC2DE;
-    box-shadow: 0 5px 14px rgba(22, 44, 77, 0.12);
-    transform: translateY(-1px);
-  }
-
-  .hvac-diagnostics-checkbox-card input[type="checkbox"] {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .hvac-diagnostics-checkbox-indicator {
-    width: 1.25rem;
-    height: 1.25rem;
-    border: 2px solid #8EA6C8;
-    border-radius: 4px;
-    background-color: #FFFFFF;
-    flex-shrink: 0;
-    position: relative;
-    transition: border-color 0.18s ease, background-color 0.18s ease;
-  }
-
-  .hvac-diagnostics-checkbox-label {
-    color: #1B263B;
-    font-size: 1rem;
-    font-weight: 700;
-    line-height: 1.2;
-  }
-
-  .hvac-diagnostics-checkbox-card input[type="checkbox"]:checked + .hvac-diagnostics-checkbox-indicator {
-    border-color: #1B4D8C;
-    background-color: #1B4D8C;
-  }
-
-  .hvac-diagnostics-checkbox-card input[type="checkbox"]:checked + .hvac-diagnostics-checkbox-indicator::after {
-    content: "";
-    position: absolute;
-    left: 3px;
-    top: 0;
-    width: 0.35rem;
-    height: 0.65rem;
-    border: solid #FFFFFF;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-  }
-
-  .hvac-diagnostics-checkbox-card input[type="checkbox"]:focus-visible + .hvac-diagnostics-checkbox-indicator {
-    outline: 2px solid #5FA3D3;
-    outline-offset: 2px;
   }
 
   @media (max-width: 640px) {
@@ -7352,67 +5647,10 @@ body.sidebar-view #footer-bg {
       grid-template-columns: 1fr;
     }
 
-    .view-customer-hvac-card-row {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.3rem;
-    }
-
-    .view-customer-hvac-card-value {
-      text-align: left;
-    }
-
-    .hvac-system-kpi-grid {
-      grid-template-columns: 1fr;
-      gap: 0.6rem;
-    }
-
-    .hvac-components-grid {
-      grid-template-columns: 1fr;
-      gap: 0.65rem;
-    }
-
-    .hvac-diagnostic-sections-grid {
-      grid-template-columns: 1fr;
-      gap: 0.65rem;
-    }
-
-    .hvac-system-kpi-card {
-      padding: 0.72rem 0.75rem;
-    }
-
-    .hvac-system-kpi-value {
-      font-size: 1.45rem;
-    }
-
-    .hvac-diagnostics-section {
-      margin-bottom: 0.75rem;
-    }
-
-    .hvac-diagnostics-section summary {
-      min-height: 52px;
-      padding: 0.8rem 0.8rem;
-      font-size: 1.02rem;
-    }
-
-    .hvac-diagnostics-section-content {
-      padding: 0.75rem 0.75rem 0.35rem;
-      grid-template-columns: 1fr;
-      gap: 0.65rem;
-    }
-
-    .hvac-diagnostics-row {
-      flex-direction: column;
-    }
-
     .hvac-generate-report-button {
       width: 100%;
       min-width: 0;
     }
-  }
-
-  .hvac-diagnostics-row .view-customer-card-link {
-    flex: 1;
   }
 
   .hvac-generate-report-form {
@@ -9762,10 +8000,6 @@ body.sidebar-view #footer-bg {
   box-shadow: none;
 }
 
-.resource-employees .customer-card {
-  cursor: pointer;
-}
-
 .resource-employees .customer-card-value--name-link,
 .resource-employees [data-live-card-filter-empty] {
   color: #B2C0B9;
@@ -9811,6 +8045,7 @@ body.sidebar-view #footer-bg {
 }
 
 .resource-employees .customer-card {
+  cursor: pointer;
   display: flex;
   align-items: stretch;
   justify-content: flex-start;

@@ -53,5 +53,6 @@ htmlcov/
 *.log
 
 work/
+docs/
 static/uploads/
 /invoices

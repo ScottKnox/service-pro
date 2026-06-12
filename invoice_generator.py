@@ -6,10 +6,12 @@ from reportlab.lib import colors
 from datetime import datetime, timedelta
 from io import BytesIO
 import os
+import base64
 from xml.sax.saxutils import escape as xml_escape
 
 from PIL import Image as PILImage
 from utils import object_storage
+from utils.qr_codes import generate_payment_qr
 from utils.taxes import build_line_item_tax_inputs, calculate_itemized_tax, normalize_business_tax_rates
 
 
@@ -300,7 +302,22 @@ def _part_display_amount(part):
     )
 
 
-def generate_invoice(job_id, job, customer, business_logo_path="", business=None):
+def _build_payment_qr_flowable(payment_url, qr_size=80):
+    try:
+        qr_code_b64 = generate_payment_qr(payment_url)
+        if not qr_code_b64:
+            return None
+        qr_bytes = base64.b64decode(qr_code_b64)
+        qr_stream = BytesIO(qr_bytes)
+        qr_flowable = ReportImage(qr_stream, width=qr_size, height=qr_size)
+        qr_flowable.hAlign = "RIGHT"
+        qr_flowable._qr_stream = qr_stream
+        return qr_flowable
+    except Exception:
+        return None
+
+
+def generate_invoice(job_id, job, customer, business_logo_path="", business=None, payment_url=""):
     """
     Generate a PDF invoice for a completed job.
 
@@ -860,6 +877,60 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
         )
     )
 
+    payment_panel = None
+    payment_link = str(payment_url or "").strip()
+    if payment_link:
+        payment_qr_flowable = _build_payment_qr_flowable(payment_link, qr_size=80)
+        if payment_qr_flowable:
+            payment_label_style = ParagraphStyle(
+                "InvoicePaymentLabel",
+                parent=info_label_style,
+                fontSize=9,
+                textColor=colors.HexColor("#1B263B"),
+                fontName="Helvetica-Bold",
+                leading=11,
+            )
+            payment_link_style = ParagraphStyle(
+                "InvoicePaymentLink",
+                parent=info_value_style,
+                fontSize=8,
+                textColor=colors.HexColor("#4A5568"),
+                leading=10,
+            )
+            payment_link_display = payment_link.replace("https://", "").replace("http://", "")
+            payment_text_block = [
+                [Paragraph("Scan to pay:", payment_label_style)],
+                [Paragraph(xml_escape(payment_link_display), payment_link_style)],
+            ]
+            payment_text_table = Table(payment_text_block, colWidths=[2.8 * inch])
+            payment_text_table.setStyle(
+                TableStyle(
+                    [
+                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                        ("TOPPADDING", (0, 0), (-1, -1), 0),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ]
+                )
+            )
+
+            payment_panel = Table(
+                [[payment_text_table, payment_qr_flowable]],
+                colWidths=[2.9 * inch, 0.95 * inch],
+            )
+            payment_panel.setStyle(
+                TableStyle(
+                    [
+                        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                        ("TOPPADDING", (0, 0), (-1, -1), 2),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ]
+                )
+            )
+
     footer_paragraph = Paragraph(
         "Thank you for your business!<br/>Please retain this invoice for your records.",
         footer_style,
@@ -868,6 +939,9 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
     story.append(Spacer(1, line_items_to_totals_spacer_height))
 
     story.append(totals_panel)
+    if payment_panel:
+        story.append(Spacer(1, 0.08 * inch))
+        story.append(payment_panel)
     if notes_panel or warranty_panel:
         story.append(Spacer(1, 0.08 * inch))
         notes_warranty_row = Table(
