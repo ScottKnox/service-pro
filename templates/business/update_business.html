@@ -21,341 +21,520 @@
 
       <form id="business-profile-form" action="{{ url_for('business.update_business') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        {% if markup_rules_error_message %}
-          <p class="form-error">{{ markup_rules_error_message }}</p>
-        {% endif %}
-        <h2 class="create-job-form-section-header">Business Information</h2>
 
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="company-name">Company Name</label>
-            <input id="company-name" name="company_name" type="text" value="{{ business.get('company_name', '') }}" />
-          </div>
-        </div>
+        <div class="business-settings-shell">
+          <aside class="business-settings-sidebar" aria-label="Business settings navigation">
+            <div class="business-settings-sidebar-card">
+              <p class="business-settings-sidebar-eyebrow">Business Settings</p>
+              <h2>Update Workspace</h2>
+              <p>Use this page to maintain company profile details, pricing defaults, communication templates, and payment milestones.</p>
+            </div>
+            <nav class="business-settings-sidebar-card business-settings-sidebar-nav" aria-label="Section navigation">
+              <a href="#section-business-info">Business Information</a>
+              <a href="#section-pricing">Labor &amp; Markup</a>
+              <a href="#section-taxes">Tax Configuration</a>
+              <a href="#section-emails">Email Templates</a>
+              <a href="#section-payment-schedules">Installation Payment Schedule</a>
+            </nav>
+          </aside>
 
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="business-warranty-info">Warranty Info</label>
-            <textarea id="business-warranty-info" name="warranty_info" rows="4" placeholder="Enter your warranty details...">{{ business.get('warranty_info', '') }}</textarea>
-          </div>
-        </div>
+          <div class="business-settings-main">
+            {% if markup_rules_error_message or payment_schedule_templates_error_message %}
+              <div class="business-settings-global-errors" role="alert">
+                {% if markup_rules_error_message %}
+                  <p class="form-error">{{ markup_rules_error_message }}</p>
+                {% endif %}
+                {% if payment_schedule_templates_error_message %}
+                  <p class="form-error">{{ payment_schedule_templates_error_message }}</p>
+                {% endif %}
+              </div>
+            {% endif %}
 
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="business-address-line-1">Address Line 1</label>
-            <input id="business-address-line-1" name="address_line_1" type="text" value="{{ business.get('address_line_1', '') }}" />
-          </div>
-          <div class="add-customer-form-field">
-            <label for="business-address-line-2">Address Line 2</label>
-            <input id="business-address-line-2" name="address_line_2" type="text" value="{{ business.get('address_line_2', '') }}" />
-          </div>
-        </div>
+            <section id="section-business-info" class="business-settings-section">
+              <h2 class="create-job-form-section-header">Business Information</h2>
 
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="business-city">City</label>
-            <input id="business-city" name="city" type="text" value="{{ business.get('city', '') }}" />
-          </div>
-          <div class="add-customer-form-field">
-            <label for="business-state">State</label>
-            <input id="business-state" name="state" type="text" maxlength="2" value="{{ business.get('state', '') }}" />
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="business-zip-code">Zip Code</label>
-            <input id="business-zip-code" name="zip_code" type="text" value="{{ business.get('zip_code', '') }}" />
-          </div>
-          <div class="add-customer-form-field">
-            <label for="business-license-number">License Number</label>
-            <input id="business-license-number" name="license_number" type="text" value="{{ business.get('license_number', '') }}" />
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="business-phone-number">Phone Number</label>
-            <input id="business-phone-number" name="phone_number" type="text" value="{{ business.get('phone_number', '') }}" />
-          </div>
-          <div class="add-customer-form-field">
-            <label for="business-twilio-phone-number">Twilio Phone Number</label>
-            <input id="business-twilio-phone-number" name="twilio_phone_number" type="text" value="{{ business.get('twilio_phone_number', '') }}" placeholder="+15551234567" />
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="business-fax-number">Fax Number</label>
-            <input id="business-fax-number" name="fax_number" type="text" value="{{ business.get('fax_number', '') }}" />
-          </div>
-          <div class="add-customer-form-field"></div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="business-email">Email</label>
-            <input id="business-email" name="email" type="email" value="{{ business.get('email', '') }}" />
-          </div>
-          <div class="add-customer-form-field">
-            <label for="business-website">Website</label>
-            <input id="business-website" name="website" type="text" value="{{ business.get('website', '') }}" />
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="default-estimate-expiration-days">Default Estimate Expiration Days</label>
-            <input id="default-estimate-expiration-days" name="default_estimate_expiration_days" type="number" min="1" step="1" value="{{ business.get('default_estimate_expiration_days', 30) }}" />
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="default-payment-due-days">Default Payment Due Days</label>
-            <input id="default-payment-due-days" name="default_payment_due_days" type="number" min="1" step="1" value="{{ business.get('default_payment_due_days', 30) }}" />
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="qb-material-account-id">QuickBooks Materials Revenue Account ID</label>
-            <input id="qb-material-account-id" name="qb_material_account_id" type="text" value="{{ business.get('qb_material_account_id', '') }}" placeholder="Optional (future QuickBooks mapping)" />
-          </div>
-        </div>
-
-        <h2 class="create-job-form-section-header">Labor Rates</h2>
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="labor-rate-standard">Standard Labor Rate (per hour)</label>
-            <input id="labor-rate-standard" name="labor_rate_standard" type="number" step="0.01" min="0" placeholder="95.00" value="{{ business.get('labor_rate_standard', '') }}" />
-          </div>
-          <div class="add-customer-form-field">
-            <label for="labor-rate-emergency">Emergency Labor Rate (per hour)</label>
-            <input id="labor-rate-emergency" name="labor_rate_emergency" type="number" step="0.01" min="0" placeholder="145.00" value="{{ business.get('labor_rate_emergency', '') }}" />
-          </div>
-        </div>
-
-        <h2 class="create-job-form-section-header">Markup Rules</h2>
-        <p class="form-field-note">Define cost ranges and markup percentages used to auto-populate sell prices on parts and materials. Rules cannot overlap.</p>
-
-        <div id="markup-rules-list">
-          {% for markup_rule in business.get('markup_rules', []) %}
-            <div class="markup-rule-row-wrapper">
-              <div class="add-customer-form-row add-customer-form-row--top-aligned markup-rule-row">
+              <div class="add-customer-form-row">
                 <div class="add-customer-form-field">
-                  <label>Cost Range Min ($)</label>
-                  <input name="markup_range_min[]" type="number" step="0.01" min="0" value="{{ markup_rule.range_min|default('', true) }}" placeholder="0.00" />
-                </div>
-                <div class="add-customer-form-field">
-                  <label>Cost Range Max ($)</label>
-                  <input name="markup_range_max[]" type="number" step="0.01" min="0" value="{{ markup_rule.range_max|default('', true) }}" placeholder="Leave blank for no limit" />
-                </div>
-                <div class="add-customer-form-field">
-                  <label>Markup (%)</label>
-                  <input name="markup_percent[]" type="number" step="0.01" min="0.01" value="{{ markup_rule.markup_percent|default('', true) }}" placeholder="40.00" />
+                  <label for="company-name">Company Name</label>
+                  <input id="company-name" name="company_name" type="text" value="{{ business.get('company_name', '') }}" />
                 </div>
               </div>
-              <div class="tax-rate-row-remove-wrap">
-                <button type="button" class="markup-rule-remove-button">Remove Rule</button>
+
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="business-warranty-info">Warranty Info</label>
+                  <textarea id="business-warranty-info" name="warranty_info" rows="4" placeholder="Enter your warranty details...">{{ business.get('warranty_info', '') }}</textarea>
+                </div>
               </div>
-              <div class="form-error markup-rule-error">
-                {% for error in markup_rules_errors.get(loop.index0, []) %}
-                  {{ error }}{% if not loop.last %}<br />{% endif %}
+
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="business-address-line-1">Address Line 1</label>
+                  <input id="business-address-line-1" name="address_line_1" type="text" value="{{ business.get('address_line_1', '') }}" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label for="business-address-line-2">Address Line 2</label>
+                  <input id="business-address-line-2" name="address_line_2" type="text" value="{{ business.get('address_line_2', '') }}" />
+                </div>
+              </div>
+
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="business-city">City</label>
+                  <input id="business-city" name="city" type="text" value="{{ business.get('city', '') }}" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label for="business-state">State</label>
+                  <input id="business-state" name="state" type="text" maxlength="2" value="{{ business.get('state', '') }}" />
+                </div>
+              </div>
+
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="business-zip-code">Zip Code</label>
+                  <input id="business-zip-code" name="zip_code" type="text" value="{{ business.get('zip_code', '') }}" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label for="business-license-number">License Number</label>
+                  <input id="business-license-number" name="license_number" type="text" value="{{ business.get('license_number', '') }}" />
+                </div>
+              </div>
+
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="business-phone-number">Phone Number</label>
+                  <input id="business-phone-number" name="phone_number" type="text" value="{{ business.get('phone_number', '') }}" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label for="business-twilio-phone-number">Twilio Phone Number</label>
+                  <input id="business-twilio-phone-number" name="twilio_phone_number" type="text" value="{{ business.get('twilio_phone_number', '') }}" placeholder="+15551234567" />
+                </div>
+              </div>
+
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="business-fax-number">Fax Number</label>
+                  <input id="business-fax-number" name="fax_number" type="text" value="{{ business.get('fax_number', '') }}" />
+                </div>
+                <div class="add-customer-form-field"></div>
+              </div>
+
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="business-email">Email</label>
+                  <input id="business-email" name="email" type="email" value="{{ business.get('email', '') }}" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label for="business-website">Website</label>
+                  <input id="business-website" name="website" type="text" value="{{ business.get('website', '') }}" />
+                </div>
+              </div>
+
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="default-estimate-expiration-days">Default Estimate Expiration Days</label>
+                  <input id="default-estimate-expiration-days" name="default_estimate_expiration_days" type="number" min="1" step="1" value="{{ business.get('default_estimate_expiration_days', 30) }}" />
+                </div>
+              </div>
+
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="default-payment-due-days">Default Payment Due Days</label>
+                  <input id="default-payment-due-days" name="default_payment_due_days" type="number" min="1" step="1" value="{{ business.get('default_payment_due_days', 30) }}" />
+                </div>
+              </div>
+
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="qb-material-account-id">QuickBooks Materials Revenue Account ID</label>
+                  <input id="qb-material-account-id" name="qb_material_account_id" type="text" value="{{ business.get('qb_material_account_id', '') }}" placeholder="Optional (future QuickBooks mapping)" />
+                </div>
+              </div>
+            </section>
+
+            <section id="section-pricing" class="business-settings-section">
+              <h2 class="create-job-form-section-header">Labor Rates</h2>
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="labor-rate-standard">Standard Labor Rate (per hour)</label>
+                  <input id="labor-rate-standard" name="labor_rate_standard" type="number" step="0.01" min="0" placeholder="95.00" value="{{ business.get('labor_rate_standard', '') }}" />
+                </div>
+                <div class="add-customer-form-field">
+                  <label for="labor-rate-emergency">Emergency Labor Rate (per hour)</label>
+                  <input id="labor-rate-emergency" name="labor_rate_emergency" type="number" step="0.01" min="0" placeholder="145.00" value="{{ business.get('labor_rate_emergency', '') }}" />
+                </div>
+              </div>
+
+              <h2 class="create-job-form-section-header business-settings-markup-header">Markup Rules</h2>
+              <p class="form-field-note">Define cost ranges and markup percentages used to auto-populate sell prices on parts and materials. Rules cannot overlap.</p>
+
+              <div id="markup-rules-list">
+                {% for markup_rule in business.get('markup_rules', []) %}
+                  <div class="markup-rule-row-wrapper">
+                    <div class="add-customer-form-row add-customer-form-row--top-aligned markup-rule-row">
+                      <div class="add-customer-form-field">
+                        <label>Cost Range Min ($)</label>
+                        <input name="markup_range_min[]" type="number" step="0.01" min="0" value="{{ markup_rule.range_min|default('', true) }}" placeholder="0.00" />
+                      </div>
+                      <div class="add-customer-form-field">
+                        <label>Cost Range Max ($)</label>
+                        <input name="markup_range_max[]" type="number" step="0.01" min="0" value="{{ markup_rule.range_max|default('', true) }}" placeholder="Leave blank for no limit" />
+                      </div>
+                      <div class="add-customer-form-field">
+                        <label>Markup (%)</label>
+                        <input name="markup_percent[]" type="number" step="0.01" min="0.01" value="{{ markup_rule.markup_percent|default('', true) }}" placeholder="40.00" />
+                      </div>
+                    </div>
+                    <div class="tax-rate-row-remove-wrap">
+                      <button type="button" class="markup-rule-remove-button">Remove Rule</button>
+                    </div>
+                    <div class="form-error markup-rule-error">
+                      {% for error in markup_rules_errors.get(loop.index0, []) %}
+                        {{ error }}{% if not loop.last %}<br />{% endif %}
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% else %}
+                  <div class="markup-rule-row-wrapper">
+                    <div class="add-customer-form-row add-customer-form-row--top-aligned markup-rule-row">
+                      <div class="add-customer-form-field">
+                        <label>Cost Range Min ($)</label>
+                        <input name="markup_range_min[]" type="number" step="0.01" min="0" value="" placeholder="0.00" />
+                      </div>
+                      <div class="add-customer-form-field">
+                        <label>Cost Range Max ($)</label>
+                        <input name="markup_range_max[]" type="number" step="0.01" min="0" value="" placeholder="Leave blank for no limit" />
+                      </div>
+                      <div class="add-customer-form-field">
+                        <label>Markup (%)</label>
+                        <input name="markup_percent[]" type="number" step="0.01" min="0.01" value="" placeholder="40.00" />
+                      </div>
+                    </div>
+                    <div class="tax-rate-row-remove-wrap">
+                      <button type="button" class="markup-rule-remove-button">Remove Rule</button>
+                    </div>
+                    <div class="form-error markup-rule-error"></div>
+                  </div>
                 {% endfor %}
               </div>
-            </div>
-          {% else %}
-            <div class="markup-rule-row-wrapper">
-              <div class="add-customer-form-row add-customer-form-row--top-aligned markup-rule-row">
-                <div class="add-customer-form-field">
-                  <label>Cost Range Min ($)</label>
-                  <input name="markup_range_min[]" type="number" step="0.01" min="0" value="" placeholder="0.00" />
-                </div>
-                <div class="add-customer-form-field">
-                  <label>Cost Range Max ($)</label>
-                  <input name="markup_range_max[]" type="number" step="0.01" min="0" value="" placeholder="Leave blank for no limit" />
-                </div>
-                <div class="add-customer-form-field">
-                  <label>Markup (%)</label>
-                  <input name="markup_percent[]" type="number" step="0.01" min="0.01" value="" placeholder="40.00" />
-                </div>
-              </div>
-              <div class="tax-rate-row-remove-wrap">
-                <button type="button" class="markup-rule-remove-button">Remove Rule</button>
-              </div>
-              <div class="form-error markup-rule-error"></div>
-            </div>
-          {% endfor %}
-        </div>
 
-        <template id="markup-rule-template">
-          <div class="add-customer-form-row add-customer-form-row--top-aligned markup-rule-row">
-            <div class="add-customer-form-field">
-              <label>Cost Range Min ($)</label>
-              <input name="markup_range_min[]" type="number" step="0.01" min="0" value="" placeholder="0.00" />
-            </div>
-            <div class="add-customer-form-field">
-              <label>Cost Range Max ($)</label>
-              <input name="markup_range_max[]" type="number" step="0.01" min="0" value="" placeholder="Leave blank for no limit" />
-            </div>
-            <div class="add-customer-form-field">
-              <label>Markup (%)</label>
-              <input name="markup_percent[]" type="number" step="0.01" min="0.01" value="" placeholder="40.00" />
-            </div>
-          </div>
-          <div class="tax-rate-row-remove-wrap">
-            <button type="button" class="markup-rule-remove-button">Remove Rule</button>
-          </div>
-          <div class="form-error markup-rule-error"></div>
-        </template>
-
-        <div class="add-customer-form-row add-customer-form-row--single">
-          <div class="add-customer-form-field" style="margin-top: 0.5rem;">
-            <button type="button" id="add-markup-rule-row">Add Markup Rule</button>
-          </div>
-        </div>
-
-        <h2 class="create-job-form-section-header">Tax Configuration</h2>
-        <p class="form-field-note">Services and labor are marked non-taxable by default reflecting Missouri tax law. If a service includes significant parts or materials sold separately add them as individual line items to ensure correct tax treatment.</p>
-
-        <div id="tax-rates-list">
-          {% for tax_rate in business.get('tax_rates', []) %}
-            <div class="tax-rate-row-wrapper">
-              <div class="add-customer-form-row add-customer-form-row--top-aligned tax-rate-row">
-                <div class="add-customer-form-field">
-                  <label>Tax Name</label>
-                  <input name="tax_rate_name[]" type="text" value="{{ tax_rate.name|default('', true) }}" placeholder="Missouri Sales Tax" />
-                </div>
-                <div class="add-customer-form-field">
-                  <label>Rate (%)</label>
-                  <input name="tax_rate_rate[]" type="number" step="0.00001" min="0" value="{{ tax_rate.rate|default(0, true) }}" placeholder="4.225" />
-                </div>
-                <div class="add-customer-form-field">
-                  <label>Applies To</label>
-                  <div class="tax-rate-applies-to-grid">
-                    <label>
-                      <input type="checkbox" name="tax_rate_applies_to_parts[]" value="{{ loop.index0 }}" {% if 'parts' in tax_rate.applies_to %}checked{% endif %} /> Parts
-                    </label>
-                    <label>
-                      <input type="checkbox" name="tax_rate_applies_to_materials[]" value="{{ loop.index0 }}" {% if 'materials' in tax_rate.applies_to %}checked{% endif %} /> Materials
-                    </label>
-                    <label>
-                      <input type="checkbox" name="tax_rate_applies_to_equipment[]" value="{{ loop.index0 }}" {% if 'equipment' in tax_rate.applies_to %}checked{% endif %} /> Equipment
-                    </label>
-                    <label>
-                      <input type="checkbox" name="tax_rate_applies_to_services[]" value="{{ loop.index0 }}" {% if 'services' in tax_rate.applies_to %}checked{% endif %} /> Services
-                    </label>
-                    <label>
-                      <input type="checkbox" name="tax_rate_applies_to_labor[]" value="{{ loop.index0 }}" {% if 'labor' in tax_rate.applies_to %}checked{% endif %} /> Labor
-                    </label>
+              <template id="markup-rule-template">
+                <div class="add-customer-form-row add-customer-form-row--top-aligned markup-rule-row">
+                  <div class="add-customer-form-field">
+                    <label>Cost Range Min ($)</label>
+                    <input name="markup_range_min[]" type="number" step="0.01" min="0" value="" placeholder="0.00" />
+                  </div>
+                  <div class="add-customer-form-field">
+                    <label>Cost Range Max ($)</label>
+                    <input name="markup_range_max[]" type="number" step="0.01" min="0" value="" placeholder="Leave blank for no limit" />
+                  </div>
+                  <div class="add-customer-form-field">
+                    <label>Markup (%)</label>
+                    <input name="markup_percent[]" type="number" step="0.01" min="0.01" value="" placeholder="40.00" />
                   </div>
                 </div>
-                <div class="add-customer-form-field">
-                  <label>Agency</label>
-                  <input name="tax_rate_agency[]" type="text" value="{{ tax_rate.agency|default('', true) }}" placeholder="State Department of Revenue" />
+                <div class="tax-rate-row-remove-wrap">
+                  <button type="button" class="markup-rule-remove-button">Remove Rule</button>
                 </div>
-                <div class="add-customer-form-field">
-                  <label>QuickBooks Tax Code</label>
-                  <input name="tax_rate_quickbooks_tax_code[]" type="text" value="{{ tax_rate.quickbooks_tax_code|default('', true) }}" placeholder="Optional" />
-                </div>
-                <div class="add-customer-form-field">
-                  <label>Active</label>
-                  <select name="tax_rate_active[]">
-                    <option value="true" {% if tax_rate.active %}selected{% endif %}>Yes</option>
-                    <option value="false" {% if not tax_rate.active %}selected{% endif %}>No</option>
-                  </select>
+                <div class="form-error markup-rule-error"></div>
+              </template>
+
+              <div class="add-customer-form-row add-customer-form-row--single">
+                <div class="add-customer-form-field business-settings-inline-add-row">
+                  <button type="button" id="add-markup-rule-row">Add Markup Rule</button>
                 </div>
               </div>
-              <div class="tax-rate-row-remove-wrap">
-                <button type="button" class="tax-rate-remove-button">Remove Tax Rate</button>
+            </section>
+
+            <section id="section-taxes" class="business-settings-section">
+              <h2 class="create-job-form-section-header">Tax Configuration</h2>
+              <p class="form-field-note">Services and labor are marked non-taxable by default reflecting Missouri tax law. If a service includes significant parts or materials sold separately add them as individual line items to ensure correct tax treatment.</p>
+
+              <div id="tax-rates-list">
+                {% for tax_rate in business.get('tax_rates', []) %}
+                  <div class="tax-rate-row-wrapper">
+                    <div class="add-customer-form-row add-customer-form-row--top-aligned tax-rate-row">
+                      <div class="add-customer-form-field">
+                        <label>Tax Name</label>
+                        <input name="tax_rate_name[]" type="text" value="{{ tax_rate.name|default('', true) }}" placeholder="Missouri Sales Tax" />
+                      </div>
+                      <div class="add-customer-form-field">
+                        <label>Rate (%)</label>
+                        <input name="tax_rate_rate[]" type="number" step="0.00001" min="0" value="{{ tax_rate.rate|default(0, true) }}" placeholder="4.225" />
+                      </div>
+                      <div class="add-customer-form-field">
+                        <label>Applies To</label>
+                        <div class="tax-rate-applies-to-grid">
+                          <label>
+                            <input type="checkbox" name="tax_rate_applies_to_parts[]" value="{{ loop.index0 }}" {% if 'parts' in tax_rate.applies_to %}checked{% endif %} /> Parts
+                          </label>
+                          <label>
+                            <input type="checkbox" name="tax_rate_applies_to_materials[]" value="{{ loop.index0 }}" {% if 'materials' in tax_rate.applies_to %}checked{% endif %} /> Materials
+                          </label>
+                          <label>
+                            <input type="checkbox" name="tax_rate_applies_to_equipment[]" value="{{ loop.index0 }}" {% if 'equipment' in tax_rate.applies_to %}checked{% endif %} /> Equipment
+                          </label>
+                          <label>
+                            <input type="checkbox" name="tax_rate_applies_to_services[]" value="{{ loop.index0 }}" {% if 'services' in tax_rate.applies_to %}checked{% endif %} /> Services
+                          </label>
+                          <label>
+                            <input type="checkbox" name="tax_rate_applies_to_labor[]" value="{{ loop.index0 }}" {% if 'labor' in tax_rate.applies_to %}checked{% endif %} /> Labor
+                          </label>
+                        </div>
+                      </div>
+                      <div class="add-customer-form-field">
+                        <label>Agency</label>
+                        <input name="tax_rate_agency[]" type="text" value="{{ tax_rate.agency|default('', true) }}" placeholder="State Department of Revenue" />
+                      </div>
+                      <div class="add-customer-form-field">
+                        <label>QuickBooks Tax Code</label>
+                        <input name="tax_rate_quickbooks_tax_code[]" type="text" value="{{ tax_rate.quickbooks_tax_code|default('', true) }}" placeholder="Optional" />
+                      </div>
+                      <div class="add-customer-form-field">
+                        <label>Active</label>
+                        <select name="tax_rate_active[]">
+                          <option value="true" {% if tax_rate.active %}selected{% endif %}>Yes</option>
+                          <option value="false" {% if not tax_rate.active %}selected{% endif %}>No</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="tax-rate-row-remove-wrap">
+                      <button type="button" class="tax-rate-remove-button">Remove Tax Rate</button>
+                    </div>
+                  </div>
+                {% endfor %}
               </div>
-            </div>
-          {% endfor %}
-        </div>
 
-        <template id="tax-rate-template">
-          <div class="add-customer-form-row add-customer-form-row--top-aligned tax-rate-row">
-            <div class="add-customer-form-field">
-              <label>Tax Name</label>
-              <input name="tax_rate_name[]" type="text" placeholder="City Tax" />
-            </div>
-            <div class="add-customer-form-field">
-              <label>Rate (%)</label>
-              <input name="tax_rate_rate[]" type="number" step="0.00001" min="0" placeholder="2.125" />
-            </div>
-            <div class="add-customer-form-field">
-              <label>Applies To</label>
-              <div class="tax-rate-applies-to-grid">
-                <label>
-                  <input type="checkbox" name="tax_rate_applies_to_parts[]" value="" checked /> Parts
-                </label>
-                <label>
-                  <input type="checkbox" name="tax_rate_applies_to_materials[]" value="" checked /> Materials
-                </label>
-                <label>
-                  <input type="checkbox" name="tax_rate_applies_to_equipment[]" value="" checked /> Equipment
-                </label>
-                <label>
-                  <input type="checkbox" name="tax_rate_applies_to_services[]" value="" /> Services
-                </label>
-                <label>
-                  <input type="checkbox" name="tax_rate_applies_to_labor[]" value="" /> Labor
-                </label>
+              <template id="tax-rate-template">
+                <div class="add-customer-form-row add-customer-form-row--top-aligned tax-rate-row">
+                  <div class="add-customer-form-field">
+                    <label>Tax Name</label>
+                    <input name="tax_rate_name[]" type="text" placeholder="City Tax" />
+                  </div>
+                  <div class="add-customer-form-field">
+                    <label>Rate (%)</label>
+                    <input name="tax_rate_rate[]" type="number" step="0.00001" min="0" placeholder="2.125" />
+                  </div>
+                  <div class="add-customer-form-field">
+                    <label>Applies To</label>
+                    <div class="tax-rate-applies-to-grid">
+                      <label>
+                        <input type="checkbox" name="tax_rate_applies_to_parts[]" value="" checked /> Parts
+                      </label>
+                      <label>
+                        <input type="checkbox" name="tax_rate_applies_to_materials[]" value="" checked /> Materials
+                      </label>
+                      <label>
+                        <input type="checkbox" name="tax_rate_applies_to_equipment[]" value="" checked /> Equipment
+                      </label>
+                      <label>
+                        <input type="checkbox" name="tax_rate_applies_to_services[]" value="" /> Services
+                      </label>
+                      <label>
+                        <input type="checkbox" name="tax_rate_applies_to_labor[]" value="" /> Labor
+                      </label>
+                    </div>
+                  </div>
+                  <div class="add-customer-form-field">
+                    <label>Agency</label>
+                    <input name="tax_rate_agency[]" type="text" placeholder="Tax agency" />
+                  </div>
+                  <div class="add-customer-form-field">
+                    <label>QuickBooks Tax Code</label>
+                    <input name="tax_rate_quickbooks_tax_code[]" type="text" placeholder="Optional" />
+                  </div>
+                  <div class="add-customer-form-field">
+                    <label>Active</label>
+                    <select name="tax_rate_active[]">
+                      <option value="true" selected>Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="tax-rate-row-remove-wrap">
+                  <button type="button" class="tax-rate-remove-button">Remove Tax Rate</button>
+                </div>
+              </template>
+
+              <div class="add-customer-form-row add-customer-form-row--single">
+                <div class="add-customer-form-field business-settings-inline-add-row">
+                  <button type="button" id="add-tax-rate-row">Add Tax Rate</button>
+                </div>
               </div>
+            </section>
+
+            <section id="section-emails" class="business-settings-section">
+              <h2 class="create-job-form-section-header">Email Templates</h2>
+
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="quote-email-template">Quote Email Template</label>
+                  <textarea id="quote-email-template" name="quote_email_template" rows="8" placeholder="Enter the email template text for quotes...">{{ business.get('quote_email_template', '') }}</textarea>
+                </div>
+              </div>
+
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="invoice-email-template">Invoice Email Template</label>
+                  <textarea id="invoice-email-template" name="invoice_email_template" rows="8" placeholder="Enter the email template text for invoices...">{{ business.get('invoice_email_template', '') }}</textarea>
+                </div>
+              </div>
+
+              <div class="add-customer-form-row">
+                <div class="add-customer-form-field">
+                  <label for="report-email-template">Report Email Template</label>
+                  <textarea id="report-email-template" name="report_email_template" rows="8" placeholder="Enter the email template text for reports...">{{ business.get('report_email_template', '') }}</textarea>
+                </div>
+              </div>
+            </section>
+
+            <section id="section-payment-schedules" class="business-settings-section business-settings-payment-schedules">
+              <h2 class="create-job-form-section-header">Installation Payment Schedule</h2>
+              {% if payment_schedule_templates_error_message %}
+                <p class="form-error">{{ payment_schedule_templates_error_message }}</p>
+              {% endif %}
+              <p class="form-field-note">This schedule applies to Installation jobs only. Deposit uses whole-number percent, Progress and Materials use fixed dollars, and Final Payment is remaining balance calculated at job time.</p>
+
+              <div id="payment-schedule-templates-list" class="payment-schedule-cards-list">
+                {% for template in business.get('payment_schedule_templates', []) %}
+                  <section class="payment-schedule-template-card" data-template-card data-template-index="{{ template.template_index }}">
+                    <input type="hidden" name="payment_schedule_template_index[]" value="{{ template.template_index }}" />
+                    <input type="hidden" name="payment_schedule_template_category[]" value="Installation" />
+                    <div class="form-error payment-schedule-card-errors" data-template-errors>
+                      {% for error in payment_schedule_templates_errors.get(template.template_index, []) %}
+                        {{ error }}{% if not loop.last %}<br />{% endif %}
+                      {% endfor %}
+                    </div>
+                    <div class="payment-schedule-stage-list" data-stage-list>
+                      {% for stage in template.stages %}
+                        <div class="add-customer-form-row add-customer-form-row--top-aligned payment-schedule-stage-row payment-schedule-stage-grid" data-stage-row>
+                          <input type="hidden" name="payment_schedule_stage_template_index[]" value="{{ template.template_index }}" data-stage-template-index />
+                          <input type="hidden" name="payment_schedule_stage_key[]" value="{{ stage.stage_key }}" data-stage-key />
+                          <div class="add-customer-form-field payment-schedule-stage-name-field">
+                            <label>Stage Name</label>
+                            <select name="payment_schedule_stage_name[]" data-stage-name required>
+                              <option value="">-- Select stage --</option>
+                              {% for stage_option in installation_payment_stage_options %}
+                                <option value="{{ stage_option }}" {% if stage.name == stage_option %}selected{% endif %}>{{ stage_option }}</option>
+                              {% endfor %}
+                            </select>
+                          </div>
+                          <div class="add-customer-form-field payment-schedule-stage-amount-field">
+                            <label data-stage-amount-label>{% if stage.amount_type == 'percentage' %}% of job total{% elif stage.amount_type == 'fixed' %}$ Amount{% else %}Amount{% endif %}</label>
+                            <input type="hidden" name="payment_schedule_stage_amount_type[]" value="{{ stage.amount_type }}" data-stage-amount-type />
+                            <input type="{% if stage.amount_type == 'remaining' %}hidden{% else %}number{% endif %}" name="payment_schedule_stage_amount[]" value="{{ stage.amount }}" min="0" step="{% if stage.amount_type == 'percentage' %}1{% else %}0.01{% endif %}" placeholder="{% if stage.amount_type == 'percentage' %}50{% else %}0.00{% endif %}" data-stage-amount {% if stage.amount_type != 'remaining' %}required{% endif %} />
+                            <p class="payment-schedule-amount-readonly" data-stage-amount-readonly {% if stage.amount_type != 'remaining' %}hidden{% endif %}>Remaining balance - calculated at job time</p>
+                          </div>
+                          <div class="add-customer-form-field payment-schedule-stage-trigger-field">
+                            <label>Trigger</label>
+                            <p class="payment-schedule-trigger-readonly" data-stage-trigger-label>Triggers on: {{ stage.trigger_label|default('Manual', true) }}</p>
+                            <input type="hidden" name="payment_schedule_stage_trigger[]" value="{{ stage.trigger }}" data-stage-trigger-input />
+                          </div>
+                          <div class="add-customer-form-field payment-schedule-stage-sms-field">
+                            <label>SMS Request</label>
+                            <label class="payment-schedule-sms-toggle">
+                              <input type="checkbox" name="payment_schedule_stage_send_request[]" value="{{ stage.stage_key }}" data-stage-send-request {% if stage.send_payment_request %}checked{% endif %} />
+                              <span>On</span>
+                            </label>
+                          </div>
+                          <div class="add-customer-form-field payment-schedule-stage-actions">
+                            <button type="button" data-stage-delete>Remove Stage</button>
+                          </div>
+                        </div>
+                      {% endfor %}
+                    </div>
+                    <div class="add-customer-form-row add-customer-form-row--single business-settings-stage-toolbar payment-schedule-card-toolbar">
+                      <div class="add-customer-form-field">
+                        <button type="button" data-add-stage>Add Stage</button>
+                      </div>
+                      <div class="add-customer-form-field business-settings-stage-toolbar-right">
+                        <div class="business-settings-template-actions">
+                          <button type="submit" class="payment-schedule-template-save-button" data-template-save>Save Template</button>
+                          <button type="button" class="payment-schedule-template-delete-button" data-template-delete>Delete Template</button>
+                        </div>
+                        <div class="business-settings-stage-total">
+                          <strong>Running Total:</strong>
+                          <div class="payment-schedule-summary" data-template-summary></div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                {% endfor %}
+              </div>
+
+              <template id="payment-schedule-template-card-template">
+                <section class="payment-schedule-template-card" data-template-card>
+                  <input type="hidden" name="payment_schedule_template_index[]" value="" data-template-index-input />
+                  <input type="hidden" name="payment_schedule_template_category[]" value="Installation" />
+                  <div class="form-error payment-schedule-card-errors" data-template-errors></div>
+                  <div class="payment-schedule-stage-list" data-stage-list></div>
+                  <div class="add-customer-form-row add-customer-form-row--single business-settings-stage-toolbar payment-schedule-card-toolbar">
+                    <div class="add-customer-form-field">
+                      <button type="button" data-add-stage>Add Stage</button>
+                    </div>
+                    <div class="add-customer-form-field business-settings-stage-toolbar-right">
+                      <div class="business-settings-template-actions">
+                        <button type="submit" class="payment-schedule-template-save-button" data-template-save>Save Template</button>
+                        <button type="button" class="payment-schedule-template-delete-button" data-template-delete>Delete Template</button>
+                      </div>
+                      <div class="business-settings-stage-total">
+                        <strong>Running Total:</strong>
+                        <div class="payment-schedule-summary" data-template-summary></div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </template>
+
+              <template id="payment-schedule-stage-row-template">
+                <div class="add-customer-form-row add-customer-form-row--top-aligned payment-schedule-stage-row payment-schedule-stage-grid" data-stage-row>
+                  <input type="hidden" name="payment_schedule_stage_template_index[]" value="" data-stage-template-index />
+                  <input type="hidden" name="payment_schedule_stage_key[]" value="" data-stage-key />
+                  <div class="add-customer-form-field payment-schedule-stage-name-field">
+                    <label>Stage Name</label>
+                    <select name="payment_schedule_stage_name[]" data-stage-name required>
+                      <option value="">-- Select stage --</option>
+                      {% for stage_option in installation_payment_stage_options %}
+                        <option value="{{ stage_option }}">{{ stage_option }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="add-customer-form-field payment-schedule-stage-amount-field">
+                    <label data-stage-amount-label>$ Amount</label>
+                    <input type="hidden" name="payment_schedule_stage_amount_type[]" value="fixed" data-stage-amount-type />
+                    <input type="number" name="payment_schedule_stage_amount[]" value="" min="0" step="0.01" placeholder="0.00" data-stage-amount required />
+                    <p class="payment-schedule-amount-readonly" data-stage-amount-readonly hidden>Remaining balance - calculated at job time</p>
+                  </div>
+                  <div class="add-customer-form-field payment-schedule-stage-trigger-field">
+                    <label>Trigger</label>
+                    <p class="payment-schedule-trigger-readonly" data-stage-trigger-label>Triggers on: Estimate accepted</p>
+                    <input type="hidden" name="payment_schedule_stage_trigger[]" value="estimate_accepted" data-stage-trigger-input />
+                  </div>
+                  <div class="add-customer-form-field payment-schedule-stage-sms-field">
+                    <label>SMS Request</label>
+                    <label class="payment-schedule-sms-toggle">
+                      <input type="checkbox" name="payment_schedule_stage_send_request[]" value="" data-stage-send-request checked />
+                      <span>On</span>
+                    </label>
+                  </div>
+                  <div class="add-customer-form-field payment-schedule-stage-actions">
+                    <button type="button" data-stage-delete>Remove Stage</button>
+                  </div>
+                </div>
+              </template>
+
+              <div class="add-customer-form-row add-customer-form-row--single">
+                <div class="add-customer-form-field payment-schedule-add-template-wrap">
+                  <button type="button" id="add-payment-schedule-template">Add Template</button>
+                </div>
+              </div>
+            </section>
+
+            <div id="add-customer-form-actions" class="business-settings-footer-actions">
+              <a class="business-settings-footer-button" href="{{ url_for('business.business_profile') }}">Cancel</a>
+              <button class="business-settings-footer-button" type="submit">Save Business Profile</button>
             </div>
-            <div class="add-customer-form-field">
-              <label>Agency</label>
-              <input name="tax_rate_agency[]" type="text" placeholder="Tax agency" />
-            </div>
-            <div class="add-customer-form-field">
-              <label>QuickBooks Tax Code</label>
-              <input name="tax_rate_quickbooks_tax_code[]" type="text" placeholder="Optional" />
-            </div>
-            <div class="add-customer-form-field">
-              <label>Active</label>
-              <select name="tax_rate_active[]">
-                <option value="true" selected>Yes</option>
-                <option value="false">No</option>
-              </select>
-            </div>
           </div>
-          <div class="tax-rate-row-remove-wrap">
-            <button type="button" class="tax-rate-remove-button">Remove Tax Rate</button>
-          </div>
-        </template>
-
-        <div class="add-customer-form-row add-customer-form-row--single">
-          <div class="add-customer-form-field" style="margin-top: 0.5rem;">
-            <button type="button" id="add-tax-rate-row">Add Tax Rate</button>
-          </div>
-        </div>
-
-        <h2 class="create-job-form-section-header">Email Templates</h2>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="quote-email-template">Quote Email Template</label>
-            <textarea id="quote-email-template" name="quote_email_template" rows="8" placeholder="Enter the email template text for quotes...">{{ business.get('quote_email_template', '') }}</textarea>
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="invoice-email-template">Invoice Email Template</label>
-            <textarea id="invoice-email-template" name="invoice_email_template" rows="8" placeholder="Enter the email template text for invoices...">{{ business.get('invoice_email_template', '') }}</textarea>
-          </div>
-        </div>
-
-        <div class="add-customer-form-row">
-          <div class="add-customer-form-field">
-            <label for="report-email-template">Report Email Template</label>
-            <textarea id="report-email-template" name="report_email_template" rows="8" placeholder="Enter the email template text for reports...">{{ business.get('report_email_template', '') }}</textarea>
-          </div>
-        </div>
-
-        <div id="add-customer-form-actions">
-          <button type="submit">Save Business Profile</button>
         </div>
       </form>
         </div>
@@ -407,7 +586,7 @@
         const removeButtons = list.querySelectorAll('.tax-rate-remove-button');
         const shouldHide = rows.length <= 1;
         removeButtons.forEach((button) => {
-          button.style.display = shouldHide ? 'none' : 'block';
+          button.hidden = shouldHide;
         });
       }
 
@@ -562,7 +741,7 @@
         const removeButtons = list.querySelectorAll('.markup-rule-remove-button');
         const shouldHide = wrappers.length <= 1;
         removeButtons.forEach((button) => {
-          button.style.display = shouldHide ? 'none' : 'block';
+          button.hidden = shouldHide;
         });
       }
 
@@ -598,6 +777,450 @@
 
       form.addEventListener('submit', (event) => {
         if (!validateRows()) {
+          event.preventDefault();
+        }
+      });
+    })();
+
+    (function () {
+      const form = document.getElementById('business-profile-form');
+      const templatesList = document.getElementById('payment-schedule-templates-list');
+      const addTemplateButton = document.getElementById('add-payment-schedule-template');
+      const templateTemplate = document.getElementById('payment-schedule-template-card-template');
+      const stageTemplate = document.getElementById('payment-schedule-stage-row-template');
+      const stageTriggerMap = {
+        'Deposit': 'estimate_accepted',
+        'Progress Payment': 'manual',
+        'Materials Payment': 'manual',
+        'Final Payment': 'job_completed',
+      };
+      const stageAmountTypeMap = {
+        'Deposit': 'percentage',
+        'Progress Payment': 'fixed',
+        'Materials Payment': 'fixed',
+        'Final Payment': 'remaining',
+      };
+      const triggerLabelMap = {
+        estimate_accepted: 'Estimate accepted',
+        job_completed: 'Job completed',
+        manual: 'Manual',
+      };
+
+      if (!form || !templatesList || !addTemplateButton || !templateTemplate || !stageTemplate) {
+        return;
+      }
+
+      let nextTemplateIndex = Array.from(templatesList.querySelectorAll('[data-template-card]')).reduce((maxValue, card) => {
+        const parsed = Number(card.getAttribute('data-template-index') || '0');
+        return Number.isNaN(parsed) ? maxValue : Math.max(maxValue, parsed);
+      }, 0) + 1;
+      let nextStageCounter = 1;
+
+      function buildStageKey(templateIndex) {
+        const stageKey = 'tmpl-' + String(templateIndex) + '-stage-' + String(nextStageCounter);
+        nextStageCounter += 1;
+        return stageKey;
+      }
+
+      function getStageRows(card) {
+        return Array.from(card.querySelectorAll('[data-stage-row]'));
+      }
+
+      function formatCurrency(amount) {
+        const numeric = Number.isFinite(amount) ? amount : 0;
+        return '$' + numeric.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      function updateTemplateSaveState(card) {
+        const saveTemplateButton = card.querySelector('[data-template-save]');
+        if (!saveTemplateButton) {
+          return;
+        }
+        const hasRows = getStageRows(card).length > 0;
+        saveTemplateButton.disabled = !hasRows;
+      }
+
+      function updateStageTriggerFromName(row) {
+        const nameInput = row.querySelector('[data-stage-name]');
+        const triggerInput = row.querySelector('[data-stage-trigger-input]');
+        const triggerLabel = row.querySelector('[data-stage-trigger-label]');
+        const stageName = String(nameInput ? nameInput.value || '' : '').trim();
+        const triggerValue = stageTriggerMap[stageName] || 'manual';
+
+        if (triggerInput) {
+          triggerInput.value = triggerValue;
+        }
+        if (triggerLabel) {
+          triggerLabel.textContent = 'Triggers on: ' + (triggerLabelMap[triggerValue] || 'Manual');
+        }
+      }
+
+      function updateStageAmountBehavior(row) {
+        const nameInput = row.querySelector('[data-stage-name]');
+        const amountTypeInput = row.querySelector('[data-stage-amount-type]');
+        const amountLabel = row.querySelector('[data-stage-amount-label]');
+        const amountInput = row.querySelector('[data-stage-amount]');
+        const amountReadonly = row.querySelector('[data-stage-amount-readonly]');
+        const stageName = String(nameInput ? nameInput.value || '' : '').trim();
+        const amountType = stageAmountTypeMap[stageName] || 'fixed';
+
+        if (amountTypeInput) {
+          amountTypeInput.value = amountType;
+        }
+        if (amountLabel) {
+          if (amountType === 'percentage') {
+            amountLabel.textContent = '% of job total';
+          } else if (amountType === 'fixed') {
+            amountLabel.textContent = '$ Amount';
+          } else {
+            amountLabel.textContent = 'Amount';
+          }
+        }
+
+        if (amountInput) {
+          if (amountType === 'remaining') {
+            amountInput.type = 'hidden';
+            amountInput.required = false;
+            amountInput.value = '';
+          } else {
+            amountInput.type = 'number';
+            amountInput.required = true;
+            amountInput.min = '0';
+            if (amountType === 'percentage') {
+              amountInput.step = '1';
+              amountInput.placeholder = '50';
+            } else {
+              amountInput.step = '0.01';
+              amountInput.placeholder = '0.00';
+            }
+          }
+        }
+
+        if (amountReadonly) {
+          amountReadonly.hidden = amountType !== 'remaining';
+        }
+      }
+
+      function renderTemplateSummary(card) {
+        const summaryNode = card.querySelector('[data-template-summary]');
+        if (!summaryNode) {
+          return;
+        }
+
+        const lines = [];
+        getStageRows(card).forEach((row) => {
+          const stageName = String((row.querySelector('[data-stage-name]') || {}).value || '').trim() || 'Stage';
+          const amountType = String((row.querySelector('[data-stage-amount-type]') || {}).value || '').trim();
+          const amountInput = row.querySelector('[data-stage-amount]');
+          const amountValue = Number(String(amountInput ? amountInput.value || '' : '').trim());
+
+          if (amountType === 'percentage') {
+            const wholePercent = Number.isNaN(amountValue) ? 0 : Math.round(amountValue);
+            lines.push(stageName + ' ' + String(wholePercent) + '%: $[calculated from estimate]');
+            return;
+          }
+          if (amountType === 'fixed') {
+            const fixedAmount = Number.isNaN(amountValue) ? 0 : amountValue;
+            lines.push(stageName + ': ' + formatCurrency(fixedAmount));
+            return;
+          }
+          lines.push(stageName + ': $[remaining - auto]');
+        });
+
+        lines.push('------------------------------');
+        lines.push('Total: $[job total] \u2713');
+        summaryNode.innerHTML = lines.map((line) => '<div class="payment-schedule-summary-line">' + line + '</div>').join('');
+      }
+
+      function renderTemplateErrors(card, errors) {
+        const errorNode = card.querySelector('[data-template-errors]');
+        if (!errorNode) {
+          return;
+        }
+        if (!errors.length) {
+          errorNode.innerHTML = '';
+          return;
+        }
+        errorNode.innerHTML = errors.join('<br />');
+      }
+
+      function validateTemplateCard(card) {
+        const errors = [];
+        const stageRows = getStageRows(card);
+        if (!stageRows.length) {
+          errors.push('Add at least one payment stage.');
+        }
+
+        const orderedNames = [];
+        let depositCount = 0;
+        let finalCount = 0;
+
+        stageRows.forEach((row) => {
+          const nameInput = row.querySelector('[data-stage-name]');
+          const stageName = String(nameInput ? nameInput.value || '' : '').trim();
+          const amountType = String((row.querySelector('[data-stage-amount-type]') || {}).value || '').trim();
+          const amountInput = row.querySelector('[data-stage-amount]');
+          const amountValue = Number(String(amountInput ? amountInput.value : '').trim());
+
+          if (!stageName) {
+            errors.push('Each stage needs a stage name.');
+          } else if (!Object.prototype.hasOwnProperty.call(stageTriggerMap, stageName)) {
+            errors.push('Each stage must use a valid installation stage name.');
+          } else {
+            orderedNames.push(stageName);
+            if (stageName === 'Deposit') {
+              depositCount += 1;
+            }
+            if (stageName === 'Final Payment') {
+              finalCount += 1;
+            }
+          }
+
+          if (amountType === 'percentage') {
+            if (!amountInput || String(amountInput.value || '').trim() === '' || Number.isNaN(amountValue) || amountValue < 0 || Math.abs(amountValue - Math.round(amountValue)) > 0.001) {
+              errors.push('Deposit requires a whole-number percentage.');
+            }
+          } else if (amountType === 'fixed') {
+            if (!amountInput || String(amountInput.value || '').trim() === '' || Number.isNaN(amountValue) || amountValue < 0) {
+              errors.push('Fixed payment stages require valid dollar amounts.');
+            }
+          }
+
+          updateStageTriggerFromName(row);
+          updateStageAmountBehavior(row);
+        });
+
+        if (depositCount > 1) {
+          errors.push('Only one Deposit stage is allowed.');
+        }
+        if (finalCount > 1) {
+          errors.push('Only one Final Payment stage is allowed.');
+        }
+
+        const finalIndex = orderedNames.indexOf('Final Payment');
+        if (finalIndex >= 0) {
+          if (finalIndex !== orderedNames.length - 1) {
+            errors.push('Final Payment must be the last stage.');
+          }
+          const beforeFinal = orderedNames.slice(0, finalIndex);
+          if (!beforeFinal.includes('Deposit') && !beforeFinal.includes('Progress Payment')) {
+            errors.push('Deposit or Progress Payment must come before Final Payment.');
+          }
+        }
+
+        renderTemplateErrors(card, Array.from(new Set(errors)));
+        renderTemplateSummary(card);
+        updateTemplateSaveState(card);
+        return errors.length === 0;
+      }
+
+      function moveFinalPaymentRowToEnd(card) {
+        const stageList = card.querySelector('[data-stage-list]');
+        if (!stageList) {
+          return;
+        }
+        const rows = getStageRows(card);
+        const finalRow = rows.find((row) => {
+          const nameInput = row.querySelector('[data-stage-name]');
+          return String(nameInput ? nameInput.value || '' : '').trim() === 'Final Payment';
+        });
+        if (!finalRow) {
+          return;
+        }
+        const lastRow = rows[rows.length - 1];
+        if (lastRow !== finalRow) {
+          stageList.appendChild(finalRow);
+        }
+      }
+
+      function attachStageRowListeners(card, row) {
+        const amountInput = row.querySelector('[data-stage-amount]');
+        const nameInput = row.querySelector('[data-stage-name]');
+        const removeButton = row.querySelector('[data-stage-delete]');
+
+        [amountInput, nameInput].forEach((field) => {
+          if (!field) {
+            return;
+          }
+          field.addEventListener('input', () => {
+            if (field === nameInput) {
+              updateStageTriggerFromName(row);
+              updateStageAmountBehavior(row);
+            }
+            renderTemplateSummary(card);
+            updateTemplateSaveState(card);
+            renderTemplateErrors(card, []);
+          });
+          field.addEventListener('change', () => {
+            if (field === nameInput) {
+              const currentName = String(nameInput.value || '').trim();
+              const previousName = String(row.getAttribute('data-previous-stage-name') || '').trim();
+              if ((currentName === 'Deposit' || currentName === 'Final Payment') && getStageRows(card).some((candidate) => candidate !== row && String((candidate.querySelector('[data-stage-name]') || {}).value || '').trim() === currentName)) {
+                nameInput.value = previousName;
+              } else {
+                row.setAttribute('data-previous-stage-name', currentName);
+              }
+              updateStageTriggerFromName(row);
+              updateStageAmountBehavior(row);
+              moveFinalPaymentRowToEnd(card);
+            }
+            renderTemplateSummary(card);
+            updateTemplateSaveState(card);
+            renderTemplateErrors(card, []);
+          });
+        });
+
+        if (removeButton) {
+          removeButton.addEventListener('click', () => {
+            row.remove();
+            moveFinalPaymentRowToEnd(card);
+            renderTemplateSummary(card);
+            updateTemplateSaveState(card);
+            renderTemplateErrors(card, []);
+          });
+        }
+
+        row.setAttribute('data-previous-stage-name', String((nameInput || {}).value || '').trim());
+        updateStageTriggerFromName(row);
+        updateStageAmountBehavior(row);
+      }
+
+      function addStageRow(card, initialData) {
+        const stageList = card.querySelector('[data-stage-list]');
+        const templateIndex = String(card.getAttribute('data-template-index') || '').trim();
+        const clone = stageTemplate.content.cloneNode(true);
+        const row = clone.querySelector('[data-stage-row]');
+        const stageTemplateIndexInput = row.querySelector('[data-stage-template-index]');
+        const stageKeyInput = row.querySelector('[data-stage-key]');
+        const nameInput = row.querySelector('[data-stage-name]');
+        const amountTypeInput = row.querySelector('[data-stage-amount-type]');
+        const amountInput = row.querySelector('[data-stage-amount]');
+        const triggerInput = row.querySelector('[data-stage-trigger-input]');
+        const sendRequestCheckbox = row.querySelector('[data-stage-send-request]');
+        const stageKey = initialData && initialData.stage_key ? initialData.stage_key : buildStageKey(templateIndex);
+
+        if (stageTemplateIndexInput) {
+          stageTemplateIndexInput.value = templateIndex;
+        }
+        if (stageKeyInput) {
+          stageKeyInput.value = stageKey;
+        }
+        if (nameInput) {
+          nameInput.value = initialData && initialData.name ? initialData.name : '';
+        }
+        if (amountTypeInput) {
+          amountTypeInput.value = initialData && initialData.amount_type ? initialData.amount_type : (stageAmountTypeMap[nameInput.value] || 'fixed');
+        }
+        if (amountInput) {
+          amountInput.value = initialData && Object.prototype.hasOwnProperty.call(initialData, 'amount') ? initialData.amount : '';
+        }
+        if (triggerInput && initialData && initialData.trigger) {
+          triggerInput.value = initialData.trigger;
+        }
+        if (sendRequestCheckbox) {
+          sendRequestCheckbox.value = stageKey;
+          sendRequestCheckbox.checked = initialData ? Boolean(initialData.send_payment_request) : true;
+        }
+
+        const finalRow = getStageRows(card).find((candidate) => {
+          const candidateName = String((candidate.querySelector('[data-stage-name]') || {}).value || '').trim();
+          return candidateName === 'Final Payment';
+        });
+        if (finalRow) {
+          stageList.insertBefore(row, finalRow);
+        } else {
+          stageList.appendChild(row);
+        }
+
+        attachStageRowListeners(card, row);
+        moveFinalPaymentRowToEnd(card);
+        renderTemplateSummary(card);
+        updateTemplateSaveState(card);
+      }
+
+      function attachTemplateCardListeners(card) {
+        const addStageButton = card.querySelector('[data-add-stage]');
+        const deleteTemplateButton = card.querySelector('[data-template-delete]');
+        const saveTemplateButton = card.querySelector('[data-template-save]');
+
+        if (addStageButton) {
+          addStageButton.addEventListener('click', () => {
+            addStageRow(card, null);
+          });
+        }
+
+        if (deleteTemplateButton) {
+          deleteTemplateButton.addEventListener('click', () => {
+            card.remove();
+          });
+        }
+
+        if (saveTemplateButton) {
+          saveTemplateButton.addEventListener('click', (event) => {
+            if (!validateTemplateCard(card)) {
+              event.preventDefault();
+            }
+          });
+        }
+
+        card.querySelectorAll('[data-stage-row]').forEach((row) => {
+          attachStageRowListeners(card, row);
+        });
+        moveFinalPaymentRowToEnd(card);
+        renderTemplateSummary(card);
+        updateTemplateSaveState(card);
+      }
+
+      function addTemplateCard(initialData) {
+        const clone = templateTemplate.content.cloneNode(true);
+        const card = clone.querySelector('[data-template-card]');
+        const templateIndex = initialData && initialData.template_index ? String(initialData.template_index) : String(nextTemplateIndex++);
+        const templateIndexInput = card.querySelector('[data-template-index-input]');
+
+        card.setAttribute('data-template-index', templateIndex);
+        if (templateIndexInput) {
+          templateIndexInput.value = templateIndex;
+        }
+
+        templatesList.appendChild(card);
+        attachTemplateCardListeners(card);
+        if (initialData && Array.isArray(initialData.stages)) {
+          const existingRows = card.querySelectorAll('[data-stage-row]');
+          existingRows.forEach((row) => row.remove());
+          initialData.stages.forEach((stage) => addStageRow(card, stage));
+        } else {
+          addStageRow(card, null);
+        }
+        moveFinalPaymentRowToEnd(card);
+        renderTemplateSummary(card);
+        updateTemplateSaveState(card);
+      }
+
+      templatesList.querySelectorAll('[data-template-card]').forEach((card) => {
+        attachTemplateCardListeners(card);
+      });
+
+      addTemplateButton.addEventListener('click', () => {
+        addTemplateCard(null);
+      });
+
+      form.addEventListener('submit', (event) => {
+        const saveButton = event.submitter;
+        if (saveButton && saveButton.hasAttribute('data-template-save')) {
+          const card = saveButton.closest('[data-template-card]');
+          if (card && !validateTemplateCard(card)) {
+            event.preventDefault();
+            return;
+          }
+        }
+
+        let hasErrors = false;
+        templatesList.querySelectorAll('[data-template-card]').forEach((card) => {
+          if (!validateTemplateCard(card)) {
+            hasErrors = true;
+          }
+        });
+        if (hasErrors) {
           event.preventDefault();
         }
       });

@@ -36,11 +36,68 @@
         </div>
       </section>
 
+      <section id="employee-profile-photo-section" aria-label="Employee profile photo">
+        <h3>Employee Profile Photo</h3>
+
+        {% if employee_photo_status_message %}
+          <p class="business-logo-status {{ 'is-success' if employee_photo_status_kind == 'success' else 'is-error' }}">
+            {{ employee_photo_status_message }}
+          </p>
+        {% endif %}
+
+        {% if employee_photo_url %}
+          <div class="business-logo-preview-shell">
+            <img src="{{ employee_photo_url }}" alt="Employee profile photo" class="business-logo-preview-image" />
+          </div>
+        {% else %}
+          <p class="business-logo-placeholder">
+            <i class="fas fa-user-circle business-logo-placeholder-icon" aria-hidden="true"></i>
+            <span>No profile photo uploaded</span>
+          </p>
+        {% endif %}
+
+        <p class="business-logo-note">
+          Recommended file type: PNG, JPG, JPEG, or WEBP. Maximum file size: 2 MB. Recommended resolution: 300x100 to 2400x1400.
+        </p>
+
+        {% if current_employee_id == employeeId %}
+          <form
+            action="{{ url_for('employees.upload_profile_photo', employeeId=employeeId) }}"
+            method="POST"
+            enctype="multipart/form-data"
+            class="business-logo-upload-form"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input
+              type="file"
+              name="employee_profile_photo_file"
+              accept=".png,.jpg,.jpeg,.webp"
+              required
+              class="business-logo-upload-input"
+            />
+            <button type="submit" class="business-logo-upload-button">
+              {{ 'Upload Photo' if not employee_photo_url else 'Update Photo' }}
+            </button>
+          </form>
+
+          {% if employee_photo_url %}
+            <form
+              action="{{ url_for('employees.delete_profile_photo', employeeId=employeeId) }}"
+              method="POST"
+              class="employee-profile-photo-delete-form"
+              onsubmit="return confirm('Delete your profile photo?');"
+            >
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <button type="submit" class="employee-profile-photo-delete-button">Delete Photo</button>
+            </form>
+          {% endif %}
+        {% endif %}
+      </section>
+
       <section id="view-customer-details" aria-label="Employee details">
         <h2>Employee Details</h2>
         <div class="view-customer-section-row" id="view-employee-details-columns">
           <div class="view-customer-section-column view-customer-details-column">
-            <h3>Details</h3>
             {% set employee_status = employee.status|default('N/A', true) %}
             {% set employee_status_normalized = employee_status|lower %}
             <div id="view-customer-details-list">

@@ -3,9 +3,13 @@
 {% block title %}Manage Equipment | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="manage-jobs-header" class="resource-page resource-parts">
-      <h1>Manage Equipment</h1>
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="manage-jobs-header" class="resource-page resource-parts">
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
@@ -56,7 +60,7 @@
           <div class="jobs-controls-right-top">
             <h2>All Equipment</h2>
             <div class="jobs-controls-right-actions">
-              <a href="{{ url_for('catalog.create_equipment') }}">Add Equipment</a>
+              <a href="{{ url_for('catalog.create_equipment') }}">Create Equipment</a>
               <a href="{{ url_for('catalog.export_equipment_csv') }}">Export CSV</a>
             </div>
           </div>
@@ -78,13 +82,16 @@
               <div id="jobs-list-grid" class="catalog-compact-list">
                 {% if equipment_items %}
                   {% for equipment in equipment_items %}
-                    <a
+                    <div
                       class="jobs-card"
-                      href="{{ url_for('catalog.view_equipment', equipmentId=equipment._id) }}"
                       data-catalog-card
+                      data-card-link-url="{{ url_for('catalog.view_equipment', equipmentId=equipment._id) }}"
                       data-filter-name="{{ equipment.equipment_name }}"
                       data-filter-category="{{ equipment.category }}"
                       data-filter-manufacturer="{{ equipment.manufacturer }}"
+                      role="link"
+                      tabindex="0"
+                      aria-label="View equipment {{ equipment.equipment_name }}"
                     >
                       <div class="jobs-card-row">
                         <span class="jobs-card-label">Equipment</span>
@@ -110,7 +117,7 @@
                         <span class="jobs-card-label">Sell Price</span>
                         <span class="jobs-card-value">{{ equipment.sell_price_display }}</span>
                       </div>
-                    </a>
+                    </div>
                   {% endfor %}
                 {% else %}
                   <p>No equipment has been created yet.</p>
@@ -124,8 +131,10 @@
           {% include 'services/category_management_section.html' %}
         </div>
       </div>
+        </div>
+      </div>
+    </section>
     </div>
-  </div>
 {% endblock %}
 
 {% block scripts %}

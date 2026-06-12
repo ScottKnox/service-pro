@@ -255,6 +255,9 @@
 }
 
 #employee-greeting-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
   color: var(--kl-accent-contrast);
   text-decoration: none;
   font-family: "Source Sans 3", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -266,6 +269,15 @@
 
 #employee-greeting-link:hover {
   text-decoration: underline;
+}
+
+.header-employee-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid #3a6553;
+  object-fit: cover;
+  background: #223a30;
 }
 
 #main-container {
@@ -1119,31 +1131,32 @@
 
 .home-hvac-system-card {
   display: block;
-  border: 1px solid var(--kl-border);
-  background-color: var(--kl-surface);
-  color: inherit;
+  border: 1px solid #2f5a4a;
+  border-top: 3px solid #00A86B;
+  background: #244236;
+  color: #F2F5F3;
   text-decoration: none;
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
   min-width: 0;
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .home-hvac-system-card:hover {
-  background-color: var(--kl-surface-soft);
-  border-color: var(--kl-border-strong);
+  background-color: #2b4f42;
+  border-color: #00A86B;
 }
 
 .home-hvac-system-card-header {
-  padding: 0.55rem 0.75rem 0.3rem;
-  background: linear-gradient(135deg, #F8FAFC 0%, #F0F6FA 100%);
-  border-bottom: 1px solid var(--kl-border);
+  padding: 0.6rem 0.75rem 0.4rem;
+  background: linear-gradient(180deg, #2b4f42 0%, #244236 100%);
+  border-bottom: 1px solid #2f5a4a;
 }
 
 .home-hvac-system-card-header h4 {
   margin: 0;
   font-size: 0.95rem;
-  color: #1F6B35;
+  color: #F2F5F3;
   font-weight: 700;
 }
 
@@ -1163,12 +1176,12 @@
 }
 
 .home-hvac-system-label {
-  color: var(--kl-text-muted);
+  color: #B2C0B9;
   font-weight: 600;
 }
 
 .home-hvac-system-row strong {
-  color: var(--kl-text);
+  color: #F2F5F3;
   font-weight: 700;
 }
 
@@ -1248,23 +1261,32 @@
 }
 
 .home-note-card {
-  border: 1px solid var(--kl-border);
-  border-top: 3px solid #1F6B35;
-  background: linear-gradient(180deg, var(--kl-surface) 0%, var(--kl-surface-soft) 100%);
-  border-radius: 6px;
+  border: 1px solid #2f5a4a;
+  border-top: 3px solid #00A86B;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.18);
   padding: 0.65rem 0.75rem;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.home-note-card:hover {
+  border-color: #3a6553;
+  background: linear-gradient(180deg, #2b4a3d 0%, #223a30 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(12, 30, 23, 0.24);
 }
 
 .home-note-text {
   margin: 0;
-  color: var(--kl-text);
+  color: #F2F5F3;
   font-size: 0.92rem;
   line-height: 1.4;
 }
 
 .home-note-date {
   margin: 0.35rem 0 0;
-  color: var(--kl-text-muted);
+  color: #B2C0B9;
   font-size: 0.8rem;
 }
 
@@ -8281,11 +8303,38 @@ body.sidebar-view #footer-bg {
 
 .resource-customers#view-customer-panel .view-customer-card-link,
 .resource-customers#view-customer-panel .view-customer-estimate-item,
-.resource-customers#view-customer-panel .view-customer-internal-note-card,
 .resource-customers#view-customer-panel .view-customer-hvac-card {
   border: 1px solid var(--kl-border);
   border-radius: 4px;
   background: var(--kl-surface);
+}
+
+.resource-customers#view-customer-panel .view-customer-internal-note-card {
+  border: 1px solid #2f5a4a;
+  border-top: 3px solid #00A86B;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.18);
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.resource-customers#view-customer-panel .view-customer-internal-note-card:hover {
+  border-color: #3a6553;
+  background: linear-gradient(180deg, #2b4a3d 0%, #223a30 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(12, 30, 23, 0.24);
+}
+
+.resource-customers#view-customer-panel .view-customer-internal-note-delete {
+  border: 1px solid #4f2f2f;
+  background: #3b2222;
+  color: #ffd8d8;
+}
+
+.resource-customers#view-customer-panel .view-customer-internal-note-delete:hover {
+  border-color: #9a3535;
+  background: #5e2727;
+  color: #ffe6e6;
 }
 
 .resource-customers#view-customer-panel .view-customer-hvac-card {
@@ -9658,6 +9707,108 @@ body.sidebar-view #footer-bg {
   color: #F2F5F3;
 }
 
+/* Email Estimate Modal - Updated styling */
+#email-estimate-modal {
+  background-color: rgba(6, 14, 10, 0.66);
+  backdrop-filter: blur(2px);
+}
+
+#email-estimate-modal .modal-content {
+  width: min(700px, 94vw);
+  max-width: 700px;
+  border: 1px solid #2f5a4a;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  box-shadow: 0 20px 48px rgba(5, 15, 11, 0.45);
+}
+
+#email-estimate-modal .modal-header {
+  padding: 0.95rem 1rem;
+  border-bottom: 1px solid #2f5a4a;
+  background: #244236;
+}
+
+#email-estimate-modal .modal-header h2,
+#email-estimate-modal .modal-close-btn,
+#email-estimate-modal .form-group label,
+#email-estimate-modal .form-group input,
+#email-estimate-modal .form-group textarea {
+  color: #F2F5F3;
+}
+
+#email-estimate-modal .modal-close-btn {
+  border: 1px solid #2f5a4a;
+  border-radius: 6px;
+  background: #253E33;
+}
+
+#email-estimate-modal .modal-close-btn:hover {
+  border-color: #3a6553;
+  background: #2d4b3f;
+}
+
+#email-estimate-modal #email-estimate-form {
+  padding: 0.95rem 1rem 1rem;
+}
+
+#email-estimate-modal .form-group {
+  margin-bottom: 0.85rem;
+}
+
+#email-estimate-modal .form-group input,
+#email-estimate-modal .form-group textarea {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #253E33;
+}
+
+#email-estimate-modal .form-group input::placeholder,
+#email-estimate-modal .form-group textarea::placeholder {
+  color: #a6b8b1;
+}
+
+#email-estimate-modal .form-group input:focus,
+#email-estimate-modal .form-group textarea:focus {
+  border-color: #5fa3d3;
+  outline: 2px solid rgba(95, 163, 211, 0.3);
+  outline-offset: 1px;
+}
+
+#email-estimate-modal .email-readonly-input {
+  background: #1f342b;
+}
+
+#email-estimate-modal .modal-actions {
+  border-top: 1px solid #2f5a4a;
+  padding-top: 0.8rem;
+}
+
+#email-estimate-modal .modal-send-btn,
+#email-estimate-modal .modal-cancel-btn {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #253E33;
+  color: #D0DDD7;
+}
+
+#email-estimate-modal .modal-send-btn {
+  border-color: #00A86B;
+  background: #00A86B;
+  color: #0B120F;
+}
+
+#email-estimate-modal .modal-send-btn:hover {
+  border-color: #009863;
+  background: #009863;
+  color: #0B120F;
+}
+
+#email-estimate-modal .modal-cancel-btn:hover {
+  border-color: #3a6553;
+  background: #2d4b3f;
+  color: #F2F5F3;
+}
+
 .resource-invoice-view .estimate-line-items {
   border: 1px solid #2f5a4a;
   border-radius: 8px;
@@ -9785,7 +9936,17 @@ body.sidebar-view #footer-bg {
   border-color: #2f5a4a;
 }
 
-.resource-estimate-view .estimate-line-items,
+.resource-estimate-view .estimate-line-items {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.18);
+}
+
+.resource-estimate-view .estimate-line-item-row {
+  background: transparent;
+}
+
 .resource-estimate-view .note-card,
 .resource-estimate-view .estimate-signature-modal-content,
 .resource-estimate-view .modal-content {
@@ -9821,6 +9982,26 @@ body.sidebar-view #footer-bg {
 
 .resource-estimate-view .progress-step-connector {
   background-color: #2f5a4a;
+}
+
+.resource-estimate-view .progress-step.is-done .progress-step-circle {
+  background-color: #00A86B;
+  border-color: #00A86B;
+  color: #0B120F;
+}
+
+.resource-estimate-view .progress-step.is-active .progress-step-circle {
+  background-color: #244236;
+  border-color: #5fa3d3;
+  color: #5fa3d3;
+}
+
+.resource-estimate-view .progress-step-connector.is-done {
+  background-color: #00A86B;
+}
+
+.resource-estimate-view .progress-step-connector.is-active-right {
+  background-color: #5fa3d3;
 }
 
 .resource-estimate-view .estimate-services-list {
@@ -9943,8 +10124,7 @@ body.sidebar-view #footer-bg {
 .resource-job-view .note-card-date,
 .resource-job-view .note-card-text,
 .resource-job-view .view-job-line-item,
-.resource-job-view .view-job-line-item strong,
-.resource-job-view .jobs-status-chip {
+.resource-job-view .view-job-line-item strong {
   color: #F2F5F3;
 }
 
@@ -10094,6 +10274,26 @@ body.sidebar-view #footer-bg {
 
 .resource-job-view .progress-step-connector {
   background-color: #2f5a4a;
+}
+
+.resource-job-view .progress-step.is-done .progress-step-circle {
+  background-color: #00A86B;
+  border-color: #00A86B;
+  color: #0B120F;
+}
+
+.resource-job-view .progress-step.is-active .progress-step-circle {
+  background-color: #244236;
+  border-color: #5fa3d3;
+  color: #5fa3d3;
+}
+
+.resource-job-view .progress-step-connector.is-done {
+  background-color: #00A86B;
+}
+
+.resource-job-view .progress-step-connector.is-active-right {
+  background-color: #5fa3d3;
 }
 
 .resource-job-view .view-job-internal-note-form textarea:focus,
@@ -11285,33 +11485,29 @@ body.sidebar-view #footer-bg {
 
 .resource-business #view-customer-actions-row a,
 .resource-business #view-customer-actions-row button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 38px;
+  display: inline-block;
   padding: 0.55rem 0.95rem;
   border: 1px solid #2f5a4a;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #2d4b3f 0%, #253E33 100%);
+  border-radius: 4px;
+  background-color: #253E33;
   color: #E4ECE8;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-weight: 600;
   text-decoration: none;
-  box-shadow: 0 3px 10px rgba(12, 30, 23, 0.2);
-  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: none;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+  cursor: pointer;
 }
 
 .resource-business #view-customer-actions-row a:hover,
 .resource-business #view-customer-actions-row button:hover {
-  border-color: #4d816d;
-  background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%);
+  border-color: #3a6553;
+  background-color: #2d4b3f;
   color: #F2F5F3;
   text-decoration: none;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.26);
 }
 
 .resource-business #business-markup-recalculate-prompt {
+  margin-bottom: 1rem;
   border: 1px solid #2f5a4a;
   border-radius: 8px;
   background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
@@ -11327,6 +11523,26 @@ body.sidebar-view #footer-bg {
 .resource-business #business-markup-recalculate-prompt p {
   margin: 0 0 0.6rem;
   color: #C7D4CF;
+}
+
+.resource-business .business-markup-prompt-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.resource-business .business-markup-prompt-actions form {
+  margin: 0;
+  display: inline-flex;
+}
+
+.resource-business .business-markup-prompt-actions a,
+.resource-business .business-markup-prompt-actions button {
+  min-height: 40px;
+  height: 40px;
+  box-sizing: border-box;
+  line-height: 1;
 }
 
 .resource-business #view-customer-details {
@@ -11349,6 +11565,10 @@ body.sidebar-view #footer-bg {
   margin: 0;
 }
 
+.resource-business .business-profile-detail-group + .business-profile-detail-group {
+  margin-top: 0.85rem;
+}
+
 .resource-business .view-customer-section-column {
   border: 0;
   border-radius: 0;
@@ -11366,10 +11586,15 @@ body.sidebar-view #footer-bg {
   text-align: left;
 }
 
-.resource-business #view-customer-details-list {
+.resource-business #view-customer-details-list,
+.resource-business .business-profile-details-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.65rem;
+}
+
+.resource-business .business-profile-details-grid--single {
+  grid-template-columns: 1fr;
 }
 
 .resource-business .view-customer-detail-item {
@@ -11390,8 +11615,35 @@ body.sidebar-view #footer-bg {
   color: #C7D4CF;
 }
 
+.resource-business .business-profile-installation-schedule-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.resource-business .business-profile-installation-schedule-card {
+  border: 1px solid #3a6554;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: linear-gradient(180deg, rgba(34, 57, 47, 0.9) 0%, rgba(27, 45, 37, 0.94) 100%);
+}
+
+.resource-business .business-profile-installation-schedule-title {
+  margin: 0 0 0.5rem;
+  color: #e6efea;
+}
+
+.resource-business .business-profile-installation-schedule-row {
+  margin: 0;
+  color: #d0ded8;
+}
+
+.resource-business .business-profile-installation-schedule-row + .business-profile-installation-schedule-row {
+  margin-top: 0.25rem;
+}
+
 .resource-business #business-logo-section,
-.resource-business #business-tax-config-section {
+.resource-business #business-tax-config-section,
+.resource-employee-view #employee-profile-photo-section {
   margin-top: 0.85rem;
   border: 1px solid #2f5a4a;
   border-radius: 8px;
@@ -11406,20 +11658,24 @@ body.sidebar-view #footer-bg {
   gap: 0.65rem;
 }
 
-.resource-business .business-logo-status {
+.resource-business .business-logo-status,
+.resource-employee-view .business-logo-status {
   border-radius: 8px;
 }
 
-.resource-business .business-logo-upload-button {
+.resource-business .business-logo-upload-button,
+.resource-employee-view .business-logo-upload-button {
   border-radius: 8px;
 }
 
-.resource-business #business-logo-section {
+.resource-business #business-logo-section,
+.resource-employee-view #employee-profile-photo-section {
   position: relative;
   overflow: hidden;
 }
 
-.resource-business #business-logo-section::before {
+.resource-business #business-logo-section::before,
+.resource-employee-view #employee-profile-photo-section::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -11429,23 +11685,27 @@ body.sidebar-view #footer-bg {
   pointer-events: none;
 }
 
-.resource-business #business-logo-section > * {
+.resource-business #business-logo-section > *,
+.resource-employee-view #employee-profile-photo-section > * {
   position: relative;
   z-index: 1;
 }
 
-.resource-business #business-logo-section > h3 {
+.resource-business #business-logo-section > h3,
+.resource-employee-view #employee-profile-photo-section > h3 {
   margin: 0 0 0.6rem;
   font-size: 1rem;
   letter-spacing: 0.01em;
 }
 
-.resource-business .business-logo-status {
+.resource-business .business-logo-status,
+.resource-employee-view .business-logo-status {
   margin: 0 0 0.65rem;
   border-radius: 10px;
 }
 
-.resource-business .business-logo-preview-shell {
+.resource-business .business-logo-preview-shell,
+.resource-employee-view .business-logo-preview-shell {
   display: grid;
   place-items: center;
   min-height: 180px;
@@ -11459,7 +11719,8 @@ body.sidebar-view #footer-bg {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 10px 18px rgba(9, 24, 18, 0.24);
 }
 
-.resource-business .business-logo-preview-image {
+.resource-business .business-logo-preview-image,
+.resource-employee-view .business-logo-preview-image {
   max-width: min(100%, 420px);
   max-height: 145px;
   width: auto;
@@ -11468,7 +11729,8 @@ body.sidebar-view #footer-bg {
   filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.35));
 }
 
-.resource-business .business-logo-placeholder {
+.resource-business .business-logo-placeholder,
+.resource-employee-view .business-logo-placeholder {
   min-height: 136px;
   border: 1px dashed #3f6d5a;
   border-radius: 12px;
@@ -11477,19 +11739,22 @@ body.sidebar-view #footer-bg {
   gap: 0.6rem;
 }
 
-.resource-business .business-logo-placeholder-icon {
+.resource-business .business-logo-placeholder-icon,
+.resource-employee-view .business-logo-placeholder-icon {
   color: #6fc7af;
   font-size: 1.1rem;
 }
 
-.resource-business .business-logo-note {
+.resource-business .business-logo-note,
+.resource-employee-view .business-logo-note {
   margin: 0.65rem 0 0;
   color: #adc0b8;
   font-size: 0.84rem;
   line-height: 1.45;
 }
 
-.resource-business .business-logo-upload-form {
+.resource-business .business-logo-upload-form,
+.resource-employee-view .business-logo-upload-form {
   margin-top: 0.8rem;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -11497,7 +11762,8 @@ body.sidebar-view #footer-bg {
   align-items: stretch;
 }
 
-.resource-business .business-logo-upload-input {
+.resource-business .business-logo-upload-input,
+.resource-employee-view .business-logo-upload-input {
   min-height: 44px;
   border: 1px solid #3d6b59;
   border-radius: 10px;
@@ -11506,7 +11772,9 @@ body.sidebar-view #footer-bg {
 }
 
 .resource-business .business-logo-upload-input::file-selector-button,
-.resource-business .business-logo-upload-input::-webkit-file-upload-button {
+.resource-business .business-logo-upload-input::-webkit-file-upload-button,
+.resource-employee-view .business-logo-upload-input::file-selector-button,
+.resource-employee-view .business-logo-upload-input::-webkit-file-upload-button {
   border-color: #3d6b59;
   border-radius: 8px;
   background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%);
@@ -11514,18 +11782,23 @@ body.sidebar-view #footer-bg {
 }
 
 .resource-business .business-logo-upload-input:hover::file-selector-button,
-.resource-business .business-logo-upload-input:hover::-webkit-file-upload-button {
+.resource-business .business-logo-upload-input:hover::-webkit-file-upload-button,
+.resource-employee-view .business-logo-upload-input:hover::file-selector-button,
+.resource-employee-view .business-logo-upload-input:hover::-webkit-file-upload-button {
   border-color: #4e846f;
   background: linear-gradient(180deg, #3d6e5b 0%, #315747 100%);
 }
 
 .resource-business .business-logo-upload-input:focus,
-.resource-business .business-logo-upload-button:focus-visible {
+.resource-business .business-logo-upload-button:focus-visible,
+.resource-employee-view .business-logo-upload-input:focus,
+.resource-employee-view .business-logo-upload-button:focus-visible {
   outline: 2px solid #5FA3D3;
   outline-offset: 2px;
 }
 
-.resource-business .business-logo-upload-button {
+.resource-business .business-logo-upload-button,
+.resource-employee-view .business-logo-upload-button {
   min-height: 44px;
   border: 1px solid #3d6b59;
   border-radius: 10px;
@@ -11533,9 +11806,582 @@ body.sidebar-view #footer-bg {
   color: #eef5f1;
 }
 
-.resource-business .business-logo-upload-button:hover {
+.resource-business .business-logo-upload-button:hover,
+.resource-employee-view .business-logo-upload-button:hover {
   border-color: #4e846f;
   background: linear-gradient(180deg, #3d6e5b 0%, #315747 100%);
+}
+
+.resource-business .business-settings-shell {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.resource-business .business-settings-sidebar {
+  position: sticky;
+  top: 0.75rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.resource-business .business-settings-sidebar-card,
+.resource-business .business-settings-section,
+.resource-business .business-settings-hero,
+.resource-business .business-settings-global-errors,
+.resource-business .payment-schedule-template-card,
+.resource-business #business-profile-form {
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.16);
+}
+
+.resource-business #business-profile-form {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.resource-business .business-settings-sidebar-card {
+  padding: 0.7rem 0.75rem;
+}
+
+.resource-business .business-settings-sidebar-eyebrow,
+.resource-business .business-settings-section-kicker,
+.resource-business .business-settings-hero-eyebrow {
+  margin: 0;
+  color: #8fb4a4;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.resource-business .business-settings-sidebar-card h2,
+.resource-business .business-settings-sidebar-card h3 {
+  margin: 0.25rem 0 0.35rem;
+  color: #f2f5f3;
+}
+
+.resource-business .business-settings-sidebar-card p {
+  margin: 0;
+  color: #c7d4cf;
+}
+
+.resource-business .business-settings-sidebar-nav {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.resource-business .business-settings-sidebar-nav a {
+  display: block;
+  padding: 0.48rem 0.55rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 6px;
+  color: #dbe7e2;
+  text-decoration: none;
+  background: linear-gradient(180deg, #2b4a3e 0%, #243d33 100%);
+  font-weight: 600;
+}
+
+.resource-business .business-settings-sidebar-nav a:hover {
+  border-color: #4d816d;
+  color: #f2f5f3;
+}
+
+.resource-business .business-settings-sidebar-nav a:focus-visible {
+  outline: 2px solid #6ba892;
+  outline-offset: 2px;
+}
+
+.resource-business .business-settings-sidebar-nav a.is-active {
+  border-color: #4d816d;
+  background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%);
+  color: #f2f5f3;
+}
+
+.resource-business .business-settings-main {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.resource-business .business-settings-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  align-items: end;
+  padding: 0.75rem;
+}
+
+.resource-business .business-settings-hero h1 {
+  margin: 0.15rem 0 0.3rem;
+  color: #f2f5f3;
+  font-size: 1.35rem;
+}
+
+.resource-business .business-settings-hero-copy {
+  margin: 0;
+  color: #c7d4cf;
+}
+
+.resource-business .business-settings-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.resource-business .business-settings-global-errors {
+  padding: 0.65rem 0.75rem;
+}
+
+.resource-business .business-settings-global-errors .form-error {
+  margin: 0;
+}
+
+.resource-business .business-settings-section {
+  padding: 0.75rem;
+}
+
+.resource-business #section-business-info {
+  display: grid;
+  row-gap: 0.75rem;
+}
+
+.resource-business #section-business-info .add-customer-form-row {
+  margin: 0;
+}
+
+.resource-business .business-settings-section .create-job-form-section-header {
+  margin-top: 0;
+}
+
+.resource-business .business-settings-section .create-job-form-section-header.business-settings-markup-header {
+  margin-top: 2rem;
+}
+
+.resource-business .business-settings-subsection-heading {
+  margin: 0.5rem 0 0.35rem;
+  color: #f2f5f3;
+  font-size: 1rem;
+}
+
+.resource-business .business-settings-inline-action {
+  margin-top: 0.5rem;
+}
+
+.resource-business .business-settings-inline-add-row {
+  margin-top: 0.5rem;
+}
+
+.resource-business #section-pricing #add-markup-rule-row {
+  min-height: 40px;
+  padding: 0.6rem 1rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2d4b3f 0%, #253e33 100%);
+  color: #e4ece8;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 3px 10px rgba(12, 30, 23, 0.2);
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.resource-business #section-pricing #add-markup-rule-row:hover {
+  border-color: #4d816d;
+  background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%);
+  color: #f2f5f3;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.26);
+}
+
+.resource-business #section-pricing .markup-rule-remove-button {
+  min-height: 40px;
+  padding: 0.6rem 1rem;
+  border: 1px solid #9a3535;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #4a2222 0%, #3a1b1b 100%);
+  color: #f4dada;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 3px 10px rgba(45, 14, 14, 0.22);
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.resource-business #section-pricing .markup-rule-remove-button:hover {
+  border-color: #c35a5a;
+  background: linear-gradient(180deg, #5a2929 0%, #492121 100%);
+  color: #fff0f0;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(45, 14, 14, 0.3);
+}
+
+.resource-business .business-settings-payment-schedules {
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%) !important;
+}
+
+.resource-business .business-settings-payment-schedules .payment-schedule-cards-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.resource-business .payment-schedule-template-card {
+  padding: 0.9rem;
+  margin-bottom: 0.9rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(34, 57, 47, 0.86) 0%, rgba(29, 49, 41, 0.9) 100%);
+  box-shadow: 0 8px 20px rgba(8, 24, 18, 0.16);
+}
+
+.resource-business .business-settings-payment-schedules .payment-schedule-template-card {
+  background: linear-gradient(180deg, rgba(34, 57, 47, 0.94) 0%, rgba(27, 45, 37, 0.96) 100%) !important;
+  border-color: #3a6554;
+  color: #e3ece8;
+}
+
+.resource-business .business-settings-payment-schedules .payment-schedule-card-errors {
+  margin-bottom: 0.4rem;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-stage-row {
+  margin-bottom: 0.55rem;
+  padding: 0.55rem;
+  border: 1px solid #355f4f;
+  border-radius: 9px;
+  background: rgba(20, 36, 29, 0.55);
+}
+
+.resource-business .business-settings-payment-schedules .payment-schedule-stage-row {
+  background: rgba(18, 32, 26, 0.72) !important;
+  border-color: #3a6554 !important;
+}
+
+.resource-business .business-settings-payment-schedules .payment-schedule-card-toolbar {
+  margin-top: 0.2rem;
+}
+
+.resource-business .business-settings-payment-schedules .add-customer-form-row {
+  background: transparent;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-stage-row .add-customer-form-field > label {
+  color: #d9e8e1;
+}
+
+.resource-business .business-settings-payment-schedules .add-customer-form-field label {
+  color: #d9e8e1;
+}
+
+.resource-business .business-settings-payment-schedules .add-customer-form-field input,
+.resource-business .business-settings-payment-schedules .add-customer-form-field select,
+.resource-business .business-settings-payment-schedules .add-customer-form-field textarea {
+  border-color: #3b6a58 !important;
+  background-color: #1f342b !important;
+  color: #f2f5f3 !important;
+}
+
+.resource-business .business-settings-payment-schedules .add-customer-form-field input:focus,
+.resource-business .business-settings-payment-schedules .add-customer-form-field select:focus,
+.resource-business .business-settings-payment-schedules .add-customer-form-field textarea:focus {
+  outline: 2px solid #5fa3d3;
+  border-color: #5fa3d3;
+}
+
+.resource-business #section-payment-schedules input[name="payment_schedule_stage_amount[]"] {
+  border: 1px solid #3b6a58;
+  border-radius: 8px;
+  background: #1f342b;
+  color: #f2f5f3;
+}
+
+.resource-business #section-payment-schedules input[name="payment_schedule_stage_amount[]"]:focus {
+  outline: 2px solid #5fa3d3;
+  border-color: #5fa3d3;
+}
+
+.resource-business #section-payment-schedules select[name="payment_schedule_stage_name[]"] {
+  border: 1px solid #3b6a58;
+  border-radius: 8px;
+  background-color: #1f342b;
+  color: #f2f5f3;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #d0ddd7 50%),
+    linear-gradient(135deg, #d0ddd7 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.05rem) calc(50% + 1px),
+    calc(100% - 0.75rem) calc(50% + 1px);
+  background-size: 0.35rem 0.35rem, 0.35rem 0.35rem;
+  background-repeat: no-repeat;
+  padding-right: 2.3rem;
+}
+
+.resource-business #section-payment-schedules select[name="payment_schedule_stage_name[]"] {
+  margin-bottom: 0.45rem;
+}
+
+.resource-business #section-payment-schedules select[name="payment_schedule_stage_name[]"]:focus {
+  outline: 2px solid #5fa3d3;
+  border-color: #5fa3d3;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-trigger-readonly {
+  margin: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #3b6a58;
+  border-radius: 8px;
+  background: #1f342b;
+  color: #d6e4de;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-amount-readonly {
+  margin: 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0.55rem 0.7rem;
+  border: 1px dashed #3b6a58;
+  border-radius: 8px;
+  background: rgba(31, 52, 43, 0.45);
+  color: #d6e4de;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-amount-readonly[hidden] {
+  display: none !important;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-summary {
+  margin-top: 0.35rem;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #3b6a58;
+  border-radius: 8px;
+  background: #1f342b;
+  color: #d6e4de;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.88rem;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-summary-line {
+  white-space: nowrap;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-sms-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 42px;
+  color: #d6e4de;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-stage-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-add-template-wrap {
+  margin-top: 0.5rem;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-template-save-button,
+.resource-business #section-payment-schedules [data-add-stage],
+.resource-business #section-payment-schedules #add-payment-schedule-template {
+  min-height: 40px;
+  padding: 0.6rem 1rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2d4b3f 0%, #253e33 100%);
+  color: #e4ece8;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 3px 10px rgba(12, 30, 23, 0.2);
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-template-save-button:hover,
+.resource-business #section-payment-schedules [data-add-stage]:hover,
+.resource-business #section-payment-schedules #add-payment-schedule-template:hover {
+  border-color: #4d816d;
+  background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%);
+  color: #f2f5f3;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.26);
+}
+
+.resource-business #section-payment-schedules .payment-schedule-template-save-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  border-color: #365847;
+  background: linear-gradient(180deg, #2a4137 0%, #25382f 100%);
+}
+
+.resource-business #section-payment-schedules .payment-schedule-template-save-button:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-template-delete-button,
+.resource-business #section-payment-schedules [data-stage-delete] {
+  min-height: 40px;
+  padding: 0.6rem 1rem;
+  border: 1px solid #9a3535;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #4a2222 0%, #3a1b1b 100%);
+  color: #f4dada;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 3px 10px rgba(45, 14, 14, 0.22);
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.resource-business #section-payment-schedules [data-stage-delete] {
+  margin-bottom: 0.35rem;
+}
+
+.resource-business #section-payment-schedules .payment-schedule-template-delete-button:hover,
+.resource-business #section-payment-schedules [data-stage-delete]:hover {
+  border-color: #c35a5a;
+  background: linear-gradient(180deg, #5a2929 0%, #492121 100%);
+  color: #fff0f0;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(45, 14, 14, 0.3);
+}
+
+.resource-business #section-taxes .tax-rate-applies-to-grid label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 6px;
+  background: #1f342b;
+  color: #d6e4de;
+}
+
+.resource-business #section-taxes .tax-rate-applies-to-grid input[type="checkbox"] {
+  accent-color: #5fa3d3;
+}
+
+.resource-business #section-taxes select[name="tax_rate_active[]"] {
+  border: 1px solid #3b6a58;
+  border-radius: 8px;
+  background-color: #1f342b;
+  color: #f2f5f3;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #d0ddd7 50%),
+    linear-gradient(135deg, #d0ddd7 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.05rem) calc(50% + 1px),
+    calc(100% - 0.75rem) calc(50% + 1px);
+  background-size: 0.35rem 0.35rem, 0.35rem 0.35rem;
+  background-repeat: no-repeat;
+  padding-right: 2.3rem;
+}
+
+.resource-business #section-taxes #add-tax-rate-row {
+  min-height: 38px;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2d4b3f 0%, #253e33 100%);
+  color: #e4ece8;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 3px 10px rgba(12, 30, 23, 0.2);
+}
+
+.resource-business #section-taxes #add-tax-rate-row:hover {
+  border-color: #4d816d;
+  background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%);
+  color: #f2f5f3;
+}
+
+.resource-business .business-settings-stage-toolbar {
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.resource-business .business-settings-stage-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-left: auto;
+}
+
+.resource-business .business-settings-template-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.resource-business .business-settings-stage-total {
+  text-align: right;
+}
+
+.resource-business .business-settings-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.resource-business .business-settings-footer-actions a,
+.resource-business .business-settings-footer-actions button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  height: 40px;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #2d4b3f 0%, #253e33 100%);
+  color: #e4ece8;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  text-decoration: none;
+  box-sizing: border-box;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(12, 30, 23, 0.2);
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.resource-business .business-settings-footer-actions .business-settings-footer-button {
+  border: 1px solid #2f5a4a !important;
+  border-radius: 8px !important;
+  background: linear-gradient(180deg, #2d4b3f 0%, #253e33 100%) !important;
+}
+
+.resource-business .business-settings-footer-actions a:hover,
+.resource-business .business-settings-footer-actions button:hover {
+  border-color: #4d816d;
+  background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%);
+  color: #f2f5f3;
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.26);
+}
+
+.resource-business .business-settings-footer-actions .business-settings-footer-button:hover {
+  border-color: #4d816d !important;
+  background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%) !important;
 }
 
 @media (max-width: 720px) {
@@ -11543,8 +12389,20 @@ body.sidebar-view #footer-bg {
     grid-template-columns: 1fr;
   }
 
+  .resource-employee-view .business-logo-upload-form {
+    grid-template-columns: 1fr;
+  }
+
   .resource-business .business-logo-upload-button {
     width: 100%;
+  }
+
+  .resource-business .business-settings-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .resource-business .business-settings-hero-actions {
+    justify-content: flex-start;
   }
 }
 
@@ -11585,30 +12443,24 @@ body.sidebar-view #footer-bg {
 
 .resource-employee-view #view-customer-actions-row a,
 .resource-employee-view #view-customer-actions-row button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 38px;
+  display: inline-block;
   padding: 0.55rem 0.95rem;
   border: 1px solid #2f5a4a;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #2d4b3f 0%, #253E33 100%);
-  color: #E4ECE8;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  border-radius: 4px;
+  background: #253E33;
+  color: #B2C0B9;
+  font-weight: 600;
   text-decoration: none;
-  box-shadow: 0 3px 10px rgba(12, 30, 23, 0.2);
-  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: none;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
 }
 
 .resource-employee-view #view-customer-actions-row a:hover,
 .resource-employee-view #view-customer-actions-row button:hover {
-  border-color: #4d816d;
-  background: linear-gradient(180deg, #35604f 0%, #2b4d40 100%);
+  border-color: #3a6553;
+  background: #2d4b3f;
   color: #F2F5F3;
   text-decoration: none;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(12, 30, 23, 0.26);
 }
 
 .resource-employee-view #view-customer-details {
@@ -11661,6 +12513,27 @@ body.sidebar-view #footer-bg {
 
 .resource-employee-view .employee-status-chip {
   font-size: 0.9rem;
+}
+
+.resource-employee-view .employee-profile-photo-delete-form {
+  margin-top: 0.6rem;
+}
+
+.resource-employee-view .employee-profile-photo-delete-button {
+  min-height: 40px;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid #9a3535;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #4a2222 0%, #3a1b1b 100%);
+  color: #f4dada;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.resource-employee-view .employee-profile-photo-delete-button:hover {
+  border-color: #c35a5a;
+  background: linear-gradient(180deg, #5a2929 0%, #492121 100%);
+  color: #fff0f0;
 }
 
 .resource-employee-update #add-customer-form {
@@ -11739,7 +12612,16 @@ body.sidebar-view #footer-bg {
 }
 
 @media (max-width: 980px) {
+  .resource-business .business-settings-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .resource-business .business-settings-sidebar {
+    position: static;
+  }
+
   .resource-business #view-customer-details-list,
+  .resource-business .business-profile-details-grid,
   .resource-business .business-tax-config-list {
     grid-template-columns: 1fr;
   }
@@ -11779,5 +12661,145 @@ body.sidebar-view #footer-bg {
   .resource-employees .customer-card-column--position .customer-card-label,
   .resource-employees .customer-card-column--position .customer-card-value {
     text-align: center;
+  }
+}
+
+/* Estimate Signature Modal Styles */
+#estimate-signature-modal {
+  background-color: rgba(6, 14, 10, 0.66);
+  backdrop-filter: blur(2px);
+}
+
+.estimate-signature-modal-content {
+  width: min(750px, 96vw);
+  max-width: 750px;
+  border: 1px solid #2f5a4a;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #223a30 0%, #1d3329 100%);
+  box-shadow: 0 20px 48px rgba(5, 15, 11, 0.45);
+}
+
+.estimate-signature-modal-body {
+  padding: 1.2rem 1.2rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: #1d3329;
+  color: #F2F5F3;
+}
+
+#estimate-signature-modal .modal-header {
+  padding: 0.95rem 1rem;
+  border-bottom: 1px solid #2f5a4a;
+  background: #244236;
+}
+
+#estimate-signature-modal .modal-header h2 {
+  color: #F2F5F3;
+}
+
+#estimate-signature-modal .modal-close-btn {
+  border: 1px solid #2f5a4a;
+  border-radius: 6px;
+  background: #253E33;
+  color: #F2F5F3;
+}
+
+#estimate-signature-modal .modal-close-btn:hover {
+  border-color: #3a6553;
+  background: #2d4b3f;
+}
+
+.estimate-signature-modal-body > p {
+  color: #F2F5F3;
+  font-size: 0.95rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+#estimate-signature-canvas {
+  border: 2px solid #2f5a4a;
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: crosshair;
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  touch-action: none;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#estimate-signature-canvas:focus {
+  outline: 2px solid #5fa3d3;
+  outline-offset: 2px;
+  border-color: #5fa3d3;
+}
+
+.estimate-signature-actions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: flex-end;
+  padding: 0.75rem 1.2rem 1.2rem;
+  border-top: 1px solid #2f5a4a;
+  background: #1f342b;
+  border-radius: 0 0 10px 10px;
+}
+
+.estimate-signature-actions .modal-cancel-btn,
+.estimate-signature-actions .modal-send-btn {
+  flex: 0 0 auto;
+  padding: 0.55rem 1.2rem;
+  font-size: 0.9rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 8px;
+  background: #253E33;
+  color: #D0DDD7;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.estimate-signature-actions .modal-cancel-btn:hover {
+  border-color: #3a6553;
+  background: #2d4b3f;
+  color: #F2F5F3;
+}
+
+.estimate-signature-actions .modal-send-btn {
+  border-color: #00A86B;
+  background: #00A86B;
+  color: #0B120F;
+  font-weight: 600;
+}
+
+.estimate-signature-actions .modal-send-btn:hover {
+  border-color: #009863;
+  background: #009863;
+  color: #0B120F;
+}
+
+.estimate-signature-actions .modal-send-btn:active {
+  transform: scale(0.98);
+}
+
+/* Canvas mobile sizing */
+@media (max-width: 640px) {
+  .estimate-signature-modal-content {
+    width: 98vw;
+  }
+
+  #estimate-signature-canvas {
+    max-height: 200px;
+  }
+
+  .estimate-signature-actions {
+    flex-wrap: wrap;
+    padding: 0.6rem 1rem 1rem;
+  }
+
+  .estimate-signature-actions .modal-cancel-btn,
+  .estimate-signature-actions .modal-send-btn {
+    padding: 0.5rem 0.95rem;
+    font-size: 0.85rem;
   }
 }

@@ -1,11 +1,13 @@
 import os
+import json
+import secrets
 from io import BytesIO
 from datetime import UTC, datetime
 from urllib.parse import quote
 
 from PIL import Image
 from bson import ObjectId
-from flask import Blueprint, current_app, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, current_app, redirect, render_template, request, session, url_for
 import stripe
 
 from mongo import ensure_connection_or_500, serialize_doc
@@ -22,6 +24,47 @@ MIN_LOGO_HEIGHT = 100
 MAX_LOGO_WIDTH = 2400
 MAX_LOGO_HEIGHT = 1400
 DEFAULT_TAX_RATE_TYPES = ["parts", "materials", "equipment"]
+INSTALLATION_SERVICE_TYPE = "Installation"
+INSTALLATION_PAYMENT_STAGE_OPTIONS = [
+    "Deposit",
+    "Progress Payment",
+    "Materials Payment",
+    "Final Payment",
+]
+INSTALLATION_STAGE_AMOUNT_TYPE_MAP = {
+    "Deposit": "percentage",
+    "Progress Payment": "fixed",
+    "Materials Payment": "fixed",
+    "Final Payment": "remaining",
+}
+INSTALLATION_STAGE_TRIGGER_MAP = {
+    "Deposit": "estimate_accepted",
+    "Progress Payment": "manual",
+    "Materials Payment": "manual",
+    "Final Payment": "job_completed",
+}
+INSTALLATION_TRIGGER_LABEL_MAP = {
+    "estimate_accepted": "Estimate accepted",
+    "job_completed": "Job completed",
+    "manual": "Manual",
+}
+
+_LOGO_MIME_TYPES = {
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "webp": "image/webp",
+}
+
+
+def _installation_trigger_for_stage_name(stage_name):
+    normalized_name = str(stage_name or "").strip()
+    return INSTALLATION_STAGE_TRIGGER_MAP.get(normalized_name)
+
+
+def _installation_amount_type_for_stage_name(stage_name):
+    normalized_name = str(stage_name or "").strip()
+    return INSTALLATION_STAGE_AMOUNT_TYPE_MAP.get(normalized_name)
 
 
 def _configure_stripe_client():
@@ -226,6 +269,240 @@ def _normalize_markup_rules_for_view(business):
     return normalized
 
 
+def _normalize_payment_schedule_templates_for_view(business):
+    raw_templates = business.get("payment_schedule_templates")
+    if isinstance(raw_templates, str):
+        try:
+            raw_templates = json.loads(raw_templates)
+        except ValueError:
+            raw_templates = []
+
+    if not isinstance(raw_templates, list):
+        return []
+
+    normalized_templates = []
+    for template_index, template in enumerate(raw_templates):
+        if not isinstance(template, dict):
+            continue
+
+        category = INSTALLATION_SERVICE_TYPE
+        stages = []
+        for stage_index, stage in enumerate(template.get("stages") or []):
+            if not isinstance(stage, dict):
+                continue
+            stage_name = str(stage.get("name") or "").strip()
+            if stage_name not in INSTALLATION_PAYMENT_STAGE_OPTIONS:
+                continue
+
+            amount_type = str(stage.get("amount_type") or "").strip().lower()
+            expected_amount_type = _installation_amount_type_for_stage_name(stage_name)
+            if amount_type not in {"percentage", "fixed", "remaining"}:
+                amount_type = expected_amount_type
+            if expected_amount_type:
+                amount_type = expected_amount_type
+
+            raw_amount_value = stage.get("amount")
+            if amount_type == "remaining":
+                amount_value = None
+                amount_text = ""
+            else:
+                if raw_amount_value in [None, ""] and amount_type == "percentage":
+                    raw_amount_value = stage.get("percentage")
+                try:
+                    amount_value = float(raw_amount_value)
+                except (TypeError, ValueError):
+                    amount_value = 0.0
+                amount_value = max(0.0, amount_value)
+                if amount_type == "percentage":
+                    amount_value = round(amount_value)
+                    amount_text = str(int(amount_value))
+                else:
+                    amount_value = round(amount_value, 2)
+                    amount_text = f"{amount_value:.2f}".rstrip("0").rstrip(".")
+
+            trigger_value = _installation_trigger_for_stage_name(stage_name) or "manual"
+            stages.append(
+                {
+                    "stage_key": str(stage.get("stage_key") or "").strip() or f"existing-{template_index}-{stage_index}-{secrets.token_hex(3)}",
+                    "name": stage_name,
+                    "amount_type": amount_type,
+                    "amount": amount_text,
+                    "trigger": trigger_value,
+                    "trigger_label": INSTALLATION_TRIGGER_LABEL_MAP.get(trigger_value, "Manual"),
+                    "send_payment_request": bool(stage.get("send_payment_request", True)),
+                }
+            )
+
+        normalized_templates.append(
+            {
+                "template_index": str(template.get("template_index") or template_index),
+                "category": category,
+                "stages": stages,
+            }
+        )
+
+    return normalized_templates
+
+
+def _parse_payment_schedule_templates_from_form(form):
+    template_indices = form.getlist("payment_schedule_template_index[]")
+    stage_template_indices = form.getlist("payment_schedule_stage_template_index[]")
+    stage_keys = form.getlist("payment_schedule_stage_key[]")
+    stage_names = form.getlist("payment_schedule_stage_name[]")
+    stage_amount_types = form.getlist("payment_schedule_stage_amount_type[]")
+    stage_amounts = form.getlist("payment_schedule_stage_amount[]")
+    checked_stage_keys = set(form.getlist("payment_schedule_stage_send_request[]"))
+
+    parsed_templates = []
+    templates_for_view = []
+    template_errors = {}
+    template_count = len(template_indices)
+    if template_count == 0:
+        template_count = 1
+
+    for template_position in range(template_count):
+        template_index = str(template_indices[template_position] if template_position < len(template_indices) else template_position).strip() or str(template_position)
+        category = INSTALLATION_SERVICE_TYPE
+        row_errors = []
+
+        stages = []
+        for stage_position in range(len(stage_template_indices)):
+            stage_template_index = str(stage_template_indices[stage_position] or "").strip()
+            if stage_template_index != template_index:
+                continue
+
+            stage_key = str(stage_keys[stage_position] if stage_position < len(stage_keys) else "").strip() or f"{template_index}:{stage_position}"
+            stage_name = str(stage_names[stage_position] if stage_position < len(stage_names) else "").strip()
+            stage_amount_type_text = str(stage_amount_types[stage_position] if stage_position < len(stage_amount_types) else "").strip().lower()
+            stage_amount_text = str(stage_amounts[stage_position] if stage_position < len(stage_amounts) else "").strip()
+            if not stage_name and not stage_amount_text:
+                continue
+
+            stage_trigger = _installation_trigger_for_stage_name(stage_name)
+            expected_amount_type = _installation_amount_type_for_stage_name(stage_name)
+            stage_amount_type = expected_amount_type or stage_amount_type_text
+            stage_amount_value = None
+
+            if not stage_name:
+                row_errors.append("Each stage needs a name.")
+            if stage_name and stage_name not in INSTALLATION_PAYMENT_STAGE_OPTIONS:
+                row_errors.append("Each stage must use a valid installation stage name.")
+            if not stage_trigger:
+                row_errors.append("Each stage needs a valid trigger mapping.")
+                stage_trigger = "manual"
+            if not stage_amount_type:
+                row_errors.append("Each stage needs a valid amount type.")
+
+            if stage_amount_type == "percentage":
+                try:
+                    stage_amount_value = float(stage_amount_text)
+                except (TypeError, ValueError):
+                    stage_amount_value = None
+                if stage_amount_value is None:
+                    row_errors.append("Deposit requires a whole-number percentage.")
+                else:
+                    if stage_amount_value < 0:
+                        row_errors.append("Deposit percentage must be zero or greater.")
+                    if abs(stage_amount_value - round(stage_amount_value)) > 0.001:
+                        row_errors.append("Deposit percentage must be a whole number.")
+                    stage_amount_value = round(stage_amount_value)
+            elif stage_amount_type == "fixed":
+                try:
+                    stage_amount_value = float(stage_amount_text)
+                except (TypeError, ValueError):
+                    stage_amount_value = None
+                if stage_amount_value is None:
+                    row_errors.append("This stage requires a valid fixed dollar amount.")
+                elif stage_amount_value < 0:
+                    row_errors.append("Fixed dollar amount must be zero or greater.")
+                else:
+                    stage_amount_value = round(stage_amount_value, 2)
+            elif stage_amount_type == "remaining":
+                stage_amount_value = None
+
+            stages.append(
+                {
+                    "stage_key": stage_key,
+                    "name": stage_name,
+                    "amount_type": stage_amount_type,
+                    "amount": stage_amount_value,
+                    "trigger": stage_trigger,
+                    "send_payment_request": stage_key in checked_stage_keys,
+                }
+            )
+
+        if not stages:
+            row_errors.append("Add at least one payment stage.")
+
+        stage_names_ordered = [str(stage.get("name") or "").strip() for stage in stages]
+        final_payment_indices = [index for index, name in enumerate(stage_names_ordered) if name == "Final Payment"]
+        deposit_indices = [index for index, name in enumerate(stage_names_ordered) if name == "Deposit"]
+
+        if len(final_payment_indices) > 1:
+            row_errors.append("Only one Final Payment stage is allowed.")
+        if len(deposit_indices) > 1:
+            row_errors.append("Only one Deposit stage is allowed.")
+
+        if final_payment_indices:
+            final_index = final_payment_indices[0]
+            if final_index != len(stage_names_ordered) - 1:
+                row_errors.append("Final Payment must be the last stage.")
+            has_deposit_or_progress_before_final = any(name in {"Deposit", "Progress Payment"} for name in stage_names_ordered[:final_index])
+            if not has_deposit_or_progress_before_final:
+                row_errors.append("Deposit or Progress Payment must come before Final Payment.")
+
+        if row_errors:
+            template_errors[template_index] = row_errors
+
+        parsed_templates.append(
+            {
+                "template_index": template_index,
+                "category": category,
+                "stages": [
+                    {
+                        "name": stage.get("name"),
+                        "amount_type": stage.get("amount_type"),
+                        "amount": stage.get("amount"),
+                        "trigger": stage.get("trigger"),
+                        "send_payment_request": bool(stage.get("send_payment_request", True)),
+                    }
+                    for stage in stages
+                ],
+            }
+        )
+        templates_for_view.append(
+            {
+                "template_index": template_index,
+                "category": category,
+                "stages": [
+                    {
+                        "stage_key": stage.get("stage_key"),
+                        "name": stage.get("name"),
+                        "amount_type": stage.get("amount_type"),
+                        "amount": "" if stage.get("amount") is None else f"{float(stage.get('amount') or 0.0):.2f}".rstrip("0").rstrip("."),
+                        "trigger": stage.get("trigger"),
+                        "trigger_label": INSTALLATION_TRIGGER_LABEL_MAP.get(stage.get("trigger"), "Manual"),
+                        "send_payment_request": bool(stage.get("send_payment_request", True)),
+                    }
+                    for stage in stages
+                ],
+            }
+        )
+
+    cleaned_templates = []
+    for template in parsed_templates:
+        if not isinstance(template.get("stages"), list) or not template.get("stages"):
+            continue
+        cleaned_templates.append(
+            {
+                "category": template.get("category"),
+                "stages": template.get("stages"),
+            }
+        )
+
+    return cleaned_templates, templates_for_view, template_errors
+
+
 def _parse_markup_rules_from_form(form):
     mins = form.getlist("markup_range_min[]")
     maxes = form.getlist("markup_range_max[]")
@@ -324,6 +601,31 @@ def _parse_markup_rules_from_form(form):
     ]
 
     return cleaned_rules, parsed_rows, row_errors
+
+
+def _canonicalize_markup_rules(rules):
+    canonical_rows = []
+    for rule in rules or []:
+        if not isinstance(rule, dict):
+            continue
+        try:
+            range_min = round(float(rule.get("range_min") or 0.0), 4)
+            markup_percent = round(float(rule.get("markup_percent") or 0.0), 4)
+        except (TypeError, ValueError):
+            continue
+
+        range_max_raw = rule.get("range_max")
+        range_max = None
+        if range_max_raw not in [None, ""]:
+            try:
+                range_max = round(float(range_max_raw), 4)
+            except (TypeError, ValueError):
+                range_max = None
+
+        canonical_rows.append((range_min, range_max, markup_percent))
+
+    canonical_rows.sort(key=lambda row: (row[0], float("inf") if row[1] is None else row[1], row[2]))
+    return canonical_rows
 
 
 def _markup_status_payload(status):
@@ -427,9 +729,12 @@ def business_profile():
     business = serialize_doc(business)
     business["tax_rates"] = _normalize_tax_rates_for_view(business)
     business["markup_rules"] = _normalize_markup_rules_for_view(business)
+    business["payment_schedule_templates"] = _normalize_payment_schedule_templates_for_view(business)
 
     custom_logo = str(business.get("custom_logo") or "").strip()
-    logo_url = object_storage.build_access_url(custom_logo)
+    logo_url = ""
+    if custom_logo:
+        logo_url = url_for("business.view_logo")
     logo_version = str(business.get("custom_logo_uploaded_at") or "").strip()
     if logo_url and logo_version:
         separator = "&" if "?" in logo_url else "?"
@@ -439,7 +744,7 @@ def business_profile():
     stripe_status_kind, stripe_status_message = _stripe_status_payload(request.args.get("stripe_status", ""))
     twilio_status_kind, twilio_status_message = _twilio_status_payload(business)
     markup_status_kind, markup_status_message = _markup_status_payload(request.args.get("markup_status", ""))
-    show_markup_recalc_prompt = str(request.args.get("markup_status") or "").strip() == "saved"
+    show_markup_recalc_prompt = str(request.args.get("show_markup_recalc_prompt") or "").strip() == "1"
 
     stripe_account_id = str(business.get("stripe_account_id") or "").strip()
     stripe_charges_enabled = bool(business.get("stripe_charges_enabled"))
@@ -463,6 +768,42 @@ def business_profile():
         markup_status_kind=markup_status_kind,
         markup_status_message=markup_status_message,
         show_markup_recalc_prompt=show_markup_recalc_prompt,
+    )
+
+
+@bp.route("/business/logo/view")
+def view_logo():
+    if not _is_authorized():
+        return Response(status=403)
+
+    db = ensure_connection_or_500()
+    employee, _, business = _business_context(db)
+    if not employee:
+        session.clear()
+        return Response(status=401)
+    if not business:
+        return Response(status=404)
+
+    custom_logo = str((business or {}).get("custom_logo") or "").strip()
+    if not custom_logo:
+        return Response(status=404)
+
+    logo_bytes = object_storage.download_object_bytes(custom_logo)
+    if not logo_bytes:
+        fallback_url = object_storage.build_access_url(custom_logo)
+        if fallback_url:
+            return redirect(fallback_url)
+        return Response(status=404)
+
+    extension = custom_logo.rsplit(".", 1)[-1].lower() if "." in custom_logo else ""
+    mime_type = _LOGO_MIME_TYPES.get(extension, "image/png")
+
+    return Response(
+        logo_bytes,
+        mimetype=mime_type,
+        headers={
+            "Cache-Control": "private, max-age=300",
+        },
     )
 
 
@@ -673,6 +1014,7 @@ def update_business():
         return redirect(url_for("error_page", error="no_business"))
 
     if request.method == "POST":
+        existing_markup_rules = _canonicalize_markup_rules((business or {}).get("markup_rules") or [])
         company_name = request.form.get("company_name", "").strip()
         warranty_info = request.form.get("warranty_info", "").strip()
         address_line_1 = request.form.get("address_line_1", "").strip()
@@ -690,6 +1032,7 @@ def update_business():
         quote_email_template = request.form.get("quote_email_template", "").strip()
         invoice_email_template = request.form.get("invoice_email_template", "").strip()
         report_email_template = request.form.get("report_email_template", "").strip()
+        payment_schedule_templates, payment_schedule_templates_rows, payment_schedule_templates_errors = _parse_payment_schedule_templates_from_form(request.form)
         default_estimate_expiration_days_raw = request.form.get("default_estimate_expiration_days", "").strip()
         default_payment_due_days_raw = request.form.get("default_payment_due_days", "").strip()
         qb_material_account_id = request.form.get("qb_material_account_id", "").strip()
@@ -707,7 +1050,8 @@ def update_business():
         except ValueError:
             default_payment_due_days = 30
 
-        if not markup_rules_errors:
+        if not markup_rules_errors and not payment_schedule_templates_errors:
+            markup_rules_changed = existing_markup_rules != _canonicalize_markup_rules(markup_rules)
             db.businesses.update_one(
                 {"_id": business_oid},
                 {
@@ -729,6 +1073,7 @@ def update_business():
                         "quote_email_template": quote_email_template,
                         "invoice_email_template": invoice_email_template,
                         "report_email_template": report_email_template,
+                        "payment_schedule_templates": payment_schedule_templates,
                         "default_estimate_expiration_days": default_estimate_expiration_days,
                         "default_payment_due_days": default_payment_due_days,
                         "qb_material_account_id": qb_material_account_id,
@@ -739,7 +1084,10 @@ def update_business():
                 },
             )
 
-            return redirect(url_for("business.business_profile", markup_status="saved"))
+            redirect_kwargs = {"markup_status": "saved"}
+            if markup_rules_changed:
+                redirect_kwargs["show_markup_recalc_prompt"] = "1"
+            return redirect(url_for("business.business_profile", **redirect_kwargs))
 
         business = serialize_doc(db.businesses.find_one({"_id": business_oid}) or {})
         business["tax_rates"] = tax_rates
@@ -759,6 +1107,7 @@ def update_business():
         business["quote_email_template"] = quote_email_template
         business["invoice_email_template"] = invoice_email_template
         business["report_email_template"] = report_email_template
+        business["payment_schedule_templates"] = payment_schedule_templates_rows
         business["default_estimate_expiration_days"] = default_estimate_expiration_days
         business["default_payment_due_days"] = default_payment_due_days
         business["qb_material_account_id"] = qb_material_account_id
@@ -769,7 +1118,11 @@ def update_business():
             "business/update_business.html",
             business=business,
             markup_rules_errors=markup_rules_errors,
-            markup_rules_error_message="Fix markup rule errors before saving.",
+            markup_rules_error_message="Fix the highlighted errors before saving.",
+            payment_schedule_templates_errors=payment_schedule_templates_errors,
+            payment_schedule_templates_error_message="Fix installation payment schedule errors before saving.",
+            installation_payment_stage_options=INSTALLATION_PAYMENT_STAGE_OPTIONS,
+            installation_trigger_label_map=INSTALLATION_TRIGGER_LABEL_MAP,
         )
 
     business = db.businesses.find_one({"_id": business_oid})
@@ -791,6 +1144,7 @@ def update_business():
     business["license_number"] = str(business.get("license_number") or "").strip()
     business["warranty_info"] = str(business.get("warranty_info") or "").strip()
     business["report_email_template"] = str(business.get("report_email_template") or "").strip()
+    business["payment_schedule_templates"] = _normalize_payment_schedule_templates_for_view(business)
     business["qb_material_account_id"] = str(business.get("qb_material_account_id") or "").strip()
     try:
         business["default_estimate_expiration_days"] = max(1, int(business.get("default_estimate_expiration_days") or 30))
@@ -805,7 +1159,16 @@ def update_business():
     business["labor_rate_standard"] = "" if labor_rate_standard is None else f"{labor_rate_standard:.2f}"
     business["labor_rate_emergency"] = "" if labor_rate_emergency is None else f"{labor_rate_emergency:.2f}"
     business["markup_rules"] = _normalize_markup_rules_for_view(business)
-    return render_template("business/update_business.html", business=business, markup_rules_errors={}, markup_rules_error_message="")
+    return render_template(
+        "business/update_business.html",
+        business=business,
+        markup_rules_errors={},
+        markup_rules_error_message="",
+        payment_schedule_templates_errors={},
+        payment_schedule_templates_error_message="",
+        installation_payment_stage_options=INSTALLATION_PAYMENT_STAGE_OPTIONS,
+        installation_trigger_label_map=INSTALLATION_TRIGGER_LABEL_MAP,
+    )
 
 
 @bp.route("/business/markup/recalculate", methods=["POST"])

@@ -23,6 +23,13 @@
       <section id="view-service-actions" aria-labelledby="view-service-actions-header">
         <h2 id="view-service-actions-header">Actions</h2>
         <div id="view-service-actions-row">
+          <button class="view-estimate-action-secondary estimate-email-btn"
+                  type="button"
+                  data-estimate-title="Estimate"
+                  data-estimate-file="{{ estimate.latest_file_path|default('', true) }}"
+                  data-customer-email="{{ customer.email|default('', true) }}"
+                  data-customer-name="{{ customer.first_name|default('', true) }} {{ customer.last_name|default('', true) }}"
+                  data-email-type="estimate">Send Estimate</button>
           <a class="view-estimate-action-secondary" href="{{ url_for('jobs.update_estimate', estimateId=estimateId) }}">Update Estimate</a>
           <form method="POST" action="{{ url_for('jobs.delete_estimate', estimateId=estimateId) }}" onsubmit="return confirm('Are you sure you want to delete this estimate?');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -185,6 +192,24 @@
           </div>
         </div>
 
+        {% if payment_schedule_view.has_schedule %}
+          <div class="estimate-stack-block estimate-pricing-summary">
+            <h3>Payment Schedule</h3>
+            {% for stage in payment_schedule_view.stages %}
+              <div class="estimate-pricing-row">
+                <span>{{ stage.name }}</span>
+                <span>
+                  {{ stage.amount_display }}
+                  {% if stage.status == 'paid' %}(Paid){% elif stage.status == 'partial' %}(Partial){% elif stage.status == 'due' %}(Due){% else %}(Pending){% endif %}
+                </span>
+              </div>
+            {% endfor %}
+            <div class="estimate-pricing-row"><span>Total Scheduled</span><span>{{ payment_schedule_view.total_amount|currency }}</span></div>
+            <div class="estimate-pricing-row"><span>Amount Paid</span><span>{{ payment_schedule_view.amount_paid|currency }}</span></div>
+            <div class="estimate-pricing-row"><span>Balance Due</span><span>{{ payment_schedule_view.balance_due|currency }}</span></div>
+          </div>
+        {% endif %}
+
         {% if estimate.services %}
           <div class="estimate-stack-block estimate-services-block">
             <h3>Services</h3>
@@ -301,6 +326,29 @@
             {% if estimate_status_normalized == 'accepted' %}
               <h3>Estimate Accepted</h3>
               <p class="estimate-customer-status-text">Thank you. This estimate has been accepted.</p>
+              {% if payment_request_state == 'sent' %}
+                <p class="estimate-customer-status-text" style="color: #185A37; font-weight: 600;">Payment reminder sent.</p>
+              {% elif payment_request_state == 'failed' and payment_request_reason %}
+                <p class="estimate-customer-status-text" style="color: #8A2D2D; font-weight: 600;">{{ payment_request_reason }}</p>
+              {% endif %}
+              {% if deposit_prompt.show %}
+                <div class="estimate-pricing-summary" style="margin-top: 1rem; text-align: left;">
+                  <div class="estimate-pricing-row"><span>{{ deposit_prompt.label }}</span><span>{{ deposit_prompt.amount_display }}</span></div>
+                </div>
+                <div class="estimate-customer-actions" style="margin-top: 0.85rem;">
+                  <a href="{{ deposit_prompt.payment_url }}" class="estimate-customer-action-btn estimate-customer-action-btn-accept">Pay {{ deposit_prompt.label|lower }} now</a>
+                  {% if not deposit_prompt.request_sent %}
+                  <form method="POST" action="{{ url_for('jobs.send_estimate_payment_request_later', estimateId=estimateId) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="access_token" value="{{ access_token|default('', true) }}">
+                    <button type="submit" class="estimate-customer-action-btn">Pay later - we'll send you a reminder</button>
+                  </form>
+                  {% endif %}
+                </div>
+                {% if deposit_prompt.request_sent %}
+                  <p class="estimate-customer-status-text" style="margin-top: 0.75rem;">A payment reminder has already been sent for this stage.</p>
+                {% endif %}
+              {% endif %}
               {% if estimate.accepted_signature_data_url %}
                 <div class="estimate-signature-preview-wrap">
                   <img src="{{ estimate.accepted_signature_data_url }}" alt="Customer signature" class="estimate-signature-preview" />

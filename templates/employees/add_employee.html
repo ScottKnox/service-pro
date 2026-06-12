@@ -3,9 +3,13 @@
 {% block title %}Add Employee | Klovent{% endblock %}
 
 {% block content %}
-  <div id="main-container">
-    <div id="add-customer-panel">
-      <h1>Add Employee</h1>
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="add-customer-panel" class="resource-page resource-employee-update">
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
@@ -20,6 +24,9 @@
 
       <form id="add-customer-form" action="{{ url_for('employees.add_employee') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <h2 class="create-job-form-section-header">Employee Details</h2>
+
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <label for="employee-first-name">First Name</label>
@@ -29,20 +36,6 @@
           <div class="add-customer-form-field">
             <label for="employee-last-name">Last Name</label>
             <input id="employee-last-name" name="last_name" type="text" placeholder="Last name" value="{{ form_data.get('last_name', '') }}" required />
-          </div>
-        </div>
-
-        <div class="add-customer-form-row add-customer-form-row--top-aligned">
-          <div class="add-customer-form-field">
-            <label for="employee-username">Username</label>
-            <input id="employee-username" name="username" type="text" placeholder="Username for login" value="{{ form_data.get('username', '') }}" required />
-          </div>
-
-          <div class="add-customer-form-field">
-            <label for="employee-password">Password</label>
-            <input id="employee-password" name="password" type="password" placeholder="Password for login" required />
-            <p class="form-field-note form-field-note--compact">Use at least 8 characters with 1 uppercase letter, 1 number, and 1 special character from !@#$%^&amp;*.</p>
-            <p id="employee-password-error" class="field-validation-error" aria-live="polite"></p>
           </div>
         </div>
 
@@ -58,7 +51,7 @@
           </div>
         </div>
 
-        <div class="add-customer-form-row">
+        <div class="add-customer-form-row add-customer-form-row--single">
           <div class="add-customer-form-field">
             <label for="employee-position">Position</label>
             <select id="employee-position" name="position" required>
@@ -68,14 +61,32 @@
               <option value="Other" {% if form_data.get('position', '') == 'Other' %}selected{% endif %}>Other</option>
             </select>
           </div>
-          <div class="add-customer-form-field"></div>
+        </div>
+
+        <h2 class="create-job-form-section-header">Account Access</h2>
+        <p class="form-field-note form-field-note--compact">These credentials are used by the employee to sign in.</p>
+
+        <div class="add-customer-form-row add-customer-form-row--top-aligned">
+          <div class="add-customer-form-field">
+            <label for="employee-username">Username</label>
+            <input id="employee-username" name="username" type="text" placeholder="Username for login" value="{{ form_data.get('username', '') }}" required />
+          </div>
+
+          <div class="add-customer-form-field">
+            <label for="employee-password">Password</label>
+            <input id="employee-password" name="password" type="password" placeholder="Password for login" required />
+            <p class="form-field-note form-field-note--compact">Use at least 8 characters with 1 uppercase letter, 1 number, and 1 special character from !@#$%^&amp;*.</p>
+            <p id="employee-password-error" class="field-validation-error" aria-live="polite"></p>
+          </div>
         </div>
 
         <div id="add-customer-form-actions">
           <button type="submit">Submit</button>
         </div>
       </form>
-    </div>
+        </div>
+      </div>
+    </section>
   </div>
 {% endblock %}
 

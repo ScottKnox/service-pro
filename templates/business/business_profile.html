@@ -18,13 +18,34 @@
         </ol>
       </nav>
 
+      <div class="business-settings-shell">
+        <aside class="business-settings-sidebar" aria-label="Business profile navigation">
+          <div class="business-settings-sidebar-card">
+            <p class="business-settings-sidebar-eyebrow">Business Settings</p>
+            <h2>View Workspace</h2>
+            <p>Review company profile details, pricing defaults, communication templates, payment milestones, and integrations.</p>
+          </div>
+          <nav class="business-settings-sidebar-card business-settings-sidebar-nav" aria-label="Section navigation">
+            <a href="#section-business-info">Business Information</a>
+            <a href="#section-contact">Contact &amp; Address</a>
+            <a href="#section-pricing-defaults">Pricing &amp; Defaults</a>
+            <a href="#section-emails">Email Templates</a>
+            <a href="#section-payment-schedule">Installation Payment Schedule</a>
+            <a href="#section-integrations">Integrations</a>
+            <a href="#business-logo-section">Custom Logo</a>
+            <a href="#business-tax-config-section">Tax Configuration</a>
+          </nav>
+        </aside>
+
+        <div class="business-settings-main">
+
       <section id="view-customer-actions" aria-labelledby="view-customer-actions-header">
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
-          <a href="{{ url_for('business.update_business') }}">Update Business</a>
+          <a class="business-profile-action-button" href="{{ url_for('business.update_business') }}">Update Business</a>
           <form method="POST" action="{{ url_for('business.connect_stripe_account') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit">{% if stripe_connect_ready %}Manage Stripe Connect{% else %}Connect Stripe Account{% endif %}</button>
+            <button class="business-profile-action-button" type="submit">{% if stripe_connect_ready %}Manage Stripe Connect{% else %}Connect Stripe Account{% endif %}</button>
           </form>
         </div>
       </section>
@@ -48,10 +69,10 @@
       {% endif %}
 
       {% if show_markup_recalc_prompt %}
-        <section id="business-markup-recalculate-prompt" style="margin-bottom: 1rem;">
-          <h2 style="margin-bottom: 0.4rem;">Apply New Rules to Existing Auto-Populated Prices?</h2>
-          <p style="margin-bottom: 0.6rem;">Recalculate only parts and materials where sell prices were originally auto-populated. Manual overrides will stay unchanged.</p>
-          <div id="view-customer-actions-row">
+        <section id="business-markup-recalculate-prompt">
+          <h2>Apply New Rules to Existing Auto-Populated Prices?</h2>
+          <p>Recalculate only parts and materials where sell prices were originally auto-populated. Manual overrides will stay unchanged.</p>
+          <div id="view-customer-actions-row" class="business-markup-prompt-actions">
             <form method="POST" action="{{ url_for('business.recalculate_markup_prices') }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit">Recalculate Existing Auto-Populated Prices</button>
@@ -65,149 +86,204 @@
         <h2>Business Details</h2>
         <div class="view-customer-section-row" id="view-profile-details-columns">
           <div class="view-customer-section-column view-customer-details-column">
-            <h3>Details</h3>
-            <div id="view-customer-details-list">
-              <div class="view-customer-detail-item">
-                <h4>Company Name</h4>
-                <p>{{ business.get('company_name', business.get('business_name', '')) }}</p>
-              </div>
+            <div id="section-business-info" class="business-profile-detail-group">
+              <h3>Business Information</h3>
+              <div class="business-profile-details-grid">
+                <div class="view-customer-detail-item">
+                  <h4>Company Name</h4>
+                  <p>{{ business.get('company_name', business.get('business_name', '')) }}</p>
+                </div>
 
-              <div class="view-customer-detail-item">
-                <h4>Address Line 1</h4>
-                <p>{{ business.get('address_line_1', '') }}</p>
-              </div>
+                <div class="view-customer-detail-item">
+                  <h4>License Number</h4>
+                  <p>{{ business.get('license_number', '') }}</p>
+                </div>
 
-              <div class="view-customer-detail-item">
-                <h4>Address Line 2</h4>
-                <p>{{ business.get('address_line_2', '') }}</p>
-              </div>
+                <div class="view-customer-detail-item">
+                  <h4>Warranty Info</h4>
+                  <p>{{ business.get('warranty_info', '')|replace('\n', '<br/>')|safe }}</p>
+                </div>
 
-              <div class="view-customer-detail-item">
-                <h4>City</h4>
-                <p>{{ business.get('city', '') }}</p>
+                <div class="view-customer-detail-item">
+                  <h4>QuickBooks Materials Revenue Account ID</h4>
+                  <p>{{ business.get('qb_material_account_id', '') or '-' }}</p>
+                </div>
               </div>
+            </div>
 
-              <div class="view-customer-detail-item">
-                <h4>State</h4>
-                <p>{{ business.get('state', '') }}</p>
+            <div id="section-contact" class="business-profile-detail-group">
+              <h3>Contact & Address</h3>
+              <div class="business-profile-details-grid">
+                <div class="view-customer-detail-item">
+                  <h4>Address Line 1</h4>
+                  <p>{{ business.get('address_line_1', '') }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Address Line 2</h4>
+                  <p>{{ business.get('address_line_2', '') }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>City</h4>
+                  <p>{{ business.get('city', '') }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>State</h4>
+                  <p>{{ business.get('state', '') }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Zip Code</h4>
+                  <p>{{ business.get('zip_code', '') }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Phone Number</h4>
+                  <p>{{ business.get('phone_number', '') }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Twilio Phone Number</h4>
+                  <p>{{ business.get('twilio_phone_number', '') }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Twilio SMS Ready</h4>
+                  <p>{{ 'Yes' if twilio_status_kind == 'success' else 'No' }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Fax Number</h4>
+                  <p>{{ business.get('fax_number', '') }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Email</h4>
+                  <p>{{ business.get('email', '') }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Website</h4>
+                  <p>{{ business.get('website', '') }}</p>
+                </div>
               </div>
+            </div>
 
-              <div class="view-customer-detail-item">
-                <h4>Zip Code</h4>
-                <p>{{ business.get('zip_code', '') }}</p>
+            <div id="section-pricing-defaults" class="business-profile-detail-group">
+              <h3>Pricing & Defaults</h3>
+              <div class="business-profile-details-grid">
+                <div class="view-customer-detail-item">
+                  <h4>Default Estimate Expiration Days</h4>
+                  <p>{{ business.get('default_estimate_expiration_days', 30) }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Default Payment Due Days</h4>
+                  <p>{{ business.get('default_payment_due_days', 30) }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Standard Labor Rate</h4>
+                  <p>{% if business.get('labor_rate_standard') is not none %}${{ '%.2f'|format(business.get('labor_rate_standard')|float) }}/hr{% else %}-{% endif %}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Emergency Labor Rate</h4>
+                  <p>{% if business.get('labor_rate_emergency') is not none %}${{ '%.2f'|format(business.get('labor_rate_emergency')|float) }}/hr{% else %}-{% endif %}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Markup Rules</h4>
+                  {% if business.get('markup_rules') %}
+                    <p>
+                      {% for rule in business.get('markup_rules', []) %}
+                        ${{ rule.range_min }}{% if rule.range_max %} - ${{ rule.range_max }}{% else %} - no limit{% endif %}: {{ rule.markup_percent }}%{% if not loop.last %}<br />{% endif %}
+                      {% endfor %}
+                    </p>
+                  {% else %}
+                    <p>No markup rules configured.</p>
+                  {% endif %}
+                </div>
               </div>
+            </div>
 
-              <div class="view-customer-detail-item">
-                <h4>Phone Number</h4>
-                <p>{{ business.get('phone_number', '') }}</p>
+            <div id="section-emails" class="business-profile-detail-group">
+              <h3>Email Templates</h3>
+              <div class="business-profile-details-grid">
+                <div class="view-customer-detail-item">
+                  <h4>Quote Email Template</h4>
+                  <p>{{ business.get('quote_email_template', '') }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Invoice Email Template</h4>
+                  <p>{{ business.get('invoice_email_template', '') }}</p>
+                </div>
+
+                <div class="view-customer-detail-item">
+                  <h4>Report Email Template</h4>
+                  <p>{{ business.get('report_email_template', '') }}</p>
+                </div>
               </div>
+            </div>
 
-              <div class="view-customer-detail-item">
-                <h4>Twilio Phone Number</h4>
-                <p>{{ business.get('twilio_phone_number', '') }}</p>
+            <div id="section-payment-schedule" class="business-profile-detail-group">
+              <h3>Installation Payment Schedule</h3>
+              <div class="business-profile-details-grid business-profile-details-grid--single">
+                <div class="view-customer-detail-item">
+                  <h4>Stages</h4>
+                  {% if business.get('payment_schedule_templates') %}
+                    <div class="business-profile-installation-schedule-list">
+                      {% for template in business.get('payment_schedule_templates', []) %}
+                        <div class="business-profile-installation-schedule-card">
+                          <p class="business-profile-installation-schedule-title"><strong>{{ template.category }}</strong></p>
+                          {% for stage in template.stages %}
+                            <p class="business-profile-installation-schedule-row">
+                              {{ stage.name }} -
+                              {% if stage.amount_type == 'percentage' %}
+                                {{ stage.amount }}% of job total
+                              {% elif stage.amount_type == 'fixed' %}
+                                ${{ stage.amount }}
+                              {% else %}
+                                Remaining balance
+                              {% endif %}
+                              - {{ stage.trigger }} - SMS {{ 'On' if stage.send_payment_request else 'Off' }}
+                            </p>
+                          {% endfor %}
+                        </div>
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <p>No installation payment schedule configured.</p>
+                  {% endif %}
+                </div>
               </div>
+            </div>
 
-              <div class="view-customer-detail-item">
-                <h4>Twilio SMS Ready</h4>
-                <p>{{ 'Yes' if twilio_status_kind == 'success' else 'No' }}</p>
-              </div>
+            <div id="section-integrations" class="business-profile-detail-group">
+              <h3>Integrations</h3>
+              <div class="business-profile-details-grid">
+                <div class="view-customer-detail-item">
+                  <h4>Stripe Account ID</h4>
+                  <p>{{ stripe_account_id|default('Not Connected', true) }}</p>
+                </div>
 
-              <div class="view-customer-detail-item">
-                <h4>Fax Number</h4>
-                <p>{{ business.get('fax_number', '') }}</p>
-              </div>
+                <div class="view-customer-detail-item">
+                  <h4>Stripe Charges Enabled</h4>
+                  <p>{{ 'Yes' if stripe_charges_enabled else 'No' }}</p>
+                </div>
 
-              <div class="view-customer-detail-item">
-                <h4>Email</h4>
-                <p>{{ business.get('email', '') }}</p>
-              </div>
+                <div class="view-customer-detail-item">
+                  <h4>Stripe Payouts Enabled</h4>
+                  <p>{{ 'Yes' if stripe_payouts_enabled else 'No' }}</p>
+                </div>
 
-              <div class="view-customer-detail-item">
-                <h4>Website</h4>
-                <p>{{ business.get('website', '') }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>License Number</h4>
-                <p>{{ business.get('license_number', '') }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Warranty Info</h4>
-                <p>{{ business.get('warranty_info', '')|replace('\n', '<br/>')|safe }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Default Estimate Expiration Days</h4>
-                <p>{{ business.get('default_estimate_expiration_days', 30) }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Default Payment Due Days</h4>
-                <p>{{ business.get('default_payment_due_days', 30) }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Standard Labor Rate</h4>
-                <p>{% if business.get('labor_rate_standard') is not none %}${{ '%.2f'|format(business.get('labor_rate_standard')|float) }}/hr{% else %}-{% endif %}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Emergency Labor Rate</h4>
-                <p>{% if business.get('labor_rate_emergency') is not none %}${{ '%.2f'|format(business.get('labor_rate_emergency')|float) }}/hr{% else %}-{% endif %}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Markup Rules</h4>
-                {% if business.get('markup_rules') %}
-                  <p>
-                    {% for rule in business.get('markup_rules', []) %}
-                      ${{ rule.range_min }}{% if rule.range_max %} - ${{ rule.range_max }}{% else %} - no limit{% endif %}: {{ rule.markup_percent }}%{% if not loop.last %}<br />{% endif %}
-                    {% endfor %}
-                  </p>
-                {% else %}
-                  <p>No markup rules configured.</p>
-                {% endif %}
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Quote Email Template</h4>
-                <p>{{ business.get('quote_email_template', '') }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Invoice Email Template</h4>
-                <p>{{ business.get('invoice_email_template', '') }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Report Email Template</h4>
-                <p>{{ business.get('report_email_template', '') }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Stripe Account ID</h4>
-                <p>{{ stripe_account_id|default('Not Connected', true) }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Stripe Charges Enabled</h4>
-                <p>{{ 'Yes' if stripe_charges_enabled else 'No' }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Stripe Payouts Enabled</h4>
-                <p>{{ 'Yes' if stripe_payouts_enabled else 'No' }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>Stripe Connect Ready</h4>
-                <p>{{ 'Yes' if stripe_connect_ready else 'No' }}</p>
-              </div>
-
-              <div class="view-customer-detail-item">
-                <h4>QuickBooks Materials Revenue Account ID</h4>
-                <p>{{ business.get('qb_material_account_id', '') or '-' }}</p>
+                <div class="view-customer-detail-item">
+                  <h4>Stripe Connect Ready</h4>
+                  <p>{{ 'Yes' if stripe_connect_ready else 'No' }}</p>
+                </div>
               </div>
             </div>
 
@@ -280,6 +356,13 @@
       </section>
         </div>
       </div>
+        </div>
+      </div>
     </section>
   </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script src="{{ url_for('static', filename='js/business_profile_nav.js') }}" defer></script>
 {% endblock %}

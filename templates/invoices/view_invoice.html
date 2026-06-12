@@ -283,6 +283,35 @@
           </div>
         {% endif %}
 
+        {% if payment_schedule_view.has_schedule %}
+          <div class="estimate-stack-block estimate-pricing-summary">
+            <h3>Payment Schedule</h3>
+            {% for stage in payment_schedule_view.stages %}
+              <div class="estimate-pricing-row">
+                <span>
+                  {% if stage.status == 'paid' %}✓{% elif stage.status == 'due' %}▶{% elif stage.status == 'partial' %}◐{% endif %}
+                  {{ stage.name }}
+                </span>
+                <span>
+                  {% if stage.status == 'paid' %}
+                    Paid
+                  {% elif stage.status == 'partial' %}
+                    {{ stage.amount_remaining|currency }} due
+                  {% elif stage.status == 'due' %}
+                    Due now
+                  {% else %}
+                    Pending
+                  {% endif %}
+                  - {{ stage.amount_display }}
+                </span>
+              </div>
+            {% endfor %}
+            <div class="estimate-pricing-row"><span>Total Scheduled</span><span>{{ payment_schedule_view.total_amount|currency }}</span></div>
+            <div class="estimate-pricing-row"><span>Amount Paid</span><span>{{ payment_schedule_view.amount_paid|currency }}</span></div>
+            <div class="estimate-pricing-row"><span>Balance Due</span><span>{{ payment_schedule_view.balance_due|currency }}</span></div>
+          </div>
+        {% endif %}
+
         <div class="estimate-stack-block estimate-pricing-summary">
           <h3>Pricing Summary</h3>
           <div class="estimate-pricing-row"><span>Subtotal</span><span>{{ pricing_summary.subtotal_display }}</span></div>
@@ -298,29 +327,6 @@
           {% endif %}
           <div class="estimate-pricing-row"><span>Total Invoice</span><span>{{ pricing_summary.total_due_display }}</span></div>
           <div class="estimate-pricing-row estimate-pricing-total"><span>Balance Due</span><span>{{ balance_due|currency }}</span></div>
-
-          {% if not invoice_is_paid and payment_url and invoice_qr_code %}
-            <div class="invoice-payment-qr-block" aria-label="Invoice payment QR code">
-              <p class="invoice-payment-qr-title">Pay online:</p>
-              <a class="invoice-payment-link" href="{{ payment_url }}" target="_blank" rel="noopener noreferrer">{{ payment_url_display }}</a>
-              <img
-                class="invoice-payment-qr-image"
-                src="data:image/png;base64,{{ invoice_qr_code }}"
-                alt="Invoice payment QR code"
-                width="150"
-                height="150"
-              />
-              <p class="invoice-payment-qr-caption">Scan to pay instantly</p>
-            </div>
-          {% elif not invoice_is_paid and is_staff_view %}
-            <div class="invoice-payment-link-fallback">
-              <p class="estimate-customer-status-text">No payment URL is currently available for this invoice.</p>
-              <form method="POST" action="{{ url_for('jobs.generate_invoice_payment_link', jobId=jobId, invoiceRef=invoice.invoice_id|default(invoice.invoice_number, true)) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="estimate-customer-action-btn estimate-customer-action-btn-accept">Generate Payment Link</button>
-              </form>
-            </div>
-          {% endif %}
         </div>
 
         {% if payment_summary.show %}
@@ -373,19 +379,6 @@
             {% if invoice_is_paid %}
               <p class="estimate-customer-status-text">This invoice has already been paid. Thank you.</p>
             {% else %}
-              {% if customer_qr_code and payment_url %}
-                <div class="customer-payment-qr-desktop" aria-label="Pay on phone QR code">
-                  <p class="invoice-payment-qr-title">Pay on your phone</p>
-                  <img
-                    class="customer-payment-qr-image"
-                    src="data:image/png;base64,{{ customer_qr_code }}"
-                    alt="Invoice payment QR code for phone payment"
-                    width="120"
-                    height="120"
-                  />
-                  <p class="invoice-payment-qr-caption">Scan with your phone camera to pay</p>
-                </div>
-              {% endif %}
               <p class="estimate-customer-status-text">Choose a payment method to continue.</p>
               {% if not stripe_connect_ready and stripe_connect_reason %}
                 <p class="estimate-customer-status-text invoice-warning-text">{{ stripe_connect_reason }}</p>
@@ -398,6 +391,19 @@
                 <button type="button" class="estimate-customer-action-btn estimate-customer-action-btn-accept" disabled>Invoice Paid</button>
               {% endif %}
             </div>
+            {% if not invoice_is_paid and customer_qr_code and payment_url %}
+              <div class="customer-payment-qr-desktop" aria-label="Pay on phone QR code">
+                <p class="invoice-payment-qr-title">Pay on your phone</p>
+                <img
+                  class="customer-payment-qr-image"
+                  src="data:image/png;base64,{{ customer_qr_code }}"
+                  alt="Invoice payment QR code for phone payment"
+                  width="120"
+                  height="120"
+                />
+                <p class="invoice-payment-qr-caption">Scan with your phone camera to pay</p>
+              </div>
+            {% endif %}
           </div>
         {% endif %}
       </section>
@@ -472,7 +478,7 @@
             <div class="add-customer-form-row invoice-modal-amount-row">
               <div class="add-customer-form-field">
                 <label for="card-amount-to-charge">Amount To Charge</label>
-                <input id="card-amount-to-charge" type="number" min="0.01" step="0.01" max="{{ '%.2f'|format(balance_due|default(0, true)) }}" value="{{ '%.2f'|format(balance_due|default(0, true)) }}" />
+                <input id="card-amount-to-charge" type="number" min="0.01" step="0.01" max="{{ '%.2f'|format((payment_schedule_due_now or balance_due)|default(0, true)) }}" value="{{ '%.2f'|format((payment_schedule_due_now or balance_due)|default(0, true)) }}" />
               </div>
             </div>
             {% if not stripe_connect_ready and stripe_connect_reason %}
@@ -495,7 +501,7 @@
               <div class="add-customer-form-row">
                 <div class="add-customer-form-field">
                   <label for="cash-amount-received">Amount Received</label>
-                  <input id="cash-amount-received" name="amount_received" type="number" min="0.01" max="{{ '%.2f'|format(balance_due|default(0, true)) }}" step="0.01" required placeholder="0.00" value="{{ '%.2f'|format(balance_due|default(0, true)) }}" />
+                  <input id="cash-amount-received" name="amount_received" type="number" min="0.01" max="{{ '%.2f'|format((payment_schedule_due_now or balance_due)|default(0, true)) }}" step="0.01" required placeholder="0.00" value="{{ '%.2f'|format((payment_schedule_due_now or balance_due)|default(0, true)) }}" />
                 </div>
               </div>
               <p class="estimate-customer-status-text invoice-cash-balance-text">Remaining Balance After Payment: <strong id="cash-change-due">$0.00</strong></p>
@@ -520,7 +526,7 @@
               <div class="add-customer-form-row">
                 <div class="add-customer-form-field">
                   <label for="check-amount-received">Amount Received</label>
-                  <input id="check-amount-received" name="amount_received" type="number" min="0.01" max="{{ '%.2f'|format(balance_due|default(0, true)) }}" step="0.01" required placeholder="0.00" value="{{ '%.2f'|format(balance_due|default(0, true)) }}" />
+                  <input id="check-amount-received" name="amount_received" type="number" min="0.01" max="{{ '%.2f'|format((payment_schedule_due_now or balance_due)|default(0, true)) }}" step="0.01" required placeholder="0.00" value="{{ '%.2f'|format((payment_schedule_due_now or balance_due)|default(0, true)) }}" />
                 </div>
               </div>
               <div class="add-customer-form-row">
@@ -573,7 +579,7 @@
       var checkNumberInput = document.getElementById('check-number');
       var cardAmountToChargeInput = document.getElementById('card-amount-to-charge');
       var cashChangeDueText = document.getElementById('cash-change-due');
-      var invoiceBalanceDue = Number("{{ balance_due|default(0, true) }}") || 0;
+      var invoiceBalanceDue = Number("{{ payment_schedule_due_now|default(balance_due, true) }}") || Number("{{ balance_due|default(0, true) }}") || 0;
       var csrfToken = "{{ csrf_token() }}";
 
       function openPaymentModal() {

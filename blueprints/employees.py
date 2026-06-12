@@ -1,12 +1,16 @@
 from datetime import UTC, datetime
+import os
 import re
+from io import BytesIO
 
 from bson import ObjectId
-from flask import Blueprint, current_app, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, current_app, redirect, render_template, request, session, url_for
+from PIL import Image
 from werkzeug.security import generate_password_hash
 
 from mongo import ensure_connection_or_500, object_id_or_404, reference_value, serialize_doc
 from utils.csv_export import build_csv_export_response
+from utils import object_storage
 
 bp = Blueprint("employees", __name__)
 
@@ -17,6 +21,19 @@ PASSWORD_REQUIREMENTS_MESSAGE = (
 PASSWORD_REQUIREMENTS_PATTERN = re.compile(r"^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$")
 EMAIL_VALIDATION_MESSAGE = "Enter a valid email address."
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+ALLOWED_PROFILE_PHOTO_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+MAX_PROFILE_PHOTO_FILE_SIZE = 2 * 1024 * 1024
+MIN_PROFILE_PHOTO_WIDTH = 300
+MIN_PROFILE_PHOTO_HEIGHT = 100
+MAX_PROFILE_PHOTO_WIDTH = 2400
+MAX_PROFILE_PHOTO_HEIGHT = 1400
+
+_PROFILE_PHOTO_MIME_TYPES = {
+    "png": "image/png",
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "webp": "image/webp",
+}
 
 
 def _password_meets_requirements(password):
@@ -125,6 +142,33 @@ def _is_authorized():
     return position in ["owner", "co-owner", "manager"]
 
 
+def _is_self(employee_id):
+    current_employee_id = str(session.get("employee_id") or "").strip()
+    return bool(current_employee_id and current_employee_id == str(employee_id or "").strip())
+
+
+def _employee_photo_status_payload(status):
+    if status == "uploaded":
+        return "success", "Profile photo uploaded successfully."
+    if status == "deleted":
+        return "success", "Profile photo removed successfully."
+    if status == "missing":
+        return "error", "Please choose a profile photo to upload."
+    if status == "invalid_type":
+        return "error", "Unsupported file type. Please upload PNG, JPG, JPEG, or WEBP."
+    if status == "too_large":
+        return "error", "Profile photo file is too large. Maximum allowed size is 2 MB."
+    if status == "bad_resolution":
+        return "error", "Profile photo resolution is not supported. Use between 300x100 and 2400x1400 pixels."
+    if status == "invalid_image":
+        return "error", "The selected file is not a valid image."
+    if status == "upload_failed":
+        return "error", "Unable to upload profile photo. Please try again."
+    if status == "forbidden":
+        return "error", "You can only manage your own profile photo."
+    return "", ""
+
+
 @bp.route("/employees/add", methods=["GET", "POST"])
 def add_employee():
     if not _is_authorized():
@@ -212,11 +256,144 @@ def view_employee(employeeId):
     if not employee:
         return redirect(url_for("employees.employees"))
 
+    serialized_employee = serialize_doc(employee)
+    employee_photo_url = ""
+    profile_photo = str(serialized_employee.get("profile_photo") or "").strip()
+    if profile_photo:
+        employee_photo_url = url_for("employees.view_employee_profile_photo", employeeId=employeeId)
+        photo_version = str(serialized_employee.get("profile_photo_uploaded_at") or "").strip()
+        if photo_version:
+            separator = "&" if "?" in employee_photo_url else "?"
+            employee_photo_url = f"{employee_photo_url}{separator}v={photo_version}"
+
+    employee_photo_status_kind, employee_photo_status_message = _employee_photo_status_payload(
+        request.args.get("photo_status", "")
+    )
+
     return render_template(
         "employees/view_employee.html",
         employeeId=employeeId,
-        employee=serialize_doc(employee),
+        employee=serialized_employee,
+        employee_photo_url=employee_photo_url,
+        employee_photo_status_kind=employee_photo_status_kind,
+        employee_photo_status_message=employee_photo_status_message,
     )
+
+
+@bp.route("/employees/<employeeId>/profile-photo/view")
+def view_employee_profile_photo(employeeId):
+    db = ensure_connection_or_500()
+    employee = db.employees.find_one({"_id": object_id_or_404(employeeId)}, {"profile_photo": 1})
+    if not employee:
+        return Response(status=404)
+
+    photo_key = str((employee or {}).get("profile_photo") or "").strip()
+    if not photo_key:
+        return Response(status=404)
+
+    photo_bytes = object_storage.download_object_bytes(photo_key)
+    if not photo_bytes:
+        fallback_url = object_storage.build_access_url(photo_key)
+        if fallback_url:
+            return redirect(fallback_url)
+        return Response(status=404)
+
+    extension = photo_key.rsplit(".", 1)[-1].lower() if "." in photo_key else ""
+    mime_type = _PROFILE_PHOTO_MIME_TYPES.get(extension, "image/png")
+    return Response(photo_bytes, mimetype=mime_type, headers={"Cache-Control": "private, max-age=300"})
+
+
+@bp.route("/employees/<employeeId>/profile-photo", methods=["POST"])
+def upload_profile_photo(employeeId):
+    if not _is_self(employeeId):
+        return redirect(url_for("employees.view_employee", employeeId=employeeId, photo_status="forbidden"))
+
+    db = ensure_connection_or_500()
+    employee_oid = object_id_or_404(employeeId)
+    employee = db.employees.find_one({"_id": employee_oid}, {"_id": 1})
+    if not employee:
+        return redirect(url_for("employees.employees"))
+
+    photo_file = request.files.get("employee_profile_photo_file")
+    if not photo_file or not str(photo_file.filename or "").strip():
+        return redirect(url_for("employees.view_employee", employeeId=employeeId, photo_status="missing"))
+
+    filename = str(photo_file.filename or "").strip()
+    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if extension not in ALLOWED_PROFILE_PHOTO_EXTENSIONS:
+        return redirect(url_for("employees.view_employee", employeeId=employeeId, photo_status="invalid_type"))
+
+    photo_file.stream.seek(0, os.SEEK_END)
+    file_size = photo_file.stream.tell()
+    photo_file.stream.seek(0)
+    if file_size > MAX_PROFILE_PHOTO_FILE_SIZE:
+        return redirect(url_for("employees.view_employee", employeeId=employeeId, photo_status="too_large"))
+
+    try:
+        with Image.open(photo_file.stream) as image_file:
+            image_file.load()
+            width, height = image_file.size
+            if (
+                width < MIN_PROFILE_PHOTO_WIDTH
+                or height < MIN_PROFILE_PHOTO_HEIGHT
+                or width > MAX_PROFILE_PHOTO_WIDTH
+                or height > MAX_PROFILE_PHOTO_HEIGHT
+            ):
+                return redirect(url_for("employees.view_employee", employeeId=employeeId, photo_status="bad_resolution"))
+
+            save_image = image_file.convert("RGBA")
+            save_image.thumbnail((1200, 600), Image.Resampling.LANCZOS)
+
+            encoded = BytesIO()
+            save_image.save(encoded, format="PNG", optimize=True)
+            object_key = f"employee-profile-photos/{employeeId}_profile.png"
+            object_storage.upload_bytes(
+                object_key=object_key,
+                data=encoded.getvalue(),
+                content_type="image/png",
+            )
+    except Exception:
+        return redirect(url_for("employees.view_employee", employeeId=employeeId, photo_status="upload_failed"))
+
+    db.employees.update_one(
+        {"_id": employee_oid},
+        {
+            "$set": {
+                "profile_photo": object_key,
+                "profile_photo_uploaded_at": datetime.now(UTC),
+            }
+        },
+    )
+
+    return redirect(url_for("employees.view_employee", employeeId=employeeId, photo_status="uploaded"))
+
+
+@bp.route("/employees/<employeeId>/profile-photo/delete", methods=["POST"])
+def delete_profile_photo(employeeId):
+    if not _is_self(employeeId):
+        return redirect(url_for("employees.view_employee", employeeId=employeeId, photo_status="forbidden"))
+
+    db = ensure_connection_or_500()
+    employee_oid = object_id_or_404(employeeId)
+    employee = db.employees.find_one({"_id": employee_oid}, {"profile_photo": 1})
+    if not employee:
+        return redirect(url_for("employees.employees"))
+
+    profile_photo_key = str((employee or {}).get("profile_photo") or "").strip()
+    if profile_photo_key:
+        object_storage.delete_object(profile_photo_key)
+
+    db.employees.update_one(
+        {"_id": employee_oid},
+        {
+            "$unset": {
+                "profile_photo": "",
+                "profile_photo_uploaded_at": "",
+            }
+        },
+    )
+
+    return redirect(url_for("employees.view_employee", employeeId=employeeId, photo_status="deleted"))
 
 
 @bp.route("/employees/<employeeId>/update", methods=["GET", "POST"])

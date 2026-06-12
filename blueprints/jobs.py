@@ -1023,6 +1023,417 @@ def _clone_line_item_list(value):
     return cloned
 
 
+def _parse_payment_schedule_payload(raw_value, default=None):
+    if raw_value in (None, ""):
+        return default if default is not None else []
+
+    if isinstance(raw_value, list):
+        return raw_value
+
+    if isinstance(raw_value, dict):
+        return [raw_value]
+
+    if not isinstance(raw_value, str):
+        return default if default is not None else []
+
+    text = raw_value.strip()
+    if not text:
+        return default if default is not None else []
+
+    try:
+        parsed = json.loads(text)
+    except Exception:
+        return default if default is not None else []
+
+    if isinstance(parsed, list):
+        return parsed
+    if isinstance(parsed, dict):
+        return [parsed]
+    return default if default is not None else []
+
+
+def _extract_primary_service_category(services):
+    for service in services or []:
+        if not isinstance(service, dict):
+            continue
+        category = str(service.get("category") or service.get("service_category") or "").strip()
+        if category:
+            return category
+    return ""
+
+
+def _resolve_payment_schedule_templates(business_doc):
+    raw_templates = (business_doc or {}).get("payment_schedule_templates")
+    return _parse_payment_schedule_payload(raw_templates, default=[])
+
+
+def _find_payment_schedule_template(business_doc, category_name):
+    normalized_category = str(category_name or "").strip().lower()
+    if not normalized_category:
+        return None
+
+    for template in _resolve_payment_schedule_templates(business_doc):
+        if not isinstance(template, dict):
+            continue
+        template_category = str(template.get("category") or template.get("service_category") or template.get("name") or "").strip().lower()
+        if template_category == normalized_category:
+            return template
+    return None
+
+
+def _normalize_payment_schedule_stages(stages, total_amount=0.0, preserve_stage_ids=False):
+    normalized_stages = []
+    stage_rows = [stage for stage in (stages or []) if isinstance(stage, dict)]
+    total_due = round(_safe_float(total_amount, 0.0), 2)
+    running_amount = 0.0
+
+    for stage in stage_rows:
+        stage_name = str(stage.get("name") or "Stage").strip() or "Stage"
+        amount_type = str(stage.get("amount_type") or "").strip().lower()
+        if amount_type not in {"percentage", "fixed", "remaining"}:
+            if stage_name == "Final Payment":
+                amount_type = "remaining"
+            elif stage.get("percentage") not in [None, ""]:
+                amount_type = "percentage"
+            else:
+                amount_type = "fixed"
+
+        raw_amount_value = stage.get("amount_value")
+        if raw_amount_value in [None, ""]:
+            if amount_type == "percentage":
+                raw_amount_value = stage.get("percentage") if stage.get("percentage") not in [None, ""] else stage.get("amount")
+            elif amount_type == "fixed":
+                raw_amount_value = stage.get("amount")
+
+        amount_value = None
+        if amount_type != "remaining":
+            amount_value = round(max(0.0, _safe_float(raw_amount_value, 0.0)), 2)
+
+        if amount_type == "percentage":
+            effective_percentage = max(0.0, amount_value or 0.0)
+            amount = round(total_due * (effective_percentage / 100.0), 2) if total_due > 0 else 0.0
+        elif amount_type == "fixed":
+            amount = round(max(0.0, amount_value or 0.0), 2)
+            effective_percentage = round((amount / total_due) * 100.0, 2) if total_due > 0 and amount > 0 else 0.0
+        else:
+            amount = round(max(0.0, total_due - running_amount), 2) if total_due > 0 else 0.0
+            effective_percentage = round((amount / total_due) * 100.0, 2) if total_due > 0 and amount > 0 else 0.0
+
+        running_amount += amount
+
+        status = str(stage.get("status") or "pending").strip().lower()
+        if amount <= 0 and status not in {"paid", "cancelled"}:
+            status = "paid"
+
+        due_at = _coerce_datetime_utc(stage.get("due_at"))
+        paid_at = _coerce_datetime_utc(stage.get("paid_at"))
+        request_sent_at = _coerce_datetime_utc(stage.get("request_sent_at"))
+
+        normalized_stage = {
+            "stage_id": str(stage.get("stage_id") or "").strip() if preserve_stage_ids else str(stage.get("stage_id") or "").strip(),
+            "name": stage_name,
+            "amount_type": amount_type,
+            "amount_value": None if amount_type == "remaining" else amount_value,
+            "amount": round(amount, 2),
+            "percentage": round(effective_percentage, 2),
+            "trigger": str(stage.get("trigger") or "manual").strip() or "manual",
+            "send_payment_request": bool(stage.get("send_payment_request", True)),
+            "status": status,
+            "due_at": due_at,
+            "paid_at": paid_at,
+            "payment_id": str(stage.get("payment_id") or "").strip() or None,
+            "request_sent_at": request_sent_at,
+            "trigger_fired_at": _coerce_datetime_utc(stage.get("trigger_fired_at")),
+        }
+        if not normalized_stage["stage_id"]:
+            normalized_stage["stage_id"] = secrets.token_hex(8)
+        normalized_stages.append(normalized_stage)
+
+    return normalized_stages
+
+
+def _build_payment_schedule_from_template(template, total_amount):
+    template_stages = [stage for stage in (template or {}).get("stages") or [] if isinstance(stage, dict)]
+    staged = []
+    for stage in template_stages:
+        amount_type = str(stage.get("amount_type") or "").strip().lower()
+        if amount_type not in {"percentage", "fixed", "remaining"}:
+            if str(stage.get("name") or "").strip() == "Final Payment":
+                amount_type = "remaining"
+            elif stage.get("percentage") not in [None, ""]:
+                amount_type = "percentage"
+            else:
+                amount_type = "fixed"
+
+        amount_value = None
+        if amount_type == "percentage":
+            amount_value = round(max(0.0, _safe_float(stage.get("amount") if stage.get("amount") not in [None, ""] else stage.get("percentage"), 0.0)), 2)
+        elif amount_type == "fixed":
+            amount_value = round(max(0.0, _safe_float(stage.get("amount"), 0.0)), 2)
+
+        staged.append(
+            {
+                "stage_id": secrets.token_hex(8),
+                "name": str(stage.get("name") or "Stage").strip() or "Stage",
+                "amount_type": amount_type,
+                "amount_value": amount_value,
+                "amount": 0.0,
+                "trigger": str(stage.get("trigger") or "manual").strip() or "manual",
+                "send_payment_request": bool(stage.get("send_payment_request", True)),
+                "status": "pending",
+                "due_at": None,
+                "paid_at": None,
+                "payment_id": None,
+                "request_sent_at": None,
+                "trigger_fired_at": None,
+            }
+        )
+
+    return _normalize_payment_schedule_stages(staged, total_amount=total_amount, preserve_stage_ids=True)
+
+
+def _build_payment_schedule_for_record(record, business_doc=None, total_amount=0.0, raw_schedule=None):
+    existing_schedule = _parse_payment_schedule_payload(raw_schedule, default=None)
+    if existing_schedule is None:
+        existing_schedule = _parse_payment_schedule_payload((record or {}).get("payment_schedule"), default=None)
+
+    if existing_schedule:
+        return _normalize_payment_schedule_stages(existing_schedule, total_amount=total_amount, preserve_stage_ids=True)
+
+    primary_category = _extract_primary_service_category((record or {}).get("services") or [])
+    template = _find_payment_schedule_template(business_doc or {}, primary_category)
+    if template:
+        return _build_payment_schedule_from_template(template, total_amount)
+
+    return []
+
+
+def _allocate_payments_to_payment_schedule(payment_schedule, payment_docs):
+    stages = _normalize_payment_schedule_stages(payment_schedule or [], total_amount=sum(_safe_float(stage.get("amount"), 0.0) for stage in (payment_schedule or [])), preserve_stage_ids=True)
+    if not stages:
+        return []
+
+    payments = []
+    for payment in payment_docs or []:
+        if not isinstance(payment, dict):
+            continue
+        if str(payment.get("status") or "").strip().lower() != "completed":
+            continue
+        paid_at = _coerce_datetime_utc(payment.get("paid_at")) or _coerce_datetime_utc(payment.get("created_at")) or datetime.now(UTC)
+        payments.append(
+            {
+                "payment_id": str(payment.get("_id") or "").strip(),
+                "amount": round(_safe_float(payment.get("amount"), 0.0), 2),
+                "paid_at": paid_at,
+            }
+        )
+
+    payments.sort(key=lambda row: row["paid_at"])
+    stage_index = 0
+    amount_cursor = 0.0
+    for payment in payments:
+        remaining_payment = payment["amount"]
+        while remaining_payment > 0 and stage_index < len(stages):
+            stage = stages[stage_index]
+            if str(stage.get("status") or "").strip().lower() == "cancelled":
+                stage_index += 1
+                continue
+
+            stage_amount = round(_safe_float(stage.get("amount"), 0.0), 2)
+            if stage_amount <= 0:
+                stage.update(
+                    {
+                        "status": "paid",
+                        "paid_at": payment["paid_at"],
+                        "payment_id": payment["payment_id"] or stage.get("payment_id"),
+                        "request_sent_at": stage.get("request_sent_at"),
+                    }
+                )
+                stage_index += 1
+                continue
+
+            already_paid = _safe_float(stage.get("amount_paid"), 0.0)
+            outstanding = round(max(0.0, stage_amount - already_paid), 2)
+            allocated = round(min(outstanding, remaining_payment), 2)
+            if allocated <= 0:
+                stage_index += 1
+                continue
+
+            new_paid = round(already_paid + allocated, 2)
+            new_remaining = round(max(0.0, stage_amount - new_paid), 2)
+            stage["amount_paid"] = new_paid
+            stage["amount_remaining"] = new_remaining
+            stage["payment_id"] = payment["payment_id"] or stage.get("payment_id")
+            if new_remaining <= 0:
+                stage["status"] = "paid"
+                stage["paid_at"] = payment["paid_at"]
+                stage_index += 1
+            else:
+                stage["status"] = "partial"
+                stage["paid_at"] = None
+
+            remaining_payment = round(remaining_payment - allocated, 2)
+            amount_cursor += allocated
+
+        if stage_index >= len(stages):
+            break
+
+    for stage in stages:
+        amount_paid = round(_safe_float(stage.get("amount_paid"), 0.0), 2)
+        amount_total = round(_safe_float(stage.get("amount"), 0.0), 2)
+        stage["amount_remaining"] = round(max(0.0, amount_total - amount_paid), 2)
+        if amount_total <= 0 and str(stage.get("status") or "").strip().lower() not in {"cancelled"}:
+            stage["status"] = "paid"
+            if not stage.get("paid_at"):
+                stage["paid_at"] = stage.get("trigger_fired_at") or datetime.now(UTC)
+    return stages
+
+
+def _sync_job_payment_schedule(db, job_id):
+    if not ObjectId.is_valid(job_id):
+        return None
+
+    job = db.jobs.find_one({"_id": ObjectId(job_id)})
+    if not job:
+        return None
+
+    payment_schedule = job.get("payment_schedule") or []
+    if not payment_schedule:
+        return None
+
+    payment_docs = list(db.payments.find(_reference_match("job_id", job_id)).sort([("paid_at", 1), ("created_at", 1), ("_id", 1)]))
+    recalculated_schedule = _allocate_payments_to_payment_schedule(payment_schedule, payment_docs)
+    db.jobs.update_one(
+        {"_id": ObjectId(job_id)},
+        {"$set": {"payment_schedule": recalculated_schedule, "updated_at": datetime.now(UTC)}},
+    )
+    refreshed = db.jobs.find_one({"_id": ObjectId(job_id)})
+    return refreshed
+
+
+def _fire_payment_schedule_trigger(payment_schedule, trigger_name, fired_at=None):
+    updated_schedule = []
+    trigger_matches = 0
+    fired_timestamp = fired_at or datetime.now(UTC)
+    normalized_trigger = str(trigger_name or "").strip().lower()
+
+    for stage in payment_schedule or []:
+        if not isinstance(stage, dict):
+            continue
+
+        normalized_stage = dict(stage)
+        stage_trigger = str(normalized_stage.get("trigger") or "manual").strip().lower()
+        stage_status = str(normalized_stage.get("status") or "pending").strip().lower()
+
+        if stage_status in {"paid", "cancelled"}:
+            updated_schedule.append(normalized_stage)
+            continue
+
+        if stage_trigger == normalized_trigger:
+            trigger_matches += 1
+            normalized_stage["trigger_fired_at"] = fired_timestamp
+            normalized_stage["due_at"] = fired_timestamp
+            if _safe_float(normalized_stage.get("amount"), 0.0) <= 0:
+                normalized_stage["status"] = "paid"
+                normalized_stage["paid_at"] = fired_timestamp
+            else:
+                normalized_stage["status"] = "due"
+        updated_schedule.append(normalized_stage)
+
+    return updated_schedule, trigger_matches > 0
+
+
+def _send_triggered_payment_schedule_requests(db, job_id, trigger_name):
+    if not job_id or not ObjectId.is_valid(job_id):
+        return 0
+
+    job = db.jobs.find_one({"_id": ObjectId(job_id)})
+    if not job:
+        return 0
+
+    job_doc = serialize_doc(job)
+    sent_count = 0
+    normalized_trigger = str(trigger_name or "").strip().lower()
+    for stage in job_doc.get("payment_schedule") or []:
+        if not isinstance(stage, dict):
+            continue
+        if str(stage.get("trigger") or "").strip().lower() != normalized_trigger:
+            continue
+        if not bool(stage.get("send_payment_request", True)):
+            continue
+        if str(stage.get("status") or "").strip().lower() not in {"due", "partial"}:
+            continue
+        if stage.get("request_sent_at"):
+            continue
+        ok, detail = _send_payment_schedule_stage_request(db, job_id, str(stage.get("stage_id") or "").strip())
+        if ok:
+            sent_count += 1
+        else:
+            current_app.logger.info(
+                "Payment schedule request not sent: job_id=%s stage_id=%s trigger=%s detail=%s",
+                job_id,
+                str(stage.get("stage_id") or "").strip(),
+                normalized_trigger,
+                detail,
+            )
+    return sent_count
+
+
+def _build_payment_schedule_view(payment_schedule):
+    rows = []
+    total_amount = 0.0
+    total_paid = 0.0
+    for stage in payment_schedule or []:
+        if not isinstance(stage, dict):
+            continue
+        amount = round(_safe_float(stage.get("amount"), 0.0), 2)
+        amount_paid = round(_safe_float(stage.get("amount_paid"), 0.0), 2)
+        total_amount += amount
+        total_paid += amount_paid if amount_paid > 0 else (amount if str(stage.get("status") or "").strip().lower() == "paid" else 0.0)
+        rows.append(
+            {
+                "stage_id": str(stage.get("stage_id") or "").strip(),
+                "name": str(stage.get("name") or "Stage").strip() or "Stage",
+                "amount_type": str(stage.get("amount_type") or "fixed").strip().lower() or "fixed",
+                "amount_value": stage.get("amount_value"),
+                "trigger": str(stage.get("trigger") or "manual").strip() or "manual",
+                "status": str(stage.get("status") or "pending").strip().lower() or "pending",
+                "amount": amount,
+                "amount_display": normalize_currency(amount),
+                "amount_paid": amount_paid,
+                "amount_remaining": round(_safe_float(stage.get("amount_remaining"), max(0.0, amount - amount_paid)), 2),
+                "percentage": round(_safe_float(stage.get("percentage"), 0.0), 2),
+                "send_payment_request": bool(stage.get("send_payment_request", True)),
+                "due_at": stage.get("due_at"),
+                "paid_at": stage.get("paid_at"),
+                "request_sent_at": stage.get("request_sent_at"),
+            }
+        )
+
+    return {
+        "stages": rows,
+        "total_amount": round(total_amount, 2),
+        "amount_paid": round(total_paid, 2),
+        "balance_due": round(max(0.0, total_amount - total_paid), 2),
+        "has_schedule": bool(rows),
+    }
+
+
+def _payment_schedule_due_now_amount(payment_schedule):
+    due_now_total = 0.0
+    for stage in payment_schedule or []:
+        if not isinstance(stage, dict):
+            continue
+        status = str(stage.get("status") or "").strip().lower()
+        if status not in {"due", "partial"}:
+            continue
+        if status == "partial":
+            due_now_total += max(0.0, _safe_float(stage.get("amount_remaining"), _safe_float(stage.get("amount"), 0.0)))
+        else:
+            due_now_total += max(0.0, _safe_float(stage.get("amount"), 0.0))
+    return round(due_now_total, 2)
+
+
 def _create_job_from_accepted_estimate(db, estimate_id):
     estimate = db.estimates.find_one({"_id": object_id_or_404(estimate_id)})
     if not estimate:
@@ -1076,6 +1487,15 @@ def _create_job_from_accepted_estimate(db, estimate_id):
         sole_business = db.businesses.find_one({}, {"_id": 1})
         if sole_business:
             business_id = sole_business["_id"]
+    business_doc = {}
+    if business_id:
+        business_doc = serialize_doc(db.businesses.find_one(build_reference_filter("_id", business_id)) or {})
+    payment_schedule = _build_payment_schedule_for_record(
+        {"services": services, "payment_schedule": estimate.get("payment_schedule") or []},
+        business_doc=business_doc,
+        total_amount=float(estimate.get("total_amount") or 0.0),
+        raw_schedule="",
+    )
 
     new_job = {
         "customer_id": customer_id_ref,
@@ -1103,6 +1523,7 @@ def _create_job_from_accepted_estimate(db, estimate_id):
         "total_amount": float(estimate.get("total_amount") or 0.0),
         "invoice_notes": "",
         "payment_due_days": payment_due_days,
+        "payment_schedule": payment_schedule,
         "internal_notes": [],
         "date_created": datetime.now().strftime("%m/%d/%Y"),
         "created_at": datetime.now(UTC),
@@ -1125,6 +1546,8 @@ def _create_job_from_accepted_estimate(db, estimate_id):
     }
 
     inserted = db.jobs.insert_one(new_job)
+    if payment_schedule:
+        _ensure_job_invoice_entry(db, str(inserted.inserted_id))
     created_job_id = str(inserted.inserted_id)
     db.estimates.update_one(
         {"_id": ObjectId(estimate_id)},
@@ -1586,6 +2009,48 @@ def _find_invoice_entry(job_doc, invoice_ref="", file_path=""):
     return None
 
 
+def _build_job_invoice_number(job_id):
+    return f"INV-{str(job_id or '')[:8].upper()}"
+
+
+def _build_provisional_invoice_entry(job_id):
+    return {
+        "invoice_id": str(ObjectId()),
+        "invoice_number": _build_job_invoice_number(job_id),
+        "job_id": str(job_id or "").strip(),
+        "file_path": "",
+        "sent_at": None,
+        "due_date": "",
+        "status": "Created",
+        "is_provisional": True,
+    }
+
+
+def _ensure_job_invoice_entry(db, job_id):
+    if not job_id or not ObjectId.is_valid(str(job_id)):
+        return None
+
+    job = db.jobs.find_one({"_id": ObjectId(str(job_id))})
+    if not job:
+        return None
+
+    invoices = [entry for entry in (job.get("invoices") or []) if isinstance(entry, dict)]
+    if invoices:
+        return invoices[-1]
+
+    invoice_entry = _build_provisional_invoice_entry(str(job_id))
+    db.jobs.update_one(
+        {"_id": ObjectId(str(job_id))},
+        {
+            "$set": {
+                "invoices": [invoice_entry],
+                "updated_at": datetime.now(UTC),
+            }
+        },
+    )
+    return invoice_entry
+
+
 def _issue_invoice_access_token(db, job_id, invoice_ref, recipient_email=""):
     job = db.jobs.find_one({"_id": ObjectId(job_id)})
     if not job:
@@ -1608,7 +2073,23 @@ def _issue_invoice_access_token(db, job_id, invoice_ref, recipient_email=""):
 
         entry_invoice_id = str(entry.get("invoice_id") or "").strip()
         entry_invoice_number = str(entry.get("invoice_number") or "").strip()
-        if normalized_invoice_ref in {entry_invoice_id, entry_invoice_number}:
+        entry_file_path = str(entry.get("file_path") or "").strip()
+        entry_file_name = entry_file_path.split("/")[-1] if entry_file_path else ""
+        target_invoice_id = str((invoice_entry or {}).get("invoice_id") or "").strip()
+        target_invoice_number = str((invoice_entry or {}).get("invoice_number") or "").strip()
+        target_file_path = str((invoice_entry or {}).get("file_path") or "").strip()
+        target_file_name = target_file_path.split("/")[-1] if target_file_path else ""
+        
+        is_match = (
+            (normalized_invoice_ref and entry_invoice_id == normalized_invoice_ref) or
+            (normalized_invoice_ref and entry_invoice_number == normalized_invoice_ref) or
+            (normalized_invoice_ref and entry_file_name == normalized_invoice_ref.split("/")[-1]) or
+            (entry_invoice_id == target_invoice_id and target_invoice_id) or
+            (entry_invoice_number == target_invoice_number and target_invoice_number) or
+            (entry_file_name == target_file_name and target_file_name)
+        )
+        
+        if is_match:
             updated = dict(entry)
             updated["access_token_hash"] = token_hash
             updated["access_token_created_at"] = datetime.now(UTC).isoformat()
@@ -1706,6 +2187,128 @@ def _resolve_customer_first_name(customer_doc, job_doc):
 
     customer_name = str((job_doc or {}).get("customer_name") or "Customer").strip()
     return customer_name.split(" ", 1)[0] if customer_name else "Customer"
+
+
+def _latest_invoice_for_job(job_doc):
+    invoices = [entry for entry in (job_doc or {}).get("invoices") or [] if isinstance(entry, dict)]
+    if not invoices:
+        return None
+    return invoices[-1]
+
+
+def _build_payment_schedule_request_message(stage_name, first_name, amount_display, company_name, payment_link):
+    return (
+        f"Hi {first_name}, your {stage_name} of {amount_display} for your {company_name} service is now due. "
+        f"Pay here: {payment_link}. Reply STOP to unsubscribe."
+    )
+
+
+def _send_payment_schedule_stage_request(db, job_id, stage_id, force_resend=False):
+    if not job_id or not ObjectId.is_valid(job_id):
+        return False, "Job not found"
+
+    job = db.jobs.find_one({"_id": ObjectId(job_id)})
+    if not job:
+        return False, "Job not found"
+
+    job_doc = serialize_doc(job)
+    payment_schedule = list(job_doc.get("payment_schedule") or [])
+    if not payment_schedule:
+        return False, "Job has no payment schedule"
+
+    target_index = -1
+    target_stage = None
+    for index, stage in enumerate(payment_schedule):
+        if not isinstance(stage, dict):
+            continue
+        if str(stage.get("stage_id") or "").strip() == str(stage_id or "").strip():
+            target_index = index
+            target_stage = dict(stage)
+            break
+
+    if target_index < 0 or not target_stage:
+        return False, "Payment stage not found"
+
+    stage_status = str(target_stage.get("status") or "pending").strip().lower()
+    if stage_status in {"paid", "cancelled"}:
+        return False, "This payment stage is no longer collectible"
+
+    if target_stage.get("request_sent_at") and not force_resend:
+        return False, "Payment request already sent"
+
+    invoice_entry = _latest_invoice_for_job(job_doc)
+    if not invoice_entry:
+        invoice_entry = _ensure_job_invoice_entry(db, job_id)
+        job = db.jobs.find_one({"_id": ObjectId(job_id)})
+        job_doc = serialize_doc(job) if job else job_doc
+    if not invoice_entry:
+        return False, "No invoice exists for this job yet"
+
+    invoice_ref = _resolve_invoice_ref(invoice_entry)
+    if not invoice_ref:
+        return False, "Invoice reference is unavailable"
+
+    customer = db.customers.find_one(build_reference_filter("_id", job_doc.get("customer_id"))) or {}
+    business = _resolve_business_doc_for_job(db, job_doc) or {}
+    channel_payload = _resolve_reminder_channel(customer, business)
+    if channel_payload["channel"] == "none":
+        return False, "Customer has no email or SMS destination"
+
+    customer_email = channel_payload["email"]
+    token = _issue_invoice_access_token(db, job_id, invoice_ref, customer_email)
+    payment_link = _build_invoice_view_url(job_id, invoice_ref, access_token=token, external=True) if token else _build_invoice_view_url(job_id, invoice_ref, external=True)
+    if not payment_link:
+        return False, "Payment link could not be created"
+
+    first_name = _resolve_customer_first_name(customer, job_doc)
+    company_name = _resolve_company_name(business)
+    stage_name = str(target_stage.get("name") or "Payment").strip() or "Payment"
+    amount_display = normalize_currency(_safe_float(target_stage.get("amount_remaining"), target_stage.get("amount")))
+    message_body = _build_payment_schedule_request_message(stage_name, first_name, amount_display, company_name, payment_link)
+
+    email_sent = False
+    sms_sent = False
+    failure_reasons = []
+
+    if channel_payload["channel"] in {"both", "email"}:
+        try:
+            invoice_number = str((invoice_entry or {}).get("invoice_number") or invoice_ref).strip()
+            msg = Message(
+                subject=f"Payment Request - {stage_name} - {invoice_number}",
+                recipients=[customer_email],
+                body=message_body,
+            )
+            current_app.extensions["mail"].send(msg)
+            email_sent = True
+        except Exception as exc:
+            failure_reasons.append(f"Email failed: {exc}")
+
+    if channel_payload["channel"] in {"both", "sms"}:
+        sms_ok, sms_detail = send_sms_via_twilio(
+            to_number=channel_payload["to_phone"],
+            from_number=channel_payload["from_phone"],
+            message_body=message_body,
+        )
+        if sms_ok:
+            sms_sent = True
+        else:
+            failure_reasons.append(f"SMS failed: {sms_detail}")
+
+    if not (email_sent or sms_sent):
+        return False, " | ".join(failure_reasons) or "Payment request failed"
+
+    now_utc = datetime.now(UTC)
+    target_stage["request_sent_at"] = now_utc
+    if str(target_stage.get("status") or "pending").strip().lower() == "pending":
+        target_stage["status"] = "due"
+        target_stage["due_at"] = target_stage.get("due_at") or now_utc
+    payment_schedule[target_index] = target_stage
+
+    db.jobs.update_one(
+        {"_id": ObjectId(job_id)},
+        {"$set": {"payment_schedule": payment_schedule, "updated_at": now_utc}},
+    )
+    return True, "Payment request sent"
 
 
 def _customer_is_sms_opted_out(customer_doc):
@@ -2349,6 +2952,9 @@ def _synchronize_job_payment_fields(db, job_id):
 
     db.jobs.update_one({"_id": ObjectId(job_id)}, {"$set": job_updates})
 
+    if job.get("payment_schedule"):
+        _sync_job_payment_schedule(db, job_id)
+
     refreshed = db.jobs.find_one({"_id": ObjectId(job_id)})
     if refreshed:
         _refresh_customer_balance_from_jobs(db, refreshed.get("customer_id"))
@@ -2708,6 +3314,23 @@ def send_invoice_reminder_manually(jobId, invoiceRef):
 
     state = "sent" if sent_ok else "failed"
     return redirect(url_for("jobs.view_invoice", jobId=jobId, invoiceRef=invoiceRef, reminder=state))
+
+
+@bp.route("/jobs/<jobId>/payment-schedule/<stageId>/send-request", methods=["POST"])
+def send_payment_schedule_request(jobId, stageId):
+    if not _is_authenticated_employee():
+        return redirect(url_for("auth.login"))
+
+    db = ensure_connection_or_500()
+    job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
+    if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    force_resend = str(request.form.get("force_resend") or "").strip().lower() in {"1", "true", "yes", "on"}
+    ok, detail = _send_payment_schedule_stage_request(db, jobId, stageId, force_resend=force_resend)
+    state = "sent" if ok else "failed"
+    reason = detail if not ok else ""
+    return redirect(url_for("jobs.view_job", jobId=jobId, payment_schedule_request=state, payment_schedule_reason=reason))
 
 
 def _coerce_line_amount(value):
@@ -3352,6 +3975,18 @@ def create_job(customerId):
             customer_doc=serialize_doc(customer),
         )
         total = pricing_summary["total_due"]
+        payment_schedule = _build_payment_schedule_for_record(
+            {"services": services, "payment_schedule": []},
+            business_doc=business_doc_for_rates,
+            total_amount=total,
+            raw_schedule=request.form.get("payment_schedule_json", ""),
+        )
+        payment_schedule = _build_payment_schedule_for_record(
+            {"services": services, "payment_schedule": []},
+            business_doc=business_doc_for_rates,
+            total_amount=total,
+            raw_schedule=request.form.get("payment_schedule_json", ""),
+        )
 
         primary_service = services[0]["type"] if services else "No services added."
         scheduled_date = format_date(request.form.get("job_date", ""))
@@ -3440,6 +4075,7 @@ def create_job(customerId):
             "total_amount": float(total or 0.0),
             "invoice_notes": invoice_notes,
             "payment_due_days": payment_due_days,
+            "payment_schedule": payment_schedule,
             "internal_notes": [],
             "date_created": datetime.now().strftime("%m/%d/%Y"),
             "created_at": datetime.now(UTC),
@@ -3455,6 +4091,8 @@ def create_job(customerId):
             "recurrence_summary": "",
         }
         inserted = db.jobs.insert_one(new_job)
+        if payment_schedule:
+            _ensure_job_invoice_entry(db, str(inserted.inserted_id))
         current_app.logger.info("Job created: id=%s customer_id=%s by employee_id=%s", str(inserted.inserted_id), customerId, session.get("employee_id"))
         return redirect(url_for("jobs.view_job", jobId=str(inserted.inserted_id)))
 
@@ -3630,6 +4268,12 @@ def create_estimate(customerId):
             customer_doc=serialize_doc(customer),
         )
         total = pricing_summary["total_due"]
+        payment_schedule = _build_payment_schedule_for_record(
+            {"services": services, "payment_schedule": []},
+            business_doc=business_doc_for_rates,
+            total_amount=total,
+            raw_schedule=request.form.get("payment_schedule_json", ""),
+        )
 
         primary_technician_id = _resolve_employee_id_value(db, request.form.get("primary_technician_id", "") or request.form.get("job_assigned_employee", ""))
         technician_payload = _build_job_technician_payload(db, primary_technician_id, [])
@@ -3682,6 +4326,7 @@ def create_estimate(customerId):
             "recurring_end_after": recurrence_data.get("max_occurrences"),
             "recurrence_summary": recurrence_data.get("summary") or "",
             "total_amount": float(total or 0.0),
+            "payment_schedule": payment_schedule,
             "estimate_notes": estimate_notes,
             "estimate_expiration_days": estimate_expiration_days,
             "file_path": [],
@@ -3892,6 +4537,49 @@ def view_estimate(estimateId):
         if estimate_business_doc:
             estimate_business = serialize_doc(estimate_business_doc)
     pricing_summary = _build_estimate_pricing_summary(estimate_doc, business_doc=estimate_business, customer_doc=customer)
+    payment_schedule_view = _build_payment_schedule_view(estimate_doc.get("payment_schedule") or [])
+    payment_request_state = str(request.args.get("payment_request") or "").strip().lower()
+    payment_request_reason = str(request.args.get("payment_request_reason") or "").strip()
+    deposit_prompt = {
+        "show": False,
+        "label": "",
+        "amount": 0.0,
+        "amount_display": "",
+        "payment_url": "",
+        "stage_id": "",
+        "request_sent": False,
+    }
+
+    created_job_id = str(estimate_doc.get("created_job_id") or "").strip()
+    if not is_staff_view and str(estimate_doc.get("status") or "").strip().lower() == "accepted" and ObjectId.is_valid(created_job_id):
+        created_job = db.jobs.find_one({"_id": ObjectId(created_job_id)})
+        if created_job:
+            created_job_doc = serialize_doc(created_job)
+            invoice_entry = _ensure_job_invoice_entry(db, created_job_id)
+            due_now_amount = _payment_schedule_due_now_amount(created_job_doc.get("payment_schedule") or [])
+            due_stage_name = "Payment"
+            due_stage_id = ""
+            request_sent = False
+            for stage in created_job_doc.get("payment_schedule") or []:
+                if not isinstance(stage, dict):
+                    continue
+                if str(stage.get("status") or "").strip().lower() in {"due", "partial"}:
+                    due_stage_name = str(stage.get("name") or "Payment").strip() or "Payment"
+                    due_stage_id = str(stage.get("stage_id") or "").strip()
+                    request_sent = bool(stage.get("request_sent_at"))
+                    break
+            if invoice_entry and due_now_amount > 0:
+                invoice_ref = _resolve_invoice_ref(invoice_entry)
+                invoice_token = _issue_invoice_access_token(db, created_job_id, invoice_ref, str(customer.get("email") or "").strip())
+                deposit_prompt = {
+                    "show": True,
+                    "label": due_stage_name,
+                    "amount": due_now_amount,
+                    "amount_display": normalize_currency(due_now_amount),
+                    "payment_url": _build_invoice_view_url(created_job_id, invoice_ref, access_token=invoice_token, external=False),
+                    "stage_id": due_stage_id,
+                    "request_sent": request_sent,
+                }
 
     return render_template(
         "estimates/view_estimate.html",
@@ -3902,6 +4590,10 @@ def view_estimate(estimateId):
         is_staff_view=is_staff_view,
         access_token=token_value,
         pricing_summary=pricing_summary,
+        payment_schedule_view=payment_schedule_view,
+        payment_request_state=payment_request_state,
+        payment_request_reason=payment_request_reason,
+        deposit_prompt=deposit_prompt,
     )
 
 
@@ -4018,6 +4710,12 @@ def update_estimate(estimateId):
             customer_doc=customer,
         )
         total = pricing_summary["total_due"]
+        payment_schedule = _build_payment_schedule_for_record(
+            {"services": services, "payment_schedule": estimate.get("payment_schedule") or []},
+            business_doc=business_doc_for_rates,
+            total_amount=total,
+            raw_schedule=request.form.get("payment_schedule_json", ""),
+        )
 
         primary_technician_id = _resolve_employee_id_value(db, request.form.get("primary_technician_id", "") or request.form.get("job_assigned_employee", ""))
         technician_payload = _build_job_technician_payload(db, primary_technician_id, [])
@@ -4058,6 +4756,7 @@ def update_estimate(estimateId):
             "estimate_notes": estimate_notes,
             "estimate_expiration_days": estimate_expiration_days,
             "total_amount": float(total or 0.0),
+            "payment_schedule": payment_schedule,
             "date_updated": datetime.now().strftime("%m/%d/%Y"),
             "time_updated": datetime.now().strftime("%H:%M:%S"),
             "updated_at": datetime.now(UTC),
@@ -4319,6 +5018,14 @@ def accept_estimate(estimateId):
         {"$set": update_data},
     )
 
+    if estimate.get("payment_schedule"):
+        fired_schedule, _ = _fire_payment_schedule_trigger(estimate.get("payment_schedule"), "estimate_accepted")
+        db.estimates.update_one(
+            {"_id": ObjectId(estimateId)},
+            {"$set": {"payment_schedule": fired_schedule, "updated_at": datetime.now(UTC)}},
+        )
+        estimate["payment_schedule"] = fired_schedule
+
     try:
         created_job_id = _create_job_from_accepted_estimate(db, estimateId)
         if created_job_id:
@@ -4327,6 +5034,58 @@ def accept_estimate(estimateId):
         current_app.logger.error("Job auto-create failed for accepted estimate: estimate_id=%s error=%s", estimateId, exc)
 
     return redirect(_build_estimate_view_url(estimateId, access_token=token_value if not is_staff_view else ""))
+
+
+@bp.route("/estimates/<estimateId>/payment-schedule/pay-later", methods=["POST"])
+def send_estimate_payment_request_later(estimateId):
+    db = ensure_connection_or_500()
+    estimate = db.estimates.find_one({"_id": object_id_or_404(estimateId)})
+    if not estimate:
+        return redirect(url_for("home"))
+
+    token_value = str(request.form.get("access_token") or request.args.get("token") or "").strip()
+    is_staff_view = _is_authenticated_employee()
+    if not is_staff_view and not _verify_estimate_access_token(estimate, token_value):
+        return redirect(url_for("auth.login"))
+
+    created_job_id = str(estimate.get("created_job_id") or "").strip()
+    if not ObjectId.is_valid(created_job_id):
+        return redirect(_build_estimate_view_url(estimateId, access_token=token_value if not is_staff_view else "", external=False))
+
+    created_job = db.jobs.find_one({"_id": ObjectId(created_job_id)}) or {}
+    stage_id = ""
+    for stage in created_job.get("payment_schedule") or []:
+        if not isinstance(stage, dict):
+            continue
+        if str(stage.get("trigger") or "").strip().lower() != "estimate_accepted":
+            continue
+        if str(stage.get("status") or "").strip().lower() not in {"due", "partial"}:
+            continue
+        stage_id = str(stage.get("stage_id") or "").strip()
+        if stage_id:
+            break
+
+    if not stage_id:
+        return redirect(
+            url_for(
+                "jobs.view_estimate",
+                estimateId=estimateId,
+                token=token_value if not is_staff_view else None,
+                payment_request="failed",
+                payment_request_reason="No due payment stage is available.",
+            )
+        )
+
+    ok, detail = _send_payment_schedule_stage_request(db, created_job_id, stage_id, force_resend=False)
+    return redirect(
+        url_for(
+            "jobs.view_estimate",
+            estimateId=estimateId,
+            token=token_value if not is_staff_view else None,
+            payment_request="sent" if ok else "failed",
+            payment_request_reason="" if ok else detail,
+        )
+    )
 
 
 @bp.route("/estimates/<estimateId>/decline", methods=["POST"])
@@ -4539,6 +5298,8 @@ def view_invoice(jobId, invoiceRef):
     payment_summary = _build_invoice_payment_summary(job_doc, pricing_summary, payment_history)
     total_amount_paid = round(_safe_float(payment_summary.get("amount_paid"), 0.0), 2)
     balance_due = round(_safe_float(payment_summary.get("invoice_balance"), 0.0), 2)
+    payment_schedule_view = _build_payment_schedule_view(job_doc.get("payment_schedule") or [])
+    payment_schedule_due_now = _payment_schedule_due_now_amount(job_doc.get("payment_schedule") or [])
 
     return render_template(
         "invoices/view_invoice.html",
@@ -4552,6 +5313,8 @@ def view_invoice(jobId, invoiceRef):
         payment_history=payment_history,
         total_amount_paid=total_amount_paid,
         balance_due=balance_due,
+        payment_schedule_view=payment_schedule_view,
+        payment_schedule_due_now=payment_schedule_due_now,
         payment_due_days=payment_due_days,
         due_date=due_date,
         invoice_sent_display=invoice_sent_display,
@@ -4648,18 +5411,6 @@ def create_invoice_checkout_session(jobId, invoiceRef):
     if charge_amount <= 0 or charge_amount > balance_due:
         return jsonify({"success": False, "error": "Payment amount must be greater than zero and no more than balance due"}), 400
 
-    # Validate that the requested amount matches the backend calculation
-    # Round both to 2 decimals and compare to prevent floating point issues
-    calculated_charge = round(balance_due, 2)
-    if charge_amount != calculated_charge:
-        current_app.logger.warning(
-            "Payment amount mismatch detected: job_id=%s requested=%.2f calculated=%.2f",
-            jobId,
-            charge_amount,
-            calculated_charge,
-        )
-        return jsonify({"success": False, "error": "Payment amount does not match invoice balance. Please refresh and try again."}), 400
-
     amount_total = int(round(charge_amount * 100))
 
     business_id = str(job_doc.get("business_id") or "").strip()
@@ -4751,6 +5502,9 @@ def view_job(jobId):
     if not job:
         return redirect(url_for("jobs.jobs"))
 
+    payment_schedule_request_state = str(request.args.get("payment_schedule_request") or "").strip().lower()
+    payment_schedule_request_reason = str(request.args.get("payment_schedule_reason") or "").strip()
+
     job_series = None
     job_series_id = job.get("series_id")
     if job_series_id:
@@ -4804,6 +5558,7 @@ def view_job(jobId):
     pricing_summary = _build_invoice_pricing_summary(job_doc, business_doc=job_business, customer_doc=customer)
     job_doc["internal_notes"] = _build_internal_notes_for_view(db, job)
     payment_history = _build_payment_history(db, jobId)
+    payment_schedule_view = _build_payment_schedule_view(job_doc.get("payment_schedule") or [])
 
     # Detect if the viewing employee has a *different* active job (En Route / Started).
     # Used to disable transition buttons so only one job can be active at a time.
@@ -4833,6 +5588,9 @@ def view_job(jobId):
         quote_email_template=quote_email_template,
         invoice_email_template=invoice_email_template,
         pricing_summary=pricing_summary,
+        payment_schedule_view=payment_schedule_view,
+        payment_schedule_request_state=payment_schedule_request_state,
+        payment_schedule_request_reason=payment_schedule_request_reason,
         employee_has_other_active_job=employee_has_other_active_job,
     )
 
@@ -4991,11 +5749,18 @@ def start_job(jobId):
 
     current_timestamp = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
     current_timestamp_utc = datetime.now(UTC)
+    payment_schedule = job.get("payment_schedule") or []
+    if payment_schedule:
+        payment_schedule, _ = _fire_payment_schedule_trigger(payment_schedule, "job_started", current_timestamp_utc)
 
     db.jobs.update_one(
         {"_id": ObjectId(jobId)},
-        {"$set": {"status": "Started", "dateStarted": current_timestamp, "started_at": current_timestamp_utc, "updated_at": current_timestamp_utc}},
+        {"$set": {"status": "Started", "dateStarted": current_timestamp, "started_at": current_timestamp_utc, "updated_at": current_timestamp_utc, "payment_schedule": payment_schedule}},
     )
+
+    if payment_schedule:
+        _sync_job_payment_schedule(db, jobId)
+        _send_triggered_payment_schedule_requests(db, jobId, "job_started")
 
     next_url = request.form.get("next") or url_for("jobs.view_job", jobId=jobId)
     return redirect(next_url)
@@ -5187,6 +5952,31 @@ def complete_job(jobId):
         completion_payment_status = "partial_paid"
 
     completion_job_status = "Paid" if completion_balance_due <= 0 else "Completed"
+    payment_schedule = job.get("payment_schedule") or []
+    if payment_schedule:
+        payment_schedule, _ = _fire_payment_schedule_trigger(payment_schedule, "job_completed", current_timestamp_utc)
+
+    existing_invoices = [entry for entry in (job.get("invoices") or []) if isinstance(entry, dict)]
+    if existing_invoices:
+        latest_invoice = dict(existing_invoices[-1])
+        latest_invoice["invoice_number"] = str(latest_invoice.get("invoice_number") or _build_job_invoice_number(jobId)).strip() or _build_job_invoice_number(jobId)
+        latest_invoice["file_path"] = url_for("download_invoice", filename=filename)
+        latest_invoice["status"] = "Paid" if completion_balance_due <= 0 and existing_paid > 0 else "Created"
+        latest_invoice["is_provisional"] = False
+        existing_invoices[-1] = latest_invoice
+    else:
+        existing_invoices = [
+            {
+                "invoice_id": str(ObjectId()),
+                "invoice_number": _build_job_invoice_number(jobId),
+                "job_id": str(jobId),
+                "file_path": url_for("download_invoice", filename=filename),
+                "sent_at": None,
+                "due_date": "",
+                "status": "Paid" if completion_balance_due <= 0 and existing_paid > 0 else "Created",
+                "is_provisional": False,
+            }
+        ]
 
     db.jobs.update_one(
         {"_id": ObjectId(jobId)},
@@ -5206,20 +5996,15 @@ def complete_job(jobId):
                 "total_materials_cost": total_materials_cost,
                 "total_equipment_cost": total_equipment_cost,
                 "gross_profit": gross_profit,
-            },
-            "$push": {
-                "invoices": {
-                    "invoice_id": str(ObjectId()),
-                    "invoice_number": f"INV-{jobId[:8].upper()}",
-                    "job_id": str(jobId),
-                    "file_path": url_for("download_invoice", filename=filename),
-                    "sent_at": None,
-                    "due_date": "",
-                    "status": "Created",
-                }
+                "payment_schedule": payment_schedule,
+                "invoices": existing_invoices,
             },
         },
     )
+
+    if payment_schedule:
+        _sync_job_payment_schedule(db, jobId)
+        _send_triggered_payment_schedule_requests(db, jobId, "job_completed")
 
     try:
         serviced_count = _mark_hvac_systems_serviced(db, job, current_timestamp_utc)
@@ -5664,6 +6449,12 @@ def update_job(jobId):
             customer_doc=customer,
         )
         total = pricing_summary["total_due"]
+        payment_schedule = _build_payment_schedule_for_record(
+            {"services": services, "payment_schedule": job.get("payment_schedule") or []},
+            business_doc=business_doc_for_rates,
+            total_amount=total,
+            raw_schedule=request.form.get("payment_schedule_json", ""),
+        )
 
         primary_service = services[0]["type"] if services else "No services added."
         scheduled_date = format_date(request.form.get("job_date", ""))
@@ -5740,6 +6531,7 @@ def update_job(jobId):
             "invoice_notes": request.form.get("invoice_notes", "").strip(),
             "payment_due_days": payment_due_days,
             "total_amount": float(total or 0.0),
+            "payment_schedule": payment_schedule,
         }
 
         if recurring_data.get("is_recurring"):

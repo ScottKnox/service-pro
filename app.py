@@ -71,30 +71,55 @@ def internal_error(e):
 @app.context_processor
 def inject_header_business_name():
     employee_id = str(session.get("employee_id") or "").strip()
+    default_photo_url = url_for("static", filename="img/default_profile_photo.svg")
     if not employee_id or not ObjectId.is_valid(employee_id):
-        return {"header_business_name": ""}
+        return {
+            "header_business_name": "",
+            "header_employee_photo_url": default_photo_url,
+            "header_employee_photo_alt": "Default profile photo",
+        }
 
     try:
         db = ensure_connection_or_500()
-        employee_doc = db.employees.find_one({"_id": ObjectId(employee_id)}, {"business": 1}) or {}
-        raw_business_id = employee_doc.get("business")
-        if not raw_business_id or not ObjectId.is_valid(str(raw_business_id)):
-            return {"header_business_name": ""}
-
-        business_doc = db.businesses.find_one(
-            {"_id": ObjectId(str(raw_business_id))},
-            {"company_name": 1, "business_name": 1, "name": 1},
+        employee_doc = db.employees.find_one(
+            {"_id": ObjectId(employee_id)},
+            {"business": 1, "profile_photo": 1, "profile_photo_uploaded_at": 1},
         ) or {}
-        header_business_name = str(
-            business_doc.get("company_name")
-            or business_doc.get("business_name")
-            or business_doc.get("name")
-            or ""
-        ).strip()
-        return {"header_business_name": header_business_name}
+        raw_business_id = employee_doc.get("business")
+        header_business_name = ""
+        if raw_business_id and ObjectId.is_valid(str(raw_business_id)):
+            business_doc = db.businesses.find_one(
+                {"_id": ObjectId(str(raw_business_id))},
+                {"company_name": 1, "business_name": 1, "name": 1},
+            ) or {}
+            header_business_name = str(
+                business_doc.get("company_name")
+                or business_doc.get("business_name")
+                or business_doc.get("name")
+                or ""
+            ).strip()
+
+        header_employee_photo_url = default_photo_url
+        profile_photo = str(employee_doc.get("profile_photo") or "").strip()
+        if profile_photo:
+            header_employee_photo_url = url_for("employees.view_employee_profile_photo", employeeId=employee_id)
+            photo_version = str(employee_doc.get("profile_photo_uploaded_at") or "").strip()
+            if photo_version:
+                separator = "&" if "?" in header_employee_photo_url else "?"
+                header_employee_photo_url = f"{header_employee_photo_url}{separator}v={photo_version}"
+
+        return {
+            "header_business_name": header_business_name,
+            "header_employee_photo_url": header_employee_photo_url,
+            "header_employee_photo_alt": "Employee profile photo",
+        }
     except Exception:
         app.logger.exception("Failed to load header business name")
-        return {"header_business_name": ""}
+        return {
+            "header_business_name": "",
+            "header_employee_photo_url": default_photo_url,
+            "header_employee_photo_alt": "Default profile photo",
+        }
 
 
 @app.before_request

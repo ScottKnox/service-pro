@@ -357,6 +357,7 @@
   content: "\2709";
   line-height: 1;
   font-size: 0.95rem;
+  margin-right: 0.5rem;
 }
 
 .estimate-email-btn:focus {

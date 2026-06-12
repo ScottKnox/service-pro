@@ -102,6 +102,16 @@
       </div>
       {% endif %}
 
+      {% if payment_schedule_request_state == 'sent' %}
+      <div style="border: 1px solid #B7D8C9; background-color: #EEF9F1; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
+        <p style="margin: 0; color: #185A37; font-weight: 600;">Payment request sent.</p>
+      </div>
+      {% elif payment_schedule_request_state == 'failed' %}
+      <div style="border: 1px solid #E2B4B4; background-color: #FFF3F3; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
+        <p style="margin: 0; color: #8A2D2D; font-weight: 600;">Payment request could not be sent{% if payment_schedule_request_reason %}: {{ payment_schedule_request_reason }}{% endif %}.</p>
+      </div>
+      {% endif %}
+
       {% if hvac_system_prompt_items %}
       <section id="view-job-hvac-prompt" aria-labelledby="view-job-hvac-prompt-header" style="border: 1px solid #B7D8C9; background: linear-gradient(180deg, #F7FBF8 0%, #EEF8F1 100%); padding: 1rem; border-radius: 10px; margin: 1rem 0; box-shadow: 0 10px 24px rgba(12, 48, 29, 0.08);">
         <h2 id="view-job-hvac-prompt-header" style="margin-top: 0;">Equipment Installed</h2>
@@ -197,6 +207,10 @@
             <h3>Details</h3>
             <div id="view-job-details-list">
               {% set detail_job_status_normalized = job.status|default('', true)|lower %}
+              <div class="view-job-detail-item">
+                <h4>Status</h4>
+                <p><span class="jobs-status-chip{% if detail_job_status_normalized == 'pending' %} is-pending{% elif detail_job_status_normalized == 'scheduled' %} is-scheduled{% elif detail_job_status_normalized == 'en route' %} is-en-route{% elif detail_job_status_normalized == 'started' %} is-started{% elif detail_job_status_normalized in ['completed', 'complete', 'done'] %} is-completed{% elif detail_job_status_normalized == 'paid' %} is-paid{% elif detail_job_status_normalized == 'estimating' %} is-estimating{% elif detail_job_status_normalized == 'declined' %} is-declined{% endif %}">{{ job.status|default('Unknown', true) }}</span></p>
+              </div>
               <div class="view-job-detail-item">
                 <h4>Customer</h4>
                 <div class="view-job-customer-row">
@@ -316,6 +330,44 @@
             </div>
           </div>
         </div>
+
+        {% if payment_schedule_view.has_schedule %}
+        <div class="estimate-stack-block estimate-pricing-summary">
+          <h3>Payment Schedule</h3>
+          {% for stage in payment_schedule_view.stages %}
+            <div class="estimate-pricing-row">
+              <span>{{ stage.name }}</span>
+              <span>
+                {{ stage.amount_display }}
+                {% if stage.status == 'paid' %}(Paid){% elif stage.status == 'partial' %}(Partial){% elif stage.status == 'due' %}(Due){% else %}(Pending){% endif %}
+              </span>
+            </div>
+            {% if stage.send_payment_request and stage.status not in ['paid', 'cancelled'] %}
+            <div class="estimate-pricing-row" style="margin-top: -0.35rem; margin-bottom: 0.45rem;">
+              <span>
+                {% if stage.request_sent_at %}
+                  Last sent {{ stage.request_sent_at.strftime('%m/%d/%Y %H:%M:%S') if stage.request_sent_at else '' }}
+                {% else %}
+                  No payment request sent yet
+                {% endif %}
+              </span>
+              <span>
+                <form method="POST" action="{{ url_for('jobs.send_payment_schedule_request', jobId=jobId, stageId=stage.stage_id) }}" {% if stage.request_sent_at %}onsubmit="return confirm('A request was already sent for this stage. Send it again?');"{% endif %}>
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  {% if stage.request_sent_at %}
+                    <input type="hidden" name="force_resend" value="1">
+                  {% endif %}
+                  <button type="submit">{% if stage.request_sent_at %}Resend request{% else %}Send payment request{% endif %}</button>
+                </form>
+              </span>
+            </div>
+            {% endif %}
+          {% endfor %}
+          <div class="estimate-pricing-row"><span>Total Scheduled</span><span>{{ payment_schedule_view.total_amount|currency }}</span></div>
+          <div class="estimate-pricing-row"><span>Amount Paid</span><span>{{ payment_schedule_view.amount_paid|currency }}</span></div>
+          <div class="estimate-pricing-row"><span>Balance Due</span><span>{{ payment_schedule_view.balance_due|currency }}</span></div>
+        </div>
+        {% endif %}
 
         <div class="view-job-section-row" id="view-job-notes-row">
           <div class="view-job-section-column view-job-details-column">

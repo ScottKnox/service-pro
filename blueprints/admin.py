@@ -189,19 +189,26 @@ def _build_revenue_performance_report(db, business_id=None):
     ytd_total = 0.0
     lytd_total = 0.0
 
-    _rev_filter = {"status": {"$regex": "^Completed$", "$options": "i"}}
+    _rev_filter = {"status": {"$in": ["completed", "paid", "Completed", "Paid"]}}
     if business_id:
         _rev_filter["business_id"] = business_id
     completed_jobs = db.jobs.find(
         _rev_filter,
-        {"total_amount": 1, "dateCompleted": 1, "completed_at": 1},
+        {
+            "total_amount": 1,
+            "status": 1,
+            "dateCompleted": 1,
+            "completed_at": 1,
+            "datePaid": 1,
+            "paid_at": 1,
+        },
     )
 
     for job in completed_jobs:
-        completed_at = _job_completed_datetime(job)
-        if not completed_at:
+        revenue_at = _job_revenue_datetime(job)
+        if not revenue_at:
             continue
-        completed_day = completed_at.date()
+        completed_day = revenue_at.date()
         amount = _coerce_float(job.get("total_amount"))
 
         if mtd_start <= completed_day <= mtd_end:
