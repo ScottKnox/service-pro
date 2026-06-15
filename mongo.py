@@ -451,6 +451,46 @@ def ensure_collection_validators(db):
         }
     }
 
+    maintenance_plan_templates_validator = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": ["business_id", "name", "is_active", "visits_per_year", "price_annual", "created_at"],
+            "properties": {
+                "business_id": {"bsonType": ["objectId", "string"]},
+                "name": {"bsonType": "string"},
+                "description": {"bsonType": ["string", "null"]},
+                "tier_order": {"bsonType": ["int", "long", "null"]},
+                "is_active": {"bsonType": "bool"},
+                "visits_per_year": {"bsonType": ["int", "long"]},
+                "visit_seasons": {
+                    "bsonType": ["array", "null"],
+                    "items": {
+                        "bsonType": "object",
+                        "required": ["season", "service_id", "service_name"],
+                        "properties": {
+                            "season": {"bsonType": "string"},
+                            "service_id": {"bsonType": ["objectId", "string", "null"]},
+                            "service_name": {"bsonType": ["string", "null"]},
+                            "start_date": {"bsonType": ["string", "null"]},
+                            "end_date": {"bsonType": ["string", "null"]},
+                        },
+                    },
+                },
+                "price_annual": {"bsonType": ["double", "int", "long", "decimal"]},
+                "price_monthly": {"bsonType": ["double", "int", "long", "decimal", "null"]},
+                "repair_discount_pct": {"bsonType": ["double", "int", "long", "decimal", "null"]},
+                "discount_service_types": {"bsonType": ["array", "null"]},
+                "discount_line_item_types": {"bsonType": ["array", "null"]},
+                "diagnostic_fee_waived": {"bsonType": ["bool", "null"]},
+                "priority_scheduling": {"bsonType": ["bool", "null"]},
+                "emergency_service": {"bsonType": ["bool", "null"]},
+                "custom_benefits": {"bsonType": ["array", "null"]},
+                "created_at": {"bsonType": ["date"]},
+                "updated_at": {"bsonType": ["date", "null"]},
+            },
+        }
+    }
+
     _ensure_collection_with_validator(db, "jobs", jobs_validator)
     _ensure_collection_with_validator(db, "payments", payments_validator)
     _ensure_collection_with_validator(db, "recurring_job_series", recurring_job_series_validator)
@@ -460,6 +500,7 @@ def ensure_collection_validators(db):
     _ensure_collection_with_validator(db, "hvacDiagnostics", hvac_diagnostics_validator)
     _ensure_collection_with_validator(db, "subscriptions", subscriptions_validator)
     _ensure_collection_with_validator(db, "categories", categories_validator)
+    _ensure_collection_with_validator(db, "maintenance_plan_templates", maintenance_plan_templates_validator)
 
     db.hvacDiagnostics.create_index([("hvac_system_id", 1), ("created_at", -1)])
     db.hvacDiagnostics.create_index([("customer_id", 1), ("created_at", -1)])
@@ -478,6 +519,7 @@ def ensure_collection_validators(db):
     db.jobs.create_index([("company_id", 1), ("materials.hvac_system_id", 1), ("status", 1), ("completed_at", -1)])
     db.jobs.create_index([("company_id", 1), ("equipments.hvac_system_id", 1), ("status", 1), ("completed_at", -1)])
     db.categories.create_index([("company_id", 1), ("type", 1), ("sort_order", 1)])
+    db.maintenance_plan_templates.create_index([("business_id", 1), ("is_active", 1), ("tier_order", 1)])
     db.payments.create_index([("job_id", 1), ("paid_at", -1)])
     db.payments.create_index([("customer_id", 1), ("paid_at", -1)])
     db.payments.create_index([("invoice_id", 1), ("paid_at", -1)])

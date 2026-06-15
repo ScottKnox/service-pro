@@ -1,0 +1,677 @@
+{% extends "base.html" %}
+
+{% block title %}Maintenance Plan Templates | Klovent{% endblock %}
+
+{% block content %}
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="manage-jobs-header" class="resource-page resource-admin resource-reporting">
+          <nav id="breadcrumb" aria-label="Breadcrumb">
+            <ol>
+              <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+              <li><a href="{{ url_for('catalog.manage_price_book') }}">Manage Price Book</a></li>
+              <li aria-current="page">Maintenance Plan Templates</li>
+            </ol>
+          </nav>
+
+          <div id="jobs-controls-row">
+            <div class="jobs-controls-left">
+              <aside class="reporting-sidebar" aria-label="Maintenance plan views">
+                <h3>Views</h3>
+                <div class="reporting-nav-stack">
+                  <a class="reporting-nav-link{% if active_section == 'templates' %} is-active{% endif %}" href="{{ url_for('admin_bp.maintenance_plans', section='templates') }}">
+                    <span>Plan Templates</span>
+                    <small>{{ templates_count }}</small>
+                  </a>
+                  <a class="reporting-nav-link{% if active_section == 'active' %} is-active{% endif %}" href="{{ url_for('admin_bp.maintenance_plans', section='active') }}">
+                    <span>Active Plans</span>
+                    <small>{{ active_plans_count }}</small>
+                  </a>
+                  <a class="reporting-nav-link{% if active_section == 'renewals' %} is-active{% endif %}" href="{{ url_for('admin_bp.maintenance_plans', section='renewals') }}">
+                    <span>Renewal Queue</span>
+                    <small>{{ renewal_count }}</small>
+                  </a>
+                </div>
+              </aside>
+
+              {% if active_section == 'templates' %}
+                <div class="jobs-filter-list" style="margin-top: 1rem;">
+                  <div class="jobs-filter-content">
+                    <label class="catalog-search-form-label" for="maintenance-template-status">Status</label>
+                    <select id="maintenance-template-status" name="status">
+                      <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
+                      <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active Only</option>
+                      <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive Only</option>
+                    </select>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="jobs-controls-right">
+              <div class="jobs-controls-right-top">
+                <h2>Plan Templates</h2>
+                {% if active_section == 'templates' %}
+                  <div class="jobs-controls-right-actions">
+                    <a href="/admin/price-book/maintenance-plans/new">Add Plan Template</a>
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="jobs-controls-right-bottom">
+                {% if active_section == 'templates' %}
+                  {% set sorted_templates = (plan_templates or []) | sort(attribute='tier_order') %}
+                  <div id="maintenance-plan-templates-list" class="catalog-compact-list">
+                    {% if sorted_templates %}
+                      {% for template in sorted_templates %}
+                        {% set benefits = [] %}
+                        {% if (template.repair_discount_pct or 0) > 0 %}
+                          {% set _ = benefits.append(((template.repair_discount_pct|int) if template.repair_discount_pct == (template.repair_discount_pct|int) else template.repair_discount_pct) ~ '% repair discount') %}
+                        {% endif %}
+                        {% if template.diagnostic_fee_waived %}
+                          {% set _ = benefits.append('Waived diagnostics') %}
+                        {% endif %}
+                        {% if template.priority_scheduling %}
+                          {% set _ = benefits.append('Priority scheduling') %}
+                        {% endif %}
+                        {% if template.emergency_service %}
+                          {% set _ = benefits.append('After-hours service') %}
+                        {% endif %}
+                        {% if (template.parts_credit or 0) > 0 %}
+                          {% set _ = benefits.append('$' ~ ('%.0f'|format(template.parts_credit)) ~ ' parts credit') %}
+                        {% endif %}
+
+                        {% set sold_plan_count = template.sold_plans_count if template.sold_plans_count is defined else 0 %}
+                        {% set template_id = template._id if template._id is defined else template.id %}
+
+                        <article
+                          class="jobs-card maintenance-template-card{% if not template.is_active %} is-inactive{% endif %}"
+                          data-template-card
+                          data-template-id="{{ template_id }}"
+                          data-is-active="{{ 'true' if template.is_active else 'false' }}"
+                          data-sold-plans-count="{{ sold_plan_count }}"
+                        >
+                          <div class="jobs-card-row">
+                            <span class="dispatch-pending-count">Tier {{ template.tier_order or loop.index }}</span>
+                          </div>
+
+                          <div class="jobs-card-row">
+                            <span class="jobs-card-value" style="font-size: 1.1rem; font-weight: 700;">{{ template.name }}</span>
+                          </div>
+
+                          <div class="jobs-card-row">
+                            <span class="jobs-card-label">Visits</span>
+                            <span class="jobs-card-value">{{ template.visits_per_year or 0 }} visits per year</span>
+                          </div>
+
+                          <div class="jobs-card-row">
+                            <span class="jobs-card-label">Benefits</span>
+                            <span class="jobs-card-value">{{ benefits|join(' &middot; ') if benefits else 'No included benefits' }}</span>
+                          </div>
+
+                          <div class="jobs-card-row">
+                            <span class="jobs-card-label">Pricing</span>
+                            <span class="jobs-card-value">
+                              {% if template.price_monthly %}
+                                ${{ ('%.0f'|format(template.price_monthly)) }}/mo or ${{ ('%.0f'|format(template.price_annual or 0)) }}/yr
+                              {% else %}
+                                ${{ ('%.0f'|format(template.price_annual or 0)) }}/yr
+                              {% endif %}
+                            </span>
+                          </div>
+
+                          <div class="jobs-card-row maintenance-template-actions-row">
+                            <div class="maintenance-actions-cluster">
+                              <div class="maintenance-action-control maintenance-action-control--status">
+                                <span class="maintenance-control-label">Status</span>
+                                <label class="maintenance-toggle" aria-label="Toggle plan template active status">
+                                  <input type="checkbox" class="maintenance-template-status-toggle" {% if template.is_active %}checked{% endif %}>
+                                  <span class="maintenance-toggle-slider"></span>
+                                </label>
+                              </div>
+
+                              <div class="maintenance-action-control maintenance-action-control--menu">
+                                <span class="maintenance-control-label">Actions</span>
+                                <div class="maintenance-template-menu">
+                                  <button type="button" class="maintenance-template-menu-button" aria-label="Open plan template actions" aria-expanded="false" aria-haspopup="true">...</button>
+                                  <div class="maintenance-template-menu-dropdown" hidden>
+                                    <a href="/admin/price-book/maintenance-plans/{{ template_id }}/edit">Edit</a>
+                                    <button type="button" class="maintenance-template-duplicate-button">Duplicate</button>
+                                    {% if sold_plan_count|int == 0 %}
+                                      <button type="button" class="maintenance-template-delete-button">Delete</button>
+                                    {% endif %}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </article>
+                      {% endfor %}
+                    {% else %}
+                      <div id="maintenance-empty-state" class="reporting-card">
+                        <p>No maintenance plan templates yet. Create your first plan to start selling recurring service agreements.</p>
+                        <p><a href="/admin/price-book/maintenance-plans/new">Add Plan Template</a></p>
+                      </div>
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <div class="reporting-card">
+                    <p>This view is coming soon.</p>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <style>
+    .maintenance-template-card.is-inactive {
+      opacity: 0.68;
+    }
+
+    .resource-reporting .catalog-compact-list .maintenance-template-card {
+      gap: 0;
+      overflow: visible;
+    }
+
+    .resource-reporting .catalog-compact-list .maintenance-template-card .jobs-card-row {
+      flex: 0 0 auto;
+      width: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.18rem;
+      padding: 0 0.75rem;
+      border-right: 1px solid #2f5a4a;
+      min-width: 0;
+    }
+
+    .resource-reporting .catalog-compact-list .maintenance-template-card .jobs-card-label,
+    .resource-reporting .catalog-compact-list .maintenance-template-card .jobs-card-value {
+      text-align: center;
+    }
+
+    .resource-reporting .catalog-compact-list .maintenance-template-card .jobs-card-row:first-child {
+      padding-left: 0;
+    }
+
+    .resource-reporting .catalog-compact-list .maintenance-template-card .jobs-card-row:last-child {
+      padding-right: 0;
+      border-right: 0;
+    }
+
+    .maintenance-template-actions-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+      gap: 0.55rem;
+      margin-left: auto;
+      min-width: 150px;
+      overflow: visible;
+    }
+
+    .maintenance-actions-cluster {
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      gap: 0.8rem;
+    }
+
+    .maintenance-action-control {
+      display: grid;
+      justify-items: end;
+      gap: 0.2rem;
+    }
+
+    .maintenance-action-control--menu {
+      border-left: 1px solid #2f5a4a;
+      padding-left: 0.7rem;
+      margin-left: 0.15rem;
+    }
+
+    .maintenance-control-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      color: #B2C0B9;
+      text-align: right;
+      text-transform: uppercase;
+      line-height: 1.1;
+    }
+
+    .maintenance-toggle {
+      position: relative;
+      display: inline-block;
+      width: 42px;
+      height: 24px;
+    }
+
+    .maintenance-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .maintenance-toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #3a6553;
+      transition: 0.2s ease;
+      border-radius: 999px;
+      border: 1px solid #2f5a4a;
+    }
+
+    .maintenance-toggle-slider::before {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 3px;
+      top: 3px;
+      background-color: #f2f5f3;
+      transition: 0.2s ease;
+      border-radius: 50%;
+    }
+
+    .maintenance-toggle input:checked + .maintenance-toggle-slider {
+      background-color: #00a86b;
+      border-color: #00a86b;
+    }
+
+    .maintenance-toggle input:checked + .maintenance-toggle-slider::before {
+      transform: translateX(18px);
+    }
+
+    .maintenance-template-menu {
+      position: relative;
+      overflow: visible;
+    }
+
+    .maintenance-template-menu.is-open {
+      z-index: 60;
+    }
+
+    .maintenance-template-menu-button {
+      border: 1px solid #2f5a4a;
+      background: #253E33;
+      border-radius: 0;
+      min-width: 1.8rem;
+      min-height: 1.6rem;
+      padding: 0.1rem 0.35rem;
+      cursor: pointer;
+      font-size: 1.25rem;
+      color: #B2C0B9;
+      line-height: 1;
+    }
+
+    .maintenance-template-menu-button:hover {
+      background: #2d4b3f;
+      color: #F2F5F3;
+    }
+
+    .maintenance-template-menu-dropdown {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 0.3rem);
+      z-index: 80;
+      min-width: 130px;
+      display: grid;
+      gap: 0;
+      padding: 0;
+      border: 1px solid #2f5a4a;
+      background: #244236;
+    }
+
+    .maintenance-template-menu-dropdown[hidden] {
+      display: none !important;
+    }
+
+    .maintenance-template-menu-dropdown a,
+    .maintenance-template-menu-dropdown button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 0.5rem 0.55rem;
+      box-sizing: border-box;
+      border: 0;
+      background: #1D3329;
+      color: #F2F5F3;
+      text-decoration: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .maintenance-template-menu-dropdown a:hover,
+    .maintenance-template-menu-dropdown button:hover {
+      background: #284739;
+    }
+  </style>
+
+  <script>
+    (function () {
+      const activeSection = {{ active_section|tojson }};
+      if (activeSection !== "templates") {
+        return;
+      }
+
+      const listRoot = document.getElementById("maintenance-plan-templates-list");
+      const statusSelect = document.getElementById("maintenance-template-status");
+      const addPlanUrl = "/admin/price-book/maintenance-plans/new";
+      const initialTemplates = {{ (plan_templates or [])|tojson }};
+      const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+      const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute("content") : "";
+
+      function formatMoney(value) {
+        const amount = Number(value || 0);
+        return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount);
+      }
+
+      function buildBenefitsLine(template) {
+        const parts = [];
+        const repairDiscount = Number(template.repair_discount_pct || 0);
+        const partsCredit = Number(template.parts_credit || 0);
+
+        if (repairDiscount > 0) parts.push(`${repairDiscount % 1 === 0 ? repairDiscount.toFixed(0) : repairDiscount}% repair discount`);
+        if (template.diagnostic_fee_waived) parts.push("Waived diagnostics");
+        if (template.priority_scheduling) parts.push("Priority scheduling");
+        if (template.emergency_service) parts.push("After-hours service");
+        if (partsCredit > 0) parts.push(`$${formatMoney(partsCredit)} parts credit`);
+
+        return parts.length ? parts.join(" \u00b7 ") : "No included benefits";
+      }
+
+      function buildPricingLine(template) {
+        const annual = `$${formatMoney(template.price_annual || 0)}/yr`;
+        const monthlyValue = template.price_monthly;
+        if (monthlyValue === null || monthlyValue === undefined || monthlyValue === "") {
+          return annual;
+        }
+        return `$${formatMoney(monthlyValue)}/mo or ${annual}`;
+      }
+
+      function hasSoldPlans(template) {
+        const soldPlansCount = Number(template.sold_plans_count || 0);
+        return soldPlansCount > 0 || Boolean(template.has_sold_plans);
+      }
+
+      function sortedTemplates(templates) {
+        return [...templates].sort((a, b) => Number(a.tier_order || 0) - Number(b.tier_order || 0));
+      }
+
+      function buildCard(template, loopIndex) {
+        const id = template._id || template.id || "";
+        const tier = Number(template.tier_order || (loopIndex + 1));
+        const isActive = Boolean(template.is_active);
+        const deleteAllowed = !hasSoldPlans(template);
+
+        const card = document.createElement("article");
+        card.className = `jobs-card maintenance-template-card${isActive ? "" : " is-inactive"}`;
+        card.dataset.templateCard = "true";
+        card.dataset.templateId = String(id);
+        card.dataset.isActive = isActive ? "true" : "false";
+
+        card.innerHTML = `
+          <div class="jobs-card-row">
+            <span class="dispatch-pending-count">Tier ${tier}</span>
+          </div>
+          <div class="jobs-card-row">
+            <span class="jobs-card-value" style="font-size: 1.1rem; font-weight: 700;">${template.name || "Untitled Plan"}</span>
+          </div>
+          <div class="jobs-card-row">
+            <span class="jobs-card-label">Visits</span>
+            <span class="jobs-card-value">${Number(template.visits_per_year || 0)} visits per year</span>
+          </div>
+          <div class="jobs-card-row">
+            <span class="jobs-card-label">Benefits</span>
+            <span class="jobs-card-value">${buildBenefitsLine(template)}</span>
+          </div>
+          <div class="jobs-card-row">
+            <span class="jobs-card-label">Pricing</span>
+            <span class="jobs-card-value">${buildPricingLine(template)}</span>
+          </div>
+          <div class="jobs-card-row maintenance-template-actions-row">
+            <div class="maintenance-actions-cluster">
+              <div class="maintenance-action-control maintenance-action-control--status">
+                <span class="maintenance-control-label">Status</span>
+                <label class="maintenance-toggle" aria-label="Toggle plan template active status">
+                  <input type="checkbox" class="maintenance-template-status-toggle" ${isActive ? "checked" : ""}>
+                  <span class="maintenance-toggle-slider"></span>
+                </label>
+              </div>
+              <div class="maintenance-action-control maintenance-action-control--menu">
+                <span class="maintenance-control-label">Actions</span>
+                <div class="maintenance-template-menu">
+                  <button type="button" class="maintenance-template-menu-button" aria-label="Open plan template actions" aria-expanded="false" aria-haspopup="true">...</button>
+                  <div class="maintenance-template-menu-dropdown" hidden>
+                    <a href="/admin/price-book/maintenance-plans/${id}/edit">Edit</a>
+                    <button type="button" class="maintenance-template-duplicate-button">Duplicate</button>
+                    ${deleteAllowed ? '<button type="button" class="maintenance-template-delete-button">Delete</button>' : ""}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        return card;
+      }
+
+      function renderEmptyState(filterValue) {
+        const emptyState = document.createElement("div");
+        emptyState.id = "maintenance-empty-state";
+        emptyState.className = "reporting-card";
+
+        if (filterValue && filterValue !== "all") {
+          emptyState.innerHTML = `
+            <p>No templates match the current filter.</p>
+            <p><a href="#" id="maintenance-clear-filter-link">Clear filter</a></p>
+          `;
+        } else {
+          emptyState.innerHTML = `
+            <p>No maintenance plan templates yet. Create your first plan to start selling recurring service agreements.</p>
+            <p><a href="${addPlanUrl}">Add Plan Template</a></p>
+          `;
+        }
+
+        listRoot.appendChild(emptyState);
+      }
+
+      function renderTemplates(templates, filterValue) {
+        if (!listRoot) {
+          return;
+        }
+
+        listRoot.innerHTML = "";
+        const sorted = sortedTemplates(templates || []);
+
+        if (!sorted.length) {
+          renderEmptyState(filterValue || "all");
+          wireClearFilterLink();
+          return;
+        }
+
+        sorted.forEach((template, index) => {
+          listRoot.appendChild(buildCard(template, index));
+        });
+
+        wireCardActions();
+      }
+
+      async function fetchTemplates(statusValue) {
+        const status = statusValue || "all";
+        const response = await fetch(`/api/maintenance-plan-templates?status=${encodeURIComponent(status)}`, {
+          headers: { "Accept": "application/json" }
+        });
+        if (!response.ok) {
+          throw new Error("Failed to load templates");
+        }
+        const payload = await response.json();
+        return Array.isArray(payload.templates) ? payload.templates : [];
+      }
+
+      async function refreshList() {
+        const status = statusSelect ? statusSelect.value : "all";
+        try {
+          const templates = await fetchTemplates(status);
+          renderTemplates(templates, status);
+        } catch (error) {
+          renderTemplates([], status);
+        }
+      }
+
+      function closeAllMenus() {
+        listRoot.querySelectorAll(".maintenance-template-menu-dropdown").forEach((menu) => {
+          menu.hidden = true;
+        });
+        listRoot.querySelectorAll(".maintenance-template-menu-button").forEach((button) => {
+          button.setAttribute("aria-expanded", "false");
+        });
+        listRoot.querySelectorAll(".maintenance-template-menu").forEach((menuWrap) => {
+          menuWrap.classList.remove("is-open");
+        });
+      }
+
+      function wireClearFilterLink() {
+        const clearLink = document.getElementById("maintenance-clear-filter-link");
+        if (!clearLink || !statusSelect) {
+          return;
+        }
+        clearLink.addEventListener("click", function (event) {
+          event.preventDefault();
+          statusSelect.value = "all";
+          refreshList();
+        });
+      }
+
+      function wireCardActions() {
+        listRoot.querySelectorAll(".maintenance-template-menu-button").forEach((button) => {
+          button.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const dropdown = button.parentElement.querySelector(".maintenance-template-menu-dropdown");
+            const menuWrap = button.closest(".maintenance-template-menu");
+            const isOpening = dropdown.hidden;
+            closeAllMenus();
+            dropdown.hidden = !isOpening;
+            button.setAttribute("aria-expanded", isOpening ? "true" : "false");
+            if (menuWrap && isOpening) {
+              menuWrap.classList.add("is-open");
+            }
+          });
+        });
+
+        listRoot.querySelectorAll(".maintenance-template-status-toggle").forEach((toggle) => {
+          toggle.addEventListener("change", async function () {
+            const card = toggle.closest("[data-template-card]");
+            const templateId = card.dataset.templateId;
+            const previousChecked = !toggle.checked;
+
+            card.classList.toggle("is-inactive", !toggle.checked);
+            card.dataset.isActive = toggle.checked ? "true" : "false";
+
+            try {
+              const response = await fetch(`/api/maintenance-plan-templates/${encodeURIComponent(templateId)}/status`, {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Accept": "application/json",
+                  "X-CSRFToken": csrfToken
+                },
+                body: JSON.stringify({ is_active: toggle.checked })
+              });
+
+              if (!response.ok) {
+                throw new Error("Status update failed");
+              }
+
+            } catch (error) {
+              toggle.checked = previousChecked;
+              card.classList.toggle("is-inactive", !previousChecked);
+              card.dataset.isActive = previousChecked ? "true" : "false";
+            }
+          });
+        });
+
+        listRoot.querySelectorAll(".maintenance-template-duplicate-button").forEach((button) => {
+          button.addEventListener("click", async function () {
+            const card = button.closest("[data-template-card]");
+            const templateId = card.dataset.templateId;
+            closeAllMenus();
+
+            try {
+              const response = await fetch(`/api/maintenance-plan-templates/${encodeURIComponent(templateId)}/duplicate`, {
+                method: "POST",
+                headers: {
+                  "Accept": "application/json",
+                  "X-CSRFToken": csrfToken
+                }
+              });
+              if (!response.ok) {
+                throw new Error("Duplicate failed");
+              }
+              refreshList();
+            } catch (error) {
+              // Keep current list state on failure.
+            }
+          });
+        });
+
+        listRoot.querySelectorAll(".maintenance-template-delete-button").forEach((button) => {
+          button.addEventListener("click", async function () {
+            const card = button.closest("[data-template-card]");
+            const templateId = card.dataset.templateId;
+            closeAllMenus();
+
+            const confirmed = window.confirm("Delete this maintenance plan template?");
+            if (!confirmed) {
+              return;
+            }
+
+            try {
+              const response = await fetch(`/api/maintenance-plan-templates/${encodeURIComponent(templateId)}`, {
+                method: "DELETE",
+                headers: {
+                  "Accept": "application/json",
+                  "X-CSRFToken": csrfToken
+                }
+              });
+              if (!response.ok) {
+                throw new Error("Delete failed");
+              }
+
+              card.remove();
+              if (!listRoot.querySelector("[data-template-card]")) {
+                renderEmptyState(statusSelect ? statusSelect.value : "all");
+                wireClearFilterLink();
+              }
+            } catch (error) {
+              // Keep current list state on failure.
+            }
+          });
+        });
+      }
+
+      document.addEventListener("click", function (event) {
+        if (!event.target.closest(".maintenance-template-menu")) {
+          closeAllMenus();
+        }
+      });
+
+      if (statusSelect) {
+        statusSelect.addEventListener("change", refreshList);
+      }
+
+      renderTemplates(initialTemplates, statusSelect ? statusSelect.value : "all");
+    })();
+  </script>
+{% endblock %}

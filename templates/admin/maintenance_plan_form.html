@@ -1,0 +1,1066 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == 'edit' %}Edit{% else %}Create{% endif %} Maintenance Plan Template | Klovent{% endblock %}
+
+{% block content %}
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div id="manage-jobs-header" class="resource-page resource-admin resource-reporting">
+          <nav id="breadcrumb" aria-label="Breadcrumb">
+            <ol>
+              <li><a href="{{ url_for('admin_bp.admin') }}">Admin</a></li>
+              <li><a href="{{ url_for('catalog.manage_price_book') }}">Manage Price Book</a></li>
+              <li><a href="{{ url_for('admin_bp.maintenance_plans') }}">Maintenance Plan Templates</a></li>
+              <li aria-current="page">{% if mode == 'edit' %}Edit Template{% else %}Create Template{% endif %}</li>
+            </ol>
+          </nav>
+
+          <div id="jobs-controls-row">
+            <div class="jobs-controls-left">
+              <aside class="reporting-sidebar" aria-label="Maintenance plan views">
+                <h3>Views</h3>
+                <div class="reporting-nav-stack">
+                  <a class="reporting-nav-link is-active" href="{{ url_for('admin_bp.maintenance_plans', section='templates') }}">
+                    <span>Plan Templates</span>
+                    <small>{{ templates_count }}</small>
+                  </a>
+                  <a class="reporting-nav-link" href="{{ url_for('admin_bp.maintenance_plans', section='active') }}">
+                    <span>Active Plans</span>
+                    <small>{{ active_plans_count }}</small>
+                  </a>
+                  <a class="reporting-nav-link" href="{{ url_for('admin_bp.maintenance_plans', section='renewals') }}">
+                    <span>Renewal Queue</span>
+                    <small>{{ renewal_count }}</small>
+                  </a>
+                </div>
+              </aside>
+            </div>
+
+            <div class="jobs-controls-right">
+              <div class="jobs-controls-right-top">
+                <h2>{% if mode == 'edit' %}Edit Plan Template{% else %}Create Plan Template{% endif %}</h2>
+              </div>
+
+              <div class="jobs-controls-right-bottom maintenance-form-shell">
+                {% if mode == 'edit' and (active_plan_count or 0) > 0 %}
+                  <div class="maintenance-warning-banner" role="alert">
+                    {{ active_plan_count }} customers are currently on this plan. Changes you make here apply to new sales only. Existing customers keep their original terms.
+                  </div>
+                {% endif %}
+
+                <form id="maintenance-template-form" method="POST" novalidate>
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  {% set model = template or {} %}
+
+                  <section class="maintenance-form-section" id="section-basic">
+                    <h3>Section A - Basic Information</h3>
+
+                    <label for="plan-name">Plan name</label>
+                    <input id="plan-name" name="name" type="text" required minlength="2" maxlength="50" value="{{ model.get('name', '') }}" />
+                    <p class="maintenance-field-hint">Examples: Good Plan, Better Plan, Best Plan.</p>
+                    <p class="maintenance-inline-error" data-error-for="name">{{ (form_errors or {}).get('name', '') }}</p>
+
+                    <label for="tier-order">Tier order</label>
+                    <input id="tier-order" name="tier_order" type="number" required min="1" max="10" value="{{ model.get('tier_order', '') }}" />
+                    <p class="maintenance-field-hint">1 = entry tier (Good). Controls display order.</p>
+                    <p class="maintenance-inline-error" data-error-for="tier_order">{{ (form_errors or {}).get('tier_order', '') }}</p>
+
+                    <label for="plan-description">Description</label>
+                    <textarea id="plan-description" name="description" required minlength="10" maxlength="500" rows="4">{{ model.get('description', '') }}</textarea>
+                    <p class="maintenance-field-hint"><span id="description-counter">0</span>/500 characters</p>
+                    <p class="maintenance-inline-error" data-error-for="description">{{ (form_errors or {}).get('description', '') }}</p>
+                  </section>
+
+                  <hr />
+
+                  <section class="maintenance-form-section" id="section-schedule">
+                    <h3>Section B - Visit Schedule</h3>
+
+                    <label for="visits-per-year">Visits per year</label>
+                    <input id="visits-per-year" name="visits_per_year" type="number" required min="1" max="3" value="{{ model.get('visits_per_year', 1) }}" />
+                    <p class="maintenance-inline-error" data-error-for="visits_per_year">{{ (form_errors or {}).get('visits_per_year', '') }}</p>
+
+                    <label>Visit seasons</label>
+                    <div id="visit-seasons-slots" class="maintenance-season-slots" data-initial-seasons='{{ (model.get("visit_seasons") or [])|tojson }}'></div>
+                    <p class="maintenance-field-hint">Select exactly one season value per visit slot.</p>
+                    <p class="maintenance-inline-error" data-error-for="visit_seasons">{{ (form_errors or {}).get('visit_seasons', '') }}</p>
+                  </section>
+
+                  <hr />
+
+                  <section class="maintenance-form-section" id="section-pricing">
+                    <h3>Section C - Pricing</h3>
+
+                    <label for="price-annual">Annual price</label>
+                    <input id="price-annual" name="price_annual" type="number" step="0.01" min="0.01" required value="{{ model.get('price_annual', '') }}" />
+                    <p class="maintenance-field-hint">Monthly equivalent: <span id="annual-to-monthly">$0/mo</span></p>
+                    <p class="maintenance-inline-error" data-error-for="price_annual">{{ (form_errors or {}).get('price_annual', '') }}</p>
+
+                    <label for="price-monthly">Monthly price</label>
+                    <input id="price-monthly" name="price_monthly" type="number" step="0.01" min="0" placeholder="Leave blank to offer annual billing only" value="{{ model.get('price_monthly', '') if model.get('price_monthly') is not none else '' }}" />
+                    <p class="maintenance-field-hint">Annual equivalent: <span id="monthly-to-annual">$0/yr</span></p>
+                    <p class="maintenance-inline-error" data-error-for="price_monthly">{{ (form_errors or {}).get('price_monthly', '') }}</p>
+                  </section>
+
+                  <hr />
+
+                  <section class="maintenance-form-section" id="section-benefits">
+                    <h3>Section D - Benefits</h3>
+
+                    <label for="repair-discount-pct">% discount applied to plan holder jobs</label>
+                    <input id="repair-discount-pct" name="repair_discount_pct" type="number" min="0" max="50" step="0.01" value="{{ model.get('repair_discount_pct', 0) }}" />
+                    <p class="maintenance-inline-error" data-error-for="repair_discount_pct">{{ (form_errors or {}).get('repair_discount_pct', '') }}</p>
+
+                    {% set selected_service_types = model.get('discount_service_types') or [] %}
+                    {% set selected_line_item_types = model.get('discount_line_item_types') or [] %}
+                    <div id="discount-applicability-groups" class="maintenance-discount-applicability" data-has-discount="{{ 1 if (model.get('repair_discount_pct') or 0)|float > 0 else 0 }}">
+                      <fieldset class="maintenance-checkbox-group">
+                        <legend>Applies to these service types:</legend>
+                        <label class="maintenance-checkbox-option" for="discount-service-repairs">
+                          <input
+                            id="discount-service-repairs"
+                            type="checkbox"
+                            name="discount_service_types[]"
+                            value="repairs"
+                            {% if ('repairs' in selected_service_types) or (not selected_service_types) %}checked{% endif %}
+                          />
+                          <span>Repairs</span>
+                        </label>
+                        <label class="maintenance-checkbox-option" for="discount-service-diagnostics">
+                          <input
+                            id="discount-service-diagnostics"
+                            type="checkbox"
+                            name="discount_service_types[]"
+                            value="diagnostics"
+                            {% if 'diagnostics' in selected_service_types %}checked{% endif %}
+                          />
+                          <span>Diagnostics</span>
+                        </label>
+                        <label class="maintenance-checkbox-option" for="discount-service-installation">
+                          <input
+                            id="discount-service-installation"
+                            type="checkbox"
+                            name="discount_service_types[]"
+                            value="installation"
+                            {% if 'installation' in selected_service_types %}checked{% endif %}
+                          />
+                          <span>Installation</span>
+                        </label>
+                      </fieldset>
+
+                      <fieldset class="maintenance-checkbox-group">
+                        <legend>Applies to these line item types:</legend>
+                        <label class="maintenance-checkbox-option" for="discount-line-parts">
+                          <input
+                            id="discount-line-parts"
+                            type="checkbox"
+                            name="discount_line_item_types[]"
+                            value="parts"
+                            {% if ('parts' in selected_line_item_types) or (not selected_line_item_types) %}checked{% endif %}
+                          />
+                          <span>Parts</span>
+                        </label>
+                        <label class="maintenance-checkbox-option" for="discount-line-materials">
+                          <input
+                            id="discount-line-materials"
+                            type="checkbox"
+                            name="discount_line_item_types[]"
+                            value="materials"
+                            {% if 'materials' in selected_line_item_types %}checked{% endif %}
+                          />
+                          <span>Materials</span>
+                        </label>
+                        <label class="maintenance-checkbox-option" for="discount-line-equipment">
+                          <input
+                            id="discount-line-equipment"
+                            type="checkbox"
+                            name="discount_line_item_types[]"
+                            value="equipment"
+                            {% if 'equipment' in selected_line_item_types %}checked{% endif %}
+                          />
+                          <span>Equipment</span>
+                        </label>
+                      </fieldset>
+                    </div>
+
+                    <label class="maintenance-toggle-row" for="diagnostic-fee-waived">
+                      <span>Diagnostic fee waived</span>
+                      <span class="maintenance-toggle-wrap">
+                        <input id="diagnostic-fee-waived" name="diagnostic_fee_waived" type="checkbox" {% if model.get('diagnostic_fee_waived') %}checked{% endif %} />
+                        <span>Waive the diagnostic / trip charge on service calls</span>
+                      </span>
+                    </label>
+
+                    <label class="maintenance-toggle-row" for="priority-scheduling">
+                      <span>Priority scheduling</span>
+                      <span class="maintenance-toggle-wrap">
+                        <input id="priority-scheduling" name="priority_scheduling" type="checkbox" {% if model.get('priority_scheduling') %}checked{% endif %} />
+                        <span>Flag plan visit jobs as priority on the dispatch board</span>
+                      </span>
+                    </label>
+
+                    <label class="maintenance-toggle-row" for="emergency-service">
+                      <span>Emergency / after-hours service</span>
+                      <span class="maintenance-toggle-wrap">
+                        <input id="emergency-service" name="emergency_service" type="checkbox" {% if model.get('emergency_service') %}checked{% endif %} />
+                        <span>Plan includes after-hours emergency service</span>
+                      </span>
+                    </label>
+
+                    <div id="custom-benefits-group">
+                      <label>Custom benefits</label>
+                      <div id="custom-benefits-list" data-initial-benefits='{{ (model.get("custom_benefits") or [""])|tojson }}'></div>
+                      <p><a href="#" id="add-custom-benefit-link">+ Add benefit</a></p>
+                      <p class="maintenance-field-hint">Max 10 benefits. Each up to 100 characters.</p>
+                    </div>
+                  </section>
+
+                  <div class="maintenance-form-footer">
+                    <button type="submit" class="maintenance-save-button">Save Template</button>
+                    <a href="{{ url_for('admin_bp.maintenance_plans') }}" id="maintenance-cancel-link" class="maintenance-cancel-button">Cancel</a>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <style>
+    .resource-reporting {
+      --maintenance-panel: #1d3329;
+      --maintenance-panel-soft: #253e33;
+      --maintenance-panel-elevated: #2b473b;
+      --maintenance-border: #2f5a4a;
+      --maintenance-border-strong: #3a6553;
+      --maintenance-text: #f2f5f3;
+      --maintenance-text-muted: #b2c0b9;
+      --maintenance-text-subtle: #8c9a93;
+      --maintenance-accent: #00a86b;
+      --maintenance-accent-soft: #244236;
+      --maintenance-danger: #fda29b;
+      --maintenance-danger-soft: #4d1f1f;
+      --maintenance-warning-bg: #3b2d1b;
+      --maintenance-warning-border: #7a5a2a;
+      --maintenance-warning-text: #f9ddb2;
+    }
+
+    .maintenance-form-shell {
+      max-height: calc(100vh - 220px);
+      overflow: auto;
+      padding-right: 0.5rem;
+      padding-left: 0.5rem;
+      background: var(--maintenance-panel);
+      border: 1px solid var(--maintenance-border);
+    }
+
+    .maintenance-warning-banner {
+      border: 1px solid var(--maintenance-warning-border);
+      background: var(--maintenance-warning-bg);
+      color: var(--maintenance-warning-text);
+      border-radius: 8px;
+      padding: 0.75rem 0.9rem;
+      margin-bottom: 1rem;
+      font-weight: 600;
+    }
+
+    .maintenance-form-section {
+      display: grid;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .maintenance-form-section h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1rem;
+    }
+
+    .maintenance-form-section label {
+      font-weight: 600;
+      color: var(--maintenance-text);
+      margin-top: 0.25rem;
+    }
+
+    .maintenance-form-section input,
+    .maintenance-form-section textarea,
+    .maintenance-form-section select {
+      width: 100%;
+      border: 1px solid var(--maintenance-border-strong);
+      border-radius: 6px;
+      padding: 0.55rem 0.65rem;
+      background: var(--maintenance-panel-soft);
+      color: var(--maintenance-text);
+      font: inherit;
+      box-sizing: border-box;
+    }
+
+    .maintenance-form-section input::placeholder,
+    .maintenance-form-section textarea::placeholder {
+      color: var(--maintenance-text-subtle);
+    }
+
+    .maintenance-form-section input:focus,
+    .maintenance-form-section textarea:focus,
+    .maintenance-form-section select:focus {
+      border-color: var(--maintenance-accent);
+      outline: 2px solid rgba(0, 168, 107, 0.26);
+      outline-offset: 0;
+    }
+
+    .maintenance-field-hint {
+      margin: 0;
+      color: var(--maintenance-text-muted);
+      font-size: 0.86rem;
+    }
+
+    .maintenance-inline-error {
+      min-height: 1rem;
+      margin: 0;
+      color: var(--maintenance-danger);
+      font-size: 0.84rem;
+    }
+
+    .maintenance-season-slots {
+      display: grid;
+      gap: 0.65rem;
+      margin-top: 0.2rem;
+    }
+
+    .maintenance-season-slot {
+      border: 1px solid var(--maintenance-border);
+      border-radius: 8px;
+      padding: 0.65rem;
+      background: var(--maintenance-panel-elevated);
+    }
+
+    .maintenance-season-slot h4 {
+      margin: 0 0 0.45rem 0;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--maintenance-text);
+    }
+
+    .maintenance-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .maintenance-chip-label {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--maintenance-border-strong);
+      border-radius: 999px;
+      background: var(--maintenance-panel-soft);
+      color: var(--maintenance-text-muted);
+      font-size: 0.83rem;
+      font-weight: 600;
+      padding: 0.35rem 0.7rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .maintenance-chip-label input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .maintenance-chip-label.is-selected {
+      border-color: var(--maintenance-accent);
+      background: var(--maintenance-accent-soft);
+      color: var(--maintenance-text);
+    }
+
+    .maintenance-custom-window {
+      margin-top: 0.55rem;
+      display: grid;
+      gap: 0.45rem;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .maintenance-slot-service-wrap {
+      margin-top: 0.65rem;
+      display: grid;
+      gap: 0.3rem;
+    }
+
+    .maintenance-slot-service-wrap > label {
+      margin: 0;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--maintenance-text);
+    }
+
+    .maintenance-custom-window label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--maintenance-text-muted);
+      margin: 0;
+    }
+
+    .maintenance-custom-window input {
+      margin-top: 0.2rem;
+    }
+
+    .maintenance-toggle-row {
+      display: grid;
+      gap: 0.45rem;
+      margin-top: 0.3rem;
+    }
+
+    .maintenance-toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      font-weight: 500;
+      color: var(--maintenance-text-muted);
+    }
+
+    .maintenance-toggle-wrap input[type="checkbox"] {
+      width: auto;
+      transform: scale(1.1);
+      margin: 0;
+    }
+
+    .maintenance-discount-applicability {
+      display: none;
+      gap: 0.75rem;
+      padding: 0.65rem;
+      border: 1px solid var(--maintenance-border);
+      border-radius: 8px;
+      background: rgba(43, 71, 59, 0.55);
+      margin-top: 0.3rem;
+    }
+
+    .maintenance-discount-applicability.is-visible {
+      display: grid;
+    }
+
+    .maintenance-checkbox-group {
+      border: 0;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .maintenance-checkbox-group legend {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--maintenance-text);
+      margin-bottom: 0.15rem;
+      padding: 0;
+    }
+
+    .maintenance-checkbox-option {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--maintenance-text-muted);
+      margin: 0;
+    }
+
+    .maintenance-checkbox-option input[type="checkbox"] {
+      width: auto;
+      transform: scale(1.05);
+      margin: 0;
+    }
+
+    #custom-benefits-list {
+      display: grid;
+      gap: 0.5rem;
+      margin-top: 0.35rem;
+    }
+
+    .maintenance-benefit-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 0.45rem;
+      align-items: center;
+    }
+
+    .maintenance-benefit-remove {
+      border: 1px solid var(--maintenance-border-strong);
+      background: var(--maintenance-panel-soft);
+      color: var(--maintenance-text-muted);
+      border-radius: 6px;
+      width: 34px;
+      height: 34px;
+      line-height: 1;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    .maintenance-benefit-remove:hover {
+      background: var(--maintenance-panel-elevated);
+      color: var(--maintenance-text);
+    }
+
+    .maintenance-form-footer {
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
+      display: flex;
+      gap: 0.7rem;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0.75rem 0;
+      margin-top: 1rem;
+      background: linear-gradient(180deg, rgba(29, 51, 41, 0), rgba(29, 51, 41, 0.96) 35%);
+      border-top: 1px solid var(--maintenance-border);
+    }
+
+    .maintenance-save-button,
+    .maintenance-cancel-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 132px;
+      padding: 0.56rem 0.96rem;
+      border-radius: 6px;
+      border: 1px solid var(--maintenance-border-strong);
+      font-size: 0.92rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    }
+
+    .maintenance-save-button {
+      border-color: var(--maintenance-accent);
+      background: var(--maintenance-accent);
+      color: #0f1b16;
+    }
+
+    .maintenance-save-button:hover {
+      background: #00bc77;
+      border-color: #00bc77;
+    }
+
+    .maintenance-cancel-button {
+      background: var(--maintenance-panel-soft);
+      color: var(--maintenance-text);
+    }
+
+    .maintenance-cancel-button:hover {
+      background: var(--maintenance-panel-elevated);
+      border-color: var(--maintenance-border-strong);
+    }
+
+    .maintenance-form-section h3,
+    #description-counter,
+    #annual-to-monthly,
+    #monthly-to-annual,
+    #add-custom-benefit-link {
+      color: var(--maintenance-text);
+    }
+
+    .maintenance-form-section hr,
+    .maintenance-form-section + hr {
+      border-color: var(--maintenance-border);
+      opacity: 0.65;
+    }
+
+    #add-custom-benefit-link {
+      text-decoration-color: var(--maintenance-accent);
+      text-underline-offset: 3px;
+    }
+
+    #add-custom-benefit-link:hover {
+      color: #a6f4d0;
+    }
+
+    @media (max-width: 900px) {
+      .maintenance-form-shell {
+        max-height: none;
+      }
+
+      .maintenance-form-footer {
+        position: static;
+        justify-content: stretch;
+      }
+
+      .maintenance-save-button,
+      .maintenance-cancel-button {
+        flex: 1;
+      }
+
+      .maintenance-custom-window {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <script>
+    (function () {
+      const form = document.getElementById("maintenance-template-form");
+      if (!form) {
+        return;
+      }
+
+      const mode = {{ mode|tojson }};
+      const visitsInput = document.getElementById("visits-per-year");
+      const visitSlotsRoot = document.getElementById("visit-seasons-slots");
+      const descriptionInput = document.getElementById("plan-description");
+      const descriptionCounter = document.getElementById("description-counter");
+      const annualInput = document.getElementById("price-annual");
+      const monthlyInput = document.getElementById("price-monthly");
+      const repairDiscountInput = document.getElementById("repair-discount-pct");
+      const discountApplicabilityGroups = document.getElementById("discount-applicability-groups");
+      const annualToMonthly = document.getElementById("annual-to-monthly");
+      const monthlyToAnnual = document.getElementById("monthly-to-annual");
+      const benefitsList = document.getElementById("custom-benefits-list");
+      const addBenefitLink = document.getElementById("add-custom-benefit-link");
+      const cancelLink = document.getElementById("maintenance-cancel-link");
+
+      const SEASON_OPTIONS = ["Spring", "Summer", "Fall", "Winter", "Custom"];
+      const serviceOptions = {{ services|tojson }};
+      const initialSeasonEntries = JSON.parse(visitSlotsRoot.dataset.initialSeasons || "[]");
+      const slotState = {};
+
+      (initialSeasonEntries || []).forEach((entry, index) => {
+        const slotNumber = index + 1;
+        if (entry && typeof entry === "object") {
+          slotState[slotNumber] = {
+            season: SEASON_OPTIONS.includes(String(entry.season || "").trim())
+              ? String(entry.season || "").trim()
+              : "",
+            service_id: String(entry.service_id || "").trim(),
+            service_name: String(entry.service_name || "").trim(),
+            start_date: String(entry.start_date || "").trim(),
+            end_date: String(entry.end_date || "").trim(),
+          };
+        } else {
+          const seasonValue = String(entry || "").trim();
+          slotState[slotNumber] = {
+            season: SEASON_OPTIONS.includes(seasonValue) ? seasonValue : "",
+            service_id: "",
+            service_name: "",
+            start_date: "",
+            end_date: "",
+          };
+        }
+      });
+
+      function toMoney(value) {
+        const amount = Number(value || 0);
+        return `$${amount.toFixed(2)}`;
+      }
+
+      function updateDescriptionCounter() {
+        descriptionCounter.textContent = String((descriptionInput.value || "").length);
+      }
+
+      function updatePriceHelpers() {
+        const annual = Number(annualInput.value || 0);
+        const monthly = Number(monthlyInput.value || 0);
+
+        annualToMonthly.textContent = `${toMoney(annual > 0 ? annual / 12 : 0)}/mo`;
+        monthlyToAnnual.textContent = `${toMoney(monthly > 0 ? monthly * 12 : 0)}/yr`;
+      }
+
+      function buildSeasonChip(slotNumber, selectedValue) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "maintenance-chip-row";
+
+        SEASON_OPTIONS.forEach((optionValue) => {
+          const label = document.createElement("label");
+          label.className = `maintenance-chip-label${selectedValue === optionValue ? " is-selected" : ""}`;
+
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = `visit_season_slot_${slotNumber}`;
+          input.value = optionValue;
+          input.checked = selectedValue === optionValue;
+          input.dataset.slotNumber = String(slotNumber);
+          input.dataset.optionValue = optionValue;
+
+          input.addEventListener("change", function () {
+            if (!slotState[slotNumber]) {
+              slotState[slotNumber] = {
+                season: "",
+                service_id: "",
+                service_name: "",
+                start_date: "",
+                end_date: "",
+              };
+            }
+            slotState[slotNumber].season = optionValue;
+            if (optionValue !== "Custom") {
+              slotState[slotNumber].start_date = "";
+              slotState[slotNumber].end_date = "";
+            }
+            const slot = input.closest(".maintenance-season-slot");
+            slot.querySelectorAll(".maintenance-chip-label").forEach((chipLabel) => {
+              chipLabel.classList.remove("is-selected");
+            });
+            label.classList.add("is-selected");
+            renderSeasonSlots();
+          });
+
+          label.appendChild(input);
+          label.appendChild(document.createTextNode(optionValue));
+          wrapper.appendChild(label);
+        });
+
+        return wrapper;
+      }
+
+      function ensureSlotState(slotNumber) {
+        if (!slotState[slotNumber]) {
+          slotState[slotNumber] = {
+            season: "",
+            service_id: "",
+            service_name: "",
+            start_date: "",
+            end_date: "",
+          };
+        }
+        return slotState[slotNumber];
+      }
+
+      function resolveSelectedSeason(slotNumber) {
+        const state = ensureSlotState(slotNumber);
+        if (SEASON_OPTIONS.includes(state.season)) {
+          return state.season;
+        }
+        return "";
+      }
+
+      function renderSeasonSlots() {
+        const visitsCount = Math.max(1, Math.min(3, Number(visitsInput.value || 1)));
+        visitSlotsRoot.innerHTML = "";
+
+        for (let i = 1; i <= visitsCount; i += 1) {
+          const currentState = ensureSlotState(i);
+          const selectedSeason = resolveSelectedSeason(i);
+          currentState.season = selectedSeason;
+          const slot = document.createElement("div");
+          slot.className = "maintenance-season-slot";
+
+          const heading = document.createElement("h4");
+          heading.textContent = `Visit ${i}`;
+          slot.appendChild(heading);
+
+          slot.appendChild(buildSeasonChip(i, selectedSeason));
+
+          const hiddenSeason = document.createElement("input");
+          hiddenSeason.type = "hidden";
+          hiddenSeason.name = "visit_slot_season[]";
+          hiddenSeason.value = selectedSeason;
+          slot.appendChild(hiddenSeason);
+
+          const serviceWrap = document.createElement("div");
+          serviceWrap.className = "maintenance-slot-service-wrap";
+          const serviceLabel = document.createElement("label");
+          serviceLabel.setAttribute("for", `visit-slot-service-${i}`);
+          serviceLabel.textContent = "Service for this visit";
+          serviceWrap.appendChild(serviceLabel);
+
+          const serviceSelect = document.createElement("select");
+          serviceSelect.id = `visit-slot-service-${i}`;
+          serviceSelect.name = "visit_slot_service_id[]";
+          serviceSelect.required = true;
+
+          const emptyOption = document.createElement("option");
+          emptyOption.value = "";
+          emptyOption.textContent = "Select a service";
+          serviceSelect.appendChild(emptyOption);
+
+          (serviceOptions || []).forEach((service) => {
+            const option = document.createElement("option");
+            option.value = String(service._id || "").trim();
+            option.textContent = String(service.service_name || "").trim();
+            option.selected = option.value === String(currentState.service_id || "").trim();
+            serviceSelect.appendChild(option);
+          });
+
+          if (!currentState.service_name && currentState.service_id) {
+            const seededOption = Array.from(serviceSelect.options).find(
+              (option) => option.value === String(currentState.service_id || "").trim(),
+            );
+            currentState.service_name = seededOption
+              ? String(seededOption.textContent || "").trim()
+              : "";
+          }
+
+          serviceSelect.addEventListener("change", function () {
+            const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+            currentState.service_id = String(serviceSelect.value || "").trim();
+            currentState.service_name =
+              selectedOption && selectedOption.value
+                ? String(selectedOption.textContent || "").trim()
+                : "";
+            hiddenServiceName.value = currentState.service_name;
+          });
+
+          serviceWrap.appendChild(serviceSelect);
+
+          const hiddenServiceName = document.createElement("input");
+          hiddenServiceName.type = "hidden";
+          hiddenServiceName.name = "visit_slot_service_name[]";
+          hiddenServiceName.value = String(currentState.service_name || "").trim();
+          serviceWrap.appendChild(hiddenServiceName);
+          slot.appendChild(serviceWrap);
+
+          const shouldShowWindow = selectedSeason === "Custom";
+          const windowWrap = document.createElement("div");
+          windowWrap.className = "maintenance-custom-window";
+          windowWrap.style.display = shouldShowWindow ? "grid" : "none";
+
+          const startWrap = document.createElement("label");
+          startWrap.textContent = "Start date";
+          const startInput = document.createElement("input");
+          startInput.type = "date";
+          startInput.name = "visit_window_start[]";
+          startInput.value = shouldShowWindow ? String(currentState.start_date || "") : "";
+          startInput.addEventListener("input", function () {
+            currentState.start_date = String(startInput.value || "");
+          });
+          startWrap.appendChild(startInput);
+
+          const endWrap = document.createElement("label");
+          endWrap.textContent = "End date";
+          const endInput = document.createElement("input");
+          endInput.type = "date";
+          endInput.name = "visit_window_end[]";
+          endInput.value = shouldShowWindow ? String(currentState.end_date || "") : "";
+          endInput.addEventListener("input", function () {
+            currentState.end_date = String(endInput.value || "");
+          });
+          endWrap.appendChild(endInput);
+
+          windowWrap.appendChild(startWrap);
+          windowWrap.appendChild(endWrap);
+          slot.appendChild(windowWrap);
+
+          visitSlotsRoot.appendChild(slot);
+        }
+      }
+
+      function createBenefitRow(value) {
+        const row = document.createElement("div");
+        row.className = "maintenance-benefit-row";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.name = "custom_benefits[]";
+        input.maxLength = 100;
+        input.placeholder = 'e.g. "Free filter with each visit"';
+        input.value = value || "";
+
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "maintenance-benefit-remove";
+        removeButton.setAttribute("aria-label", "Remove benefit");
+        removeButton.innerHTML = "&#128465;";
+        removeButton.addEventListener("click", function () {
+          row.remove();
+          if (!benefitsList.querySelector(".maintenance-benefit-row")) {
+            benefitsList.appendChild(createBenefitRow(""));
+          }
+        });
+
+        row.appendChild(input);
+        row.appendChild(removeButton);
+        return row;
+      }
+
+      function renderBenefits(initialValues) {
+        benefitsList.innerHTML = "";
+        const rows = (initialValues || []).slice(0, 10);
+        if (!rows.length) {
+          rows.push("");
+        }
+
+        rows.forEach((value) => {
+          benefitsList.appendChild(createBenefitRow(value));
+        });
+      }
+
+      function syncDiscountApplicabilityVisibility() {
+        const discountValue = Number(repairDiscountInput.value || 0);
+        const isVisible = discountValue > 0;
+        const checkboxInputs = Array.from(discountApplicabilityGroups.querySelectorAll('input[type="checkbox"]'));
+
+        discountApplicabilityGroups.classList.toggle("is-visible", isVisible);
+        checkboxInputs.forEach((input) => {
+          input.disabled = !isVisible;
+        });
+      }
+
+      function clearInlineErrors() {
+        form.querySelectorAll(".maintenance-inline-error").forEach((errorEl) => {
+          errorEl.textContent = "";
+        });
+      }
+
+      function setInlineError(fieldName, message) {
+        const errorTarget = form.querySelector(`[data-error-for="${fieldName}"]`);
+        if (errorTarget) {
+          errorTarget.textContent = message;
+        }
+      }
+
+      function firstVisibleErrorElement() {
+        const errorElements = Array.from(form.querySelectorAll(".maintenance-inline-error"));
+        return errorElements.find((el) => String(el.textContent || "").trim());
+      }
+
+      function validateForm() {
+        clearInlineErrors();
+        const errors = [];
+
+        const nameValue = String(form.name.value || "").trim();
+        if (nameValue.length < 2 || nameValue.length > 50) {
+          errors.push({ field: "name", message: "Plan name must be between 2 and 50 characters." });
+        }
+
+        const tierValue = Number(form.tier_order.value || 0);
+        if (!Number.isInteger(tierValue) || tierValue < 1 || tierValue > 10) {
+          errors.push({ field: "tier_order", message: "Tier order must be a whole number from 1 to 10." });
+        }
+
+        const descriptionValue = String(form.description.value || "").trim();
+        if (descriptionValue.length < 10 || descriptionValue.length > 500) {
+          errors.push({ field: "description", message: "Description must be between 10 and 500 characters." });
+        }
+
+        const visitsValue = Number(form.visits_per_year.value || 0);
+        if (!Number.isInteger(visitsValue) || visitsValue < 1 || visitsValue > 3) {
+          errors.push({ field: "visits_per_year", message: "Visits per year must be a whole number between 1 and 3." });
+        }
+
+        const seasonValues = Array.from(form.querySelectorAll('input[name="visit_slot_season[]"]')).map((input) => String(input.value || "").trim());
+        if (seasonValues.length !== visitsValue || seasonValues.some((value) => !value)) {
+          errors.push({ field: "visit_seasons", message: "Select one season value for each visit slot." });
+        }
+
+        const slotServiceIds = Array.from(form.querySelectorAll('select[name="visit_slot_service_id[]"]')).map((input) => String(input.value || "").trim());
+        if (slotServiceIds.length !== visitsValue || slotServiceIds.some((value) => !value)) {
+          errors.push({ field: "visit_seasons", message: "Select a service for each visit slot." });
+        }
+
+        const customSlots = Array.from(form.querySelectorAll('.maintenance-season-slot')).filter((slot) => {
+          const seasonInput = slot.querySelector('input[name="visit_slot_season[]"]');
+          return seasonInput && seasonInput.value === "Custom";
+        });
+        customSlots.forEach((slot) => {
+          const startValue = String((slot.querySelector('input[name="visit_window_start[]"]') || {}).value || "").trim();
+          const endValue = String((slot.querySelector('input[name="visit_window_end[]"]') || {}).value || "").trim();
+          if (!startValue || !endValue) {
+            errors.push({ field: "visit_seasons", message: "Custom season slots require both start and end dates." });
+          }
+        });
+
+        const annualPrice = Number(form.price_annual.value || 0);
+        if (!(annualPrice > 0)) {
+          errors.push({ field: "price_annual", message: "Annual price must be greater than $0." });
+        }
+
+        const monthlyPriceRaw = String(form.price_monthly.value || "").trim();
+        if (monthlyPriceRaw && Number(monthlyPriceRaw) < 0) {
+          errors.push({ field: "price_monthly", message: "Monthly price cannot be negative." });
+        }
+
+        const repairDiscount = Number(form.repair_discount_pct.value || 0);
+        if (repairDiscount < 0 || repairDiscount > 50) {
+          errors.push({ field: "repair_discount_pct", message: "Repair discount must be between 0 and 50." });
+        }
+
+        if (repairDiscount > 0) {
+          const selectedServiceTypes = Array.from(form.querySelectorAll('input[name="discount_service_types[]"]:checked'));
+          const selectedLineItemTypes = Array.from(form.querySelectorAll('input[name="discount_line_item_types[]"]:checked'));
+          if (!selectedServiceTypes.length) {
+            errors.push({ field: "repair_discount_pct", message: "Select at least one service type when discount is greater than 0." });
+          } else if (!selectedLineItemTypes.length) {
+            errors.push({ field: "repair_discount_pct", message: "Select at least one line item type when discount is greater than 0." });
+          }
+        }
+
+        errors.forEach((error) => setInlineError(error.field, error.message));
+        return errors;
+      }
+
+      const initialFormSnapshot = new FormData(form);
+      function hasUnsavedChanges() {
+        const current = new FormData(form);
+        const initialEntries = Array.from(initialFormSnapshot.entries());
+        const currentEntries = Array.from(current.entries());
+        if (initialEntries.length !== currentEntries.length) {
+          return true;
+        }
+        for (let i = 0; i < initialEntries.length; i += 1) {
+          const a = initialEntries[i];
+          const b = currentEntries[i];
+          if (a[0] !== b[0] || String(a[1]) !== String(b[1])) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      cancelLink.addEventListener("click", function (event) {
+        if (!hasUnsavedChanges()) {
+          return;
+        }
+
+        event.preventDefault();
+        const shouldDiscard = window.confirm("Discard unsaved changes?\n\nSelect OK to Discard or Cancel to Keep Editing.");
+        if (shouldDiscard) {
+          window.location.href = cancelLink.getAttribute("href");
+        }
+      });
+
+      form.addEventListener("submit", function (event) {
+        const errors = validateForm();
+        if (!errors.length) {
+          return;
+        }
+
+        event.preventDefault();
+        const firstError = firstVisibleErrorElement();
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+
+      visitsInput.addEventListener("input", function () {
+        renderSeasonSlots();
+      });
+
+      descriptionInput.addEventListener("input", updateDescriptionCounter);
+      annualInput.addEventListener("input", updatePriceHelpers);
+      monthlyInput.addEventListener("input", updatePriceHelpers);
+      repairDiscountInput.addEventListener("input", syncDiscountApplicabilityVisibility);
+
+      addBenefitLink.addEventListener("click", function (event) {
+        event.preventDefault();
+        const rowCount = benefitsList.querySelectorAll(".maintenance-benefit-row").length;
+        if (rowCount >= 10) {
+          return;
+        }
+        benefitsList.appendChild(createBenefitRow(""));
+      });
+
+      renderSeasonSlots();
+      renderBenefits(JSON.parse(benefitsList.dataset.initialBenefits || "[]"));
+      updateDescriptionCounter();
+      updatePriceHelpers();
+      syncDiscountApplicabilityVisibility();
+    })();
+  </script>
+{% endblock %}
