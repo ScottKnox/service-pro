@@ -23,6 +23,11 @@
         <h2 id="view-customer-actions-header">Actions</h2>
         <div id="view-customer-actions-row">
           <a class="view-customer-action-primary" href="{{ url_for('customers.update_property', customerId=customerId, propertyId=propertyId) }}">Update Property</a>
+          {% if active_maintenance_plan_id %}
+            <a class="view-customer-action-secondary" href="{{ url_for('customers.view_maintenance_plan', planId=active_maintenance_plan_id) }}">View Maintenance Plan</a>
+          {% else %}
+            <a class="view-customer-action-secondary" href="{{ url_for('customers.sell_maintenance_plan', customerId=customerId, propertyId=propertyId) }}">Sell Maintenance Plan</a>
+          {% endif %}
           <a class="view-customer-action-secondary" href="{{ url_for('customers.add_sub_properties', customerId=customerId, propertyId=propertyId) }}">{% if sub_properties %}Manage Sub-Properties{% else %}Add Sub-Properties{% endif %}</a>
           {% if sub_properties %}
             <form method="POST" action="{{ url_for('customers.delete_all_sub_properties', customerId=customerId, propertyId=propertyId) }}" onsubmit="return confirm('Delete all sub-properties for this property? This cannot be undone.');">

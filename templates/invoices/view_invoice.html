@@ -322,7 +322,11 @@
               <div class="estimate-pricing-row"><span>{{ tax_line.display_name }}</span><span>{{ tax_line.amount_display }}</span></div>
             {% endfor %}
           {% endif %}
-          {% if pricing_summary.discounts_total > 0 %}
+          {% if pricing_summary.discount_lines %}
+            {% for discount_line in pricing_summary.discount_lines %}
+              <div class="estimate-pricing-row"><span>{{ discount_line.name }}</span><span>-{{ discount_line.amount_display }}</span></div>
+            {% endfor %}
+          {% elif pricing_summary.discounts_total > 0 %}
             <div class="estimate-pricing-row"><span>Discounts</span><span>-{{ pricing_summary.discounts_total_display }}</span></div>
           {% endif %}
           <div class="estimate-pricing-row"><span>Total Invoice</span><span>{{ pricing_summary.total_due_display }}</span></div>

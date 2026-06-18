@@ -1,5 +1,6 @@
 import calendar
 from datetime import UTC, datetime, timedelta
+import copy
 import hashlib
 import hmac
 import json
@@ -1543,6 +1544,10 @@ def _create_job_from_accepted_estimate(db, estimate_id):
         "recurring_end_date": recurring_end_date,
         "recurring_end_after": recurring_end_after,
         "source_estimate_id": ObjectId(estimate_id),
+        "maintenance_plan_id": estimate.get("maintenance_plan_id"),
+        "is_maintenance_visit": bool(estimate.get("is_maintenance_visit")),
+        "plan_discount_applied": bool(estimate.get("plan_discount_applied")),
+        "plan_discount_pct": estimate.get("plan_discount_pct"),
     }
 
     inserted = db.jobs.insert_one(new_job)
@@ -3337,6 +3342,26 @@ def _coerce_line_amount(value):
     return float(currency_to_float(value))
 
 
+PLAN_DISCOUNT_ROW_NAME = "Maintenance Plan Savings"
+PLAN_DISCOUNT_SOURCE = "maintenance_plan"
+
+
+def _is_plan_discount_row(discount):
+    if not isinstance(discount, dict):
+        return False
+    if str(discount.get("source") or "").strip() == PLAN_DISCOUNT_SOURCE:
+        return True
+    return str(discount.get("discount_name") or "").strip() == PLAN_DISCOUNT_ROW_NAME
+
+
+def _strip_plan_discount_rows(discounts):
+    return [
+        discount
+        for discount in (discounts or [])
+        if not _is_plan_discount_row(discount)
+    ]
+
+
 def _calculate_discount_totals(payload, subtotal):
     discount_rows = []
     discounts_total = 0.0
@@ -3355,10 +3380,23 @@ def _calculate_discount_totals(payload, subtotal):
             continue
 
         discounts_total += amount_value
-        discount_rows.append({"name": str(discount.get("discount_name") or "Discount").strip() or "Discount", "amount": amount_value})
+        discount_rows.append(
+            {
+                "name": str(discount.get("discount_name") or "Discount").strip() or "Discount",
+                "amount": amount_value,
+                "is_plan_savings": _is_plan_discount_row(discount),
+            }
+        )
 
-    discounts_total = min(discounts_total, max(0.0, subtotal))
-    return discount_rows, discounts_total
+    # Cap the combined discount at the subtotal and proportionally trim the rows
+    # so the itemized list still sums to the (capped) total shown to the customer.
+    capped_total = min(discounts_total, max(0.0, subtotal))
+    if discount_rows and capped_total < discounts_total and discounts_total > 0:
+        scale = capped_total / discounts_total
+        for row in discount_rows:
+            row["amount"] = round(row["amount"] * scale, 2)
+
+    return discount_rows, capped_total
 
 
 def _build_pricing_summary(payload, business_doc=None, customer_doc=None):
@@ -3389,7 +3427,7 @@ def _build_pricing_summary(payload, business_doc=None, customer_doc=None):
     equipment_total = sum(_coerce_line_amount(equipment.get("line_total") or equipment.get("price")) for equipment in (source.get("equipments") or []))
 
     subtotal = services_total + parts_total + labors_total + materials_total + equipment_total
-    _, discounts_total = _calculate_discount_totals(source, subtotal)
+    discount_rows, discounts_total = _calculate_discount_totals(source, subtotal)
     pre_tax_total = max(0.0, subtotal - discounts_total)
 
     tax_inputs = build_line_item_tax_inputs(source)
@@ -3405,10 +3443,21 @@ def _build_pricing_summary(payload, business_doc=None, customer_doc=None):
     total_due = round(pre_tax_total + tax_breakdown.get("tax_total", 0.0), 2)
     tax_lines = tax_breakdown.get("tax_lines") or []
 
+    discount_lines = [
+        {
+            "name": row["name"],
+            "amount": round(row["amount"], 2),
+            "amount_display": normalize_currency(row["amount"]),
+            "is_plan_savings": bool(row.get("is_plan_savings")),
+        }
+        for row in discount_rows
+    ]
+
     return {
         "subtotal": round(subtotal, 2),
         "tax_total": round(tax_breakdown.get("tax_total", 0.0), 2),
         "discounts_total": round(discounts_total, 2),
+        "discount_lines": discount_lines,
         "total_due": total_due,
         "tax_lines": tax_lines,
         "is_tax_exempt": bool(tax_breakdown.get("is_tax_exempt")),
@@ -3426,6 +3475,174 @@ def _build_estimate_pricing_summary(estimate, business_doc=None, customer_doc=No
 
 def _build_invoice_pricing_summary(job_doc, business_doc=None, customer_doc=None):
     return _build_pricing_summary(job_doc or {}, business_doc=business_doc, customer_doc=customer_doc)
+
+
+def get_active_plan_for_property(db, property_id, business_id):
+    normalized_property_id = str(property_id or "").strip()
+    if not normalized_property_id:
+        return None
+
+    conditions = [build_reference_filter("property_id", normalized_property_id), {"status": "active"}]
+    normalized_business_id = str(business_id or "").strip()
+    if normalized_business_id:
+        conditions.append(build_reference_filter("business_id", normalized_business_id))
+
+    return db.maintenance_plans.find_one({"$and": conditions})
+
+
+def _apply_discount_to_currency(value, discount_pct):
+    base_amount = currency_to_float(value)
+    discounted = base_amount * (1 - (discount_pct / 100.0))
+    if discounted < 0:
+        discounted = 0.0
+    return normalize_currency(discounted)
+
+
+def _resync_line_total_from_unit_price(line_item, *quantity_keys):
+    quantity_value = 0.0
+    for key in quantity_keys:
+        if line_item.get(key) not in (None, ""):
+            quantity_value = currency_to_float(line_item.get(key))
+            break
+    unit_price = currency_to_float(line_item.get("price"))
+    line_total = normalize_currency(quantity_value * unit_price)
+    if "unit_price" in line_item:
+        line_item["unit_price"] = line_item.get("price")
+    if "line_total" in line_item:
+        line_item["line_total"] = line_total
+    if "total" in line_item:
+        line_item["total"] = line_total
+
+
+def apply_plan_discount(job_document, plan, business_doc=None, customer_doc=None):
+    snapshot = (plan or {}).get("template_snapshot") or {}
+
+    try:
+        discount_pct = float(snapshot.get("repair_discount_pct") or 0)
+    except (TypeError, ValueError):
+        discount_pct = 0.0
+
+    diagnostic_fee_waived = bool(snapshot.get("diagnostic_fee_waived"))
+
+    # Always drop any previously-applied plan savings row so re-applying (e.g. on
+    # edit) recomputes cleanly instead of stacking duplicate rows.
+    job_document["discounts"] = _strip_plan_discount_rows(job_document.get("discounts"))
+
+    if discount_pct <= 0 and not diagnostic_fee_waived:
+        job_document["maintenance_plan_id"] = plan.get("_id")
+        job_document["is_maintenance_visit"] = False
+        job_document["plan_discount_applied"] = False
+        job_document["plan_discount_pct"] = discount_pct
+        _resync_total_after_plan_discount(job_document, business_doc, customer_doc)
+        return job_document
+
+    # Plan checkbox values are stored lowercase (e.g. "repairs", "parts") while
+    # service records use capitalized service types (e.g. "Repairs"), so compare
+    # case-insensitively.
+    discount_service_types = {
+        str(item).strip().lower() for item in (snapshot.get("discount_service_types") or []) if str(item).strip()
+    }
+    discount_line_item_types = {
+        str(item).strip().lower() for item in (snapshot.get("discount_line_item_types") or []) if str(item).strip()
+    }
+
+    # A plan may only cover specific HVAC systems on the property. When it does,
+    # a line item is only eligible for the discount if it is explicitly tagged to
+    # one of the covered systems. Untagged (property-level) items are NOT
+    # discounted. A plan with no covered systems applies to the whole property.
+    covered_system_ids = {
+        str((entry or {}).get("hvac_system_id") or "").strip()
+        for entry in ((plan or {}).get("covered_systems") or [])
+        if str((entry or {}).get("hvac_system_id") or "").strip()
+    }
+
+    def _component_is_covered(component):
+        if not covered_system_ids:
+            return True
+        tagged_system_id = str((component or {}).get("hvac_system_id") or "").strip()
+        if not tagged_system_id:
+            return False
+        return tagged_system_id in covered_system_ids
+
+    def _service_amount(service):
+        return _coerce_line_amount(service.get("price") or service.get("standard_price") or 0)
+
+    def _part_amount(part):
+        return _coerce_line_amount(part.get("price") or part.get("sell_price") or part.get("unit_cost") or 0)
+
+    def _line_amount(item):
+        return _coerce_line_amount(item.get("line_total") or item.get("price") or 0)
+
+    # Compute the savings without mutating line item prices. The original prices
+    # stay intact and the savings are represented as a single discount row, so
+    # the customer can see the full value the plan provides.
+    savings = 0.0
+
+    if discount_pct > 0:
+        for service in (job_document.get("services") or []):
+            if not isinstance(service, dict) or not _component_is_covered(service):
+                continue
+            service_type = str(service.get("service_type") or "").strip()
+            # Waived diagnostics are fully credited below; don't also percent-off.
+            if diagnostic_fee_waived and service_type == "Diagnostics":
+                continue
+            if service_type.lower() in discount_service_types:
+                savings += _service_amount(service) * (discount_pct / 100.0)
+
+        if "parts" in discount_line_item_types:
+            for part in (job_document.get("parts") or []):
+                if isinstance(part, dict) and _component_is_covered(part):
+                    savings += _part_amount(part) * (discount_pct / 100.0)
+
+        if "materials" in discount_line_item_types:
+            for material in (job_document.get("materials") or []):
+                if isinstance(material, dict) and _component_is_covered(material):
+                    savings += _line_amount(material) * (discount_pct / 100.0)
+
+        if "equipment" in discount_line_item_types:
+            for equipment in (job_document.get("equipments") or []):
+                if isinstance(equipment, dict) and _component_is_covered(equipment):
+                    savings += _line_amount(equipment) * (discount_pct / 100.0)
+
+    if diagnostic_fee_waived:
+        for service in (job_document.get("services") or []):
+            if not isinstance(service, dict) or not _component_is_covered(service):
+                continue
+            if str(service.get("service_type") or "").strip() == "Diagnostics":
+                savings += _service_amount(service)
+
+    savings = round(max(0.0, savings), 2)
+    if savings > 0:
+        plan_name = str(snapshot.get("name") or "Maintenance Plan").strip() or "Maintenance Plan"
+        job_document.setdefault("discounts", [])
+        job_document["discounts"].append(
+            {
+                "discount_name": PLAN_DISCOUNT_ROW_NAME,
+                "discount_category": plan_name,
+                "discount_percentage": "",
+                "discount_amount": normalize_currency(savings),
+                "line_total": f"-{normalize_currency(savings)}",
+                "source": PLAN_DISCOUNT_SOURCE,
+            }
+        )
+
+    _resync_total_after_plan_discount(job_document, business_doc, customer_doc)
+
+    job_document["maintenance_plan_id"] = plan.get("_id")
+    job_document["is_maintenance_visit"] = False
+    job_document["plan_discount_applied"] = savings > 0
+    job_document["plan_discount_pct"] = discount_pct
+    return job_document
+
+
+def _resync_total_after_plan_discount(job_document, business_doc, customer_doc):
+    pricing_summary = _build_pricing_summary(job_document, business_doc=business_doc, customer_doc=customer_doc)
+    new_total = round(_safe_float(pricing_summary.get("total_due"), 0.0), 2)
+    job_document["total_amount"] = new_total
+    if "balance_due" in job_document:
+        amount_paid = _safe_float(job_document.get("total_amount_paid"), 0.0)
+        job_document["balance_due"] = round(max(0.0, new_total - amount_paid), 2)
+    return new_total
 
 
 def _calculate_job_payment_state(db, job_doc):
@@ -3795,6 +4012,153 @@ def api_hvac_systems_for_property():
     return jsonify({"hvac_systems": systems})
 
 
+@bp.route("/customers/<customerId>/jobs/plan-discount-preview", methods=["POST"])
+def plan_discount_preview(customerId):
+    """Live preview of the maintenance-plan discount that will apply to a draft job.
+
+    Accepts the same form fields submitted by the create/update job forms and
+    reuses the server-side discount logic so the preview always matches what the
+    save will actually do.
+    """
+    if not _is_authenticated_employee():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return jsonify({"has_plan": False}), 404
+
+    business_id = resolve_current_business_id(db)
+    selected_property_id = request.form.get("job_property_id", "").strip()
+
+    active_plan = get_active_plan_for_property(db, selected_property_id, business_id)
+    if not active_plan:
+        return jsonify({"has_plan": False})
+
+    snapshot = active_plan.get("template_snapshot") or {}
+    try:
+        discount_pct = float(snapshot.get("repair_discount_pct") or 0)
+    except (TypeError, ValueError):
+        discount_pct = 0.0
+    diagnostic_fee_waived = bool(snapshot.get("diagnostic_fee_waived"))
+    discount_service_types = [
+        str(item).strip().title() for item in (snapshot.get("discount_service_types") or []) if str(item).strip()
+    ]
+    discount_line_item_types = [
+        str(item).strip().title() for item in (snapshot.get("discount_line_item_types") or []) if str(item).strip()
+    ]
+
+    plan_info = {
+        "has_plan": True,
+        "plan_name": str(snapshot.get("name") or "Maintenance Plan").strip() or "Maintenance Plan",
+        "plan_number": str(active_plan.get("plan_number") or "").strip(),
+    }
+
+    if discount_pct <= 0 and not diagnostic_fee_waived:
+        return jsonify({**plan_info, "has_discount": False})
+
+    service_query = {"business_id": business_id} if business_id else {"_id": None}
+    part_query = {"business_id": business_id} if business_id else {"_id": None}
+    material_query = {"business_id": business_id} if business_id else {"_id": None}
+    equipment_query = {"business_id": business_id} if business_id else {"_id": None}
+    discount_query = {"business_id": business_id} if business_id else {"_id": None}
+
+    service_docs = [serialize_doc(doc) for doc in db.services.find(service_query).sort("service_name", 1)]
+    part_docs = [_serialize_part_without_legacy_fields(doc) for doc in db.parts.find(part_query).sort("part_name", 1)]
+    material_docs = [serialize_doc(doc) for doc in db.materials.find(material_query).sort("material_name", 1)]
+    equipment_docs = [serialize_doc(doc) for doc in db.equipment.find(equipment_query).sort("equipment_name", 1)]
+    discount_docs = [serialize_doc(doc) for doc in db.discounts.find(discount_query).sort("discount_name", 1)]
+
+    service_catalog = build_service_catalog(service_docs)
+    part_catalog = build_part_catalog(part_docs)
+    material_catalog = build_material_catalog(material_docs)
+    equipment_catalog = build_equipment_catalog(equipment_docs)
+    discount_catalog = build_discount_catalog(discount_docs)
+    business_doc_for_rates = serialize_doc(db.businesses.find_one({"_id": business_id})) if business_id else {}
+    customer_doc = serialize_doc(customer)
+
+    services, _ = build_job_services_from_form(
+        request.form.getlist("service_code[]") or request.form.getlist("service_type[]"),
+        request.form.getlist("service_price[]") or request.form.getlist("service_standard_price[]"),
+        request.form.getlist("service_hours[]") or request.form.getlist("service_estimated_hours[]") or request.form.getlist("service_duration[]"),
+        service_catalog,
+        business_doc_for_rates.get("labor_rate_standard"),
+        request.form.getlist("service_emergency_call[]"),
+    )
+    parts, _ = build_job_parts_from_form(
+        request.form.getlist("part_code[]") or request.form.getlist("part_name[]"),
+        request.form.getlist("part_unit_cost[]") or request.form.getlist("part_price[]"),
+        part_catalog,
+    )
+    materials, _ = build_job_materials_from_form(
+        request.form.getlist("material_name[]"),
+        request.form.getlist("material_quantity_used[]"),
+        request.form.getlist("material_unit_of_measure[]"),
+        request.form.getlist("material_price[]"),
+        material_catalog,
+    )
+    equipments, _ = build_job_equipments_from_form(
+        request.form.getlist("equipment_name[]"),
+        request.form.getlist("equipment_quantity_installed[]"),
+        request.form.getlist("equipment_price[]"),
+        request.form.getlist("equipment_serial_number[]"),
+        equipment_catalog,
+    )
+    discounts, _ = build_job_discounts_from_form(
+        request.form.getlist("discount_name[]"),
+        request.form.getlist("discount_percentage[]"),
+        request.form.getlist("discount_amount[]"),
+        discount_catalog,
+    )
+
+    # Tag line items to their selected HVAC systems so the discount preview can
+    # respect plans that only cover specific systems.
+    hvac_lookup = _build_hvac_system_lookup_for_property(db, customerId, selected_property_id)
+    _apply_hvac_tags_to_components(services, request.form.getlist("service_hvac_system_id[]"), hvac_lookup)
+    _apply_hvac_tags_to_components(parts, request.form.getlist("part_hvac_system_id[]"), hvac_lookup)
+    _apply_hvac_tags_to_components(materials, request.form.getlist("material_hvac_system_id[]"), hvac_lookup)
+    _apply_hvac_tags_to_components(equipments, request.form.getlist("equipment_hvac_system_id[]"), hvac_lookup)
+
+    draft = {
+        "services": services,
+        "parts": parts,
+        "labors": [],
+        "materials": materials,
+        "equipments": equipments,
+        "discounts": _strip_plan_discount_rows(discounts),
+    }
+
+    baseline_summary = _build_pricing_summary(draft, business_doc=business_doc_for_rates, customer_doc=customer_doc)
+    original_total = round(_safe_float(baseline_summary.get("total_due"), 0.0), 2)
+
+    response = {
+        **plan_info,
+        "has_discount": True,
+        "discount_pct": discount_pct,
+        "diagnostic_fee_waived": diagnostic_fee_waived,
+        "service_types": discount_service_types,
+        "line_item_types": discount_line_item_types,
+    }
+
+    discounted_draft = copy.deepcopy(draft)
+    apply_plan_discount(
+        discounted_draft,
+        active_plan,
+        business_doc=business_doc_for_rates,
+        customer_doc=customer_doc,
+    )
+    discounted_total = round(_safe_float(discounted_draft.get("total_amount"), original_total), 2)
+    savings = round(max(0.0, original_total - discounted_total), 2)
+
+    return jsonify({
+        **response,
+        "already_applied": False,
+        "original_total": original_total,
+        "discounted_total": discounted_total,
+        "savings": savings,
+    })
+
+
 @bp.route("/jobs")
 def jobs():
     db = ensure_connection_or_500()
@@ -4090,6 +4454,14 @@ def create_job(customerId):
             "occurrence_index": None,
             "recurrence_summary": "",
         }
+        active_plan = get_active_plan_for_property(db, new_job.get("property_id"), business_id)
+        if active_plan:
+            new_job = apply_plan_discount(
+                new_job,
+                active_plan,
+                business_doc=business_doc_for_rates,
+                customer_doc=serialize_doc(customer),
+            )
         inserted = db.jobs.insert_one(new_job)
         if payment_schedule:
             _ensure_job_invoice_entry(db, str(inserted.inserted_id))
@@ -4334,6 +4706,15 @@ def create_estimate(customerId):
             "business_id": business_id,
             "created_at": datetime.now(UTC),
         }
+
+        active_plan = get_active_plan_for_property(db, new_estimate.get("property_id"), business_id)
+        if active_plan:
+            new_estimate = apply_plan_discount(
+                new_estimate,
+                active_plan,
+                business_doc=business_doc_for_rates,
+                customer_doc=serialize_doc(customer),
+            )
 
         inserted = db.estimates.insert_one(new_estimate)
         estimate_id = str(inserted.inserted_id)
@@ -4697,6 +5078,29 @@ def update_estimate(estimateId):
             if customer_doc:
                 customer = serialize_doc(customer_doc)
 
+        plan_discount_fields = {}
+        selected_property_id_for_plan = selected_property_id if selected_property else ""
+        active_plan = get_active_plan_for_property(db, selected_property_id_for_plan, business_id)
+        if active_plan:
+            plan_draft = {
+                "services": services,
+                "parts": parts,
+                "labors": labors,
+                "materials": materials,
+                "equipments": equipments,
+                "discounts": discounts,
+            }
+            plan_draft = apply_plan_discount(
+                plan_draft,
+                active_plan,
+                business_doc=business_doc_for_rates,
+                customer_doc=customer,
+            )
+            discounts = plan_draft.get("discounts", discounts)
+            for field in ("maintenance_plan_id", "is_maintenance_visit", "plan_discount_applied", "plan_discount_pct"):
+                if field in plan_draft:
+                    plan_discount_fields[field] = plan_draft[field]
+
         pricing_summary = _build_pricing_summary(
             {
                 "services": services,
@@ -4763,6 +5167,9 @@ def update_estimate(estimateId):
         }
         if business_id and not estimate.get("business_id"):
             updated_data["business_id"] = business_id
+
+        if plan_discount_fields:
+            updated_data.update(plan_discount_fields)
 
         estimate_for_pdf = dict(estimate)
         estimate_for_pdf.update(updated_data)
@@ -5560,6 +5967,28 @@ def view_job(jobId):
     payment_history = _build_payment_history(db, jobId)
     payment_schedule_view = _build_payment_schedule_view(job_doc.get("payment_schedule") or [])
 
+    maintenance_plan_discount = None
+    if job_doc.get("plan_discount_applied") and job_doc.get("maintenance_plan_id"):
+        plan_doc = db.maintenance_plans.find_one(build_reference_filter("_id", job_doc.get("maintenance_plan_id")))
+        if plan_doc:
+            plan_snapshot = plan_doc.get("template_snapshot") or {}
+            plan_service_types = [
+                str(item).strip().title()
+                for item in (plan_snapshot.get("discount_service_types") or [])
+                if str(item).strip()
+            ]
+            try:
+                discount_pct_value = float(job_doc.get("plan_discount_pct") or 0)
+            except (TypeError, ValueError):
+                discount_pct_value = 0.0
+            maintenance_plan_discount = {
+                "plan_id": str(plan_doc.get("_id")),
+                "plan_name": str(plan_snapshot.get("name") or "Maintenance Plan").strip() or "Maintenance Plan",
+                "plan_number": str(plan_doc.get("plan_number") or "").strip(),
+                "pct_display": f"{discount_pct_value:g}",
+                "service_types": plan_service_types,
+            }
+
     # Detect if the viewing employee has a *different* active job (En Route / Started).
     # Used to disable transition buttons so only one job can be active at a time.
     employee_has_other_active_job = False
@@ -5592,6 +6021,7 @@ def view_job(jobId):
         payment_schedule_request_state=payment_schedule_request_state,
         payment_schedule_request_reason=payment_schedule_request_reason,
         employee_has_other_active_job=employee_has_other_active_job,
+        maintenance_plan_discount=maintenance_plan_discount,
     )
 
 
@@ -6624,6 +7054,18 @@ def update_job(jobId):
                     "occurrence_index": None,
                     "recurrence_summary": "",
                 }
+            )
+
+        # The plan savings are stored as a discount row that is recomputed from
+        # the current line items on every save (the row is stripped and rebuilt
+        # inside apply_plan_discount), so it is always safe to re-apply.
+        active_plan = get_active_plan_for_property(db, update_data.get("property_id"), business_id)
+        if active_plan:
+            update_data = apply_plan_discount(
+                update_data,
+                active_plan,
+                business_doc=business_doc_for_rates,
+                customer_doc=customer,
             )
 
         db.jobs.update_one(

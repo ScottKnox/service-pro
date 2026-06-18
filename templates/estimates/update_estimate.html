@@ -151,8 +151,9 @@
         <h2 class="create-job-form-section-header">Discounts</h2>
 
         <div id="job-discounts-list">
-          {% if job.discounts %}
-            {% for discount in job.discounts %}
+          {% set editable_discounts = job.discounts | rejectattr('source', 'equalto', 'maintenance_plan') | list %}
+          {% if editable_discounts %}
+            {% for discount in editable_discounts %}
             <div class="form-row add-customer-form-row job-discount-row" data-discount-index="{{ loop.index }}">
               <div class="form-field add-customer-form-field">
                 <label for="discount-name-{{ loop.index }}">Discount</label>
@@ -209,6 +210,8 @@
             <option value="{{ discount.discount_name }}">{{ discount.discount_name }}{% if discount.discount_category %} ({{ discount.discount_category }}){% endif %}</option>
           {% endfor %}
         </template>
+
+        <div id="maintenance-plan-preview" class="maintenance-plan-preview" data-plan-preview hidden></div>
 
         <div id="create-job-form-actions">
           <button id="submit-button" type="submit">Update Estimate</button>

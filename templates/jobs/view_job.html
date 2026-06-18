@@ -102,6 +102,17 @@
       </div>
       {% endif %}
 
+      {% if maintenance_plan_discount %}
+      <div id="view-job-plan-discount-note" style="border: 1px solid #B7D8C9; background-color: #EEF9F1; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
+        <p style="margin: 0; color: #185A37; font-weight: 600;">
+          Maintenance plan discount applied — {{ maintenance_plan_discount.pct_display }}% off
+          {% if maintenance_plan_discount.service_types %}{{ maintenance_plan_discount.service_types|join(', ') }}{% else %}eligible items{% endif %}
+          based on {{ maintenance_plan_discount.plan_name }}
+          {% if maintenance_plan_discount.plan_number %}(<a href="{{ url_for('customers.view_maintenance_plan', planId=maintenance_plan_discount.plan_id) }}" style="color: #185A37; text-decoration: underline;">{{ maintenance_plan_discount.plan_number }}</a>){% endif %}
+        </p>
+      </div>
+      {% endif %}
+
       {% if payment_schedule_request_state == 'sent' %}
       <div style="border: 1px solid #B7D8C9; background-color: #EEF9F1; padding: 0.8rem 1rem; border-radius: 4px; margin: 0.6rem 0 1rem;">
         <p style="margin: 0; color: #185A37; font-weight: 600;">Payment request sent.</p>
@@ -464,7 +475,14 @@
                   <p>{{ pricing_summary.tax_total_display }}</p>
                 </div>
               {% endif %}
-              {% if pricing_summary.discounts_total > 0 %}
+              {% if pricing_summary.discount_lines %}
+                {% for discount_line in pricing_summary.discount_lines %}
+                  <div class="view-job-detail-item">
+                    <h4>{{ discount_line.name }}</h4>
+                    <p>-{{ discount_line.amount_display }}</p>
+                  </div>
+                {% endfor %}
+              {% elif pricing_summary.discounts_total > 0 %}
                 <div class="view-job-detail-item">
                   <h4>Discounts</h4>
                   <p>-{{ pricing_summary.discounts_total_display }}</p>

@@ -77,13 +77,16 @@
               <div id="jobs-list-grid" class="catalog-compact-list">
                 {% if materials %}
                   {% for material in materials %}
-                    <a
+                    <div
                       class="jobs-card"
                       data-catalog-card
-                      href="{{ url_for('catalog.view_material', materialId=material._id) }}"
+                      data-card-link-url="{{ url_for('catalog.view_material', materialId=material._id) }}"
                       data-filter-name="{{ material.material_name }}"
                       data-filter-category="{{ material.category }}"
                       data-filter-code="{{ material.unit_group }}"
+                      role="link"
+                      tabindex="0"
+                      aria-label="View material {{ material.material_name }}"
                     >
                       <div class="jobs-card-row">
                         <span class="jobs-card-label">Material</span>
@@ -113,7 +116,12 @@
                         <span class="jobs-card-label">Status</span>
                         <span class="jobs-card-value">{{ 'Active' if material.is_active else 'Inactive' }}</span>
                       </div>
-                    </a>
+                      <div class="jobs-card-actions">
+                        {% if material.purchase_link %}
+                          <a class="jobs-card-action-link jobs-card-action-link--secondary" href="{{ material.purchase_link }}" target="_blank" rel="noopener noreferrer">Open Link</a>
+                        {% endif %}
+                      </div>
+                    </div>
                   {% endfor %}
                 {% else %}
                   <p>No materials have been created yet.</p>

@@ -27,8 +27,8 @@
                     <span>Plan Templates</span>
                     <small>{{ templates_count }}</small>
                   </a>
-                  <a class="reporting-nav-link{% if active_section == 'active' %} is-active{% endif %}" href="{{ url_for('admin_bp.maintenance_plans', section='active') }}">
-                    <span>Active Plans</span>
+                  <a class="reporting-nav-link{% if active_section == 'all' %} is-active{% endif %}" href="{{ url_for('admin_bp.maintenance_plans', section='all') }}">
+                    <span>All Plans</span>
                     <small>{{ active_plans_count }}</small>
                   </a>
                   <a class="reporting-nav-link{% if active_section == 'renewals' %} is-active{% endif %}" href="{{ url_for('admin_bp.maintenance_plans', section='renewals') }}">
@@ -38,14 +38,39 @@
                 </div>
               </aside>
 
-              {% if active_section == 'templates' %}
-                <div class="jobs-filter-list" style="margin-top: 1rem;">
+              {% if active_section == 'all' %}
+                <aside class="reporting-sidebar mp-filter-sidebar" aria-label="Plan filters" style="margin-top: 1rem;">
+                  <h3>Filter Plans</h3>
+                  <div class="customers-filter-list">
+                    <details class="customers-filter-group" open>
+                      <summary>Status</summary>
+                      <div class="customers-filter-content" id="mp-all-status-options">
+                        <label for="mp-status-active"><input id="mp-status-active" type="checkbox" name="mp_filter_status" value="active" checked> Active</label>
+                        <label for="mp-status-pending"><input id="mp-status-pending" type="checkbox" name="mp_filter_status" value="pending"> Pending</label>
+                        <label for="mp-status-lapsed"><input id="mp-status-lapsed" type="checkbox" name="mp_filter_status" value="lapsed"> Lapsed</label>
+                        <label for="mp-status-cancelled"><input id="mp-status-cancelled" type="checkbox" name="mp_filter_status" value="cancelled"> Cancelled</label>
+                        <label for="mp-status-expired"><input id="mp-status-expired" type="checkbox" name="mp_filter_status" value="expired"> Expired</label>
+                      </div>
+                    </details>
+                  </div>
+                </aside>
+              {% elif active_section == 'renewals' %}
+                <div class="jobs-filter-list mp-filter-list" style="margin-top: 1rem;">
                   <div class="jobs-filter-content">
-                    <label class="catalog-search-form-label" for="maintenance-template-status">Status</label>
-                    <select id="maintenance-template-status" name="status">
-                      <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
-                      <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active Only</option>
-                      <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive Only</option>
+                    <label class="catalog-search-form-label" for="mp-renewal-window">Renewal window</label>
+                    <select id="mp-renewal-window" name="window">
+                      <option value="30">Expiring in 30 days</option>
+                      <option value="60" selected>Expiring in 60 days</option>
+                      <option value="90">Expiring in 90 days</option>
+                    </select>
+                  </div>
+                  <div class="jobs-filter-content">
+                    <label class="catalog-search-form-label" for="mp-renewal-tier">Plan tier</label>
+                    <select id="mp-renewal-tier" name="tier">
+                      <option value="">All</option>
+                      {% for name in renewal_template_names %}
+                        <option value="{{ name }}">{{ name }}</option>
+                      {% endfor %}
                     </select>
                   </div>
                 </div>
@@ -54,7 +79,7 @@
 
             <div class="jobs-controls-right">
               <div class="jobs-controls-right-top">
-                <h2>Plan Templates</h2>
+                <h2>{% if active_section == 'all' %}All Plans{% elif active_section == 'renewals' %}Renewal Queue{% else %}Plan Templates{% endif %}</h2>
                 {% if active_section == 'templates' %}
                   <div class="jobs-controls-right-actions">
                     <a href="/admin/price-book/maintenance-plans/new">Add Plan Template</a>
@@ -92,6 +117,7 @@
                           class="jobs-card maintenance-template-card{% if not template.is_active %} is-inactive{% endif %}"
                           data-template-card
                           data-template-id="{{ template_id }}"
+                          data-view-url="/admin/price-book/maintenance-plans/{{ template_id }}/edit"
                           data-is-active="{{ 'true' if template.is_active else 'false' }}"
                           data-sold-plans-count="{{ sold_plan_count }}"
                         >
@@ -154,9 +180,39 @@
                     {% else %}
                       <div id="maintenance-empty-state" class="reporting-card">
                         <p>No maintenance plan templates yet. Create your first plan to start selling recurring service agreements.</p>
-                        <p><a href="/admin/price-book/maintenance-plans/new">Add Plan Template</a></p>
                       </div>
                     {% endif %}
+                  </div>
+                {% elif active_section == 'all' %}
+                  <div class="mp-results-toolbar">
+                    <form class="catalog-search-form mp-search-form" onsubmit="return false;">
+                      <label class="catalog-search-form-label" for="mp-all-search">Search Plans:</label>
+                      <input id="mp-all-search" name="q" type="search" placeholder="Search by customer or plan #" autocomplete="off" aria-label="Search plans">
+                    </form>
+                    <div class="mp-sort-control">
+                      <label class="catalog-search-form-label" for="mp-all-sort">Sort by</label>
+                      <select id="mp-all-sort" name="sort">
+                        <option value="end_sort:asc" selected>End date (soonest)</option>
+                        <option value="end_sort:desc">End date (latest)</option>
+                        <option value="customer_name:asc">Customer (A&ndash;Z)</option>
+                        <option value="plan_number:asc">Plan # (A&ndash;Z)</option>
+                        <option value="tier_name:asc">Plan tier (A&ndash;Z)</option>
+                        <option value="status_label:asc">Status (A&ndash;Z)</option>
+                        <option value="start_display:asc">Start date</option>
+                        <option value="next_visit_display:asc">Next visit</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div id="mp-all-plans">
+                    <p id="mp-all-count" class="mp-count-line"></p>
+                    <div id="mp-all-list" class="mp-plans-list"></div>
+                    <div id="mp-all-empty" class="reporting-card" hidden></div>
+                    <div id="mp-all-pagination" class="mp-pagination"></div>
+                  </div>
+                {% elif active_section == 'renewals' %}
+                  <div id="mp-renewal-queue">
+                    <div id="mp-renewal-list" class="mp-renewal-list"></div>
+                    <div id="mp-renewal-empty" class="reporting-card" hidden></div>
                   </div>
                 {% else %}
                   <div class="reporting-card">
@@ -170,6 +226,24 @@
       </div>
     </section>
   </div>
+
+  {# Cancel confirmation modal (All Plans) #}
+  <div class="mp-modal-overlay" id="mp-cancel-modal" hidden>
+    <div class="mp-modal" role="dialog" aria-modal="true" aria-labelledby="mp-cancel-title">
+      <h3 id="mp-cancel-title">Cancel Maintenance Plan</h3>
+      <p>Are you sure you want to cancel this plan?</p>
+      <label for="mp-cancel-reason" class="mp-modal-label">Reason for cancellation</label>
+      <textarea id="mp-cancel-reason" rows="3" placeholder="Enter a reason"></textarea>
+      <p class="mp-modal-error" id="mp-cancel-error" hidden></p>
+      <div class="mp-modal-actions">
+        <button type="button" class="mp-btn mp-btn-secondary" id="mp-keep-plan">Keep Plan</button>
+        <button type="button" class="mp-btn mp-btn-danger" id="mp-confirm-cancel">Cancel Plan</button>
+      </div>
+    </div>
+  </div>
+
+  {# Toast #}
+  <div class="mp-toast" id="mp-toast" hidden></div>
 {% endblock %}
 
 {% block scripts %}
@@ -181,6 +255,15 @@
     .resource-reporting .catalog-compact-list .maintenance-template-card {
       gap: 0;
       overflow: visible;
+      position: relative;
+      z-index: 1;
+      cursor: pointer;
+    }
+
+    .resource-reporting .catalog-compact-list .maintenance-template-card.is-menu-open {
+      z-index: 90;
+      border-color: #3a6553;
+      background: #244236;
     }
 
     .resource-reporting .catalog-compact-list .maintenance-template-card .jobs-card-row {
@@ -329,6 +412,7 @@
       padding: 0;
       border: 1px solid #2f5a4a;
       background: #244236;
+      pointer-events: auto;
     }
 
     .maintenance-template-menu-dropdown[hidden] {
@@ -354,7 +438,347 @@
     .maintenance-template-menu-dropdown button:hover {
       background: #284739;
     }
+
+    /* ---- All Plans + Renewal Queue shared ---- */
+    .mp-filter-list { display: flex; flex-direction: column; gap: 0.85rem; }
+
+    .mp-count-line {
+      color: #b2c0b9;
+      font-size: 0.9rem;
+      margin: 0 0 0.75rem;
+    }
+
+    /* ---- All Plans search + sort toolbar ---- */
+    .mp-results-toolbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .mp-search-form.catalog-search-form {
+      flex: 1 1 280px;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.35rem;
+      margin-bottom: 0;
+    }
+
+    .mp-search-form.catalog-search-form .catalog-search-form-label {
+      color: #f2f5f3;
+    }
+
+    .mp-search-form.catalog-search-form input[type="search"] {
+      width: min(100%, 520px);
+      max-width: 520px;
+    }
+
+    .mp-sort-control {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.35rem;
+      margin-left: auto;
+    }
+
+    .mp-sort-control .catalog-search-form-label {
+      color: #f2f5f3;
+    }
+
+    .mp-sort-control select {
+      background: #253e33;
+      border: 1px solid #2f5a4a;
+      border-radius: 4px;
+      color: #f2f5f3;
+      padding: 0.45rem 0.6rem;
+      font: inherit;
+      min-width: 200px;
+    }
+
+    .mp-sort-control select:focus {
+      outline: none;
+      border-color: #00a86b;
+    }
+
+    @media (max-width: 640px) {
+      .mp-results-toolbar { flex-direction: column; align-items: stretch; }
+      .mp-sort-control { margin-left: 0; }
+      .mp-sort-control select { width: 100%; }
+      .mp-search-form.catalog-search-form input[type="search"] { max-width: none; }
+    }
+
+    /* ---- All Plans card list ---- */
+    .mp-plans-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .mp-plan-card {
+      position: relative;
+      background: #1d3329;
+      border: 1px solid #2f5a4a;
+      border-radius: 12px;
+      padding: 1rem 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .mp-plan-card:hover { border-color: #3a6553; }
+
+    .mp-plan-card.is-menu-open {
+      z-index: 30;
+      border-color: #3a6553;
+    }
+
+    .mp-plan-card-head {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .mp-plan-card-number {
+      font-weight: 800;
+      font-size: 1rem;
+      color: #f2f5f3;
+    }
+
+    .mp-plan-card-head .mp-row-menu { margin-left: auto; }
+
+    .mp-plan-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.7rem 1rem;
+    }
+
+    .mp-plan-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      min-width: 0;
+    }
+
+    .mp-plan-field-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #8c9a93;
+    }
+
+    .mp-plan-field-value {
+      font-size: 0.9rem;
+      color: #f2f5f3;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .mp-status-badge,
+    .mp-chip {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
+    .mp-status-active { background: rgba(0, 168, 107, 0.18); color: #56d6a0; }
+    .mp-status-pending { background: rgba(245, 176, 65, 0.18); color: #f5b041; }
+    .mp-status-lapsed { background: rgba(253, 162, 155, 0.16); color: #fda29b; }
+    .mp-status-cancelled,
+    .mp-status-expired { background: rgba(140, 154, 147, 0.16); color: #b2c0b9; }
+
+    .mp-row-menu { position: relative; }
+
+    .mp-row-menu-button {
+      background: transparent;
+      border: 0;
+      color: #b2c0b9;
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+    }
+
+    .mp-row-menu-button:hover { background: #2b473b; color: #f2f5f3; }
+
+    .mp-row-menu-dropdown {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 4px);
+      background: #1d3329;
+      border: 1px solid #2f5a4a;
+      border-radius: 10px;
+      min-width: 150px;
+      z-index: 50;
+      overflow: hidden;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .mp-row-menu-dropdown a,
+    .mp-row-menu-dropdown button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 0.55rem 0.85rem;
+      border: 0;
+      background: transparent;
+      color: #f2f5f3;
+      text-decoration: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .mp-row-menu-dropdown a:hover,
+    .mp-row-menu-dropdown button:hover { background: #284739; }
+    .mp-row-menu-dropdown button.mp-danger { color: #fda29b; }
+
+    .mp-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .mp-pagination button {
+      background: #2b473b;
+      border: 1px solid #3a6553;
+      color: #f2f5f3;
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .mp-pagination button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .mp-pagination span { color: #b2c0b9; font-size: 0.85rem; }
+
+    /* ---- Renewal Queue ---- */
+    .mp-renewal-list { display: flex; flex-direction: column; gap: 0.85rem; }
+
+    .mp-renewal-card {
+      background: #1d3329;
+      border: 1px solid #2f5a4a;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .mp-renewal-main { display: flex; flex-direction: column; gap: 0.2rem; min-width: 200px; }
+    .mp-renewal-customer { font-weight: 700; font-size: 1rem; }
+    .mp-renewal-customer a { color: #00a86b; text-decoration: none; }
+    .mp-renewal-customer a:hover { text-decoration: underline; }
+    .mp-renewal-meta { color: #b2c0b9; font-size: 0.85rem; }
+
+    .mp-renewal-expiry { display: flex; flex-direction: column; gap: 0.25rem; align-items: flex-start; }
+    .mp-renewal-expiry-date { color: #f2f5f3; font-size: 0.9rem; }
+
+    .mp-chip-green { background: rgba(0, 168, 107, 0.18); color: #56d6a0; }
+    .mp-chip-amber { background: rgba(245, 176, 65, 0.18); color: #f5b041; }
+    .mp-chip-red { background: rgba(253, 162, 155, 0.16); color: #fda29b; }
+
+    .mp-renewal-actions { display: flex; gap: 0.5rem; margin-left: auto; flex-wrap: wrap; }
+
+    .mp-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem 0.95rem;
+      border-radius: 9px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      border: 1px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      transition: filter 0.15s ease, background 0.15s ease;
+    }
+
+    .mp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .mp-btn-primary { background: #00a86b; color: #06231a; }
+    .mp-btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+    .mp-btn-secondary { background: #2b473b; color: #f2f5f3; border-color: #3a6553; }
+    .mp-btn-secondary:hover:not(:disabled) { background: #2f5a4a; }
+    .mp-btn-danger { background: #4d1f1f; color: #fda29b; border-color: #7a2a2a; }
+    .mp-btn-danger:hover:not(:disabled) { filter: brightness(1.12); }
+    .mp-btn-ghost { background: transparent; color: #b2c0b9; border-color: #3a6553; }
+    .mp-btn-ghost:hover:not(:disabled) { background: #2b473b; color: #f2f5f3; }
+
+    /* ---- Modal ---- */
+    .mp-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 18, 14, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+
+    .mp-modal-overlay[hidden] { display: none; }
+
+    .mp-modal {
+      background: #1d3329;
+      border: 1px solid #2f5a4a;
+      border-radius: 14px;
+      padding: 1.5rem;
+      max-width: 460px;
+      width: 100%;
+      color: #f2f5f3;
+    }
+
+    .mp-modal h3 { margin: 0 0 0.5rem; font-size: 1.25rem; font-weight: 800; }
+    .mp-modal p { margin: 0 0 1rem; color: #b2c0b9; }
+    .mp-modal-label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.35rem; }
+
+    .mp-modal textarea {
+      width: 100%;
+      background: #253e33;
+      border: 1px solid #2f5a4a;
+      border-radius: 10px;
+      color: #f2f5f3;
+      padding: 0.6rem;
+      font: inherit;
+      resize: vertical;
+    }
+
+    .mp-modal textarea:focus { outline: none; border-color: #00a86b; }
+    .mp-modal-error { color: #fda29b; font-size: 0.85rem; margin: 0.5rem 0 0; }
+    .mp-modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; }
+
+    /* ---- Toast ---- */
+    .mp-toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #244236;
+      color: #f2f5f3;
+      border: 1px solid #2f5a4a;
+      padding: 0.8rem 1.3rem;
+      border-radius: 10px;
+      font-weight: 600;
+      z-index: 1100;
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .mp-toast[hidden] { display: none; }
+    .mp-toast.is-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .mp-toast.is-error { border-color: #7a2a2a; color: #fda29b; }
+
+    .mp-empty-actions { margin-top: 0.5rem; }
+    .mp-empty-actions a { color: #00a86b; }
   </style>
+
 
   <script>
     (function () {
@@ -417,6 +841,7 @@
         card.className = `jobs-card maintenance-template-card${isActive ? "" : " is-inactive"}`;
         card.dataset.templateCard = "true";
         card.dataset.templateId = String(id);
+        card.dataset.viewUrl = `/admin/price-book/maintenance-plans/${id}/edit`;
         card.dataset.isActive = isActive ? "true" : "false";
 
         card.innerHTML = `
@@ -478,7 +903,6 @@
         } else {
           emptyState.innerHTML = `
             <p>No maintenance plan templates yet. Create your first plan to start selling recurring service agreements.</p>
-            <p><a href="${addPlanUrl}">Add Plan Template</a></p>
           `;
         }
 
@@ -538,6 +962,9 @@
         listRoot.querySelectorAll(".maintenance-template-menu").forEach((menuWrap) => {
           menuWrap.classList.remove("is-open");
         });
+        listRoot.querySelectorAll("[data-template-card]").forEach((card) => {
+          card.classList.remove("is-menu-open");
+        });
       }
 
       function wireClearFilterLink() {
@@ -553,6 +980,19 @@
       }
 
       function wireCardActions() {
+        listRoot.querySelectorAll("[data-template-card]").forEach((card) => {
+          card.addEventListener("click", function (event) {
+            if (event.target.closest("a, button, input, label, .maintenance-template-menu-dropdown, .maintenance-template-actions-row")) {
+              return;
+            }
+
+            const viewUrl = card.dataset.viewUrl;
+            if (viewUrl) {
+              window.location.href = viewUrl;
+            }
+          });
+        });
+
         listRoot.querySelectorAll(".maintenance-template-menu-button").forEach((button) => {
           button.addEventListener("click", function (event) {
             event.preventDefault();
@@ -560,12 +1000,16 @@
 
             const dropdown = button.parentElement.querySelector(".maintenance-template-menu-dropdown");
             const menuWrap = button.closest(".maintenance-template-menu");
+            const card = button.closest("[data-template-card]");
             const isOpening = dropdown.hidden;
             closeAllMenus();
             dropdown.hidden = !isOpening;
             button.setAttribute("aria-expanded", isOpening ? "true" : "false");
             if (menuWrap && isOpening) {
               menuWrap.classList.add("is-open");
+            }
+            if (card && isOpening) {
+              card.classList.add("is-menu-open");
             }
           });
         });
@@ -672,6 +1116,440 @@
       }
 
       renderTemplates(initialTemplates, statusSelect ? statusSelect.value : "all");
+    })();
+  </script>
+
+  <script>
+    // Shared toast helper
+    (function () {
+      const toast = document.getElementById("mp-toast");
+      let toastTimer = null;
+      window.mpShowToast = function (message, isError) {
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.toggle("is-error", Boolean(isError));
+        toast.hidden = false;
+        requestAnimationFrame(() => toast.classList.add("is-visible"));
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.classList.remove("is-visible");
+          setTimeout(() => { toast.hidden = true; }, 250);
+        }, 3200);
+      };
+    })();
+  </script>
+
+  <script>
+    // ---- All Plans view ----
+    (function () {
+      const activeSection = {{ active_section|tojson }};
+      if (activeSection !== "all") return;
+
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+      const listRoot = document.getElementById("mp-all-list");
+      const countLine = document.getElementById("mp-all-count");
+      const emptyBox = document.getElementById("mp-all-empty");
+      const pagination = document.getElementById("mp-all-pagination");
+      const statusOptions = document.getElementById("mp-all-status-options");
+      const searchInput = document.getElementById("mp-all-search");
+      const sortSelect = document.getElementById("mp-all-sort");
+      const PAGE_SIZE = 25;
+
+      let allPlans = {{ (all_plans or [])|tojson }};
+      let currentPage = 1;
+      let sortKey = "end_sort";
+      let sortDir = "asc";
+
+      function statusClass(status) {
+        return "mp-status-" + String(status || "").toLowerCase();
+      }
+
+      function escapeHtml(value) {
+        const div = document.createElement("div");
+        div.textContent = value == null ? "" : String(value);
+        return div.innerHTML;
+      }
+
+      function getSelectedStatuses() {
+        if (!statusOptions) return new Set();
+        return new Set(
+          Array.from(statusOptions.querySelectorAll('input[name="mp_filter_status"]:checked'))
+            .map((input) => String(input.value || "").toLowerCase())
+        );
+      }
+
+      function applyStatusFilter(rows) {
+        const selected = getSelectedStatuses();
+        if (selected.size === 0) return rows.slice();
+        return rows.filter((p) => selected.has(String(p.status || "").toLowerCase()));
+      }
+
+      function applySearch(rows) {
+        const term = (searchInput?.value || "").trim().toLowerCase();
+        if (!term) return rows;
+        return rows.filter((p) =>
+          (p.customer_name || "").toLowerCase().includes(term) ||
+          (p.plan_number || "").toLowerCase().includes(term)
+        );
+      }
+
+      function sortRows(rows) {
+        const dir = sortDir === "asc" ? 1 : -1;
+        return [...rows].sort((a, b) => {
+          const av = a[sortKey] == null ? "" : a[sortKey];
+          const bv = b[sortKey] == null ? "" : b[sortKey];
+          if (av < bv) return -1 * dir;
+          if (av > bv) return 1 * dir;
+          return 0;
+        });
+      }
+
+      function cardHtml(plan) {
+        const canCancel = !(plan.status === "cancelled" || plan.status === "expired");
+        return `
+          <article class="mp-plan-card" data-plan-id="${escapeHtml(plan.plan_id)}" data-status="${escapeHtml(plan.status)}">
+            <div class="mp-plan-card-head">
+              <span class="mp-plan-card-number">${escapeHtml(plan.plan_number)}</span>
+              <span class="mp-status-badge ${statusClass(plan.status)}" data-status-badge>${escapeHtml(plan.status_label)}</span>
+              <div class="mp-row-menu">
+                <button type="button" class="mp-row-menu-button" aria-label="Plan actions" aria-haspopup="true" aria-expanded="false">&#8230;</button>
+                <div class="mp-row-menu-dropdown" hidden>
+                  <a href="/maintenance-plans/${encodeURIComponent(plan.plan_id)}">View Plan</a>
+                  ${canCancel ? '<button type="button" class="mp-danger mp-cancel-trigger">Cancel Plan</button>' : ""}
+                </div>
+              </div>
+            </div>
+            <div class="mp-plan-card-grid">
+              <div class="mp-plan-field"><span class="mp-plan-field-label">Customer</span><span class="mp-plan-field-value">${escapeHtml(plan.customer_name)}</span></div>
+              <div class="mp-plan-field"><span class="mp-plan-field-label">Property</span><span class="mp-plan-field-value">${escapeHtml(plan.property_name)}</span></div>
+              <div class="mp-plan-field"><span class="mp-plan-field-label">Plan Tier</span><span class="mp-plan-field-value">${escapeHtml(plan.tier_name)}</span></div>
+              <div class="mp-plan-field"><span class="mp-plan-field-label">Billing Type</span><span class="mp-plan-field-value">${escapeHtml(plan.billing_type_label)}</span></div>
+              <div class="mp-plan-field"><span class="mp-plan-field-label">Start Date</span><span class="mp-plan-field-value">${escapeHtml(plan.start_display)}</span></div>
+              <div class="mp-plan-field"><span class="mp-plan-field-label">End Date</span><span class="mp-plan-field-value">${escapeHtml(plan.end_display)}</span></div>
+              <div class="mp-plan-field"><span class="mp-plan-field-label">Visits</span><span class="mp-plan-field-value">${escapeHtml(plan.visits_display)}</span></div>
+              <div class="mp-plan-field"><span class="mp-plan-field-label">Next Visit</span><span class="mp-plan-field-value">${escapeHtml(plan.next_visit_display)}</span></div>
+            </div>
+          </article>
+        `;
+      }
+
+      function showEmpty(filtered) {
+        listRoot.innerHTML = "";
+        listRoot.hidden = true;
+        pagination.innerHTML = "";
+        countLine.textContent = "";
+        emptyBox.hidden = false;
+        if (filtered) {
+          emptyBox.innerHTML = `<p>No plans match the current filters.</p><p class="mp-empty-actions"><a href="#" id="mp-clear-filters">Clear Filters</a></p>`;
+          const clear = document.getElementById("mp-clear-filters");
+          if (clear) clear.addEventListener("click", function (e) {
+            e.preventDefault();
+            if (statusOptions) {
+              statusOptions.querySelectorAll('input[name="mp_filter_status"]').forEach((input) => {
+                input.checked = input.value === "active";
+              });
+            }
+            if (searchInput) searchInput.value = "";
+            currentPage = 1;
+            render();
+          });
+        } else {
+          emptyBox.innerHTML = `<p>No maintenance plans have been sold yet. Plans are sold from a property page.</p>`;
+        }
+      }
+
+      function renderPagination(total) {
+        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        if (currentPage > totalPages) currentPage = totalPages;
+        pagination.innerHTML = "";
+        if (totalPages <= 1) return;
+
+        const prev = document.createElement("button");
+        prev.textContent = "Previous";
+        prev.disabled = currentPage <= 1;
+        prev.addEventListener("click", () => { currentPage--; render(); });
+
+        const label = document.createElement("span");
+        label.textContent = `Page ${currentPage} of ${totalPages}`;
+
+        const next = document.createElement("button");
+        next.textContent = "Next";
+        next.disabled = currentPage >= totalPages;
+        next.addEventListener("click", () => { currentPage++; render(); });
+
+        pagination.appendChild(prev);
+        pagination.appendChild(label);
+        pagination.appendChild(next);
+      }
+
+      function render() {
+        const filtered = applySearch(applyStatusFilter(allPlans));
+        const total = filtered.length;
+
+        if (!total) {
+          showEmpty(allPlans.length > 0);
+          return;
+        }
+
+        emptyBox.hidden = true;
+        listRoot.hidden = false;
+
+        const sorted = sortRows(filtered);
+        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        if (currentPage > totalPages) currentPage = totalPages;
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const pageRows = sorted.slice(start, start + PAGE_SIZE);
+
+        listRoot.innerHTML = pageRows.map(cardHtml).join("");
+        const end = start + pageRows.length;
+        countLine.textContent = `Showing ${start + 1}-${end} of ${total} plans`;
+        renderPagination(total);
+        wireRowMenus();
+      }
+
+      // Sorting via the Sort by dropdown
+      if (sortSelect) {
+        sortSelect.addEventListener("change", function () {
+          const [key, dir] = sortSelect.value.split(":");
+          sortKey = key || "end_sort";
+          sortDir = dir === "desc" ? "desc" : "asc";
+          currentPage = 1;
+          render();
+        });
+      }
+
+      // Row action menus + cancel modal
+      const cancelModal = document.getElementById("mp-cancel-modal");
+      const cancelReason = document.getElementById("mp-cancel-reason");
+      const cancelError = document.getElementById("mp-cancel-error");
+      const keepPlanBtn = document.getElementById("mp-keep-plan");
+      const confirmCancelBtn = document.getElementById("mp-confirm-cancel");
+      let pendingCancelPlanId = null;
+
+      function closeRowMenus() {
+        document.querySelectorAll(".mp-row-menu-dropdown").forEach((d) => { d.hidden = true; });
+        document.querySelectorAll(".mp-row-menu-button").forEach((b) => b.setAttribute("aria-expanded", "false"));
+        document.querySelectorAll(".mp-plan-card.is-menu-open").forEach((c) => c.classList.remove("is-menu-open"));
+      }
+
+      function wireRowMenus() {
+        listRoot.querySelectorAll(".mp-row-menu-button").forEach((button) => {
+          button.addEventListener("click", function (event) {
+            event.stopPropagation();
+            const dropdown = button.parentElement.querySelector(".mp-row-menu-dropdown");
+            const card = button.closest(".mp-plan-card");
+            const opening = dropdown.hidden;
+            closeRowMenus();
+            dropdown.hidden = !opening;
+            button.setAttribute("aria-expanded", opening ? "true" : "false");
+            if (card) card.classList.toggle("is-menu-open", opening);
+          });
+        });
+
+        listRoot.querySelectorAll(".mp-cancel-trigger").forEach((button) => {
+          button.addEventListener("click", function () {
+            const card = button.closest(".mp-plan-card");
+            pendingCancelPlanId = card?.dataset.planId || null;
+            closeRowMenus();
+            if (cancelReason) cancelReason.value = "";
+            if (cancelError) cancelError.hidden = true;
+            if (cancelModal) cancelModal.hidden = false;
+            if (cancelReason) cancelReason.focus();
+          });
+        });
+      }
+
+      function closeCancelModal() {
+        if (cancelModal) cancelModal.hidden = true;
+        pendingCancelPlanId = null;
+      }
+
+      if (keepPlanBtn) keepPlanBtn.addEventListener("click", closeCancelModal);
+      if (cancelModal) cancelModal.addEventListener("click", function (e) {
+        if (e.target === cancelModal) closeCancelModal();
+      });
+
+      if (confirmCancelBtn) {
+        confirmCancelBtn.addEventListener("click", async function () {
+          const reason = (cancelReason?.value || "").trim();
+          if (!reason) {
+            if (cancelError) { cancelError.textContent = "A cancellation reason is required."; cancelError.hidden = false; }
+            return;
+          }
+          if (!pendingCancelPlanId) return;
+          confirmCancelBtn.disabled = true;
+          try {
+            const response = await fetch(`/api/maintenance-plans/${encodeURIComponent(pendingCancelPlanId)}/cancel`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json", "Accept": "application/json", "X-CSRFToken": csrfToken },
+              body: JSON.stringify({ reason: reason }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload.success) throw new Error(payload.error || "Request failed");
+
+            // Update the row's status badge without a full reload.
+            const planId = pendingCancelPlanId;
+            allPlans = allPlans.map((p) => p.plan_id === planId ? { ...p, status: "cancelled", status_label: "Cancelled" } : p);
+            confirmCancelBtn.disabled = false;
+            closeCancelModal();
+            render();
+            if (window.mpShowToast) window.mpShowToast("Plan cancelled.");
+          } catch (error) {
+            confirmCancelBtn.disabled = false;
+            if (cancelError) { cancelError.textContent = error.message || "Could not cancel the plan."; cancelError.hidden = false; }
+          }
+        });
+      }
+
+      document.addEventListener("click", function (event) {
+        if (!event.target.closest(".mp-row-menu")) closeRowMenus();
+      });
+
+      if (statusOptions) {
+        statusOptions.addEventListener("change", function () {
+          currentPage = 1;
+          render();
+        });
+      }
+
+      let searchTimer = null;
+      if (searchInput) {
+        searchInput.addEventListener("input", function () {
+          clearTimeout(searchTimer);
+          searchTimer = setTimeout(() => { currentPage = 1; render(); }, 300);
+        });
+      }
+
+      // Initial render: the default "Active" status checkbox filters preloaded data.
+      render();
+    })();
+  </script>
+
+  <script>
+    // ---- Renewal Queue view ----
+    (function () {
+      const activeSection = {{ active_section|tojson }};
+      if (activeSection !== "renewals") return;
+
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+      const listRoot = document.getElementById("mp-renewal-list");
+      const emptyBox = document.getElementById("mp-renewal-empty");
+      const windowSelect = document.getElementById("mp-renewal-window");
+      const tierSelect = document.getElementById("mp-renewal-tier");
+
+      let renewalPlans = {{ (renewal_plans or [])|tojson }};
+
+      function escapeHtml(value) {
+        const div = document.createElement("div");
+        div.textContent = value == null ? "" : String(value);
+        return div.innerHTML;
+      }
+
+      function chipClass(days) {
+        if (days <= 14) return "mp-chip-red";
+        if (days <= 30) return "mp-chip-amber";
+        return "mp-chip-green";
+      }
+
+      function filteredPlans() {
+        const windowDays = Number(windowSelect ? windowSelect.value : 60);
+        const tier = tierSelect ? tierSelect.value : "";
+        return renewalPlans.filter((p) =>
+          p.days_remaining <= windowDays &&
+          (!tier || p.template_name === tier)
+        );
+      }
+
+      function cardHtml(plan) {
+        const customerLink = plan.customer_id
+          ? `<a href="/customers/${encodeURIComponent(plan.customer_id)}">${escapeHtml(plan.customer_name)}</a>`
+          : escapeHtml(plan.customer_name);
+        const daysLabel = plan.days_remaining === 1 ? "1 day" : `${plan.days_remaining} days`;
+        return `
+          <div class="mp-renewal-card" data-plan-id="${escapeHtml(plan.plan_id)}">
+            <div class="mp-renewal-main">
+              <span class="mp-renewal-customer">${customerLink}</span>
+              <span class="mp-renewal-meta">${escapeHtml(plan.tier_name)}</span>
+              <span class="mp-renewal-meta">${escapeHtml(plan.property_name)}</span>
+            </div>
+            <div class="mp-renewal-expiry">
+              <span class="mp-renewal-expiry-date">${escapeHtml(plan.expiry_display)}</span>
+              <span class="mp-chip ${chipClass(plan.days_remaining)}">${daysLabel} remaining</span>
+            </div>
+            <div class="mp-renewal-actions">
+              <button type="button" class="mp-btn mp-btn-secondary mp-send-renewal">Send Renewal Email</button>
+              <a class="mp-btn mp-btn-primary" href="/maintenance-plans/${encodeURIComponent(plan.plan_id)}/renew">Renew Now</a>
+              <button type="button" class="mp-btn mp-btn-ghost mp-dismiss-renewal">Dismiss</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function render() {
+        const rows = filteredPlans();
+        if (!rows.length) {
+          listRoot.innerHTML = "";
+          emptyBox.hidden = false;
+          const windowDays = Number(windowSelect ? windowSelect.value : 60);
+          emptyBox.innerHTML = `<p>No plans are renewing in the next ${windowDays} days.</p>`;
+          return;
+        }
+        emptyBox.hidden = true;
+        listRoot.innerHTML = rows.map(cardHtml).join("");
+        wireCards();
+      }
+
+      function wireCards() {
+        listRoot.querySelectorAll(".mp-send-renewal").forEach((button) => {
+          button.addEventListener("click", async function () {
+            const card = button.closest(".mp-renewal-card");
+            const planId = card?.dataset.planId;
+            if (!planId) return;
+            button.disabled = true;
+            try {
+              const response = await fetch(`/api/maintenance-plans/${encodeURIComponent(planId)}/send-renewal-email`, {
+                method: "POST",
+                headers: { "Accept": "application/json", "X-CSRFToken": csrfToken },
+              });
+              const payload = await response.json().catch(() => ({}));
+              if (!response.ok || payload.success === false) throw new Error("Request failed");
+              if (window.mpShowToast) window.mpShowToast("Renewal email sent to the customer.");
+            } catch (error) {
+              if (window.mpShowToast) window.mpShowToast("Could not send the renewal email.", true);
+            } finally {
+              button.disabled = false;
+            }
+          });
+        });
+
+        listRoot.querySelectorAll(".mp-dismiss-renewal").forEach((button) => {
+          button.addEventListener("click", async function () {
+            const card = button.closest(".mp-renewal-card");
+            const planId = card?.dataset.planId;
+            if (!planId) return;
+            button.disabled = true;
+            try {
+              const response = await fetch(`/api/maintenance-plans/${encodeURIComponent(planId)}/dismiss-renewal`, {
+                method: "POST",
+                headers: { "Accept": "application/json", "X-CSRFToken": csrfToken },
+              });
+              const payload = await response.json().catch(() => ({}));
+              if (!response.ok || payload.success === false) throw new Error("Request failed");
+              renewalPlans = renewalPlans.filter((p) => p.plan_id !== planId);
+              render();
+              if (window.mpShowToast) window.mpShowToast("Plan removed from the renewal queue.");
+            } catch (error) {
+              button.disabled = false;
+              if (window.mpShowToast) window.mpShowToast("Could not dismiss this plan.", true);
+            }
+          });
+        });
+      }
+
+      if (windowSelect) windowSelect.addEventListener("change", render);
+      if (tierSelect) tierSelect.addEventListener("change", render);
+
+      render();
     })();
   </script>
 {% endblock %}

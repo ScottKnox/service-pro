@@ -491,6 +491,122 @@ def ensure_collection_validators(db):
         }
     }
 
+    maintenance_plans_validator = {
+        "$jsonSchema": {
+            "bsonType": "object",
+            "required": [
+                "plan_number",
+                "business_id",
+                "template_id",
+                "template_snapshot",
+                "customer_id",
+                "customer_name",
+                "company",
+                "property_id",
+                "property_name",
+                "property_address",
+                "covered_systems",
+                "status",
+                "start_date",
+                "end_date",
+                "renewal_date",
+                "auto_renew",
+                "billing_type",
+                "billing_amount",
+                "next_billing_date",
+                "billing_history",
+                "series_ids",
+                "visits_scheduled",
+                "visits_completed",
+                "sold_by_employee_id",
+                "sold_by_name",
+                "sold_via",
+                "created_at",
+                "updated_at",
+            ],
+            "properties": {
+                "plan_number": {"bsonType": "string"},
+                "business_id": {"bsonType": ["objectId", "string"]},
+                "template_id": {"bsonType": ["objectId", "string"]},
+                "template_snapshot": {"bsonType": "object"},
+                "customer_id": {"bsonType": ["objectId", "string"]},
+                "customer_name": {"bsonType": "string"},
+                "company": {"bsonType": "string"},
+                "property_id": {"bsonType": ["objectId", "string"]},
+                "property_name": {"bsonType": "string"},
+                "property_address": {
+                    "bsonType": "object",
+                    "required": ["address_line_1", "address_line_2", "city", "state", "zip_code"],
+                    "properties": {
+                        "address_line_1": {"bsonType": "string"},
+                        "address_line_2": {"bsonType": ["string", "null"]},
+                        "city": {"bsonType": "string"},
+                        "state": {"bsonType": "string"},
+                        "zip_code": {"bsonType": "string"},
+                    },
+                },
+                "covered_systems": {
+                    "bsonType": ["array", "null"],
+                    "items": {
+                        "bsonType": "object",
+                        "required": [
+                            "hvac_system_id",
+                            "system_nickname",
+                            "system_type",
+                            "system_tonnage",
+                            "manufacturer",
+                            "manufactured_year",
+                        ],
+                        "properties": {
+                            "hvac_system_id": {"bsonType": ["objectId", "string"]},
+                            "system_nickname": {"bsonType": "string"},
+                            "system_type": {"bsonType": "string"},
+                            "system_tonnage": {"bsonType": "string"},
+                            "manufacturer": {"bsonType": "string"},
+                            "manufactured_year": {"bsonType": "string"},
+                        },
+                    },
+                },
+                "status": {"enum": ["active", "pending", "lapsed", "cancelled", "expired"]},
+                "start_date": {"bsonType": ["date"]},
+                "end_date": {"bsonType": ["date"]},
+                "renewal_date": {"bsonType": ["date"]},
+                "auto_renew": {"bsonType": "bool"},
+                "billing_type": {"enum": ["monthly", "annual"]},
+                "billing_amount": {"bsonType": ["double", "int", "long", "decimal"]},
+                "next_billing_date": {"bsonType": ["date"]},
+                "billing_history": {
+                    "bsonType": ["array", "null"],
+                    "items": {
+                        "bsonType": "object",
+                        "required": ["date", "amount", "status", "invoice_id"],
+                        "properties": {
+                            "date": {"bsonType": ["date"]},
+                            "amount": {"bsonType": ["double", "int", "long", "decimal"]},
+                            "status": {"bsonType": "string"},
+                            "invoice_id": {"bsonType": ["objectId", "string", "null"]},
+                        },
+                    },
+                },
+                "series_ids": {
+                    "bsonType": ["array", "null"],
+                    "items": {"bsonType": ["objectId", "string"]},
+                },
+                "visits_scheduled": {"bsonType": ["int", "long"]},
+                "visits_completed": {"bsonType": ["int", "long"]},
+                "last_visit_date": {"bsonType": ["date", "null"]},
+                "next_visit_date": {"bsonType": ["date", "null"]},
+                "sold_by_employee_id": {"bsonType": "string"},
+                "sold_by_name": {"bsonType": "string"},
+                "sold_via": {"enum": ["office", "tech_in_field", "customer_portal"]},
+                "created_at": {"bsonType": ["date"]},
+                "updated_at": {"bsonType": ["date"]},
+                "cancelled_at": {"bsonType": ["date", "null"]},
+                "cancellation_reason": {"bsonType": ["string", "null"]},
+            },
+        }
+    }
+
     _ensure_collection_with_validator(db, "jobs", jobs_validator)
     _ensure_collection_with_validator(db, "payments", payments_validator)
     _ensure_collection_with_validator(db, "recurring_job_series", recurring_job_series_validator)
@@ -501,6 +617,7 @@ def ensure_collection_validators(db):
     _ensure_collection_with_validator(db, "subscriptions", subscriptions_validator)
     _ensure_collection_with_validator(db, "categories", categories_validator)
     _ensure_collection_with_validator(db, "maintenance_plan_templates", maintenance_plan_templates_validator)
+    _ensure_collection_with_validator(db, "maintenance_plans", maintenance_plans_validator)
 
     db.hvacDiagnostics.create_index([("hvac_system_id", 1), ("created_at", -1)])
     db.hvacDiagnostics.create_index([("customer_id", 1), ("created_at", -1)])
@@ -520,6 +637,10 @@ def ensure_collection_validators(db):
     db.jobs.create_index([("company_id", 1), ("equipments.hvac_system_id", 1), ("status", 1), ("completed_at", -1)])
     db.categories.create_index([("company_id", 1), ("type", 1), ("sort_order", 1)])
     db.maintenance_plan_templates.create_index([("business_id", 1), ("is_active", 1), ("tier_order", 1)])
+    db.maintenance_plans.create_index([("business_id", 1), ("status", 1), ("renewal_date", 1)])
+    db.maintenance_plans.create_index([("business_id", 1), ("customer_id", 1), ("status", 1)])
+    db.maintenance_plans.create_index([("business_id", 1), ("property_id", 1), ("status", 1)])
+    db.maintenance_plans.create_index([("template_id", 1)])
     db.payments.create_index([("job_id", 1), ("paid_at", -1)])
     db.payments.create_index([("customer_id", 1), ("paid_at", -1)])
     db.payments.create_index([("invoice_id", 1), ("paid_at", -1)])

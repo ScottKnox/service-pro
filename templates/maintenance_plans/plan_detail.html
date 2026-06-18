@@ -1,0 +1,652 @@
+{% extends "base.html" %}
+
+{% block title %}{{ plan.plan_number }} | Maintenance Plan | Klovent{% endblock %}
+
+{% block content %}
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div class="mp-detail-page resource-page resource-customers">
+
+          <nav id="breadcrumb" aria-label="Breadcrumb">
+            <ol>
+              <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
+              <li><a href="{{ url_for('customers.view_customer', customerId=plan.customer_id) }}">View Customer</a></li>
+              <li aria-current="page">{{ plan.plan_number }}</li>
+            </ol>
+          </nav>
+
+          <div class="mp-detail-layout">
+            {# Column 2 — plan context panel #}
+            <aside class="mp-context-panel" aria-label="Plan summary">
+              <div class="mp-context-header">
+                <span class="mp-plan-number">{{ plan.plan_number }}</span>
+                <span class="mp-status-badge mp-status-{{ plan.status }}">{{ plan.status_label }}</span>
+              </div>
+              <h1 class="mp-tier-name">{{ plan.tier_name }}</h1>
+
+              <dl class="mp-context-list">
+                <div class="mp-context-item">
+                  <dt>Customer</dt>
+                  <dd><a href="{{ url_for('customers.view_customer', customerId=plan.customer_id) }}">{{ plan.customer_name }}</a></dd>
+                </div>
+                <div class="mp-context-item">
+                  <dt>Property</dt>
+                  <dd>
+                    <a href="{{ url_for('customers.view_property', customerId=plan.customer_id, propertyId=plan.property_id) }}">{{ plan.property_name }}</a>
+                    {% if plan.address_lines %}
+                      <span class="mp-context-address">
+                        {% for line in plan.address_lines %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+                      </span>
+                    {% endif %}
+                  </dd>
+                </div>
+                <div class="mp-context-item">
+                  <dt>Contract period</dt>
+                  <dd>
+                    <span>Start: {{ plan.start_display or '-' }}</span>
+                    <span>End: {{ plan.end_display or '-' }}</span>
+                  </dd>
+                </div>
+                <div class="mp-context-item">
+                  <dt>Billing</dt>
+                  <dd>
+                    <span>Type: {{ plan.billing_type_label }}</span>
+                    <span>Amount: {{ plan.billing_amount_display }}</span>
+                    <span>Next billing: {{ plan.next_billing_display or '-' }}</span>
+                  </dd>
+                </div>
+                <div class="mp-context-item">
+                  <dt>Sold by</dt>
+                  <dd>{{ plan.sold_by_name }}</dd>
+                </div>
+                <div class="mp-context-item">
+                  <dt>Sold via</dt>
+                  <dd>{{ plan.sold_via_label }}</dd>
+                </div>
+              </dl>
+            </aside>
+
+            {# Column 3 — main content #}
+            <div class="mp-main">
+              {# Section 1 — Actions bar #}
+              <section class="mp-section mp-actions-bar" aria-label="Plan actions">
+                <button type="button" class="mp-btn mp-btn-primary" id="mp-send-summary"
+                        data-url="{{ url_for('admin_bp.api_send_maintenance_plan_summary_email', plan_id=plan_id) }}">
+                  Send Plan Summary
+                </button>
+                <button type="button" class="mp-btn mp-btn-danger" id="mp-open-cancel"
+                        {% if plan.status in ['cancelled', 'expired'] %}disabled title="This plan is already {{ plan.status }}."{% endif %}>
+                  Cancel Plan
+                </button>
+                {% if plan.show_renew %}
+                  <a class="mp-btn mp-btn-secondary" href="/maintenance-plans/{{ plan_id }}/renew">Renew Plan</a>
+                {% endif %}
+              </section>
+
+              {# Section 2 — Covered systems #}
+              <section class="mp-section" aria-labelledby="mp-systems-heading">
+                <h2 id="mp-systems-heading" class="mp-section-title">Covered Systems</h2>
+                {% if plan.covered_systems %}
+                  <div class="mp-systems-grid">
+                    {% for system in plan.covered_systems %}
+                      <div class="mp-system-card">
+                        <span class="mp-system-nickname">{{ system.system_nickname|default('System', true) }}</span>
+                        {% if system.system_type %}<span class="mp-system-type">{{ system.system_type }}</span>{% endif %}
+                        {% if system.system_tonnage %}<span class="mp-system-meta">{{ system.system_tonnage }}</span>{% endif %}
+                        {% if system.manufacturer or system.manufactured_year %}
+                          <span class="mp-system-meta">{{ system.manufacturer|default('', true) }}{% if system.manufacturer and system.manufactured_year %} &middot; {% endif %}{{ system.manufactured_year|default('', true) }}</span>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <p class="mp-empty">No systems are assigned to this plan.</p>
+                {% endif %}
+              </section>
+
+              {# Section 3 — Visit schedule #}
+              <section class="mp-section" aria-labelledby="mp-visits-heading">
+                <h2 id="mp-visits-heading" class="mp-section-title">Visit Schedule</h2>
+                <p class="mp-section-subheading">{{ plan.visits_completed }} of {{ plan.visits_scheduled }} visits completed</p>
+                {% if visits %}
+                  <div class="mp-visit-table" role="table">
+                    <div class="mp-visit-row mp-visit-head" role="row">
+                      <span role="columnheader">Season</span>
+                      <span role="columnheader">Service</span>
+                      <span role="columnheader">Scheduled</span>
+                      <span role="columnheader">Status</span>
+                      <span role="columnheader"></span>
+                    </div>
+                    {% for visit in visits %}
+                      <div class="mp-visit-row" role="row">
+                        <span role="cell" class="mp-visit-season">{{ visit.season_label or '-' }}</span>
+                        <span role="cell">{{ visit.service_name or '-' }}</span>
+                        <span role="cell">{{ visit.scheduled_display or '-' }}</span>
+                        <span role="cell"><span class="mp-visit-status mp-visit-{{ visit.status_key }}">{{ visit.status_label }}</span></span>
+                        <span role="cell" class="mp-visit-action">
+                          {% if visit.has_job %}
+                            <a class="mp-btn mp-btn-small mp-btn-secondary" href="{{ url_for('jobs.view_job', jobId=visit.job_id) }}">View Job</a>
+                          {% else %}
+                            <a class="mp-btn mp-btn-small mp-btn-primary" href="/jobs/new?maintenance_plan_id={{ plan_id }}&series_id={{ visit.series_id }}">Schedule Now</a>
+                          {% endif %}
+                        </span>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <p class="mp-empty">No visits are scheduled for this plan.</p>
+                {% endif %}
+              </section>
+
+              {# Section 4 — Plan benefits #}
+              <section class="mp-section" aria-labelledby="mp-benefits-heading">
+                <h2 id="mp-benefits-heading" class="mp-section-title">Plan Benefits</h2>
+                {% if benefits %}
+                  <ul class="mp-benefits-list">
+                    {% for benefit in benefits %}
+                      <li>{{ benefit }}</li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="mp-empty">No additional benefits on this plan.</p>
+                {% endif %}
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  {# Cancel confirmation modal #}
+  <div class="mp-modal-overlay" id="mp-cancel-modal" hidden>
+    <div class="mp-modal" role="dialog" aria-modal="true" aria-labelledby="mp-cancel-title">
+      <h3 id="mp-cancel-title">Cancel Maintenance Plan</h3>
+      <p>Are you sure you want to cancel this plan?</p>
+      <label for="mp-cancel-reason" class="mp-modal-label">Reason for cancellation</label>
+      <textarea id="mp-cancel-reason" rows="3" placeholder="Enter a reason"></textarea>
+      <p class="mp-modal-error" id="mp-cancel-error" hidden></p>
+      <div class="mp-modal-actions">
+        <button type="button" class="mp-btn mp-btn-secondary" id="mp-keep-plan">Keep Plan</button>
+        <button type="button" class="mp-btn mp-btn-danger" id="mp-confirm-cancel"
+                data-url="{{ url_for('admin_bp.api_cancel_maintenance_plan', plan_id=plan_id) }}">Cancel Plan</button>
+      </div>
+    </div>
+  </div>
+
+  {# Toast #}
+  <div class="mp-toast" id="mp-toast" hidden></div>
+{% endblock %}
+
+{% block scripts %}
+  <style>
+    .mp-detail-page {
+      --mp-panel: #1d3329;
+      --mp-panel-soft: #253e33;
+      --mp-panel-elevated: #2b473b;
+      --mp-border: #2f5a4a;
+      --mp-border-strong: #3a6553;
+      --mp-text: #f2f5f3;
+      --mp-text-muted: #b2c0b9;
+      --mp-text-subtle: #8c9a93;
+      --mp-accent: #00a86b;
+      --mp-accent-soft: #244236;
+      --mp-danger: #fda29b;
+      --mp-danger-soft: #4d1f1f;
+      color: var(--mp-text);
+    }
+
+    .mp-detail-page #breadcrumb {
+      border-bottom: 1px solid var(--mp-border);
+    }
+
+    .mp-detail-page #breadcrumb a {
+      color: var(--mp-text-muted);
+    }
+
+    .mp-detail-page #breadcrumb a:hover {
+      color: var(--mp-text);
+    }
+
+    .mp-detail-page #breadcrumb li[aria-current="page"] {
+      color: var(--mp-text-subtle);
+    }
+
+    .mp-detail-page #breadcrumb li + li::before {
+      color: var(--mp-text-subtle);
+    }
+
+    .mp-detail-layout {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 1.5rem;
+      align-items: start;
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      .mp-detail-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .mp-context-panel {
+      background: var(--mp-panel);
+      border: 1px solid var(--mp-border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      position: sticky;
+      top: 1rem;
+    }
+
+    .mp-context-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .mp-plan-number {
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: var(--mp-text-muted);
+      font-size: 0.95rem;
+    }
+
+    .mp-status-badge {
+      padding: 0.25rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .mp-status-active { background: rgba(0, 168, 107, 0.18); color: #56d6a0; border: 1px solid #1f7a57; }
+    .mp-status-pending { background: rgba(245, 176, 65, 0.18); color: #f5b041; border: 1px solid #8a5a1a; }
+    .mp-status-lapsed { background: rgba(253, 162, 155, 0.16); color: #fda29b; border: 1px solid #7a2a2a; }
+    .mp-status-cancelled,
+    .mp-status-expired { background: rgba(140, 154, 147, 0.16); color: #b2c0b9; border: 1px solid #4a5b53; }
+
+    .mp-tier-name {
+      font-size: 1.45rem;
+      font-weight: 800;
+      margin: 0.85rem 0 1.2rem;
+      color: var(--mp-text);
+    }
+
+    .mp-context-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin: 0;
+    }
+
+    .mp-context-item dt {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mp-text-subtle);
+      margin-bottom: 0.25rem;
+    }
+
+    .mp-context-item dd {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      font-size: 0.95rem;
+      color: var(--mp-text);
+    }
+
+    .mp-context-item dd a {
+      color: var(--mp-accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .mp-context-item dd a:hover { text-decoration: underline; }
+
+    .mp-context-address {
+      color: var(--mp-text-muted);
+      font-size: 0.85rem;
+      margin-top: 0.2rem;
+    }
+
+    .mp-main {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .mp-section {
+      background: var(--mp-panel);
+      border: 1px solid var(--mp-border);
+      border-radius: 14px;
+      padding: 1.5rem;
+    }
+
+    .mp-section-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      margin: 0 0 0.35rem;
+    }
+
+    .mp-section-subheading {
+      color: var(--mp-text-muted);
+      margin: 0 0 1rem;
+      font-size: 0.9rem;
+    }
+
+    .mp-actions-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .mp-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.6rem 1.1rem;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      border: 1px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      transition: filter 0.15s ease, background 0.15s ease;
+    }
+
+    .mp-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .mp-btn-small { padding: 0.4rem 0.8rem; font-size: 0.82rem; }
+
+    .mp-btn-primary { background: var(--mp-accent); color: #06231a; }
+    .mp-btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+
+    .mp-btn-secondary {
+      background: var(--mp-panel-elevated);
+      color: var(--mp-text);
+      border-color: var(--mp-border-strong);
+    }
+    .mp-btn-secondary:hover:not(:disabled) { background: var(--mp-border); }
+
+    .mp-btn-danger {
+      background: var(--mp-danger-soft);
+      color: var(--mp-danger);
+      border-color: #7a2a2a;
+    }
+    .mp-btn-danger:hover:not(:disabled) { filter: brightness(1.12); }
+
+    .mp-empty {
+      color: var(--mp-text-muted);
+      margin: 0;
+      font-style: italic;
+    }
+
+    .mp-systems-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 1rem;
+    }
+
+    .mp-system-card {
+      background: var(--mp-panel-soft);
+      border: 1px solid var(--mp-border);
+      border-radius: 12px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .mp-system-nickname { font-size: 1.1rem; font-weight: 800; }
+    .mp-system-type { color: var(--mp-text); font-size: 0.9rem; }
+    .mp-system-meta { color: var(--mp-text-muted); font-size: 0.85rem; }
+
+    .mp-visit-table { display: flex; flex-direction: column; }
+
+    .mp-visit-row {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr 1.1fr 0.9fr auto;
+      gap: 0.75rem;
+      align-items: center;
+      padding: 0.8rem 0;
+      border-bottom: 1px solid var(--mp-border);
+    }
+
+    .mp-visit-row:last-child { border-bottom: none; }
+
+    .mp-visit-head {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mp-text-subtle);
+      font-weight: 700;
+    }
+
+    .mp-visit-season { font-weight: 700; }
+
+    .mp-visit-status {
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .mp-visit-completed { background: rgba(0, 168, 107, 0.18); color: #56d6a0; }
+    .mp-visit-scheduled { background: rgba(70, 140, 235, 0.18); color: #7fb3ff; }
+    .mp-visit-missed { background: rgba(253, 162, 155, 0.16); color: #fda29b; }
+    .mp-visit-pending { background: rgba(140, 154, 147, 0.16); color: #b2c0b9; }
+
+    .mp-visit-action { text-align: right; }
+
+    @media (max-width: 720px) {
+      .mp-visit-head { display: none; }
+      .mp-visit-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.4rem 0.75rem;
+      }
+      .mp-visit-action { grid-column: 1 / -1; text-align: left; }
+    }
+
+    .mp-benefits-list {
+      margin: 0;
+      padding-left: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      color: var(--mp-text);
+    }
+
+    .mp-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 18, 14, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+
+    .mp-modal-overlay[hidden] { display: none; }
+
+    .mp-modal {
+      background: #1d3329;
+      border: 1px solid #2f5a4a;
+      border-radius: 14px;
+      padding: 1.5rem;
+      max-width: 460px;
+      width: 100%;
+      color: #f2f5f3;
+    }
+
+    .mp-modal h3 { margin: 0 0 0.5rem; font-size: 1.25rem; font-weight: 800; }
+    .mp-modal p { margin: 0 0 1rem; color: #b2c0b9; }
+
+    .mp-modal-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 0.35rem;
+    }
+
+    .mp-modal textarea {
+      width: 100%;
+      background: #253e33;
+      border: 1px solid #2f5a4a;
+      border-radius: 10px;
+      color: #f2f5f3;
+      padding: 0.6rem;
+      font: inherit;
+      resize: vertical;
+    }
+
+    .mp-modal textarea:focus { outline: none; border-color: #00a86b; }
+
+    .mp-modal-error {
+      color: #fda29b;
+      font-size: 0.85rem;
+      margin: 0.5rem 0 0;
+    }
+
+    .mp-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+
+    .mp-toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #244236;
+      color: #f2f5f3;
+      border: 1px solid #2f5a4a;
+      padding: 0.8rem 1.3rem;
+      border-radius: 10px;
+      font-weight: 600;
+      z-index: 1100;
+      opacity: 0;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .mp-toast[hidden] { display: none; }
+    .mp-toast.is-visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .mp-toast.is-error { border-color: #7a2a2a; color: #fda29b; }
+  </style>
+
+  <script>
+    (function () {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+      const toast = document.getElementById("mp-toast");
+      let toastTimer = null;
+
+      function showToast(message, isError) {
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.toggle("is-error", Boolean(isError));
+        toast.hidden = false;
+        requestAnimationFrame(() => toast.classList.add("is-visible"));
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.classList.remove("is-visible");
+          setTimeout(() => { toast.hidden = true; }, 250);
+        }, 3200);
+      }
+
+      // Send Plan Summary
+      const sendButton = document.getElementById("mp-send-summary");
+      if (sendButton) {
+        sendButton.addEventListener("click", async function () {
+          const url = sendButton.dataset.url;
+          sendButton.disabled = true;
+          try {
+            const response = await fetch(url, {
+              method: "POST",
+              headers: { "Accept": "application/json", "X-CSRFToken": csrfToken },
+            });
+            if (!response.ok) throw new Error("Request failed");
+            showToast("Plan summary sent to the customer.");
+          } catch (error) {
+            showToast("Could not send the plan summary. Please try again.", true);
+          } finally {
+            sendButton.disabled = false;
+          }
+        });
+      }
+
+      // Cancel modal
+      const modal = document.getElementById("mp-cancel-modal");
+      const openCancel = document.getElementById("mp-open-cancel");
+      const keepPlan = document.getElementById("mp-keep-plan");
+      const confirmCancel = document.getElementById("mp-confirm-cancel");
+      const reasonField = document.getElementById("mp-cancel-reason");
+      const cancelError = document.getElementById("mp-cancel-error");
+
+      function closeModal() {
+        if (modal) modal.hidden = true;
+        if (cancelError) cancelError.hidden = true;
+      }
+
+      if (openCancel && modal) {
+        openCancel.addEventListener("click", function () {
+          modal.hidden = false;
+          if (reasonField) reasonField.value = "";
+          if (cancelError) cancelError.hidden = true;
+          if (reasonField) reasonField.focus();
+        });
+      }
+
+      if (keepPlan) keepPlan.addEventListener("click", closeModal);
+      if (modal) {
+        modal.addEventListener("click", function (event) {
+          if (event.target === modal) closeModal();
+        });
+      }
+
+      if (confirmCancel) {
+        confirmCancel.addEventListener("click", async function () {
+          const reason = (reasonField?.value || "").trim();
+          if (!reason) {
+            if (cancelError) {
+              cancelError.textContent = "A cancellation reason is required.";
+              cancelError.hidden = false;
+            }
+            return;
+          }
+          confirmCancel.disabled = true;
+          try {
+            const response = await fetch(confirmCancel.dataset.url, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "X-CSRFToken": csrfToken,
+              },
+              body: JSON.stringify({ reason: reason }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload.success) {
+              throw new Error(payload.error || "Request failed");
+            }
+            window.location.reload();
+          } catch (error) {
+            confirmCancel.disabled = false;
+            if (cancelError) {
+              cancelError.textContent = error.message || "Could not cancel the plan.";
+              cancelError.hidden = false;
+            }
+          }
+        });
+      }
+    })();
+  </script>
+{% endblock %}

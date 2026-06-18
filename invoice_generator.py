@@ -751,6 +751,7 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
 
         percent_raw = str(discount.get("discount_percentage") or "").strip()
         amount_raw = str(discount.get("discount_amount") or "").strip()
+        is_plan_savings = str(discount.get("source") or "").strip() == "maintenance_plan"
 
         percent_value = _currency_to_float(percent_raw)
         if percent_value > 0:
@@ -768,8 +769,11 @@ def generate_invoice(job_id, job, customer, business_logo_path="", business=None
             discounts_total += amount_value
             discount_name = str(discount.get("discount_name") or "Discount")
             display_value = amount_raw if "$" in amount_raw else _format_currency(amount_value)
+            # The maintenance plan savings row is already named for the customer;
+            # show it verbatim instead of appending the generic "Discount (...)".
+            label = discount_name if is_plan_savings else f"{discount_name} Discount ({display_value})"
             discount_rows_for_totals.append([
-                f"{discount_name} Discount ({display_value})",
+                label,
                 _format_currency(-amount_value),
             ])
 

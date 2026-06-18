@@ -116,6 +116,11 @@
           </div>
 
           <div class="add-customer-form-field">
+            <label for="material-purchase-link">Purchase Link</label>
+            <input id="material-purchase-link" name="purchase_link" type="url" placeholder="https://supplier.example.com/material" value="{{ form_data.purchase_link|default('', true) }}" />
+          </div>
+
+          <div class="add-customer-form-field">
             <label for="material-tax-override">Tax Rule</label>
             <select id="material-tax-override" name="tax_override">
               <option value="default" {% if form_data.tax_override|default('default', true) == 'default' %}selected{% endif %}>Default (Taxable)</option>

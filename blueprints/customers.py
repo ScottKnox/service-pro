@@ -2801,6 +2801,120 @@ def view_property(customerId, propertyId):
         sub_properties=paginated_sub_properties,
         sub_properties_page=sub_properties_page,
         sub_properties_total_pages=sub_properties_total_pages,
+        active_maintenance_plan_id=_active_maintenance_plan_id(db, propertyId),
+    )
+
+
+def _format_last_serviced_display(value):
+    parsed = None
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        raw_value = str(value or "").strip()
+        if raw_value:
+            for fmt in ("%m/%d/%Y %I:%M %p", "%m/%d/%Y %H:%M:%S", "%m/%d/%Y"):
+                try:
+                    parsed = datetime.strptime(raw_value, fmt)
+                    break
+                except ValueError:
+                    continue
+            if parsed is None:
+                try:
+                    parsed = datetime.fromisoformat(raw_value.replace("Z", "+00:00"))
+                except ValueError:
+                    parsed = None
+
+    if parsed is None:
+        return "Never serviced"
+    return f"Last serviced: {parsed.strftime('%B')} {parsed.day}, {parsed.year}"
+
+
+def _build_sell_plan_systems(db, customer_id, property_id):
+    normalized_property_id = str(property_id or "").strip()
+    systems = []
+
+    for hvac_system in db.hvacSystems.find(build_reference_filter("customer_id", customer_id)).sort([("_id", -1)]):
+        system_property_id = str(hvac_system.get("property_id") or "").strip()
+        if normalized_property_id and system_property_id != normalized_property_id:
+            continue
+
+        components = hvac_system.get("components") if isinstance(hvac_system.get("components"), dict) else {}
+        condenser = components.get("condensers") if isinstance(components.get("condensers"), dict) else {}
+
+        systems.append(
+            {
+                "_id": str(hvac_system.get("_id") or "").strip(),
+                "system_nickname": str(hvac_system.get("system_nickname") or "").strip(),
+                "system_type": str(hvac_system.get("system_type") or "").strip(),
+                "system_tonnage": str(hvac_system.get("system_tonnage") or "").strip(),
+                "manufacturer": str(condenser.get("manufacturer") or "").strip(),
+                "manufactured_year": str(condenser.get("manufactured_year") or "").strip(),
+                "last_serviced_display": _format_last_serviced_display(hvac_system.get("last_serviced_at")),
+            }
+        )
+
+    return systems
+
+
+def _active_maintenance_plan_id(db, property_id):
+    normalized_property_id = str(property_id or "").strip()
+    if not normalized_property_id:
+        return None
+
+    query = {"$and": [build_reference_filter("property_id", normalized_property_id), {"status": "active"}]}
+    plan = db.maintenance_plans.find_one(query, {"_id": 1})
+    return str(plan["_id"]) if plan else None
+
+
+@bp.route("/customers/<customerId>/properties/<propertyId>/sell-maintenance-plan")
+def sell_maintenance_plan(customerId, propertyId):
+    db = ensure_connection_or_500()
+    customer = db.customers.find_one({"_id": object_id_or_404(customerId)})
+    if not customer:
+        return redirect(url_for("customers.customers"))
+
+    customer_property = _find_customer_property(customer, propertyId)
+    if not customer_property:
+        return redirect(url_for("customers.view_customer", customerId=customerId))
+
+    existing_active_plan = db.maintenance_plans.find_one(
+        {"$and": [build_reference_filter("property_id", propertyId), {"status": "active"}]},
+        {"_id": 1},
+    )
+    if existing_active_plan:
+        return redirect(url_for("customers.view_maintenance_plan", planId=str(existing_active_plan["_id"])))
+
+    systems = _build_sell_plan_systems(db, customerId, propertyId)
+
+    business_id = _resolve_current_business_id(db)
+    template_docs = []
+    if business_id:
+        template_filter = {
+            "$and": [
+                {"$or": [{"business_id": business_id}, {"business_id": str(business_id)}]},
+                {"is_active": True},
+            ]
+        }
+        template_docs = list(db.maintenance_plan_templates.find(template_filter).sort("tier_order", 1))
+    plan_templates = [serialize_doc(doc) for doc in template_docs]
+
+    employee_id = str(session.get("employee_id") or "").strip()
+    employee_name = ""
+    if ObjectId.is_valid(employee_id):
+        employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"first_name": 1, "last_name": 1})
+        if employee:
+            employee_name = f"{str(employee.get('first_name') or '').strip()} {str(employee.get('last_name') or '').strip()}".strip()
+
+    return render_template(
+        "customers/sell_maintenance_plan.html",
+        customerId=customerId,
+        propertyId=propertyId,
+        customer=serialize_doc(customer),
+        property=customer_property,
+        systems=systems,
+        templates=plan_templates,
+        sold_by_employee_id=employee_id,
+        sold_by_name=employee_name,
     )
 
 
@@ -2836,6 +2950,226 @@ def view_sub_property(customerId, propertyId, subPropertyId):
         property=customer_property,
         sub_property=sub_property,
         hvac_systems=hvac_systems,
+    )
+
+
+MAINTENANCE_PLAN_STATUS_LABELS = {
+    "active": "Active",
+    "pending": "Pending",
+    "lapsed": "Lapsed",
+    "cancelled": "Cancelled",
+    "expired": "Expired",
+}
+
+MAINTENANCE_PLAN_SOLD_VIA_LABELS = {
+    "office": "Office",
+    "tech_in_field": "Tech in field",
+    "customer_portal": "Customer portal",
+}
+
+
+def _parse_mmddyyyy_to_date(value):
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.strptime(text, "%m/%d/%Y").date()
+    except ValueError:
+        return None
+
+
+def _maintenance_long_date(value):
+    if isinstance(value, datetime):
+        dt = value
+    elif isinstance(value, str):
+        parsed_date = _parse_mmddyyyy_to_date(value)
+        if parsed_date:
+            return f"{parsed_date.strftime('%B')} {parsed_date.day}, {parsed_date.year}"
+        try:
+            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return ""
+    else:
+        return ""
+    return f"{dt.strftime('%B')} {dt.day}, {dt.year}"
+
+
+def _format_money(value):
+    try:
+        return f"${float(value or 0):,.2f}"
+    except (TypeError, ValueError):
+        return "$0.00"
+
+
+def _format_percent(value):
+    try:
+        number = float(value or 0)
+    except (TypeError, ValueError):
+        return "0"
+    if number == int(number):
+        return str(int(number))
+    return f"{number:g}"
+
+
+def _derive_maintenance_visit_status(anchor_date_str, series_jobs, today):
+    has_completed = any(
+        str(job.get("status") or "").strip() in ("Completed", "Paid") or job.get("completed_at")
+        for job in series_jobs
+    )
+    if has_completed:
+        return ("completed", "Completed")
+
+    for job in series_jobs:
+        scheduled = _parse_mmddyyyy_to_date(job.get("scheduled_date"))
+        if scheduled and scheduled >= today:
+            return ("scheduled", "Scheduled")
+
+    anchor = _parse_mmddyyyy_to_date(anchor_date_str)
+    if anchor and anchor < today:
+        return ("missed", "Missed")
+
+    return ("pending", "Pending")
+
+
+def _build_maintenance_plan_benefits(snapshot):
+    benefits = []
+    snapshot = snapshot or {}
+
+    try:
+        repair_pct = float(snapshot.get("repair_discount_pct") or 0)
+    except (TypeError, ValueError):
+        repair_pct = 0
+    if repair_pct > 0:
+        text = f"{_format_percent(repair_pct)}% discount"
+        service_types = [str(item).strip() for item in (snapshot.get("discount_service_types") or []) if str(item).strip()]
+        line_item_types = [str(item).strip() for item in (snapshot.get("discount_line_item_types") or []) if str(item).strip()]
+        if service_types:
+            text += " on " + ", ".join(service_types)
+        if line_item_types:
+            text += " including " + ", ".join(line_item_types)
+        benefits.append(text)
+
+    if snapshot.get("diagnostic_fee_waived"):
+        benefits.append("Diagnostic fee waived")
+    if snapshot.get("priority_scheduling"):
+        benefits.append("Priority scheduling on all jobs")
+    if snapshot.get("emergency_service"):
+        benefits.append("After-hours emergency service included")
+    for entry in snapshot.get("custom_benefits") or []:
+        entry_text = str(entry or "").strip()
+        if entry_text:
+            benefits.append(entry_text)
+
+    return benefits
+
+
+@bp.route("/maintenance-plans/<planId>")
+def view_maintenance_plan(planId):
+    db = ensure_connection_or_500()
+    plan = db.maintenance_plans.find_one({"_id": object_id_or_404(planId)})
+    if not plan:
+        return redirect(url_for("customers.customers"))
+
+    business_id = _resolve_current_business_id(db)
+    if business_id and str(plan.get("business_id")) != str(business_id):
+        return redirect(url_for("customers.customers"))
+
+    plan_oid = plan.get("_id")
+    series_docs = list(db.recurring_job_series.find(build_reference_filter("maintenance_plan_id", plan_oid)))
+    series_docs.sort(key=lambda doc: _parse_mmddyyyy_to_date(doc.get("anchor_date")) or datetime.max.date())
+
+    job_docs = list(db.jobs.find(build_reference_filter("maintenance_plan_id", plan_oid)))
+    job_docs.sort(key=lambda doc: _parse_mmddyyyy_to_date(doc.get("scheduled_date")) or datetime.max.date())
+
+    jobs_by_series = {}
+    for job in job_docs:
+        series_key = str(job.get("series_id") or "").strip()
+        if series_key:
+            jobs_by_series.setdefault(series_key, []).append(job)
+
+    today = datetime.now().date()
+
+    visits = []
+    for series in series_docs:
+        series_id = series.get("_id")
+        series_jobs = jobs_by_series.get(str(series_id), [])
+        status_key, status_label = _derive_maintenance_visit_status(series.get("anchor_date"), series_jobs, today)
+        job_id = str(series_jobs[0].get("_id")) if series_jobs else ""
+        visits.append(
+            {
+                "season_label": str(series.get("visit_season") or "").strip().capitalize(),
+                "service_name": str(series.get("job_type") or "").strip(),
+                "scheduled_display": _maintenance_long_date(series.get("anchor_date")),
+                "status_key": status_key,
+                "status_label": status_label,
+                "job_id": job_id,
+                "series_id": str(series_id),
+                "has_job": bool(series_jobs),
+            }
+        )
+
+    snapshot = plan.get("template_snapshot") or {}
+    benefits = _build_maintenance_plan_benefits(snapshot)
+
+    status = str(plan.get("status") or "").strip().lower()
+    show_renew = False
+    if status in ("expired", "lapsed"):
+        show_renew = True
+    elif status == "active":
+        end_date = plan.get("end_date")
+        if isinstance(end_date, datetime):
+            days_to_end = (end_date.date() - today).days
+            if days_to_end <= 60:
+                show_renew = True
+
+    address = plan.get("property_address") or {}
+    address_lines = []
+    line_1 = str(address.get("address_line_1") or "").strip()
+    line_2 = str(address.get("address_line_2") or "").strip()
+    if line_1:
+        address_lines.append(line_1)
+    if line_2:
+        address_lines.append(line_2)
+    city_state_zip = " ".join(
+        part for part in [str(address.get("state") or "").strip(), str(address.get("zip_code") or "").strip()] if part
+    )
+    city_line = ", ".join(part for part in [str(address.get("city") or "").strip(), city_state_zip] if part)
+    if city_line:
+        address_lines.append(city_line)
+
+    billing_type = str(plan.get("billing_type") or "").strip().lower()
+    sold_via = str(plan.get("sold_via") or "").strip().lower()
+
+    plan_view = {
+        "id": str(plan_oid),
+        "plan_number": str(plan.get("plan_number") or "").strip(),
+        "status": status,
+        "status_label": MAINTENANCE_PLAN_STATUS_LABELS.get(status, status.capitalize() or "Unknown"),
+        "tier_name": str(snapshot.get("name") or "").strip() or "Maintenance Plan",
+        "customer_id": str(plan.get("customer_id") or "").strip(),
+        "customer_name": str(plan.get("customer_name") or "").strip() or "Customer",
+        "property_id": str(plan.get("property_id") or "").strip(),
+        "property_name": str(plan.get("property_name") or "").strip() or "Property",
+        "address_lines": address_lines,
+        "start_display": _maintenance_long_date(plan.get("start_date")),
+        "end_display": _maintenance_long_date(plan.get("end_date")),
+        "billing_type_label": "Monthly" if billing_type == "monthly" else "Annual",
+        "billing_amount_display": _format_money(plan.get("billing_amount")),
+        "next_billing_display": _maintenance_long_date(plan.get("next_billing_date")),
+        "sold_by_name": str(plan.get("sold_by_name") or "").strip() or "-",
+        "sold_via_label": MAINTENANCE_PLAN_SOLD_VIA_LABELS.get(sold_via, sold_via.replace("_", " ").capitalize() or "-"),
+        "covered_systems": [serialize_doc(system) if isinstance(system, dict) else system for system in (plan.get("covered_systems") or [])],
+        "visits_completed": int(plan.get("visits_completed") or 0),
+        "visits_scheduled": int(plan.get("visits_scheduled") or 0),
+        "show_renew": show_renew,
+    }
+
+    return render_template(
+        "maintenance_plans/plan_detail.html",
+        plan=plan_view,
+        plan_id=str(plan_oid),
+        visits=visits,
+        benefits=benefits,
     )
 
 

@@ -1,0 +1,1051 @@
+{% extends "base.html" %}
+
+{% block title %}Sell Maintenance Plan | Klovent{% endblock %}
+
+{% block content %}
+  <div class="app-shell home-app-shell">
+    <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
+      {% include 'partials/home_sidebar_nav.html' %}
+    </aside>
+    <section class="app-content">
+      <div id="main-container" class="app-content-main-container">
+        <div class="sell-plan-page resource-page resource-customers">
+          <nav id="breadcrumb" aria-label="Breadcrumb">
+            <ol>
+              <li><a href="{{ url_for('customers.customers') }}">Customers</a></li>
+              <li><a href="{{ url_for('customers.view_customer', customerId=customerId) }}">View Customer</a></li>
+              <li><a href="{{ url_for('customers.view_property', customerId=customerId, propertyId=propertyId) }}">View Property</a></li>
+              <li aria-current="page">Sell Maintenance Plan</li>
+            </ol>
+          </nav>
+
+          <header class="sell-plan-header">
+            <div class="sell-plan-header-inner">
+              <div class="sell-plan-header-info">
+                <a class="sell-plan-customer-link" href="{{ url_for('customers.view_customer', customerId=customerId) }}">
+                  {{ customer.first_name|default('', true) }} {{ customer.last_name|default('', true) }}{% if customer.company %} &middot; {{ customer.company }}{% endif %}
+                </a>
+                <div class="sell-plan-property-line">
+                  <span class="sell-plan-property-name">{{ property.property_name|default('Property', true) }}</span>
+                  <span class="sell-plan-property-address">
+                    {{ property.address_line_1|default('', true) }}{% if property.address_line_2 %}, {{ property.address_line_2 }}{% endif %},
+                    {{ property.city|default('', true) }}, {{ property.state|default('', true) }} {{ property.zip_code|default('', true) }}
+                  </span>
+                </div>
+              </div>
+              <div class="sell-plan-step-indicator" id="sell-plan-step-indicator" aria-live="polite">Step 1 of 3</div>
+            </div>
+          </header>
+
+          <main class="sell-plan-content">
+            <!-- Step 1 -->
+            <section class="sell-plan-step" id="sell-plan-step-1" data-step="1">
+              <h1 class="sell-plan-heading">Choose a maintenance plan</h1>
+              <p class="sell-plan-subheading">Select the level of coverage that's right for this customer.</p>
+
+              <div class="sell-plan-card-grid" id="sell-plan-template-grid"></div>
+
+              {% if not templates %}
+                <p class="sell-plan-empty">No active maintenance plan templates are available. Create one in the price book first.</p>
+              {% endif %}
+            </section>
+
+            <!-- Step 2 -->
+            <section class="sell-plan-step" id="sell-plan-step-2" data-step="2" hidden>
+              <h1 class="sell-plan-heading">Select covered systems</h1>
+              <p class="sell-plan-subheading">All systems at this property are included by default. Deselect any you want to exclude.</p>
+
+              <div class="sell-plan-card-grid" id="sell-plan-system-grid"></div>
+
+              {% if not systems %}
+                <p class="sell-plan-empty">No HVAC systems are recorded for this property.</p>
+              {% endif %}
+
+              <p class="sell-plan-inline-message" id="sell-plan-system-message" hidden>At least one system must be covered by the plan.</p>
+
+              <div class="sell-plan-step-actions">
+                <a href="#" class="sell-plan-back-link" data-go-step="1">Back</a>
+                <button type="button" class="sell-plan-primary-button" id="sell-plan-systems-continue">Continue</button>
+              </div>
+            </section>
+
+            <!-- Step 3 -->
+            <section class="sell-plan-step" id="sell-plan-step-3" data-step="3" hidden>
+              <h1 class="sell-plan-heading">Review and confirm</h1>
+
+              <div class="sell-plan-confirm-grid">
+                <div class="sell-plan-confirm-controls">
+                  <div class="sell-plan-field-group">
+                    <span class="sell-plan-field-label">Billing type</span>
+                    <div class="sell-plan-billing-toggle" id="sell-plan-billing-toggle">
+                      <button type="button" class="sell-plan-billing-option is-selected" data-billing-type="annual">Pay annually</button>
+                      <button type="button" class="sell-plan-billing-option" data-billing-type="monthly">Pay monthly</button>
+                    </div>
+                    <p class="sell-plan-billing-detail" id="sell-plan-billing-detail"></p>
+                  </div>
+
+                  <div class="sell-plan-field-group">
+                    <label class="sell-plan-field-label" for="sell-plan-start-date">Plan start date</label>
+                    <input type="date" id="sell-plan-start-date" class="sell-plan-date-input" />
+                    <p class="sell-plan-coverage-end" id="sell-plan-coverage-end"></p>
+                  </div>
+                </div>
+
+                <div class="sell-plan-summary-box" id="sell-plan-summary-box"></div>
+              </div>
+
+              <div class="sell-plan-step-actions">
+                <a href="#" class="sell-plan-back-link" data-go-step="2">Back</a>
+                <button type="button" class="sell-plan-primary-button" id="sell-plan-confirm-button">Confirm and activate plan</button>
+              </div>
+              <p class="sell-plan-error-message" id="sell-plan-error-message" hidden></p>
+            </section>
+          </main>
+        </div>
+      </div>
+    </section>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <style>
+    .sell-plan-page {
+      --sp-bg: #0f1b16;
+      --sp-panel: #1d3329;
+      --sp-panel-soft: #253e33;
+      --sp-panel-elevated: #2b473b;
+      --sp-border: #2f5a4a;
+      --sp-border-strong: #3a6553;
+      --sp-text: #f2f5f3;
+      --sp-text-muted: #b2c0b9;
+      --sp-text-subtle: #8c9a93;
+      --sp-accent: #00a86b;
+      --sp-accent-soft: #244236;
+      --sp-danger: #fda29b;
+      color: var(--sp-text);
+    }
+
+    .sell-plan-header {
+      background: var(--sp-panel);
+      border: 1px solid var(--sp-border);
+      border-radius: 10px;
+      padding: 0.95rem 1.25rem;
+      margin-top: 0.75rem;
+    }
+
+    .sell-plan-header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .sell-plan-customer-link {
+      display: inline-block;
+      color: var(--sp-text);
+      font-weight: 700;
+      font-size: 1.02rem;
+      text-decoration: none;
+    }
+
+    .sell-plan-customer-link:hover {
+      color: #a6f4d0;
+    }
+
+    .sell-plan-property-line {
+      margin-top: 0.2rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem 0.6rem;
+      align-items: baseline;
+    }
+
+    .sell-plan-property-name {
+      font-weight: 600;
+      color: var(--sp-text);
+    }
+
+    .sell-plan-property-address {
+      color: var(--sp-text-muted);
+      font-size: 0.9rem;
+    }
+
+    .sell-plan-step-indicator {
+      flex: 0 0 auto;
+      border: 1px solid var(--sp-border-strong);
+      background: var(--sp-accent-soft);
+      color: var(--sp-text);
+      border-radius: 999px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .sell-plan-content {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 1.75rem 0 3rem;
+    }
+
+    .sell-plan-heading {
+      margin: 0;
+      font-size: 1.7rem;
+      font-weight: 800;
+    }
+
+    .sell-plan-subheading {
+      margin: 0.35rem 0 1.5rem;
+      color: var(--sp-text-muted);
+      font-size: 0.98rem;
+    }
+
+    .sell-plan-empty {
+      color: var(--sp-text-muted);
+      border: 1px dashed var(--sp-border);
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .sell-plan-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+      align-items: stretch;
+    }
+
+    /* Plan template cards */
+    .sell-plan-template-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--sp-border);
+      border-top: 3px solid var(--sp-accent);
+      border-radius: 12px;
+      background: var(--sp-panel);
+      padding: 1.25rem 1.1rem 1.1rem;
+    }
+
+    .sell-plan-template-card.is-selected {
+      border-color: var(--sp-accent);
+      box-shadow: 0 0 0 2px rgba(0, 168, 107, 0.4);
+      background: var(--sp-panel-soft);
+    }
+
+    .sell-plan-popular-badge {
+      position: absolute;
+      top: -0.7rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--sp-accent);
+      color: #0f1b16;
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .sell-plan-tier-name {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 800;
+    }
+
+    .sell-plan-price-annual {
+      margin-top: 0.5rem;
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .sell-plan-price-annual span {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--sp-text-muted);
+    }
+
+    .sell-plan-price-monthly {
+      margin: 0.15rem 0 0;
+      color: var(--sp-text-muted);
+      font-size: 0.92rem;
+    }
+
+    .sell-plan-visits {
+      margin: 0.85rem 0 0;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .sell-plan-list {
+      list-style: none;
+      margin: 0.55rem 0 0;
+      padding: 0;
+      display: grid;
+      gap: 0.3rem;
+    }
+
+    .sell-plan-list li {
+      font-size: 0.9rem;
+      color: var(--sp-text-muted);
+      padding-left: 1.1rem;
+      position: relative;
+    }
+
+    .sell-plan-list li::before {
+      content: "\2022";
+      position: absolute;
+      left: 0.2rem;
+      color: var(--sp-accent);
+    }
+
+    .sell-plan-section-label {
+      margin: 0.95rem 0 0.1rem;
+      font-size: 0.74rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--sp-text-subtle);
+      font-weight: 700;
+    }
+
+    .sell-plan-select-button {
+      margin-top: auto;
+      padding-top: 1rem;
+    }
+
+    .sell-plan-select-button button {
+      width: 100%;
+      border: 1px solid var(--sp-accent);
+      background: var(--sp-accent);
+      color: #0f1b16;
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-weight: 800;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .sell-plan-select-button button:hover {
+      background: #00bc77;
+    }
+
+    .sell-plan-template-card.is-selected .sell-plan-select-button button {
+      background: var(--sp-panel-elevated);
+      color: var(--sp-text);
+      border-color: var(--sp-border-strong);
+    }
+
+    /* System cards */
+    .sell-plan-system-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      border: 1px solid var(--sp-border);
+      border-radius: 12px;
+      background: var(--sp-panel);
+      padding: 1.05rem 1rem;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .sell-plan-system-card.is-selected {
+      border-color: var(--sp-accent);
+      background: var(--sp-panel-soft);
+      box-shadow: 0 0 0 2px rgba(0, 168, 107, 0.4);
+    }
+
+    .sell-plan-system-check {
+      position: absolute;
+      top: 0.85rem;
+      right: 0.85rem;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1px solid var(--sp-border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      color: #0f1b16;
+      background: transparent;
+    }
+
+    .sell-plan-system-card.is-selected .sell-plan-system-check {
+      background: var(--sp-accent);
+      border-color: var(--sp-accent);
+    }
+
+    .sell-plan-system-nickname {
+      font-size: 1.15rem;
+      font-weight: 800;
+      padding-right: 1.8rem;
+    }
+
+    .sell-plan-system-meta {
+      color: var(--sp-text-muted);
+      font-size: 0.9rem;
+    }
+
+    .sell-plan-system-serviced {
+      margin-top: 0.3rem;
+      font-size: 0.85rem;
+      color: var(--sp-text-subtle);
+    }
+
+    /* Step actions */
+    .sell-plan-step-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-top: 1.75rem;
+    }
+
+    .sell-plan-back-link {
+      color: var(--sp-text-muted);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .sell-plan-back-link:hover {
+      color: var(--sp-text);
+    }
+
+    .sell-plan-primary-button {
+      border: 1px solid var(--sp-accent);
+      background: var(--sp-accent);
+      color: #0f1b16;
+      border-radius: 8px;
+      padding: 0.62rem 1.4rem;
+      font-weight: 800;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .sell-plan-primary-button:hover {
+      background: #00bc77;
+    }
+
+    .sell-plan-primary-button:disabled {
+      opacity: 0.6;
+      cursor: progress;
+    }
+
+    .sell-plan-inline-message {
+      margin: 0.9rem 0 0;
+      color: var(--sp-danger);
+      font-weight: 600;
+    }
+
+    .sell-plan-error-message {
+      margin: 0.9rem 0 0;
+      color: var(--sp-danger);
+      font-weight: 600;
+      text-align: right;
+    }
+
+    /* Step 3 */
+    .sell-plan-confirm-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .sell-plan-field-group {
+      margin-bottom: 1.4rem;
+    }
+
+    .sell-plan-field-label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .sell-plan-billing-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem;
+    }
+
+    .sell-plan-billing-toggle.is-single {
+      grid-template-columns: 1fr;
+    }
+
+    .sell-plan-billing-option {
+      border: 1px solid var(--sp-border-strong);
+      background: var(--sp-panel-soft);
+      color: var(--sp-text);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 0.98rem;
+    }
+
+    .sell-plan-billing-option.is-selected {
+      border-color: var(--sp-accent);
+      background: var(--sp-accent-soft);
+      box-shadow: 0 0 0 2px rgba(0, 168, 107, 0.35);
+    }
+
+    .sell-plan-billing-detail {
+      margin: 0.65rem 0 0;
+      color: var(--sp-text-muted);
+      font-weight: 600;
+    }
+
+    .sell-plan-date-input {
+      width: 100%;
+      border: 1px solid var(--sp-border-strong);
+      border-radius: 8px;
+      padding: 0.6rem 0.7rem;
+      background: var(--sp-panel-soft);
+      color: var(--sp-text);
+      font: inherit;
+      box-sizing: border-box;
+    }
+
+    .sell-plan-coverage-end {
+      margin: 0.55rem 0 0;
+      color: var(--sp-text-muted);
+      font-weight: 600;
+    }
+
+    .sell-plan-summary-box {
+      border: 1px solid var(--sp-border);
+      border-radius: 12px;
+      background: var(--sp-panel);
+      padding: 1.2rem 1.15rem;
+    }
+
+    .sell-plan-summary-box h2 {
+      margin: 0 0 0.85rem;
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .sell-plan-summary-row {
+      display: grid;
+      gap: 0.15rem;
+      padding: 0.5rem 0;
+      border-top: 1px solid var(--sp-border);
+    }
+
+    .sell-plan-summary-row:first-of-type {
+      border-top: 0;
+    }
+
+    .sell-plan-summary-row .sp-key {
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--sp-text-subtle);
+      font-weight: 700;
+    }
+
+    .sell-plan-summary-row .sp-value {
+      color: var(--sp-text);
+      font-size: 0.93rem;
+    }
+
+    .sell-plan-summary-row .sp-value div {
+      padding: 0.05rem 0;
+    }
+
+    @media (max-width: 820px) {
+      .sell-plan-confirm-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .sell-plan-header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+
+  <script>
+    (function () {
+      const templates = {{ templates|tojson }};
+      const systems = {{ systems|tojson }};
+      const customer = {{ customer|tojson }};
+      const property = {{ property|tojson }};
+      const customerId = {{ customerId|tojson }};
+      const propertyId = {{ propertyId|tojson }};
+      const soldByEmployeeId = {{ sold_by_employee_id|tojson }};
+      const soldByName = {{ sold_by_name|tojson }};
+      const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+      const csrfToken = csrfMeta ? csrfMeta.getAttribute("content") : "";
+
+      const state = {
+        step: 1,
+        templateId: null,
+        selectedSystemIds: new Set(systems.map((s) => String(s._id))),
+        billingType: "annual",
+        startDate: new Date().toISOString().slice(0, 10),
+      };
+
+      const stepIndicator = document.getElementById("sell-plan-step-indicator");
+      const templateGrid = document.getElementById("sell-plan-template-grid");
+      const systemGrid = document.getElementById("sell-plan-system-grid");
+      const systemMessage = document.getElementById("sell-plan-system-message");
+      const billingToggle = document.getElementById("sell-plan-billing-toggle");
+      const billingDetail = document.getElementById("sell-plan-billing-detail");
+      const startDateInput = document.getElementById("sell-plan-start-date");
+      const coverageEnd = document.getElementById("sell-plan-coverage-end");
+      const summaryBox = document.getElementById("sell-plan-summary-box");
+      const confirmButton = document.getElementById("sell-plan-confirm-button");
+      const errorMessage = document.getElementById("sell-plan-error-message");
+      const systemsContinue = document.getElementById("sell-plan-systems-continue");
+
+      const MONTHS = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+      ];
+
+      function formatMoney(value) {
+        const amount = Number(value || 0);
+        return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount);
+      }
+
+      function parseDateString(value) {
+        const parts = String(value || "").split("-");
+        if (parts.length !== 3) {
+          return null;
+        }
+        const year = Number(parts[0]);
+        const month = Number(parts[1]);
+        const day = Number(parts[2]);
+        if (!year || !month || !day) {
+          return null;
+        }
+        return new Date(year, month - 1, day);
+      }
+
+      function formatLongDate(dateObj) {
+        if (!dateObj) {
+          return "";
+        }
+        return `${MONTHS[dateObj.getMonth()]} ${dateObj.getDate()}, ${dateObj.getFullYear()}`;
+      }
+
+      function addOneYear(dateObj) {
+        if (!dateObj) {
+          return null;
+        }
+        return new Date(dateObj.getFullYear() + 1, dateObj.getMonth(), dateObj.getDate());
+      }
+
+      function getTemplate(id) {
+        return templates.find((t) => String(t._id) === String(id)) || null;
+      }
+
+      function middleTierId() {
+        if (!templates.length) {
+          return null;
+        }
+        const exactMiddle = templates.find((t) => Number(t.tier_order) === 2);
+        if (exactMiddle) {
+          return String(exactMiddle._id);
+        }
+        const midIndex = Math.floor((templates.length - 1) / 2);
+        return String(templates[midIndex]._id);
+      }
+
+      function buildBenefits(template) {
+        const benefits = [];
+        const repairDiscount = Number(template.repair_discount_pct || 0);
+        if (repairDiscount > 0) {
+          benefits.push(`${repairDiscount % 1 === 0 ? repairDiscount.toFixed(0) : repairDiscount}% discount on repairs`);
+        }
+        if (template.diagnostic_fee_waived) {
+          benefits.push("Diagnostic fee waived");
+        }
+        if (template.priority_scheduling) {
+          benefits.push("Priority scheduling");
+        }
+        if (template.emergency_service) {
+          benefits.push("After-hours emergency service");
+        }
+        (template.custom_benefits || []).forEach((benefit) => {
+          const text = String(benefit || "").trim();
+          if (text) {
+            benefits.push(text);
+          }
+        });
+        return benefits;
+      }
+
+      function buildVisitLines(template) {
+        return (template.visit_seasons || [])
+          .filter((entry) => entry && (entry.season || entry.service_name))
+          .map((entry) => {
+            const season = String(entry.season || "").trim();
+            const serviceName = String(entry.service_name || "").trim();
+            if (season && serviceName) {
+              return `${season} \u2014 ${serviceName}`;
+            }
+            return season || serviceName;
+          });
+      }
+
+      function billingAmountFor(template, billingType) {
+        if (billingType === "monthly") {
+          return Number(template.price_monthly || 0);
+        }
+        return Number(template.price_annual || 0);
+      }
+
+      function escapeHtml(value) {
+        return String(value == null ? "" : value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      function updateStepIndicator() {
+        stepIndicator.textContent = `Step ${state.step} of 3`;
+      }
+
+      function showStep(step) {
+        state.step = step;
+        for (let i = 1; i <= 3; i += 1) {
+          const section = document.getElementById(`sell-plan-step-${i}`);
+          if (section) {
+            section.hidden = i !== step;
+          }
+        }
+        updateStepIndicator();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function renderTemplates() {
+        templateGrid.innerHTML = "";
+        const popularId = middleTierId();
+
+        templates.forEach((template) => {
+          const card = document.createElement("article");
+          card.className = "sell-plan-template-card";
+          card.dataset.templateId = String(template._id);
+          if (String(template._id) === String(state.templateId)) {
+            card.classList.add("is-selected");
+          }
+
+          const benefits = buildBenefits(template);
+          const visitLines = buildVisitLines(template);
+          const monthly = template.price_monthly;
+          const hasMonthly = monthly !== null && monthly !== undefined && monthly !== "";
+
+          let html = "";
+          if (String(template._id) === String(popularId)) {
+            html += '<span class="sell-plan-popular-badge">Most Popular</span>';
+          }
+          html += `<h2 class="sell-plan-tier-name">${escapeHtml(template.name || "Plan")}</h2>`;
+          html += `<div class="sell-plan-price-annual">$${formatMoney(template.price_annual)}<span>/yr</span></div>`;
+          if (hasMonthly) {
+            html += `<p class="sell-plan-price-monthly">or $${formatMoney(monthly)}/mo</p>`;
+          }
+          html += `<p class="sell-plan-visits">${Number(template.visits_per_year || 0)} visits per year</p>`;
+
+          if (visitLines.length) {
+            html += '<p class="sell-plan-section-label">Visits</p><ul class="sell-plan-list">';
+            visitLines.forEach((line) => {
+              html += `<li>${escapeHtml(line)}</li>`;
+            });
+            html += "</ul>";
+          }
+
+          if (benefits.length) {
+            html += '<p class="sell-plan-section-label">Benefits</p><ul class="sell-plan-list">';
+            benefits.forEach((line) => {
+              html += `<li>${escapeHtml(line)}</li>`;
+            });
+            html += "</ul>";
+          }
+
+          html += '<div class="sell-plan-select-button"><button type="button">Select</button></div>';
+          card.innerHTML = html;
+
+          card.querySelector("button").addEventListener("click", function () {
+            state.templateId = String(template._id);
+            renderTemplates();
+            showStep(2);
+          });
+
+          templateGrid.appendChild(card);
+        });
+      }
+
+      function renderSystems() {
+        systemGrid.innerHTML = "";
+
+        systems.forEach((system) => {
+          const card = document.createElement("article");
+          card.className = "sell-plan-system-card";
+          const systemId = String(system._id);
+          if (state.selectedSystemIds.has(systemId)) {
+            card.classList.add("is-selected");
+          }
+
+          const manufacturerLine = [system.manufacturer, system.manufactured_year]
+            .map((value) => String(value || "").trim())
+            .filter(Boolean)
+            .join(" \u00b7 ");
+
+          let html = '<span class="sell-plan-system-check">\u2713</span>';
+          html += `<div class="sell-plan-system-nickname">${escapeHtml(system.system_nickname || "System")}</div>`;
+          if (system.system_type) {
+            html += `<div class="sell-plan-system-meta">${escapeHtml(system.system_type)}</div>`;
+          }
+          if (system.system_tonnage) {
+            html += `<div class="sell-plan-system-meta">${escapeHtml(system.system_tonnage)}</div>`;
+          }
+          if (manufacturerLine) {
+            html += `<div class="sell-plan-system-meta">${escapeHtml(manufacturerLine)}</div>`;
+          }
+          html += `<div class="sell-plan-system-serviced">${escapeHtml(system.last_serviced_display || "Never serviced")}</div>`;
+          card.innerHTML = html;
+
+          card.addEventListener("click", function () {
+            if (state.selectedSystemIds.has(systemId)) {
+              if (state.selectedSystemIds.size <= 1) {
+                systemMessage.hidden = false;
+                return;
+              }
+              state.selectedSystemIds.delete(systemId);
+              card.classList.remove("is-selected");
+            } else {
+              state.selectedSystemIds.add(systemId);
+              card.classList.add("is-selected");
+              systemMessage.hidden = true;
+            }
+          });
+
+          systemGrid.appendChild(card);
+        });
+      }
+
+      function selectedSystemObjects() {
+        return systems.filter((system) => state.selectedSystemIds.has(String(system._id)));
+      }
+
+      function renderBillingControls() {
+        const template = getTemplate(state.templateId);
+        if (!template) {
+          return;
+        }
+
+        const monthly = template.price_monthly;
+        const hasMonthly = monthly !== null && monthly !== undefined && monthly !== "";
+
+        billingToggle.innerHTML = "";
+        billingToggle.classList.toggle("is-single", !hasMonthly);
+
+        if (!hasMonthly) {
+          state.billingType = "annual";
+        }
+
+        const options = hasMonthly
+          ? [{ type: "annual", label: "Pay annually" }, { type: "monthly", label: "Pay monthly" }]
+          : [{ type: "annual", label: "Pay annually" }];
+
+        options.forEach((option) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "sell-plan-billing-option";
+          button.dataset.billingType = option.type;
+          button.textContent = option.label;
+          if (option.type === state.billingType) {
+            button.classList.add("is-selected");
+          }
+          button.addEventListener("click", function () {
+            state.billingType = option.type;
+            renderBillingControls();
+            renderSummary();
+          });
+          billingToggle.appendChild(button);
+        });
+
+        const annual = Number(template.price_annual || 0);
+        if (state.billingType === "monthly" && hasMonthly) {
+          const monthlyAmount = Number(monthly || 0);
+          billingDetail.textContent = `$${formatMoney(monthlyAmount)} billed every month ($${formatMoney(monthlyAmount * 12)}/yr)`;
+        } else {
+          billingDetail.textContent = `$${formatMoney(annual)} billed once per year`;
+        }
+      }
+
+      function renderCoverageEnd() {
+        const startDate = parseDateString(state.startDate);
+        const endDate = addOneYear(startDate);
+        coverageEnd.textContent = endDate ? `Coverage ends: ${formatLongDate(endDate)}` : "";
+      }
+
+      function renderSummary() {
+        const template = getTemplate(state.templateId);
+        if (!template) {
+          return;
+        }
+
+        const startDate = parseDateString(state.startDate);
+        const endDate = addOneYear(startDate);
+        const benefits = buildBenefits(template);
+        const visitLines = buildVisitLines(template);
+        const coveredSystems = selectedSystemObjects();
+        const billingAmount = billingAmountFor(template, state.billingType);
+
+        const customerName = `${String(customer.first_name || "").trim()} ${String(customer.last_name || "").trim()}`.trim();
+        const addressLine = [
+          property.address_line_1,
+          property.address_line_2,
+          [property.city, property.state].filter(Boolean).join(", "),
+          property.zip_code,
+        ].map((value) => String(value || "").trim()).filter(Boolean).join(", ");
+
+        const billingLabel = state.billingType === "monthly"
+          ? `$${formatMoney(billingAmount)}/mo (monthly)`
+          : `$${formatMoney(billingAmount)}/yr (annual)`;
+
+        function row(key, valueHtml) {
+          return `<div class="sell-plan-summary-row"><span class="sp-key">${escapeHtml(key)}</span><span class="sp-value">${valueHtml}</span></div>`;
+        }
+
+        let html = "<h2>Plan summary</h2>";
+        html += row("Customer", escapeHtml(customerName || "-"));
+        html += row("Property", `${escapeHtml(property.property_name || "-")}<div>${escapeHtml(addressLine)}</div>`);
+        html += row("Plan tier", escapeHtml(template.name || "-"));
+
+        const systemsHtml = coveredSystems.length
+          ? coveredSystems.map((system) => `<div>${escapeHtml(system.system_nickname || "System")}${system.system_type ? " \u2014 " + escapeHtml(system.system_type) : ""}</div>`).join("")
+          : "<div>-</div>";
+        html += row("Covered systems", systemsHtml);
+
+        const visitsHtml = visitLines.length
+          ? visitLines.map((line) => `<div>${escapeHtml(line)}</div>`).join("")
+          : "<div>-</div>";
+        html += row("Visits included", visitsHtml);
+
+        const benefitsHtml = benefits.length
+          ? benefits.map((line) => `<div>${escapeHtml(line)}</div>`).join("")
+          : "<div>-</div>";
+        html += row("Benefits", benefitsHtml);
+
+        html += row("Billing", `${escapeHtml(billingLabel)}<div>Starts ${escapeHtml(formatLongDate(startDate))}</div>`);
+        html += row("Contract period", `${escapeHtml(formatLongDate(startDate))} \u2014 ${escapeHtml(formatLongDate(endDate))}`);
+
+        summaryBox.innerHTML = html;
+      }
+
+      function enterStep3() {
+        renderBillingControls();
+        renderCoverageEnd();
+        renderSummary();
+        showStep(3);
+      }
+
+      async function confirmPlan() {
+        const template = getTemplate(state.templateId);
+        if (!template) {
+          return;
+        }
+
+        const coveredSystems = selectedSystemObjects().map((system) => ({
+          hvac_system_id: system._id,
+          system_nickname: system.system_nickname,
+          system_type: system.system_type,
+          system_tonnage: system.system_tonnage,
+          manufacturer: system.manufacturer,
+          manufactured_year: system.manufactured_year,
+        }));
+
+        const billingAmount = billingAmountFor(template, state.billingType);
+
+        errorMessage.hidden = true;
+        confirmButton.disabled = true;
+        confirmButton.textContent = "Activating\u2026";
+
+        try {
+          const response = await fetch("/api/maintenance-plans", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+              "X-CSRFToken": csrfToken,
+            },
+            body: JSON.stringify({
+              template_id: state.templateId,
+              customer_id: customerId,
+              property_id: propertyId,
+              covered_systems: coveredSystems,
+              billing_type: state.billingType,
+              billing_amount: billingAmount,
+              start_date: state.startDate,
+              sold_via: "office",
+              sold_by_employee_id: soldByEmployeeId,
+              sold_by_name: soldByName,
+            }),
+          });
+
+          const payload = await response.json().catch(() => ({}));
+
+          if (!response.ok || payload.success === false) {
+            const serverMessage = (payload && payload.error) ? String(payload.error) : "";
+            throw new Error(serverMessage || "Request failed");
+          }
+
+          const newPlanId = payload.plan_id || (payload.plan && payload.plan._id) || payload._id;
+          if (!newPlanId) {
+            throw new Error("Missing plan id");
+          }
+          window.location.href = `/maintenance-plans/${newPlanId}`;
+        } catch (error) {
+          confirmButton.disabled = false;
+          confirmButton.textContent = "Confirm and activate plan";
+          errorMessage.textContent = error && error.message && error.message !== "Request failed"
+            ? error.message
+            : "Something went wrong while activating the plan. Please try again.";
+          errorMessage.hidden = false;
+        }
+      }
+
+      // Wire static controls
+      document.querySelectorAll("[data-go-step]").forEach((link) => {
+        link.addEventListener("click", function (event) {
+          event.preventDefault();
+          showStep(Number(link.dataset.goStep));
+        });
+      });
+
+      if (systemsContinue) {
+        systemsContinue.addEventListener("click", function () {
+          if (state.selectedSystemIds.size < 1) {
+            systemMessage.hidden = false;
+            return;
+          }
+          enterStep3();
+        });
+      }
+
+      if (startDateInput) {
+        startDateInput.value = state.startDate;
+        startDateInput.addEventListener("input", function () {
+          state.startDate = startDateInput.value || new Date().toISOString().slice(0, 10);
+          renderCoverageEnd();
+          renderSummary();
+        });
+      }
+
+      if (confirmButton) {
+        confirmButton.addEventListener("click", confirmPlan);
+      }
+
+      renderTemplates();
+      renderSystems();
+      updateStepIndicator();
+    })();
+  </script>
+{% endblock %}

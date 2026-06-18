@@ -1,12 +1,15 @@
 from calendar import monthrange
+import copy
 from datetime import UTC, datetime, timedelta
+import json
 import math
 import re
 
 from bson import ObjectId
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask_mail import Message
 
-from mongo import ensure_connection_or_500, serialize_doc
+from mongo import build_reference_filter, ensure_connection_or_500, reference_value, serialize_doc
 from utils.currency import currency_to_float
 
 bp = Blueprint("admin_bp", __name__)
@@ -1027,6 +1030,222 @@ def _build_maintenance_plan_template_document(data, business_id, now=None):
     }
 
 
+def _build_maintenance_plan_document(data, business_id, now=None):
+    """Construct a maintenance_plans document from form/API input."""
+    if now is None:
+        now = datetime.now(UTC)
+
+    def _get(key, default=None):
+        if hasattr(data, "get"):
+            return data.get(key, default)
+        return default
+
+    def _bool_field(key, default=False):
+        raw = _get(key)
+        if isinstance(raw, bool):
+            return raw
+        if raw in (None, ""):
+            return default
+        return str(raw or "").strip().lower() in {"true", "1", "yes", "on"}
+
+    def _int_field(key, default=None):
+        raw = _get(key)
+        if raw in (None, ""):
+            return default
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            return default
+
+    def _float_field(key, default=None):
+        raw = _get(key)
+        if raw in (None, ""):
+            return default
+        try:
+            return round(float(raw), 4)
+        except (TypeError, ValueError):
+            return default
+
+    def _string_field(key, default=""):
+        raw = _get(key)
+        if raw in (None, ""):
+            return default
+        return str(raw).strip()
+
+    def _json_or_list_field(key):
+        raw = _get(key)
+        if isinstance(raw, list):
+            return raw
+        if raw in (None, ""):
+            return []
+        try:
+            parsed = json.loads(raw)
+            return parsed if isinstance(parsed, list) else []
+        except Exception:
+            return []
+
+    def _json_or_dict_field(key):
+        raw = _get(key)
+        if isinstance(raw, dict):
+            return copy.deepcopy(raw)
+        if raw in (None, ""):
+            return {}
+        try:
+            parsed = json.loads(raw)
+            return parsed if isinstance(parsed, dict) else {}
+        except Exception:
+            return {}
+
+    def _date_field(key, default=None):
+        raw = _get(key)
+        parsed = _parse_datetime(raw)
+        if parsed:
+            return parsed
+        return default
+
+    plan_id = ObjectId()
+    start_date = _date_field("start_date", default=now)
+    end_date = start_date + timedelta(days=365) if start_date else None
+
+    property_address_input = _json_or_dict_field("property_address")
+    property_address = {
+        "address_line_1": _string_field("property_address_line_1", property_address_input.get("address_line_1", "")),
+        "address_line_2": _string_field("property_address_line_2", property_address_input.get("address_line_2", "")) or None,
+        "city": _string_field("property_address_city", property_address_input.get("city", "")),
+        "state": _string_field("property_address_state", property_address_input.get("state", "")),
+        "zip_code": _string_field("property_address_zip_code", property_address_input.get("zip_code", "")),
+    }
+
+    covered_systems = []
+    for entry in _json_or_list_field("covered_systems"):
+        if not isinstance(entry, dict):
+            continue
+        raw_system_id = str(entry.get("hvac_system_id") or "").strip()
+        covered_systems.append(
+            {
+                "hvac_system_id": ObjectId(raw_system_id) if ObjectId.is_valid(raw_system_id) else raw_system_id or None,
+                "system_nickname": str(entry.get("system_nickname") or "").strip(),
+                "system_type": str(entry.get("system_type") or "").strip(),
+                "system_tonnage": str(entry.get("system_tonnage") or "").strip(),
+                "manufacturer": str(entry.get("manufacturer") or "").strip(),
+                "manufactured_year": str(entry.get("manufactured_year") or "").strip(),
+            }
+        )
+
+    billing_history = []
+    for entry in _json_or_list_field("billing_history"):
+        if not isinstance(entry, dict):
+            continue
+        raw_invoice_id = str(entry.get("invoice_id") or "").strip()
+        amount_value = entry.get("amount")
+        try:
+            normalized_amount = round(float(amount_value), 4) if amount_value not in (None, "") else 0.0
+        except (TypeError, ValueError):
+            normalized_amount = 0.0
+        billing_history.append(
+            {
+                "date": _parse_datetime(entry.get("date")),
+                "amount": normalized_amount,
+                "status": str(entry.get("status") or "").strip(),
+                "invoice_id": ObjectId(raw_invoice_id) if ObjectId.is_valid(raw_invoice_id) else raw_invoice_id or None,
+            }
+        )
+
+    series_ids = []
+    for raw_series_id in _json_or_list_field("series_ids"):
+        series_id_text = str(raw_series_id or "").strip()
+        if ObjectId.is_valid(series_id_text):
+            series_ids.append(ObjectId(series_id_text))
+        elif series_id_text:
+            series_ids.append(series_id_text)
+
+    billing_type = _string_field("billing_type", default="annual").lower() or "annual"
+    next_billing_date = _date_field("next_billing_date", default=start_date)
+    template_snapshot = _json_or_dict_field("template_snapshot")
+
+    raw_template_id = _string_field("template_id", default="")
+    raw_customer_id = _string_field("customer_id", default="")
+    raw_property_id = _string_field("property_id", default="")
+
+    return {
+        "_id": plan_id,
+        "plan_number": f"MP-{str(plan_id)[-6:].upper()}",
+        "business_id": business_id,
+        "template_id": ObjectId(raw_template_id) if ObjectId.is_valid(raw_template_id) else raw_template_id or None,
+        "template_snapshot": template_snapshot,
+        "customer_id": ObjectId(raw_customer_id) if ObjectId.is_valid(raw_customer_id) else raw_customer_id or None,
+        "customer_name": _string_field("customer_name"),
+        "company": _string_field("company"),
+        "property_id": ObjectId(raw_property_id) if ObjectId.is_valid(raw_property_id) else raw_property_id or None,
+        "property_name": _string_field("property_name"),
+        "property_address": property_address,
+        "covered_systems": covered_systems,
+        "status": _string_field("status", default="active").lower() or "active",
+        "start_date": start_date,
+        "end_date": end_date,
+        "renewal_date": end_date - timedelta(days=30) if end_date else None,
+        "auto_renew": _bool_field("auto_renew", default=False),
+        "billing_type": billing_type,
+        "billing_amount": _float_field("billing_amount", default=0.0),
+        "next_billing_date": next_billing_date,
+        "billing_history": billing_history,
+        "series_ids": series_ids,
+        "visits_scheduled": _int_field("visits_scheduled", default=0),
+        "visits_completed": _int_field("visits_completed", default=0),
+        "last_visit_date": _date_field("last_visit_date"),
+        "next_visit_date": _date_field("next_visit_date"),
+        "sold_by_employee_id": _string_field("sold_by_employee_id"),
+        "sold_by_name": _string_field("sold_by_name"),
+        "sold_via": _string_field("sold_via", default="office").lower() or "office",
+        "created_at": now,
+        "updated_at": now,
+        "cancelled_at": _date_field("cancelled_at"),
+        "cancellation_reason": _string_field("cancellation_reason") or None,
+    }
+
+
+def _find_maintenance_plan_property(customer, property_id):
+    """Return the embedded property dict matching ``property_id`` for a customer."""
+    normalized = str(property_id or "").strip()
+    if not normalized:
+        return None
+    for prop in (customer or {}).get("properties", []) or []:
+        if not isinstance(prop, dict):
+            continue
+        if str(prop.get("property_id") or "").strip() == normalized:
+            return prop
+    return None
+
+
+def _maintenance_visit_anchor_datetime(season, start_date):
+    """Resolve the seasonal anchor date for a maintenance visit series.
+
+    Returns a naive ``datetime``. If the seasonal date has already passed
+    relative to ``start_date`` the same date in the following year is used.
+    """
+    base = start_date
+    if isinstance(base, datetime) and base.tzinfo is not None:
+        base = base.replace(tzinfo=None)
+    if not isinstance(base, datetime):
+        base = datetime.now(UTC).replace(tzinfo=None)
+
+    season_months = {
+        "spring": (4, 15),
+        "summer": (7, 15),
+        "fall": (10, 15),
+        "winter": (1, 15),
+    }
+    month_day = season_months.get(str(season or "").strip().lower())
+    if not month_day:
+        return base
+
+    month, day = month_day
+    candidate = datetime(base.year, month, day)
+    if candidate < base.replace(hour=0, minute=0, second=0, microsecond=0):
+        candidate = datetime(base.year + 1, month, day)
+    return candidate
+
+
 def _maintenance_template_business_scope_predicate(business_id):
     if isinstance(business_id, ObjectId):
         return {"$or": [{"business_id": business_id}, {"business_id": str(business_id)}]}
@@ -1332,14 +1551,18 @@ def _build_renewal_count(db, business_id):
     renewal_count = 0
     today = datetime.now(UTC).date()
     cutoff = today + timedelta(days=60)
+    now = datetime.now(UTC).replace(tzinfo=None)
 
     query = {
         "$and": [
             business_scope,
+            {"status": "active"},
             {"renewal_date": {"$exists": True, "$ne": None}},
         ]
     }
-    for plan in db.maintenance_plans.find(query, {"renewal_date": 1}):
+    for plan in db.maintenance_plans.find(query, {"renewal_date": 1, "snoozed_until": 1}):
+        if _maintenance_plan_is_snoozed(plan, now):
+            continue
         renewal_value = plan.get("renewal_date")
         renewal_dt = _parse_datetime(renewal_value)
         if not renewal_dt and hasattr(renewal_value, "year") and hasattr(renewal_value, "month") and hasattr(renewal_value, "day"):
@@ -1356,6 +1579,304 @@ def _build_renewal_count(db, business_id):
             renewal_count += 1
 
     return renewal_count
+
+
+MAINTENANCE_PLAN_STATUS_LABELS = {
+    "active": "Active",
+    "pending": "Pending",
+    "lapsed": "Lapsed",
+    "cancelled": "Cancelled",
+    "expired": "Expired",
+}
+
+
+def _format_long_date(value):
+    parsed = _parse_datetime(value)
+    if not parsed and hasattr(value, "year") and hasattr(value, "month") and hasattr(value, "day"):
+        try:
+            parsed = datetime(value.year, value.month, value.day)
+        except Exception:
+            parsed = None
+    if not parsed:
+        return ""
+    return f"{parsed.strftime('%B')} {parsed.day}, {parsed.year}"
+
+
+def _maintenance_plan_is_snoozed(plan, now=None):
+    snoozed_until = (plan or {}).get("snoozed_until")
+    if not snoozed_until:
+        return False
+    if now is None:
+        now = datetime.now(UTC).replace(tzinfo=None)
+    snoozed_dt = _parse_datetime(snoozed_until)
+    if not snoozed_dt:
+        return False
+    return snoozed_dt > now
+
+
+def _build_maintenance_plan_summary_email(plan, customer, business):
+    plan = plan or {}
+    customer = customer or {}
+    business = business or {}
+    snapshot = plan.get("template_snapshot") or {}
+
+    company_name = str(
+        business.get("business_name")
+        or business.get("company_name")
+        or business.get("name")
+        or "Your service team"
+    ).strip()
+    tier_name = str(snapshot.get("name") or "").strip() or "Maintenance Plan"
+    first_name = str(customer.get("first_name") or "").strip() or "there"
+
+    billing_type = str(plan.get("billing_type") or "").strip().lower()
+    billing_label = "Monthly" if billing_type == "monthly" else "Annual"
+
+    lines = [
+        f"Hi {first_name},",
+        "",
+        f"Thank you for being a {company_name} maintenance plan member. "
+        "Here is a summary of your plan.",
+        "",
+        f"Plan: {tier_name}",
+    ]
+
+    plan_number = str(plan.get("plan_number") or "").strip()
+    if plan_number:
+        lines.append(f"Plan Number: {plan_number}")
+
+    property_name = str(plan.get("property_name") or "").strip()
+    if property_name:
+        lines.append(f"Property: {property_name}")
+
+    start_display = _format_long_date(plan.get("start_date"))
+    end_display = _format_long_date(plan.get("end_date"))
+    if start_display and end_display:
+        lines.append(f"Coverage Period: {start_display} - {end_display}")
+
+    lines.append(f"Billing: {billing_label}")
+
+    covered_systems = [
+        system for system in (plan.get("covered_systems") or []) if isinstance(system, dict)
+    ]
+    if covered_systems:
+        lines.append("")
+        lines.append("Covered Systems:")
+        for system in covered_systems:
+            label = str(system.get("system_nickname") or system.get("system_type") or "System").strip()
+            details = [
+                part
+                for part in [
+                    str(system.get("system_type") or "").strip(),
+                    str(system.get("manufacturer") or "").strip(),
+                ]
+                if part
+            ]
+            suffix = f" ({', '.join(details)})" if details else ""
+            lines.append(f"  - {label}{suffix}")
+
+    benefits = []
+    try:
+        repair_pct = float(snapshot.get("repair_discount_pct") or 0)
+    except (TypeError, ValueError):
+        repair_pct = 0
+    if repair_pct > 0:
+        benefits.append(f"{repair_pct:g}% repair discount")
+    if snapshot.get("diagnostic_fee_waived"):
+        benefits.append("Diagnostic fee waived")
+    if snapshot.get("priority_scheduling"):
+        benefits.append("Priority scheduling on all jobs")
+    if snapshot.get("emergency_service"):
+        benefits.append("After-hours emergency service included")
+    for entry in snapshot.get("custom_benefits") or []:
+        entry_text = str(entry or "").strip()
+        if entry_text:
+            benefits.append(entry_text)
+    if benefits:
+        lines.append("")
+        lines.append("Your Plan Benefits:")
+        for benefit in benefits:
+            lines.append(f"  - {benefit}")
+
+    company_phone = str(business.get("phone") or business.get("business_phone") or "").strip()
+    lines.append("")
+    if company_phone:
+        lines.append(f"If you have any questions, please reach out to us at {company_phone}.")
+    else:
+        lines.append("If you have any questions, please reach out to us.")
+    lines.append("")
+    lines.append(f"Thank you,")
+    lines.append(company_name)
+
+    subject = f"Your {tier_name} Summary from {company_name}"
+    return subject, "\n".join(lines)
+
+
+def _build_maintenance_plan_renewal_email(plan, customer, business):
+    plan = plan or {}
+    customer = customer or {}
+    business = business or {}
+    snapshot = plan.get("template_snapshot") or {}
+
+    company_name = str(
+        business.get("business_name")
+        or business.get("company_name")
+        or business.get("name")
+        or "Your service team"
+    ).strip()
+    tier_name = str(snapshot.get("name") or "").strip() or "Maintenance Plan"
+    first_name = str(customer.get("first_name") or "").strip() or "there"
+
+    end_display = _format_long_date(plan.get("end_date"))
+
+    lines = [
+        f"Hi {first_name},",
+        "",
+    ]
+
+    if end_display:
+        lines.append(
+            f"Your {tier_name} with {company_name} is set to expire on {end_display}. "
+            "Renew now to keep your coverage and benefits without interruption."
+        )
+    else:
+        lines.append(
+            f"Your {tier_name} with {company_name} is coming up for renewal. "
+            "Renew now to keep your coverage and benefits without interruption."
+        )
+
+    property_name = str(plan.get("property_name") or "").strip()
+    if property_name:
+        lines.append("")
+        lines.append(f"Property: {property_name}")
+
+    benefits = []
+    try:
+        repair_pct = float(snapshot.get("repair_discount_pct") or 0)
+    except (TypeError, ValueError):
+        repair_pct = 0
+    if repair_pct > 0:
+        benefits.append(f"{repair_pct:g}% repair discount")
+    if snapshot.get("diagnostic_fee_waived"):
+        benefits.append("Diagnostic fee waived")
+    if snapshot.get("priority_scheduling"):
+        benefits.append("Priority scheduling on all jobs")
+    if snapshot.get("emergency_service"):
+        benefits.append("After-hours emergency service included")
+    for entry in snapshot.get("custom_benefits") or []:
+        entry_text = str(entry or "").strip()
+        if entry_text:
+            benefits.append(entry_text)
+    if benefits:
+        lines.append("")
+        lines.append("By renewing, you keep these benefits:")
+        for benefit in benefits:
+            lines.append(f"  - {benefit}")
+
+    company_phone = str(business.get("phone") or business.get("business_phone") or "").strip()
+    lines.append("")
+    if company_phone:
+        lines.append(f"To renew or ask any questions, please reach out to us at {company_phone}.")
+    else:
+        lines.append("To renew or ask any questions, please reach out to us.")
+    lines.append("")
+    lines.append("Thank you,")
+    lines.append(company_name)
+
+    subject = f"Renew Your {tier_name} with {company_name}"
+    return subject, "\n".join(lines)
+
+
+def _build_plan_list_view(plan):
+    snapshot = plan.get("template_snapshot") or {}
+    status = str(plan.get("status") or "").strip().lower()
+    billing_type = str(plan.get("billing_type") or "").strip().lower()
+    end_date = plan.get("end_date")
+    end_dt = _parse_datetime(end_date)
+    visits_completed = int(plan.get("visits_completed") or 0)
+    visits_scheduled = int(plan.get("visits_scheduled") or 0)
+    next_visit_display = _format_long_date(plan.get("next_visit_date")) or "None"
+
+    return {
+        "plan_id": str(plan.get("_id")),
+        "plan_number": str(plan.get("plan_number") or "").strip(),
+        "customer_id": str(plan.get("customer_id") or "").strip(),
+        "customer_name": str(plan.get("customer_name") or "").strip() or "Customer",
+        "property_id": str(plan.get("property_id") or "").strip(),
+        "property_name": str(plan.get("property_name") or "").strip() or "Property",
+        "tier_name": str(snapshot.get("name") or "").strip() or "Maintenance Plan",
+        "status": status,
+        "status_label": MAINTENANCE_PLAN_STATUS_LABELS.get(status, status.capitalize() or "Unknown"),
+        "billing_type_label": "Monthly" if billing_type == "monthly" else "Annual",
+        "start_display": _format_long_date(plan.get("start_date")),
+        "end_display": _format_long_date(end_date),
+        "end_sort": end_dt.isoformat() if end_dt else "",
+        "visits_display": f"{visits_completed} of {visits_scheduled}",
+        "next_visit_display": next_visit_display,
+    }
+
+
+def _fetch_business_plans(db, business_id, status=None):
+    predicates = [_maintenance_template_business_scope_predicate(business_id)]
+    normalized_status = str(status or "all").strip().lower()
+    if normalized_status in {"active", "pending", "lapsed", "cancelled", "expired"}:
+        predicates.append({"status": normalized_status})
+
+    query = {"$and": predicates} if len(predicates) > 1 else predicates[0]
+    plans = list(db.maintenance_plans.find(query))
+
+    def _end_sort_key(plan):
+        end_dt = _parse_datetime(plan.get("end_date"))
+        return end_dt or datetime.max
+
+    plans.sort(key=_end_sort_key)
+    return [_build_plan_list_view(plan) for plan in plans]
+
+
+def _build_renewal_queue(db, business_id, days=90):
+    business_scope = _maintenance_template_business_scope_predicate(business_id)
+    today = datetime.now(UTC).date()
+    cutoff = today + timedelta(days=days)
+    now = datetime.now(UTC).replace(tzinfo=None)
+
+    query = {
+        "$and": [
+            business_scope,
+            {"status": "active"},
+            {"renewal_date": {"$exists": True, "$ne": None}},
+        ]
+    }
+
+    rows = []
+    for plan in db.maintenance_plans.find(query):
+        if _maintenance_plan_is_snoozed(plan, now):
+            continue
+        renewal_dt = _parse_datetime(plan.get("renewal_date"))
+        if not renewal_dt:
+            continue
+        renewal_date = renewal_dt.date()
+        if not (today <= renewal_date <= cutoff):
+            continue
+
+        snapshot = plan.get("template_snapshot") or {}
+        days_remaining = (renewal_date - today).days
+        rows.append(
+            {
+                "plan_id": str(plan.get("_id")),
+                "customer_id": str(plan.get("customer_id") or "").strip(),
+                "customer_name": str(plan.get("customer_name") or "").strip() or "Customer",
+                "property_id": str(plan.get("property_id") or "").strip(),
+                "property_name": str(plan.get("property_name") or "").strip() or "Property",
+                "tier_name": str(snapshot.get("name") or "").strip() or "Maintenance Plan",
+                "template_name": str(snapshot.get("name") or "").strip(),
+                "expiry_display": _format_long_date(plan.get("renewal_date")),
+                "days_remaining": days_remaining,
+                "renewal_sort": renewal_dt.isoformat(),
+            }
+        )
+
+    rows.sort(key=lambda row: row["renewal_sort"])
+    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -1636,7 +2157,7 @@ def maintenance_plans():
         return redirect(url_for("auth.login"))
 
     section = str(request.args.get("section") or "templates").strip().lower()
-    if section not in {"templates", "active", "renewals"}:
+    if section not in {"templates", "all", "renewals"}:
         section = "templates"
 
     status_filter = str(request.args.get("status") or "all").strip().lower()
@@ -1656,24 +2177,33 @@ def maintenance_plans():
     templates_count = db.maintenance_plan_templates.count_documents(
         _maintenance_template_business_scope_predicate(business_id)
     )
+    business_scope = _maintenance_template_business_scope_predicate(business_id)
     active_plans_count = db.maintenance_plans.count_documents(
-        {
-            "$and": [
-                _maintenance_template_business_scope_predicate(business_id),
-                {"status": "active"},
-            ]
-        }
+        {"$and": [business_scope, {"status": "active"}]}
     )
+    all_plans_count = db.maintenance_plans.count_documents(business_scope)
     renewal_count = _build_renewal_count(db, business_id)
+
+    all_plans = _fetch_business_plans(db, business_id)
+    renewal_plans = _build_renewal_queue(db, business_id, days=90)
+    renewal_template_names = [
+        str(doc.get("name") or "").strip()
+        for doc in db.maintenance_plan_templates.find(business_scope, {"name": 1}).sort("tier_order", 1)
+        if str(doc.get("name") or "").strip()
+    ]
 
     return render_template(
         "admin/maintenance_plans.html",
         templates_count=templates_count,
+        all_plans_count=all_plans_count,
         active_plans_count=active_plans_count,
         renewal_count=renewal_count,
         active_section=section,
         status_filter=status_filter,
         plan_templates=plan_templates,
+        all_plans=all_plans,
+        renewal_plans=renewal_plans,
+        renewal_template_names=renewal_template_names,
     )
 
 
@@ -1844,6 +2374,379 @@ def maintenance_plan_template_edit(template_id):
         renewal_count=renewal_count,
         active_section="templates",
     )
+
+
+@bp.route("/api/maintenance-plans", methods=["POST"])
+def api_create_maintenance_plan():
+    db = ensure_connection_or_500()
+    current_employee = _get_current_employee(db)
+    if not current_employee:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    business_id = _resolve_current_business_ref(current_employee)
+    if not business_id:
+        return jsonify({"success": False, "error": "Business context unavailable"}), 403
+
+    payload = request.get_json(silent=True) or {}
+
+    # 1. Validate template belongs to this business.
+    raw_template_id = str(payload.get("template_id") or "").strip()
+    if not ObjectId.is_valid(raw_template_id):
+        return jsonify({"success": False, "error": "A valid plan template is required."}), 400
+    template_doc = db.maintenance_plan_templates.find_one(
+        {"$and": [{"_id": ObjectId(raw_template_id)}, _maintenance_template_business_scope_predicate(business_id)]}
+    )
+    if not template_doc:
+        return jsonify({"success": False, "error": "Plan template not found."}), 404
+
+    # 2. Validate property belongs to the customer.
+    raw_customer_id = str(payload.get("customer_id") or "").strip()
+    if not ObjectId.is_valid(raw_customer_id):
+        return jsonify({"success": False, "error": "A valid customer is required."}), 400
+    customer = db.customers.find_one({"_id": ObjectId(raw_customer_id)})
+    if not customer:
+        return jsonify({"success": False, "error": "Customer not found."}), 404
+
+    raw_property_id = str(payload.get("property_id") or "").strip()
+    customer_property = _find_maintenance_plan_property(customer, raw_property_id)
+    if not customer_property:
+        return jsonify({"success": False, "error": "Property not found for this customer."}), 404
+
+    # 3. Validate no existing active plan for this property.
+    existing_active = db.maintenance_plans.count_documents(
+        {"$and": [build_reference_filter("property_id", raw_property_id), {"status": "active"}]},
+        limit=1,
+    )
+    if existing_active:
+        return jsonify({"success": False, "error": "This property already has an active maintenance plan."}), 409
+
+    # 4. Validate covered systems.
+    covered_systems_input = payload.get("covered_systems")
+    if not isinstance(covered_systems_input, list) or not covered_systems_input:
+        return jsonify({"success": False, "error": "At least one system must be covered by the plan."}), 400
+
+    # 5. Validate billing type.
+    billing_type = str(payload.get("billing_type") or "").strip().lower()
+    if billing_type not in {"monthly", "annual"}:
+        return jsonify({"success": False, "error": "Billing type must be monthly or annual."}), 400
+
+    # 6. Monthly billing requires a configured monthly price.
+    price_monthly = template_doc.get("price_monthly")
+    price_annual = template_doc.get("price_annual")
+    if billing_type == "monthly" and price_monthly in (None, ""):
+        return jsonify({"success": False, "error": "This plan does not support monthly billing."}), 400
+
+    billing_amount = float(price_monthly or 0.0) if billing_type == "monthly" else float(price_annual or 0.0)
+
+    now = datetime.now(UTC)
+
+    try:
+        visits_per_year = int(template_doc.get("visits_per_year") or 0)
+    except (TypeError, ValueError):
+        visits_per_year = 0
+
+    template_snapshot = serialize_doc(copy.deepcopy(template_doc))
+
+    customer_name = f"{str(customer.get('first_name') or '').strip()} {str(customer.get('last_name') or '').strip()}".strip()
+    company = str(customer.get("company") or "").strip()
+    property_name = str(customer_property.get("property_name") or "").strip()
+    property_address = {
+        "address_line_1": str(customer_property.get("address_line_1") or "").strip(),
+        "address_line_2": str(customer_property.get("address_line_2") or "").strip() or None,
+        "city": str(customer_property.get("city") or "").strip(),
+        "state": str(customer_property.get("state") or "").strip(),
+        "zip_code": str(customer_property.get("zip_code") or "").strip(),
+    }
+
+    sold_by_employee_id = str(session.get("employee_id") or "").strip()
+    sold_by_name = f"{str(current_employee.get('first_name') or '').strip()} {str(current_employee.get('last_name') or '').strip()}".strip()
+
+    builder_input = {
+        "template_id": raw_template_id,
+        "template_snapshot": template_snapshot,
+        "customer_id": raw_customer_id,
+        "customer_name": customer_name,
+        "company": company,
+        "property_id": raw_property_id,
+        "property_name": property_name,
+        "property_address": property_address,
+        "covered_systems": covered_systems_input,
+        "status": "active",
+        "start_date": payload.get("start_date"),
+        "billing_type": billing_type,
+        "billing_amount": billing_amount,
+        "next_billing_date": payload.get("start_date"),
+        "visits_scheduled": visits_per_year,
+        "visits_completed": 0,
+        "series_ids": [],
+        "sold_via": str(payload.get("sold_via") or "office").strip().lower() or "office",
+        "sold_by_employee_id": sold_by_employee_id,
+        "sold_by_name": sold_by_name,
+        "auto_renew": payload.get("auto_renew", False),
+    }
+
+    plan_doc = _build_maintenance_plan_document(builder_input, business_id, now=now)
+    insert_result = db.maintenance_plans.insert_one(plan_doc)
+    plan_id = insert_result.inserted_id
+
+    # Regenerate plan_number from the inserted _id (first 6 chars, uppercased).
+    plan_number = f"MP-{str(plan_id)[:6].upper()}"
+    db.maintenance_plans.update_one({"_id": plan_id}, {"$set": {"plan_number": plan_number}})
+    plan_doc["plan_number"] = plan_number
+
+    # Spawn one recurring_job_series per visit season in the template.
+    start_date = plan_doc.get("start_date")
+    end_date = plan_doc.get("end_date")
+    end_date_str = end_date.strftime("%m/%d/%Y") if isinstance(end_date, datetime) else ""
+    priority_scheduling = bool(template_doc.get("priority_scheduling"))
+    covered_equipment = plan_doc.get("covered_systems")
+
+    series_ids = []
+    anchor_dates = []
+    for sequence, season_entry in enumerate(template_doc.get("visit_seasons") or [], start=1):
+        if not isinstance(season_entry, dict):
+            continue
+        season_value = str(season_entry.get("season") or "").strip()
+        service_id = season_entry.get("service_id")
+        service_name = str(season_entry.get("service_name") or "").strip()
+
+        anchor_dt = _maintenance_visit_anchor_datetime(season_value, start_date)
+        anchor_dates.append(anchor_dt)
+        anchor_date_str = anchor_dt.strftime("%m/%d/%Y")
+
+        series_doc = {
+            "customer_id": reference_value(raw_customer_id),
+            "customer_name": customer_name,
+            "company": company,
+            "property_id": plan_doc.get("property_id"),
+            "property_name": property_name,
+            "business_id": business_id,
+            "job_type": service_name,
+            "services": [{"service_id": service_id, "service_name": service_name}],
+            "parts": [],
+            "labors": [],
+            "materials": [],
+            "equipments": [],
+            "discounts": [],
+            "status": "Active",
+            "frequency": "yearly",
+            "anchor_date": anchor_date_str,
+            "anchor_time": None,
+            "end_type": "plan_year",
+            "end_date": end_date_str,
+            "next_occurrence_date": anchor_date_str,
+            "last_generated_occurrence_index": 0,
+            "total_amount": 0.0,
+            "maintenance_plan_id": plan_id,
+            "is_maintenance_plan_visit": True,
+            "visit_season": season_value,
+            "visit_sequence": sequence,
+            "plan_visit_limit": visits_per_year,
+            "plan_year_start": start_date,
+            "plan_year_end": end_date,
+            "covered_equipment": covered_equipment,
+            "priority_scheduling": priority_scheduling,
+            "visit_invoice_amount": 0.00,
+            "created_at": now,
+        }
+        series_result = db.recurring_job_series.insert_one(series_doc)
+        series_ids.append(series_result.inserted_id)
+
+    next_visit_date = min(anchor_dates) if anchor_dates else None
+    db.maintenance_plans.update_one(
+        {"_id": plan_id},
+        {"$set": {"series_ids": series_ids, "next_visit_date": next_visit_date, "updated_at": now}},
+    )
+
+    saved_plan = db.maintenance_plans.find_one({"_id": plan_id})
+    return jsonify({"success": True, "plan_id": str(plan_id), "data": serialize_doc(saved_plan)}), 201
+
+
+@bp.route("/api/maintenance-plans", methods=["GET"])
+def api_list_maintenance_plans():
+    db = ensure_connection_or_500()
+    current_employee = _get_current_employee(db)
+    if not current_employee:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    business_id = _resolve_current_business_ref(current_employee)
+    if not business_id:
+        return jsonify({"success": False, "error": "Business context unavailable"}), 403
+
+    status_filter = str(request.args.get("status") or "all").strip().lower()
+    if status_filter not in {"all", "active", "pending", "lapsed", "cancelled", "expired"}:
+        status_filter = "all"
+
+    plans = _fetch_business_plans(db, business_id, status=status_filter)
+    return jsonify({"success": True, "plans": plans}), 200
+
+
+@bp.route("/api/maintenance-plans/<plan_id>")
+def api_get_maintenance_plan(plan_id):
+    return jsonify({"error": "Not implemented"}), 501
+
+
+@bp.route("/api/maintenance-plans/<plan_id>/cancel", methods=["PATCH"])
+def api_cancel_maintenance_plan(plan_id):
+    db = ensure_connection_or_500()
+    current_employee = _get_current_employee(db)
+    if not current_employee:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    business_id = _resolve_current_business_ref(current_employee)
+    if not business_id:
+        return jsonify({"success": False, "error": "Business context unavailable"}), 403
+
+    if not ObjectId.is_valid(str(plan_id or "")):
+        return jsonify({"success": False, "error": "Plan not found."}), 404
+
+    plan_oid = ObjectId(str(plan_id))
+    plan = db.maintenance_plans.find_one(
+        {"$and": [{"_id": plan_oid}, _maintenance_template_business_scope_predicate(business_id)]}
+    )
+    if not plan:
+        return jsonify({"success": False, "error": "Plan not found."}), 404
+
+    status = str(plan.get("status") or "").strip().lower()
+    if status in ("cancelled", "expired"):
+        return jsonify({"success": False, "error": "This plan is already cancelled or expired."}), 409
+
+    payload = request.get_json(silent=True) or {}
+    reason = str(payload.get("reason") or "").strip()
+    if not reason:
+        return jsonify({"success": False, "error": "A cancellation reason is required."}), 400
+
+    now = datetime.now(UTC)
+    db.maintenance_plans.update_one(
+        {"_id": plan_oid},
+        {
+            "$set": {
+                "status": "cancelled",
+                "cancelled_at": now,
+                "cancellation_reason": reason,
+                "updated_at": now,
+            }
+        },
+    )
+    db.recurring_job_series.update_many(
+        build_reference_filter("maintenance_plan_id", plan_oid),
+        {"$set": {"status": "Cancelled"}},
+    )
+    return jsonify({"success": True})
+
+
+@bp.route("/api/maintenance-plans/<plan_id>/renew", methods=["POST"])
+def api_renew_maintenance_plan(plan_id):
+    return jsonify({"error": "Not implemented"}), 501
+
+
+@bp.route("/api/maintenance-plans/<plan_id>/send-summary-email", methods=["POST"])
+def api_send_maintenance_plan_summary_email(plan_id):
+    db = ensure_connection_or_500()
+    current_employee = _get_current_employee(db)
+    if not current_employee:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    business_id = _resolve_current_business_ref(current_employee)
+    if not business_id:
+        return jsonify({"success": False, "error": "Business context unavailable"}), 403
+
+    if not ObjectId.is_valid(str(plan_id or "")):
+        return jsonify({"success": False, "error": "Plan not found."}), 404
+
+    plan = db.maintenance_plans.find_one(
+        {"$and": [{"_id": ObjectId(str(plan_id))}, _maintenance_template_business_scope_predicate(business_id)]},
+    )
+    if not plan:
+        return jsonify({"success": False, "error": "Plan not found."}), 404
+
+    customer = db.customers.find_one(build_reference_filter("_id", plan.get("customer_id"))) or {}
+    recipient_email = str(customer.get("email") or "").strip()
+    if not recipient_email:
+        return jsonify({"success": False, "error": "This customer does not have an email address on file."}), 400
+
+    business = db.businesses.find_one(build_reference_filter("_id", plan.get("business_id"))) or {}
+    subject, body = _build_maintenance_plan_summary_email(plan, customer, business)
+
+    try:
+        message = Message(subject=subject, recipients=[recipient_email], body=body)
+        current_app.extensions["mail"].send(message)
+    except Exception as exc:
+        current_app.logger.warning("Maintenance plan summary email failed: %s", exc)
+        return jsonify({"success": False, "error": "The summary email could not be sent. Please try again."}), 502
+
+    db.maintenance_plans.update_one(
+        {"_id": plan.get("_id")},
+        {"$set": {"summary_email_sent_at": datetime.now(UTC), "updated_at": datetime.now(UTC)}},
+    )
+    return jsonify({"success": True}), 200
+
+
+@bp.route("/api/maintenance-plans/<plan_id>/send-renewal-email", methods=["POST"])
+def api_send_maintenance_plan_renewal_email(plan_id):
+    db = ensure_connection_or_500()
+    current_employee = _get_current_employee(db)
+    if not current_employee:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    business_id = _resolve_current_business_ref(current_employee)
+    if not business_id:
+        return jsonify({"success": False, "error": "Business context unavailable"}), 403
+
+    if not ObjectId.is_valid(str(plan_id or "")):
+        return jsonify({"success": False, "error": "Plan not found."}), 404
+
+    plan = db.maintenance_plans.find_one(
+        {"$and": [{"_id": ObjectId(str(plan_id))}, _maintenance_template_business_scope_predicate(business_id)]},
+    )
+    if not plan:
+        return jsonify({"success": False, "error": "Plan not found."}), 404
+
+    customer = db.customers.find_one(build_reference_filter("_id", plan.get("customer_id"))) or {}
+    recipient_email = str(customer.get("email") or "").strip()
+    if not recipient_email:
+        return jsonify({"success": False, "error": "This customer does not have an email address on file."}), 400
+
+    business = db.businesses.find_one(build_reference_filter("_id", plan.get("business_id"))) or {}
+    subject, body = _build_maintenance_plan_renewal_email(plan, customer, business)
+
+    try:
+        message = Message(subject=subject, recipients=[recipient_email], body=body)
+        current_app.extensions["mail"].send(message)
+    except Exception as exc:
+        current_app.logger.warning("Maintenance plan renewal email failed: %s", exc)
+        return jsonify({"success": False, "error": "The renewal email could not be sent. Please try again."}), 502
+
+    db.maintenance_plans.update_one(
+        {"_id": plan.get("_id")},
+        {"$set": {"renewal_email_sent_at": datetime.now(UTC), "updated_at": datetime.now(UTC)}},
+    )
+    return jsonify({"success": True}), 200
+
+
+
+@bp.route("/api/maintenance-plans/<plan_id>/dismiss-renewal", methods=["POST"])
+def api_dismiss_maintenance_plan_renewal(plan_id):
+    db = ensure_connection_or_500()
+    current_employee = _get_current_employee(db)
+    if not current_employee:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+    business_id = _resolve_current_business_ref(current_employee)
+    if not business_id:
+        return jsonify({"success": False, "error": "Business context unavailable"}), 403
+
+    if not ObjectId.is_valid(str(plan_id or "")):
+        return jsonify({"success": False, "error": "Plan not found."}), 404
+
+    plan_oid = ObjectId(str(plan_id))
+    plan = db.maintenance_plans.find_one(
+        {"$and": [{"_id": plan_oid}, _maintenance_template_business_scope_predicate(business_id)]},
+        {"_id": 1},
+    )
+    if not plan:
+        return jsonify({"success": False, "error": "Plan not found."}), 404
+
+    now = datetime.now(UTC)
+    db.maintenance_plans.update_one(
+        {"_id": plan_oid},
+        {"$set": {"snoozed_until": now + timedelta(days=7), "updated_at": now}},
+    )
+    return jsonify({"success": True}), 200
 
 
 @bp.route("/reporting")

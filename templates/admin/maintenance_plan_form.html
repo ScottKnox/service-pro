@@ -57,7 +57,7 @@
                   {% set model = template or {} %}
 
                   <section class="maintenance-form-section" id="section-basic">
-                    <h3>Section A - Basic Information</h3>
+                    <h3>Basic Information</h3>
 
                     <label for="plan-name">Plan name</label>
                     <input id="plan-name" name="name" type="text" required minlength="2" maxlength="50" value="{{ model.get('name', '') }}" />
@@ -78,7 +78,7 @@
                   <hr />
 
                   <section class="maintenance-form-section" id="section-schedule">
-                    <h3>Section B - Visit Schedule</h3>
+                    <h3>Visit Schedule</h3>
 
                     <label for="visits-per-year">Visits per year</label>
                     <input id="visits-per-year" name="visits_per_year" type="number" required min="1" max="3" value="{{ model.get('visits_per_year', 1) }}" />
@@ -93,7 +93,7 @@
                   <hr />
 
                   <section class="maintenance-form-section" id="section-pricing">
-                    <h3>Section C - Pricing</h3>
+                    <h3>Pricing</h3>
 
                     <label for="price-annual">Annual price</label>
                     <input id="price-annual" name="price_annual" type="number" step="0.01" min="0.01" required value="{{ model.get('price_annual', '') }}" />
@@ -109,7 +109,7 @@
                   <hr />
 
                   <section class="maintenance-form-section" id="section-benefits">
-                    <h3>Section D - Benefits</h3>
+                    <h3>Benefits</h3>
 
                     <label for="repair-discount-pct">% discount applied to plan holder jobs</label>
                     <input id="repair-discount-pct" name="repair_discount_pct" type="number" min="0" max="50" step="0.01" value="{{ model.get('repair_discount_pct', 0) }}" />
@@ -256,8 +256,7 @@
     .maintenance-form-shell {
       max-height: calc(100vh - 220px);
       overflow: auto;
-      padding-right: 0.5rem;
-      padding-left: 0.5rem;
+      padding: 1rem;
       background: var(--maintenance-panel);
       border: 1px solid var(--maintenance-border);
     }
@@ -279,8 +278,11 @@
     }
 
     .maintenance-form-section h3 {
-      margin: 0 0 0.5rem 0;
-      font-size: 1rem;
+      margin: 0 0 0.6rem 0;
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      line-height: 1.2;
     }
 
     .maintenance-form-section label {

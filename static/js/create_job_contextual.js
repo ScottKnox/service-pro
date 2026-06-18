@@ -830,6 +830,10 @@
     if (submitButton) {
       submitButton.disabled = !valid;
     }
+
+    // Row add/remove happens via direct DOM manipulation, which does not emit a
+    // bubbling input/change event, so refresh the plan discount preview here too.
+    schedulePlanDiscountPreview();
     return valid;
   }
 
@@ -898,6 +902,161 @@
     });
   }
 
+  const primaryTechnicianSelect = document.getElementById("primary-technician-id");
+  const additionalTechnicianRows = document.querySelectorAll("[data-additional-tech-id]");
+
+  function syncAdditionalTechnicianOptions() {
+    if (!additionalTechnicianRows.length) {
+      return;
+    }
+
+    const primaryTechnicianId = primaryTechnicianSelect ? String(primaryTechnicianSelect.value || "").trim() : "";
+
+    additionalTechnicianRows.forEach(function (row) {
+      const rowTechId = String(row.dataset.additionalTechId || "").trim();
+      const checkbox = row.querySelector('input[type="checkbox"]');
+      if (!rowTechId || !checkbox) {
+        return;
+      }
+
+      const shouldHide = Boolean(primaryTechnicianId) && rowTechId === primaryTechnicianId;
+      row.hidden = shouldHide;
+      row.style.display = shouldHide ? "none" : "";
+      if (shouldHide) {
+        checkbox.checked = false;
+      }
+    });
+  }
+
+  if (primaryTechnicianSelect) {
+    primaryTechnicianSelect.addEventListener("change", function () {
+      syncAdditionalTechnicianOptions();
+    });
+  }
+
+  // ---- Maintenance plan discount live preview ----
+  const planPreviewBox = document.querySelector("[data-plan-preview]");
+  const planPreviewCsrf = document.querySelector('meta[name="csrf-token"]');
+  const planPreviewToken = planPreviewCsrf ? planPreviewCsrf.getAttribute("content") : "";
+  let planPreviewTimer = null;
+  let planPreviewRequestId = 0;
+
+  function escapePlanText(value) {
+    const div = document.createElement("div");
+    div.textContent = value == null ? "" : String(value);
+    return div.innerHTML;
+  }
+
+  function formatPlanCurrency(value) {
+    const amount = Number(value || 0);
+    return amount.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  }
+
+  function hidePlanPreview() {
+    if (!planPreviewBox) {
+      return;
+    }
+    planPreviewBox.hidden = true;
+    planPreviewBox.innerHTML = "";
+    planPreviewBox.classList.remove("is-savings", "is-info");
+  }
+
+  function renderPlanPreview(data) {
+    if (!planPreviewBox) {
+      return;
+    }
+
+    if (!data || !data.has_plan) {
+      hidePlanPreview();
+      return;
+    }
+
+    const planLabel = data.plan_number
+      ? `${data.plan_name} (${data.plan_number})`
+      : data.plan_name;
+
+    if (!data.has_discount) {
+      planPreviewBox.classList.remove("is-savings");
+      planPreviewBox.classList.add("is-info");
+      planPreviewBox.innerHTML =
+        `<div class="maintenance-plan-preview-head">Maintenance plan active</div>` +
+        `<p class="maintenance-plan-preview-note">This property is covered by <strong>${escapePlanText(planLabel)}</strong>. This plan has no automatic price discounts.</p>`;
+      planPreviewBox.hidden = false;
+      return;
+    }
+
+    const perks = [];
+    const pct = Number(data.discount_pct || 0);
+    if (pct > 0) {
+      const types = Array.isArray(data.service_types) && data.service_types.length
+        ? data.service_types.join(", ")
+        : "eligible services";
+      perks.push(`${pct % 1 === 0 ? pct.toFixed(0) : pct}% discount on ${escapePlanText(types)}`);
+    }
+    if (data.diagnostic_fee_waived) {
+      perks.push("Waived diagnostic fee");
+    }
+
+    const savings = Number(data.savings || 0);
+    planPreviewBox.classList.remove("is-info");
+    planPreviewBox.classList.add("is-savings");
+    planPreviewBox.innerHTML =
+      `<div class="maintenance-plan-preview-head">Maintenance plan discount &mdash; ${escapePlanText(planLabel)}</div>` +
+      (perks.length ? `<ul class="maintenance-plan-preview-perks"><li>${perks.join("</li><li>")}</li></ul>` : "") +
+      `<div class="maintenance-plan-preview-totals">` +
+        `<span class="maintenance-plan-preview-row"><span>Subtotal</span><span>${formatPlanCurrency(data.original_total)}</span></span>` +
+        `<span class="maintenance-plan-preview-row maintenance-plan-preview-savings"><span>Plan savings</span><span>&minus;${formatPlanCurrency(savings)}</span></span>` +
+        `<span class="maintenance-plan-preview-row maintenance-plan-preview-final"><span>New total</span><span>${formatPlanCurrency(data.discounted_total)}</span></span>` +
+      `</div>` +
+      `<p class="maintenance-plan-preview-note">This discount is applied automatically when you save.</p>`;
+    planPreviewBox.hidden = false;
+  }
+
+  function fetchPlanDiscountPreview() {
+    if (!planPreviewBox || !customerId) {
+      return;
+    }
+
+    const propertyId = propertySelect ? String(propertySelect.value || "").trim() : "";
+    if (!propertyId) {
+      hidePlanPreview();
+      return;
+    }
+
+    const requestId = ++planPreviewRequestId;
+    const formData = new FormData(form);
+    fetch(`/customers/${encodeURIComponent(customerId)}/jobs/plan-discount-preview`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "X-CSRFToken": planPreviewToken },
+      body: formData,
+    })
+      .then(function (response) {
+        return response.ok ? response.json() : null;
+      })
+      .then(function (payload) {
+        if (requestId !== planPreviewRequestId) {
+          return;
+        }
+        renderPlanPreview(payload);
+      })
+      .catch(function () {
+        if (requestId === planPreviewRequestId) {
+          hidePlanPreview();
+        }
+      });
+  }
+
+  function schedulePlanDiscountPreview() {
+    clearTimeout(planPreviewTimer);
+    planPreviewTimer = setTimeout(fetchPlanDiscountPreview, 350);
+  }
+
+  if (planPreviewBox) {
+    form.addEventListener("input", schedulePlanDiscountPreview);
+    form.addEventListener("change", schedulePlanDiscountPreview);
+  }
+
   form.addEventListener("submit", function (event) {
     if (!validateForm()) {
       event.preventDefault();
@@ -922,5 +1081,7 @@
   preloadExistingStandaloneItems();
 
   syncRecurringUI();
+  syncAdditionalTechnicianOptions();
+  fetchPlanDiscountPreview();
   validateForm();
 })();

@@ -10710,6 +10710,86 @@ body.sidebar-view #footer-bg {
   background: #2d4b3f;
 }
 
+/* Maintenance plan discount live preview banner */
+.maintenance-plan-preview {
+  margin: 1rem 0 0;
+  border: 1px solid #2f5a4a;
+  border-left: 3px solid #00A86B;
+  border-radius: 6px;
+  background: #1f342b;
+  padding: 0.9rem 1rem;
+  color: #F2F5F3;
+}
+
+.maintenance-plan-preview[hidden] {
+  display: none;
+}
+
+.maintenance-plan-preview.is-info {
+  border-left-color: #5a8c79;
+}
+
+.maintenance-plan-preview-head {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #56d6a0;
+  margin-bottom: 0.5rem;
+}
+
+.maintenance-plan-preview.is-info .maintenance-plan-preview-head {
+  color: #D0DDD7;
+}
+
+.maintenance-plan-preview-perks {
+  margin: 0 0 0.6rem;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.maintenance-plan-preview-perks li {
+  color: #D0DDD7;
+  font-size: 0.88rem;
+}
+
+.maintenance-plan-preview-totals {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: 320px;
+  border-top: 1px solid #2f5a4a;
+  padding-top: 0.6rem;
+}
+
+.maintenance-plan-preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #D0DDD7;
+}
+
+.maintenance-plan-preview-savings {
+  color: #56d6a0;
+  font-weight: 600;
+}
+
+.maintenance-plan-preview-final {
+  border-top: 1px solid #2f5a4a;
+  padding-top: 0.35rem;
+  margin-top: 0.15rem;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #F2F5F3;
+}
+
+.maintenance-plan-preview-note {
+  margin: 0.6rem 0 0;
+  font-size: 0.82rem;
+  color: #9fb3a9;
+}
+
 .resource-customer-update {
   color: #F2F5F3;
 }
