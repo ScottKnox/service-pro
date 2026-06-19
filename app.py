@@ -7,14 +7,12 @@ import re
 from bson import ObjectId
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask, redirect, render_template, request, send_file, session, url_for
-from flask_mail import Mail
 from flask_wtf.csrf import CSRFProtect
 import stripe
 
 from blueprints import register_blueprints
 from config import (
     APP_ENV,
-    get_mail_config,
     get_secret_key,
     scheduler_enabled_flag,
     scheduler_interval_minutes,
@@ -31,16 +29,6 @@ app = Flask(__name__)
 _secret_key = get_secret_key()
 app.secret_key = _secret_key
 
-# Flask-Mail Configuration
-_mail_config = get_mail_config()
-app.config["MAIL_SERVER"] = _mail_config["MAIL_SERVER"]
-app.config["MAIL_PORT"] = _mail_config["MAIL_PORT"]
-app.config["MAIL_USE_TLS"] = _mail_config["MAIL_USE_TLS"]
-app.config["MAIL_USERNAME"] = _mail_config["MAIL_USERNAME"]
-app.config["MAIL_PASSWORD"] = _mail_config["MAIL_PASSWORD"]
-app.config["MAIL_DEFAULT_SENDER"] = _mail_config["MAIL_DEFAULT_SENDER"]
-
-mail = Mail(app)
 csrf = CSRFProtect(app)
 register_blueprints(app)
 

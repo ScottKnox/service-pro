@@ -9,7 +9,6 @@ import secrets
 
 from bson import ObjectId
 from flask import Blueprint, current_app, has_request_context, jsonify, redirect, render_template, request, session, url_for
-from flask_mail import Message
 import stripe
 
 from config import get_notification_base_url
@@ -32,7 +31,7 @@ from utils.catalog import (
 from utils.currency import currency_to_float, normalize_currency
 from utils.csv_export import build_csv_export_response
 from utils.formatters import format_date
-from utils.notifications import normalize_phone_for_twilio, send_sms_via_twilio, sms_features_enabled
+from utils.notifications import normalize_phone_for_twilio, send_email, send_sms_via_twilio, sms_features_enabled
 from utils.qr_codes import generate_payment_qr
 from utils.taxes import build_line_item_tax_inputs, calculate_itemized_tax, normalize_business_tax_rates
 
@@ -1605,7 +1604,7 @@ def estimate_pdf_absolute_path_from_url(file_url):
 
 def build_employee_options(db):
     employee_docs = []
-    for employee in db.employees.find().sort([("last_name", 1), ("first_name", 1)]):
+    for employee in db.employees.find(_employee_business_scope(db)).sort([("last_name", 1), ("first_name", 1)]):
         serialized_employee = serialize_doc(employee)
         if str(serialized_employee.get("status") or "active").strip().lower() != "active":
             continue
@@ -1642,6 +1641,34 @@ def resolve_current_business_id(db):
         if isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
             return ObjectId(business_ref)
     return None
+
+
+def _employee_business_scope(db):
+    """Return a Mongo filter restricting employees to the current business.
+
+    Employee business ownership may be stored under ``business`` (preferred) or
+    the legacy ``business_id``/``company_id`` fields, as either an ObjectId or a
+    string. When the current business cannot be resolved we return a
+    match-nothing filter so employees from other tenants are never exposed.
+    """
+    business_id = resolve_current_business_id(db)
+    if not business_id:
+        return {"_id": {"$in": []}}
+
+    business_str = str(business_id)
+    predicates = []
+    for field_name in ("business", "business_id", "company_id"):
+        predicates.append({field_name: business_id})
+        predicates.append({field_name: business_str})
+    return {"$or": predicates}
+
+
+def _scoped_employee_filter(db, base_filter=None):
+    """Combine ``base_filter`` with the current-business employee scope."""
+    scope = _employee_business_scope(db)
+    if not base_filter:
+        return scope
+    return {"$and": [dict(base_filter), scope]}
 
 
 def _is_authenticated_employee():
@@ -1791,7 +1818,7 @@ def _coerce_business_object_id(value):
 
 def _employee_lookup(db):
     lookup = {}
-    for employee in db.employees.find().sort([("last_name", 1), ("first_name", 1)]):
+    for employee in db.employees.find(_employee_business_scope(db)).sort([("last_name", 1), ("first_name", 1)]):
         serialized_employee = serialize_doc(employee)
         employee_id = str(serialized_employee.get("_id") or "").strip()
         if not employee_id or str(serialized_employee.get("status") or "active").strip().lower() != "active":
@@ -1809,7 +1836,9 @@ def _resolve_employee_id_value(db, value):
     if not raw_value:
         return ""
     if ObjectId.is_valid(raw_value):
-        employee = db.employees.find_one({"_id": ObjectId(raw_value)}, {"status": 1})
+        employee = db.employees.find_one(
+            _scoped_employee_filter(db, {"_id": ObjectId(raw_value)}), {"status": 1}
+        )
         if employee and str(employee.get("status") or "active").strip().lower() == "active":
             return raw_value
         return ""
@@ -1818,7 +1847,7 @@ def _resolve_employee_id_value(db, value):
     if not normalized_name:
         return ""
 
-    for employee in db.employees.find({}, {"first_name": 1, "last_name": 1, "status": 1}):
+    for employee in db.employees.find(_employee_business_scope(db), {"first_name": 1, "last_name": 1, "status": 1}):
         if str(employee.get("status") or "active").strip().lower() != "active":
             continue
         full_name = " ".join(f"{str(employee.get('first_name') or '').strip()} {str(employee.get('last_name') or '').strip()}".split()).lower()
@@ -1831,7 +1860,9 @@ def _resolve_employee_name_from_value(db, value):
     employee_id = _resolve_employee_id_value(db, value)
     if not employee_id:
         return ""
-    employee = db.employees.find_one({"_id": ObjectId(employee_id)}, {"first_name": 1, "last_name": 1}) or {}
+    employee = db.employees.find_one(
+        _scoped_employee_filter(db, {"_id": ObjectId(employee_id)}), {"first_name": 1, "last_name": 1}
+    ) or {}
     first_name = str(employee.get("first_name") or "").strip()
     last_name = str(employee.get("last_name") or "").strip()
     return f"{first_name} {last_name}".strip()
@@ -2278,12 +2309,12 @@ def _send_payment_schedule_stage_request(db, job_id, stage_id, force_resend=Fals
     if channel_payload["channel"] in {"both", "email"}:
         try:
             invoice_number = str((invoice_entry or {}).get("invoice_number") or invoice_ref).strip()
-            msg = Message(
+            send_email(
                 subject=f"Payment Request - {stage_name} - {invoice_number}",
                 recipients=[customer_email],
                 body=message_body,
+                business=business,
             )
-            current_app.extensions["mail"].send(msg)
             email_sent = True
         except Exception as exc:
             failure_reasons.append(f"Email failed: {exc}")
@@ -2570,8 +2601,7 @@ def _send_single_invoice_reminder(db, reminder_doc):
             if reminder_type == "manual":
                 email_subject = f"Manual Payment Reminder - {str((invoice_entry or {}).get('invoice_number') or invoice_ref)}"
 
-            msg = Message(subject=email_subject, recipients=[customer_email], body=message_body)
-            current_app.extensions["mail"].send(msg)
+            send_email(subject=email_subject, recipients=[customer_email], body=message_body, business=business)
             email_sent = True
         except Exception as exc:
             failure_reasons.append(f"Email failed: {exc}")
@@ -4967,6 +4997,7 @@ def view_estimate(estimateId):
         estimateId=estimateId,
         estimate=estimate_doc,
         customer=customer,
+        estimate_business=estimate_business,
         quote_email_template=quote_email_template,
         is_staff_view=is_staff_view,
         access_token=token_value,
@@ -5352,16 +5383,17 @@ def send_estimate_email_by_id(estimateId):
             f"{estimate_link}"
         )
 
-        msg = Message(
+        with open(filepath, "rb") as f:
+            attachment_bytes = f.read()
+
+        business = _resolve_business_doc_for_job(db, estimate) or {}
+        send_email(
             subject=subject,
             recipients=[recipient_email],
             body=appended_body,
+            attachments=[(filename, "application/pdf", attachment_bytes)],
+            business=business,
         )
-
-        with open(filepath, "rb") as f:
-            msg.attach(filename, "application/pdf", f.read())
-
-        current_app.extensions["mail"].send(msg)
 
         now = datetime.now()
         status = str(estimate.get("status") or "").strip().lower()
@@ -5729,6 +5761,7 @@ def view_invoice(jobId, invoiceRef):
         is_staff_view=is_staff_view,
         access_token=token_value,
         invoice_email_template=invoice_email_template,
+        company_name=_resolve_company_name(business),
         payment_state=payment_state,
         payment_method_state=payment_method_state,
         reminder_state=reminder_state,
@@ -6692,16 +6725,17 @@ def send_estimate_email(jobId):
         if not filename:
             filename = os.path.basename(filepath)
 
-        msg = Message(
+        with open(filepath, "rb") as f:
+            attachment_bytes = f.read()
+
+        business = _resolve_business_doc_for_job(db, job) or {}
+        send_email(
             subject=subject,
             recipients=[recipient_email],
             body=appended_body,
+            attachments=[(filename, "application/pdf", attachment_bytes)],
+            business=business,
         )
-
-        with open(filepath, "rb") as f:
-            msg.attach(filename, "application/pdf", f.read())
-
-        current_app.extensions["mail"].send(msg)
 
         if email_type == "invoice":
             sent_at_utc = datetime.now(UTC)

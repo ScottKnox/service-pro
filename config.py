@@ -74,17 +74,6 @@ def get_notification_base_url() -> str:
     ).strip().rstrip("/")
 
 
-def get_mail_config() -> dict:
-    return {
-        "MAIL_SERVER": str(os.getenv("MAIL_SERVER", "smtp.gmail.com")).strip() or "smtp.gmail.com",
-        "MAIL_PORT": int(str(os.getenv("MAIL_PORT", "587")).strip() or "587"),
-        "MAIL_USE_TLS": str(os.getenv("MAIL_USE_TLS", "true")).strip().lower() == "true",
-        "MAIL_USERNAME": os.getenv("MAIL_USERNAME"),
-        "MAIL_PASSWORD": os.getenv("MAIL_PASSWORD"),
-        "MAIL_DEFAULT_SENDER": os.getenv("MAIL_DEFAULT_SENDER"),
-    }
-
-
 def scheduler_enabled_flag() -> bool:
     enabled_flag = str(os.getenv("INVOICE_REMINDER_SCHEDULER_ENABLED", "true") or "").strip().lower()
     return enabled_flag not in {"0", "false", "no", "off"}

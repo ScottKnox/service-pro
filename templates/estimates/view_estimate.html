@@ -4,6 +4,7 @@
 
 {% block content %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/view_job.css') }}" />
+  {% if is_staff_view %}
   <div class="app-shell home-app-shell">
     <aside id="home-sidebar" class="app-sidebar" aria-label="Application navigation">
       {% include 'partials/home_sidebar_nav.html' %}
@@ -11,10 +12,16 @@
     <section class="app-content">
       <div id="main-container" class="app-content-main-container">
         <div id="view-job-panel" class="resource-page resource-estimate-view">
+  {% else %}
+  <div id="main-container" class="invoice-public-main-container">
+    <div id="view-job-panel" class="resource-page resource-estimate-view resource-invoice-public">
+  {% endif %}
 
       <nav id="breadcrumb" aria-label="Breadcrumb">
         <ol>
+          {% if is_staff_view %}
           <li><a href="{{ url_for('customers.view_customer', customerId=estimate.customer_id) }}">Customer</a></li>
+          {% endif %}
           <li aria-current="page">View Estimate</li>
         </ol>
       </nav>
@@ -25,7 +32,7 @@
         <div id="view-service-actions-row">
           <button class="view-estimate-action-secondary estimate-email-btn"
                   type="button"
-                  data-estimate-title="Estimate"
+                  data-estimate-title="{{ estimate_business.get('company_name') or estimate_business.get('business_name') or estimate_business.get('name') or '' }}"
                   data-estimate-file="{{ estimate.latest_file_path|default('', true) }}"
                   data-customer-email="{{ customer.email|default('', true) }}"
                   data-customer-name="{{ customer.first_name|default('', true) }} {{ customer.last_name|default('', true) }}"
@@ -86,14 +93,17 @@
         <div class="estimate-stack-block">
           <h3>Estimate Summary</h3>
           <div class="estimate-summary-grid">
+            {% if is_staff_view %}
             <div class="view-job-detail-item">
               <h4>Status</h4>
               <p><span class="jobs-status-chip{% if estimate_status_normalized == 'created' %} is-pending{% elif estimate_status_normalized == 'sent' %} is-scheduled{% elif estimate_status_normalized == 'accepted' %} is-started{% elif estimate_status_normalized == 'declined' %} is-declined{% endif %}">{{ estimate.status|default('Created', true) }}</span></p>
             </div>
+            {% endif %}
             <div class="view-job-detail-item">
               <h4>Customer</h4>
               <p>{{ estimate.customer_name|default('N/A', true) }}</p>
             </div>
+            {% if is_staff_view %}
             <div class="view-job-detail-item">
               <h4>Date Created</h4>
               <p>
@@ -105,6 +115,7 @@
                 >{{ estimate.time_created|default('N/A', true) }}</span>
               </p>
             </div>
+            {% endif %}
             <div class="view-job-detail-item">
               <h4>Proposed Job Date</h4>
               <p>{{ estimate.proposed_job_date|default('Not Yet Scheduled' if not is_staff_view else 'N/A', true) }}</p>
@@ -151,10 +162,12 @@
               <h4>Primary Technician</h4>
               <p>{{ estimate.estimated_by_employee|default('N/A', true) }}</p>
             </div>
+            {% if is_staff_view %}
             <div class="view-job-detail-item">
               <h4>Created By</h4>
               <p>{{ estimate.created_by_employee|default('N/A', true) }}</p>
             </div>
+            {% endif %}
             <div class="view-job-detail-item">
               <h4>Location</h4>
               <p>
@@ -163,6 +176,7 @@
                 {{ estimate.city|default('N/A', true) }}, {{ estimate.state|default('N/A', true) }} {{ estimate.zip_code|default('', true) }}
               </p>
             </div>
+            {% if is_staff_view %}
             <div class="view-job-detail-item">
               <h4>Estimate PDF</h4>
               {% if estimate.latest_file_path %}
@@ -171,6 +185,7 @@
                 <p>N/A</p>
               {% endif %}
             </div>
+            {% endif %}
 
             {% if is_staff_view and estimate_status_normalized == 'accepted' and estimate.accepted_signature_data_url %}
               <div class="view-job-detail-item estimate-signature-details-card">
@@ -399,10 +414,15 @@
           </div>
         {% endif %}
       </section>
+  {% if is_staff_view %}
         </div>
       </div>
     </section>
   </div>
+  {% else %}
+    </div>
+  </div>
+  {% endif %}
 
   {% if is_staff_view %}
   <div id="email-estimate-modal" class="modal">

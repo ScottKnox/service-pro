@@ -114,18 +114,21 @@
       const estimateFile = this.getAttribute('data-estimate-file');
       const customerEmail = this.getAttribute('data-customer-email');
       const customerName = this.getAttribute('data-customer-name').trim();
+      const businessName = (this.getAttribute('data-business-name') || '').trim();
       const emailType = this.getAttribute('data-email-type') || 'estimate';
       currentEmailType = emailType;
 
       recipientInput.value = customerEmail;
       if (emailType === 'invoice') {
-        subjectInput.value = `Invoice: ${estimateTitle}`;
+        subjectInput.value = businessName
+          ? `Invoice ${estimateTitle} from ${businessName}`
+          : `Invoice ${estimateTitle}`;
         bodyInput.value = invoiceTemplate || `Hi ${customerName},\n\nPlease find attached your invoice.\n\nPlease let us know if you have any questions.\n\nBest regards`;
       } else if (emailType === 'report') {
         subjectInput.value = `Report: ${estimateTitle}`;
         bodyInput.value = quoteTemplate || `Hi ${customerName},\n\nPlease find attached your report.\n\nPlease let us know if you have any questions.\n\nBest regards`;
       } else {
-        subjectInput.value = `Estimate: ${estimateTitle}`;
+        subjectInput.value = estimateTitle ? `Your Estimate from ${estimateTitle}` : 'Your Estimate';
         bodyInput.value = quoteTemplate || `Hi ${customerName},\n\nPlease find attached your estimate.\n\nPlease let us know if you have any questions.\n\nBest regards`;
       }
 

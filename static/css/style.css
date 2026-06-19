@@ -4640,6 +4640,10 @@ body.sidebar-view #footer-bg {
     max-width: calc(50% - 0.5rem);
   }
 
+  .job-service-row {
+    align-items: start;
+  }
+
   #create-service-form.materials-form .materials-form-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
@@ -5847,8 +5851,12 @@ body.sidebar-view #footer-bg {
     box-sizing: border-box;
   }
 
-  #view-job-notes-row {
-    margin-top: 1rem;
+  .view-job-section-row--full {
+    grid-template-columns: 1fr;
+  }
+
+  .view-job-section-row--full .view-job-section-column:first-child {
+    border-right: 0;
   }
 
   .view-job-section-column {
@@ -6017,6 +6025,24 @@ body.sidebar-view #footer-bg {
     background-color: #FFFFFF;
   }
 
+  #view-service-associated-categories {
+    margin-top: 1.25rem;
+  }
+
+  #view-service-associated-categories > h2 {
+    margin: 0 0 0.75rem;
+    color: var(--kl-header-soft);
+  }
+
+  #view-service-associated-categories-content {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    padding: 1rem;
+    border: 1px solid #C5C7CB;
+    background-color: #FFFFFF;
+  }
+
   .view-service-detail-item {
     padding: 0;
     min-width: 0;
@@ -6091,6 +6117,10 @@ body.sidebar-view #footer-bg {
     }
 
     #view-service-details-content {
+      grid-template-columns: 1fr;
+    }
+
+    #view-service-associated-categories-content {
       grid-template-columns: 1fr;
     }
   }
@@ -9453,8 +9483,28 @@ body.sidebar-view #footer-bg {
   text-align: left;
 }
 
+.invoice-public-main-container #view-job-panel.resource-invoice-public .invoice-payment-options {
+  text-align: center;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .invoice-payment-options-divider {
+  border-left-color: #2f5a4a;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .invoice-payment-qr-title {
+  color: #F2F5F3;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .invoice-payment-qr-caption {
+  color: #B2C0B9;
+}
+
 .invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-customer-actions {
   justify-content: flex-start;
+}
+
+.invoice-public-main-container #view-job-panel.resource-invoice-public .invoice-payment-options .estimate-customer-actions {
+  justify-content: center;
 }
 
 .invoice-public-main-container #view-job-panel.resource-invoice-public .estimate-customer-action-btn {
@@ -9526,9 +9576,14 @@ body.sidebar-view #footer-bg {
 }
 
 #payment-options-modal .estimate-stack-block {
-  border: 1px solid #2f5a4a;
-  border-radius: 8px;
-  background: #223a30;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+
+#payment-options-modal .invoice-payment-actions-vertical {
+  margin-top: 1.5rem;
 }
 
 #payment-options-modal .estimate-pricing-summary {
@@ -9604,6 +9659,7 @@ body.sidebar-view #footer-bg {
 
 #payment-options-modal .modal-actions {
   border-top: 1px solid #2f5a4a;
+  padding: 1rem 1.25rem 1.25rem;
 }
 
 .invoice-email-modal {
@@ -10137,24 +10193,32 @@ body.sidebar-view #footer-bg {
 
 .resource-job-view #view-job-details {
   display: grid;
-  gap: 1.15rem;
+  gap: 1rem;
 }
 
 .resource-job-view .view-job-section-row {
-  border: 1px solid #00A86B;
-  border-top: 1px solid #00A86B;
-  background: #1D3329;
+  border: 0;
+  border-top: 0;
+  background: transparent;
   margin: 0;
+  gap: 1rem;
 }
 
+.resource-job-view .view-job-section-column,
 .resource-job-view .view-job-section-column:first-child {
-  border-right: 1px solid #2f5a4a;
+  border: 1px solid #00A86B;
+  border-radius: 0;
+  background: #1D3329;
+  color: #F2F5F3;
+  padding: 0.7rem;
 }
 
 .resource-job-view .view-job-section-column > h3 {
   text-align: center;
   background: #00A86B;
   color: #F2F5F3;
+  margin: -0.7rem -0.7rem 0.75rem;
+  padding: 0.6rem 0.75rem;
 }
 
 .resource-job-view .view-job-line-item {
@@ -11046,36 +11110,167 @@ body.sidebar-view #footer-bg {
 }
 
 .resource-category-management {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.35rem 1.4rem;
+  border: 1px solid #2f5a4a;
+  background: #1D3329;
+  box-shadow: none;
 }
 
-.resource-category-management .category-management-column + .category-management-column {
-  margin-top: 0.9rem;
+.category-management-header {
+  margin-bottom: 1.1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #2f5a4a;
 }
 
-.category-management-plain-list {
-  margin: 0.35rem 0 0;
-  padding-left: 1.2rem;
+.resource-category-management .category-management-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #F2F5F3;
 }
 
-.category-management-plain-list li + li {
-  margin-top: 0.3rem;
+.category-management-subtitle {
+  margin: 0.3rem 0 0;
+  font-size: 0.9rem;
+  color: #B2C0B9;
+}
+
+.category-management-error {
+  margin: 0 0 1rem;
+}
+
+.category-management-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+@media (max-width: 720px) {
+  .category-management-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.category-management-column {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.05rem 1.1rem;
+  border: 1px solid #2f5a4a;
+  background: #253E33;
+}
+
+.category-management-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+
+.resource-category-management .category-management-column-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #F2F5F3;
+}
+
+.category-management-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 0.6rem;
+  border: 1px solid #3a6553;
+  border-radius: 999px;
+  background: #1D3329;
+  color: #B2C0B9;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.category-management-badge--custom {
+  color: #9fe0bb;
+  border-color: #3f7a5b;
+}
+
+.category-management-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.category-management-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid #3a6553;
+  border-radius: 999px;
+  background: #1D3329;
+  color: #E4ECE8;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .category-management-custom-list {
-  list-style: none;
-  padding-left: 0;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
 }
 
-.category-management-custom-list li {
+.category-management-custom-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.7rem;
+  padding: 0.5rem 0.4rem 0.5rem 0.75rem;
+  border: 1px solid #3a6553;
+  background: #1D3329;
 }
 
-.category-management-custom-list form {
+.category-management-custom-name {
+  color: #E4ECE8;
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-management-custom-item form {
   margin: 0;
+  flex-shrink: 0;
+}
+
+.category-management-delete-button {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid #6b2f2f;
+  border-radius: 4px;
+  background: #3a2020;
+  color: #f0c9c9;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.category-management-delete-button:hover {
+  border-color: #b91c1c;
+  background: #5a2626;
+  color: #ffe4e4;
+}
+
+.category-management-empty {
+  margin: 0;
+  padding: 0.6rem 0;
+  color: #93a59c;
+  font-size: 0.88rem;
+  font-style: italic;
 }
 
 .category-management-inline-add {
@@ -11083,12 +11278,45 @@ body.sidebar-view #footer-bg {
 }
 
 .category-management-inline-add > summary {
+  list-style: none;
   cursor: pointer;
-  display: inline-block;
+}
+
+.category-management-inline-add > summary::-webkit-details-marker {
+  display: none;
+}
+
+.category-management-add-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #2d4b3f 0%, #253E33 100%);
+  color: #E4ECE8;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 3px 10px rgba(12, 30, 23, 0.2);
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.category-management-add-button:hover {
+  border-color: #3a6553;
+  background: linear-gradient(180deg, #356254 0%, #2d4b3f 100%);
+  color: #F2F5F3;
+  transform: translateY(-1px);
+}
+
+.category-management-inline-add[open] > .category-management-add-button {
+  border-color: #3a6553;
+  background: #2d4b3f;
+  color: #F2F5F3;
 }
 
 .category-management-inline-form {
-  margin-top: 0.55rem;
+  margin-top: 0.7rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -11096,7 +11324,42 @@ body.sidebar-view #footer-bg {
 }
 
 .category-management-inline-form input[type="text"] {
-  min-width: 240px;
+  flex: 1 1 200px;
+  min-width: 200px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 4px;
+  background: #1D3329;
+  color: #F2F5F3;
+  font-size: 0.9rem;
+}
+
+.category-management-inline-form input[type="text"]::placeholder {
+  color: #7f9389;
+}
+
+.category-management-inline-form input[type="text"]:focus {
+  outline: none;
+  border-color: var(--kl-focus);
+  box-shadow: 0 0 0 2px rgba(103, 201, 143, 0.25);
+}
+
+.category-management-save-button {
+  padding: 0.55rem 1.1rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #2d4b3f 0%, #253E33 100%);
+  color: #E4ECE8;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.category-management-save-button:hover {
+  border-color: #3a6553;
+  background: linear-gradient(180deg, #356254 0%, #2d4b3f 100%);
+  color: #F2F5F3;
 }
 
 .form-label {
@@ -11174,19 +11437,36 @@ body.sidebar-view #footer-bg {
 }
 
 .resource-pricebook-view #view-service-details > h2,
+.resource-pricebook-view #view-service-associated-categories > h2,
 .resource-pricebook-view .view-service-detail-item h4,
 .resource-pricebook-view .view-service-detail-item p {
   color: #F2F5F3;
 }
 
-.resource-pricebook-view #view-service-details-content {
-  border: 1px solid #00A86B;
+.resource-pricebook-view #view-service-details-content,
+.resource-pricebook-view #view-service-associated-categories-content {
+  border: 1px solid #2f5a4a;
   background: #1D3329;
 }
 
 .resource-pricebook-view .view-service-detail-item {
-  border-color: #2f5a4a;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 4px;
   background: #223a30;
+}
+
+.resource-pricebook-view .view-service-detail-item h4 {
+  margin: 0 0 0.35rem;
+  color: #B2C0B9;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.resource-pricebook-view .view-service-detail-item p {
+  font-size: 1.05rem;
 }
 
 .resource-pricebook-view .view-service-detail-item a {

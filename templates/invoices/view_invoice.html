@@ -117,6 +117,7 @@
             data-estimate-file="{{ invoice.file_path|default('', true) }}"
             data-customer-email="{{ customer.email|default('') }}"
             data-customer-name="{{ customer.first_name|default('') }} {{ customer.last_name|default('') }}"
+            data-business-name="{{ company_name|default('', true) }}"
             data-email-type="invoice"
           >
             Email Invoice
@@ -140,6 +141,7 @@
         <div class="estimate-stack-block">
           <h3>Invoice Summary</h3>
           <div class="estimate-summary-grid">
+            {% if is_staff_view %}
             <div class="view-job-detail-item">
               <h4>Status</h4>
               <p>
@@ -148,10 +150,13 @@
                 </span>
               </p>
             </div>
+            {% endif %}
+            {% if is_staff_view %}
             <div class="view-job-detail-item">
               <h4>Sent Timestamp</h4>
               <p data-local-datetime-iso="{{ invoice_sent_iso|default('', true) }}">{{ invoice_sent_display|default('N/A', true) }}</p>
             </div>
+            {% endif %}
             <div class="view-job-detail-item">
               <h4>Invoice Number</h4>
               <p>{{ invoice.invoice_number|default('N/A', true) }}</p>
@@ -160,6 +165,7 @@
               <h4>Customer</h4>
               <p>{{ job.customer_name|default('N/A', true) }}</p>
             </div>
+            {% if is_staff_view %}
             <div class="view-job-detail-item">
               <h4>Tax Exempt</h4>
               <p>{{ 'Yes' if customer.tax_exempt else 'No' }}</p>
@@ -170,6 +176,7 @@
               <p>{{ customer.tax_exemption_number }}</p>
             </div>
             {% endif %}
+            {% endif %}
             <div class="view-job-detail-item">
               <h4>Primary Technician</h4>
               <p>{{ job.assigned_employee|default('N/A', true) }}</p>
@@ -178,10 +185,12 @@
               <h4>Date Completed</h4>
               <p>{{ job.dateCompleted|default('N/A', true) }}</p>
             </div>
+            {% if is_staff_view %}
             <div class="view-job-detail-item">
               <h4>Payment Terms</h4>
               <p>Net {{ payment_due_days }}</p>
             </div>
+            {% endif %}
             <div class="view-job-detail-item">
               <h4>Due Date</h4>
               <p>{{ due_date|default('N/A', true) }}</p>
@@ -312,40 +321,43 @@
           </div>
         {% endif %}
 
-        <div class="estimate-stack-block estimate-pricing-summary">
-          <h3>Pricing Summary</h3>
-          <div class="estimate-pricing-row"><span>Subtotal</span><span>{{ pricing_summary.subtotal_display }}</span></div>
-          {% if pricing_summary.is_tax_exempt %}
-            <div class="estimate-pricing-row"><span>Tax exempt</span><span>$0.00</span></div>
-          {% elif pricing_summary.tax_lines %}
-            {% for tax_line in pricing_summary.tax_lines %}
-              <div class="estimate-pricing-row"><span>{{ tax_line.display_name }}</span><span>{{ tax_line.amount_display }}</span></div>
-            {% endfor %}
+        <div class="invoice-summary-row{% if payment_summary.show %} invoice-summary-row--split{% endif %}">
+          <div class="estimate-stack-block estimate-pricing-summary invoice-summary-row-block">
+            <h3>Pricing Summary</h3>
+            <div class="estimate-pricing-row"><span>Subtotal</span><span>{{ pricing_summary.subtotal_display }}</span></div>
+            {% if pricing_summary.is_tax_exempt %}
+              <div class="estimate-pricing-row"><span>Tax exempt</span><span>$0.00</span></div>
+            {% elif pricing_summary.tax_lines %}
+              {% for tax_line in pricing_summary.tax_lines %}
+                <div class="estimate-pricing-row"><span>{{ tax_line.display_name }}</span><span>{{ tax_line.amount_display }}</span></div>
+              {% endfor %}
+            {% endif %}
+            {% if pricing_summary.discount_lines %}
+              {% for discount_line in pricing_summary.discount_lines %}
+                <div class="estimate-pricing-row"><span>{{ discount_line.name }}</span><span>-{{ discount_line.amount_display }}</span></div>
+              {% endfor %}
+            {% elif pricing_summary.discounts_total > 0 %}
+              <div class="estimate-pricing-row"><span>Discounts</span><span>-{{ pricing_summary.discounts_total_display }}</span></div>
+            {% endif %}
+            <div class="estimate-pricing-row"><span>Total Invoice</span><span>{{ pricing_summary.total_due_display }}</span></div>
+            <div class="estimate-pricing-row estimate-pricing-total"><span>Balance Due</span><span>{{ balance_due|currency }}</span></div>
+          </div>
+
+          {% if payment_summary.show %}
+            <div class="estimate-stack-block estimate-pricing-summary invoice-summary-row-block">
+              <h3>Payment Summary</h3>
+              <div class="estimate-pricing-row"><span>Status</span><span>{{ payment_summary.status_label }}</span></div>
+              <div class="estimate-pricing-row"><span>Payment Method</span><span>{{ payment_summary.payment_channel_label }}</span></div>
+              <div class="estimate-pricing-row"><span>Amount Received</span><span>{{ payment_summary.amount_paid_display }}</span></div>
+              <div class="estimate-pricing-row"><span>Remaining Invoice Balance</span><span>{{ payment_summary.invoice_balance_display }}</span></div>
+              {% if payment_summary.payment_date %}
+                <div class="estimate-pricing-row"><span>Received On</span><span data-local-datetime-iso="{{ payment_summary.payment_date_iso|default('', true) }}">{{ payment_summary.payment_date }}</span></div>
+              {% endif %}
+            </div>
           {% endif %}
-          {% if pricing_summary.discount_lines %}
-            {% for discount_line in pricing_summary.discount_lines %}
-              <div class="estimate-pricing-row"><span>{{ discount_line.name }}</span><span>-{{ discount_line.amount_display }}</span></div>
-            {% endfor %}
-          {% elif pricing_summary.discounts_total > 0 %}
-            <div class="estimate-pricing-row"><span>Discounts</span><span>-{{ pricing_summary.discounts_total_display }}</span></div>
-          {% endif %}
-          <div class="estimate-pricing-row"><span>Total Invoice</span><span>{{ pricing_summary.total_due_display }}</span></div>
-          <div class="estimate-pricing-row estimate-pricing-total"><span>Balance Due</span><span>{{ balance_due|currency }}</span></div>
         </div>
 
-        {% if payment_summary.show %}
-          <div class="estimate-stack-block estimate-pricing-summary">
-            <h3>Payment Summary</h3>
-            <div class="estimate-pricing-row"><span>Status</span><span>{{ payment_summary.status_label }}</span></div>
-            <div class="estimate-pricing-row"><span>Payment Method</span><span>{{ payment_summary.payment_channel_label }}</span></div>
-            <div class="estimate-pricing-row"><span>Amount Received</span><span>{{ payment_summary.amount_paid_display }}</span></div>
-            <div class="estimate-pricing-row"><span>Remaining Invoice Balance</span><span>{{ payment_summary.invoice_balance_display }}</span></div>
-            {% if payment_summary.payment_date %}
-              <div class="estimate-pricing-row"><span>Received On</span><span data-local-datetime-iso="{{ payment_summary.payment_date_iso|default('', true) }}">{{ payment_summary.payment_date }}</span></div>
-            {% endif %}
-          </div>
-        {% endif %}
-
+        {% if is_staff_view %}
         <div class="estimate-stack-block">
           <h3>Payment History</h3>
           {% if payment_history %}
@@ -367,6 +379,7 @@
             <p class="estimate-customer-status-text">No payments recorded yet.</p>
           {% endif %}
         </div>
+        {% endif %}
 
         {% if job.invoice_notes %}
           <div class="estimate-stack-block">
@@ -388,26 +401,29 @@
                 <p class="estimate-customer-status-text invoice-warning-text">{{ stripe_connect_reason }}</p>
               {% endif %}
             {% endif %}
-            <div class="estimate-customer-actions">
-              {% if not invoice_is_paid %}
-                <button type="button" id="open-payment-options-modal" class="estimate-customer-action-btn estimate-customer-action-btn-accept">Make Payment</button>
-              {% else %}
-                <button type="button" class="estimate-customer-action-btn estimate-customer-action-btn-accept" disabled>Invoice Paid</button>
+            <div class="invoice-payment-options">
+              <div class="estimate-customer-actions invoice-payment-options-action">
+                {% if not invoice_is_paid %}
+                  <button type="button" id="open-payment-options-modal" class="estimate-customer-action-btn estimate-customer-action-btn-accept">Make Payment</button>
+                {% else %}
+                  <button type="button" class="estimate-customer-action-btn estimate-customer-action-btn-accept" disabled>Invoice Paid</button>
+                {% endif %}
+              </div>
+              {% if not invoice_is_paid and customer_qr_code and payment_url %}
+                <div class="invoice-payment-options-divider" aria-hidden="true"></div>
+                <div class="customer-payment-qr-desktop invoice-payment-options-qr" aria-label="Pay on phone QR code">
+                  <p class="invoice-payment-qr-title">Pay on your phone</p>
+                  <img
+                    class="customer-payment-qr-image"
+                    src="data:image/png;base64,{{ customer_qr_code }}"
+                    alt="Invoice payment QR code for phone payment"
+                    width="120"
+                    height="120"
+                  />
+                  <p class="invoice-payment-qr-caption">Scan with your phone camera to pay</p>
+                </div>
               {% endif %}
             </div>
-            {% if not invoice_is_paid and customer_qr_code and payment_url %}
-              <div class="customer-payment-qr-desktop" aria-label="Pay on phone QR code">
-                <p class="invoice-payment-qr-title">Pay on your phone</p>
-                <img
-                  class="customer-payment-qr-image"
-                  src="data:image/png;base64,{{ customer_qr_code }}"
-                  alt="Invoice payment QR code for phone payment"
-                  width="120"
-                  height="120"
-                />
-                <p class="invoice-payment-qr-caption">Scan with your phone camera to pay</p>
-              </div>
-            {% endif %}
           </div>
         {% endif %}
       </section>

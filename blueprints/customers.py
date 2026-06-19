@@ -5,7 +5,6 @@ import re
 
 from bson import ObjectId
 from flask import Blueprint, current_app, jsonify, redirect, render_template, request, session, url_for
-from flask_mail import Message
 from werkzeug.utils import secure_filename
 
 ALLOWED_PHOTO_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "heic"}
@@ -17,6 +16,7 @@ from mongo import build_reference_filter, ensure_connection_or_500, object_id_or
 from hvac_report_generator import generate_hvac_system_health_report
 from utils.catalog import build_job_parts_from_form, build_part_catalog
 from utils.csv_export import build_csv_export_response
+from utils.notifications import send_email
 from utils import object_storage
 
 bp = Blueprint("customers", __name__)
@@ -4358,16 +4358,18 @@ def send_hvac_report_email(customerId, reference_type, reference_id, diagnostic_
         if not os.path.exists(filepath) or not os.path.abspath(filepath).startswith(os.path.abspath(invoices_dir)):
             return jsonify({"success": False, "error": "Report file not found"}), 404
 
-        msg = Message(
+        with open(filepath, "rb") as report_fp:
+            report_bytes = report_fp.read()
+
+        business_id = _resolve_current_business_id(db)
+        business = db.businesses.find_one({"_id": business_id}) if business_id else None
+        send_email(
             subject=subject,
             recipients=[recipient_email],
             body=body,
+            attachments=[(filename, "application/pdf", report_bytes)],
+            business=business or {},
         )
-
-        with open(filepath, "rb") as report_fp:
-            msg.attach(filename, "application/pdf", report_fp.read())
-
-        current_app.extensions["mail"].send(msg)
 
         db.hvacDiagnostics.update_one(
             {"_id": object_id_or_404(str(selected_diagnostic.get("_id") or ""))},

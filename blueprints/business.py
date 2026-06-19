@@ -1013,6 +1013,10 @@ def update_business():
     if not business_oid:
         return redirect(url_for("error_page", error="no_business"))
 
+    business = db.businesses.find_one({"_id": business_oid})
+    if not business:
+        return redirect(url_for("error_page", error="no_business"))
+
     if request.method == "POST":
         existing_markup_rules = _canonicalize_markup_rules((business or {}).get("markup_rules") or [])
         company_name = request.form.get("company_name", "").strip()
@@ -1124,10 +1128,6 @@ def update_business():
             installation_payment_stage_options=INSTALLATION_PAYMENT_STAGE_OPTIONS,
             installation_trigger_label_map=INSTALLATION_TRIGGER_LABEL_MAP,
         )
-
-    business = db.businesses.find_one({"_id": business_oid})
-    if not business:
-        return redirect(url_for("error_page", error="no_business"))
 
     business = serialize_doc(business)
     business["tax_rates"] = _normalize_tax_rates_for_view(business)

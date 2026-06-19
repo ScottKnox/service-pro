@@ -7,10 +7,10 @@ import re
 
 from bson import ObjectId
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
-from flask_mail import Message
 
 from mongo import build_reference_filter, ensure_connection_or_500, reference_value, serialize_doc
 from utils.currency import currency_to_float
+from utils.notifications import send_email
 
 bp = Blueprint("admin_bp", __name__)
 
@@ -2665,8 +2665,7 @@ def api_send_maintenance_plan_summary_email(plan_id):
     subject, body = _build_maintenance_plan_summary_email(plan, customer, business)
 
     try:
-        message = Message(subject=subject, recipients=[recipient_email], body=body)
-        current_app.extensions["mail"].send(message)
+        send_email(subject=subject, recipients=[recipient_email], body=body, business=business)
     except Exception as exc:
         current_app.logger.warning("Maintenance plan summary email failed: %s", exc)
         return jsonify({"success": False, "error": "The summary email could not be sent. Please try again."}), 502
@@ -2706,8 +2705,7 @@ def api_send_maintenance_plan_renewal_email(plan_id):
     subject, body = _build_maintenance_plan_renewal_email(plan, customer, business)
 
     try:
-        message = Message(subject=subject, recipients=[recipient_email], body=body)
-        current_app.extensions["mail"].send(message)
+        send_email(subject=subject, recipients=[recipient_email], body=body, business=business)
     except Exception as exc:
         current_app.logger.warning("Maintenance plan renewal email failed: %s", exc)
         return jsonify({"success": False, "error": "The renewal email could not be sent. Please try again."}), 502

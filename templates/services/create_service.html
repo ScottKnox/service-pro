@@ -49,7 +49,7 @@
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
             <p class="form-label">Associated Part Categories</p>
-            <p class="form-field-note">Select all part categories relevant to this service.</p>
+            {% if part_categories %}<p class="form-field-note">Select all part categories relevant to this service.</p>{% endif %}
             <div class="service-category-pills">
               {% for category in part_categories %}
                 <label class="service-category-pill {% if category._id in selected_part_category_ids %}service-category-pill--selected{% endif %}">
@@ -64,7 +64,7 @@
 
           <div class="add-customer-form-field">
             <p class="form-label">Associated Material Categories</p>
-            <p class="form-field-note">Select all material categories relevant to this service.</p>
+            {% if material_categories %}<p class="form-field-note">Select all material categories relevant to this service.</p>{% endif %}
             <div class="service-category-pills">
               {% for category in material_categories %}
                 <label class="service-category-pill {% if category._id in selected_material_category_ids %}service-category-pill--selected{% endif %}">
@@ -79,7 +79,7 @@
 
           <div class="add-customer-form-field">
             <p class="form-label">Associated Equipment Categories</p>
-            <p class="form-field-note">Select all equipment categories relevant to this service.</p>
+            {% if equipment_categories %}<p class="form-field-note">Select all equipment categories relevant to this service.</p>{% endif %}
             <div class="service-category-pills">
               {% for category in equipment_categories %}
                 <label class="service-category-pill {% if category._id in selected_equipment_category_ids %}service-category-pill--selected{% endif %}">

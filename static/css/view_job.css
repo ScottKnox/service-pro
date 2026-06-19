@@ -751,6 +751,28 @@ button[disabled] {
   max-width: 560px;
 }
 
+.invoice-summary-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.invoice-summary-row .invoice-summary-row-block {
+  margin: 0;
+}
+
+@media (min-width: 701px) {
+  .invoice-summary-row--split {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .invoice-summary-row--split .invoice-summary-row-block {
+    flex: 1 1 0;
+    max-width: none;
+  }
+}
+
 .estimate-pricing-row {
   display: flex;
   justify-content: space-between;
@@ -833,6 +855,26 @@ button[disabled] {
   align-items: center;
   flex-direction: column;
   gap: 0.45rem;
+}
+
+.invoice-payment-options {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+}
+
+.invoice-payment-options-action {
+  margin: 0;
+}
+
+.invoice-payment-options-divider {
+  display: none;
+}
+
+.invoice-payment-options-qr {
+  margin: 0;
 }
 
 .customer-payment-qr-image {
@@ -958,5 +1000,19 @@ button[disabled] {
 @media (min-width: 701px) {
   .customer-payment-qr-desktop {
     display: flex;
+  }
+
+  .invoice-payment-options {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .invoice-payment-options-divider {
+    display: block;
+    align-self: stretch;
+    width: 1px;
+    border-left: 1px solid #C8D0DA;
+    margin: 0;
   }
 }
