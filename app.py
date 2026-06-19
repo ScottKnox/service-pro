@@ -35,6 +35,19 @@ register_blueprints(app)
 # Jinja2 template filters
 app.jinja_env.filters['currency'] = lambda val: normalize_currency(val)
 
+
+@app.template_global()
+def static_url(filename):
+    """Return a static file URL with a cache-busting version based on file mtime."""
+    url = url_for("static", filename=filename)
+    try:
+        file_path = os.path.join(app.static_folder, filename)
+        version = int(os.path.getmtime(file_path))
+        return f"{url}?v={version}"
+    except OSError:
+        return url
+
+
 _invoice_reminder_scheduler = None
 
 logging.basicConfig(

@@ -6073,6 +6073,28 @@ body.sidebar-view #footer-bg {
       grid-template-columns: 1fr;
     }
 
+    #view-customer-details-columns,
+    #view-customer-estimates-columns,
+    #view-customer-account-columns {
+      grid-template-columns: 1fr;
+    }
+
+    .view-customer-section-column {
+      min-width: 0;
+    }
+
+    .view-customer-card-link,
+    .view-customer-estimate-item,
+    .view-customer-detail-item h4,
+    .view-customer-detail-item p,
+    .view-customer-card-link h4,
+    .view-customer-card-link p,
+    .view-customer-estimate-item h4,
+    .view-customer-estimate-item p {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
     #view-customer-estimates-columns .view-customer-section-column {
       border-right: 0;
       border-bottom: 1px solid #F8F9FA;
@@ -8274,6 +8296,41 @@ body.sidebar-view #footer-bg {
   text-decoration: none;
 }
 
+@media (max-width: 768px) {
+  .resource-customers #view-customer-actions-row .view-customer-action-primary,
+  .resource-customers #view-customer-actions-row .view-customer-action-secondary,
+  .resource-customers #view-customer-actions-row .view-customer-action-danger,
+  .resource-customers #view-customer-actions-row .view-customer-action-link.is-disabled {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.55rem;
+    padding: 0.55rem 0.75rem;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .resource-customers #view-customer-actions-row > .view-customer-action-primary,
+  .resource-customers #view-customer-actions-row > .view-customer-action-secondary,
+  .resource-customers #view-customer-actions-row > .view-customer-action-danger,
+  .resource-customers #view-customer-actions-row > .view-customer-action-link.is-disabled {
+    flex: 1 1 calc(50% - 0.5rem);
+    min-width: 0;
+    width: auto;
+  }
+}
+
+@media (max-width: 540px) {
+  .resource-customers #view-customer-actions-row > .view-customer-action-primary,
+  .resource-customers #view-customer-actions-row > .view-customer-action-secondary,
+  .resource-customers #view-customer-actions-row > .view-customer-action-danger,
+  .resource-customers #view-customer-actions-row > .view-customer-action-link.is-disabled {
+    flex-basis: 100%;
+  }
+}
+
 .resource-customers #view-customer-actions-note {
   color: #B2C0B9;
 }
@@ -9924,6 +9981,7 @@ body.sidebar-view #footer-bg {
 
 .resource-estimate-view #view-service-actions-row .view-estimate-action-secondary {
   display: inline-block;
+  box-sizing: border-box;
   padding: 0.55rem 0.95rem;
   border: 1px solid #2f5a4a;
   border-radius: 4px;
@@ -9938,6 +9996,47 @@ body.sidebar-view #footer-bg {
   background: #2d4b3f;
   color: #D0DDD7;
   text-decoration: none;
+}
+
+.resource-estimate-view .view-estimate-pdf-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid #2f5a4a;
+  border-radius: 4px;
+  background: #253E33;
+  color: #B2C0B9;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.resource-estimate-view .view-estimate-pdf-link:hover {
+  border-color: #3a6553;
+  background: #2d4b3f;
+  color: #D0DDD7;
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .resource-estimate-view #view-service-actions-row .view-estimate-action-secondary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 calc(50% - 0.5rem);
+    width: 100%;
+    min-width: 0;
+    min-height: 2.55rem;
+    padding: 0.55rem 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .resource-estimate-view #view-service-actions-row .estimate-email-btn {
+    flex: 1 1 100%;
+  }
 }
 
 .resource-estimate-view #breadcrumb a,
@@ -10993,6 +11092,7 @@ body.sidebar-view #footer-bg {
 .resource-pricebook-form #create-service-form .create-job-form-section-header,
 .resource-pricebook-form #create-part-form .create-job-form-section-header {
   margin: 1rem 0 0.75rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 0;
   background: #00A86B;
   color: #F2F5F3;
@@ -11107,6 +11207,92 @@ body.sidebar-view #footer-bg {
   border-color: #4d816d;
   background: linear-gradient(180deg, #2d4b3f 0%, #253E33 100%);
   color: #E4ECE8;
+}
+
+/* Collapsible category groups (compact, expandable on mobile) */
+.service-category-group {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.service-category-group__summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  list-style: none;
+  pointer-events: none;
+}
+
+.service-category-group__summary::-webkit-details-marker {
+  display: none;
+}
+
+.service-category-group__summary .form-label {
+  margin: 0;
+}
+
+.service-category-group__count,
+.service-category-group__chevron {
+  display: none;
+}
+
+.service-category-group__count {
+  margin-left: auto;
+  min-width: 1.5rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: #2d4b3f;
+  color: #E4ECE8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.service-category-group__chevron {
+  flex: 0 0 auto;
+  color: #9bb5a8;
+  transition: transform 0.2s ease;
+}
+
+.service-category-group__body {
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .service-category-group {
+    border: 1px solid #2f5a4a;
+    border-radius: 10px;
+    background: #1D3329;
+    padding: 0.6rem 0.85rem;
+  }
+
+  .service-category-group + .service-category-group {
+    margin-top: 0.6rem;
+  }
+
+  .service-category-group__summary {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  .service-category-group__count,
+  .service-category-group__chevron {
+    display: inline-flex;
+  }
+
+  .service-category-group__count {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .service-category-group[open] .service-category-group__chevron {
+    transform: rotate(180deg);
+  }
+
+  .service-category-group:not([open]) .service-category-group__body {
+    display: none;
+  }
 }
 
 .resource-category-management {

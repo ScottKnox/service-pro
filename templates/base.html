@@ -20,23 +20,23 @@
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/tokens.css') }}"
+      href="{{ static_url('css/tokens.css') }}"
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/base.css') }}"
+      href="{{ static_url('css/base.css') }}"
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/components.css') }}"
+      href="{{ static_url('css/components.css') }}"
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}"
+      href="{{ static_url('css/style.css') }}"
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/calendar.css') }}"
+      href="{{ static_url('css/calendar.css') }}"
     />
   </head>
   {% set is_login_view = request.endpoint == 'auth.login' %}

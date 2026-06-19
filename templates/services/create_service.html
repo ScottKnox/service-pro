@@ -48,48 +48,72 @@
 
         <div class="add-customer-form-row">
           <div class="add-customer-form-field">
-            <p class="form-label">Associated Part Categories</p>
-            {% if part_categories %}<p class="form-field-note">Select all part categories relevant to this service.</p>{% endif %}
-            <div class="service-category-pills">
-              {% for category in part_categories %}
-                <label class="service-category-pill {% if category._id in selected_part_category_ids %}service-category-pill--selected{% endif %}">
-                  <input type="checkbox" name="associated_part_category_ids" value="{{ category._id }}" {% if category._id in selected_part_category_ids %}checked{% endif %} />
-                  {{ category.name }}
-                </label>
-              {% else %}
-                <p class="form-field-note">No part categories have been created yet.</p>
-              {% endfor %}
-            </div>
+            <details class="service-category-group" open>
+              <summary class="service-category-group__summary">
+                <span class="form-label">Associated Part Categories</span>
+                <span class="service-category-group__count" aria-hidden="true"></span>
+                <svg class="service-category-group__chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </summary>
+              <div class="service-category-group__body">
+                {% if part_categories %}<p class="form-field-note">Select all part categories relevant to this service.</p>{% endif %}
+                <div class="service-category-pills">
+                  {% for category in part_categories %}
+                    <label class="service-category-pill {% if category._id in selected_part_category_ids %}service-category-pill--selected{% endif %}">
+                      <input type="checkbox" name="associated_part_category_ids" value="{{ category._id }}" {% if category._id in selected_part_category_ids %}checked{% endif %} />
+                      {{ category.name }}
+                    </label>
+                  {% else %}
+                    <p class="form-field-note">No part categories have been created yet.</p>
+                  {% endfor %}
+                </div>
+              </div>
+            </details>
           </div>
 
           <div class="add-customer-form-field">
-            <p class="form-label">Associated Material Categories</p>
-            {% if material_categories %}<p class="form-field-note">Select all material categories relevant to this service.</p>{% endif %}
-            <div class="service-category-pills">
-              {% for category in material_categories %}
-                <label class="service-category-pill {% if category._id in selected_material_category_ids %}service-category-pill--selected{% endif %}">
-                  <input type="checkbox" name="associated_material_category_ids" value="{{ category._id }}" {% if category._id in selected_material_category_ids %}checked{% endif %} />
-                  {{ category.name }}
-                </label>
-              {% else %}
-                <p class="form-field-note">No material categories have been created yet.</p>
-              {% endfor %}
-            </div>
+            <details class="service-category-group" open>
+              <summary class="service-category-group__summary">
+                <span class="form-label">Associated Material Categories</span>
+                <span class="service-category-group__count" aria-hidden="true"></span>
+                <svg class="service-category-group__chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </summary>
+              <div class="service-category-group__body">
+                {% if material_categories %}<p class="form-field-note">Select all material categories relevant to this service.</p>{% endif %}
+                <div class="service-category-pills">
+                  {% for category in material_categories %}
+                    <label class="service-category-pill {% if category._id in selected_material_category_ids %}service-category-pill--selected{% endif %}">
+                      <input type="checkbox" name="associated_material_category_ids" value="{{ category._id }}" {% if category._id in selected_material_category_ids %}checked{% endif %} />
+                      {{ category.name }}
+                    </label>
+                  {% else %}
+                    <p class="form-field-note">No material categories have been created yet.</p>
+                  {% endfor %}
+                </div>
+              </div>
+            </details>
           </div>
 
           <div class="add-customer-form-field">
-            <p class="form-label">Associated Equipment Categories</p>
-            {% if equipment_categories %}<p class="form-field-note">Select all equipment categories relevant to this service.</p>{% endif %}
-            <div class="service-category-pills">
-              {% for category in equipment_categories %}
-                <label class="service-category-pill {% if category._id in selected_equipment_category_ids %}service-category-pill--selected{% endif %}">
-                  <input type="checkbox" name="associated_equipment_category_ids" value="{{ category._id }}" {% if category._id in selected_equipment_category_ids %}checked{% endif %} />
-                  {{ category.name }}
-                </label>
-              {% else %}
-                <p class="form-field-note">No equipment categories have been created yet.</p>
-              {% endfor %}
-            </div>
+            <details class="service-category-group" open>
+              <summary class="service-category-group__summary">
+                <span class="form-label">Associated Equipment Categories</span>
+                <span class="service-category-group__count" aria-hidden="true"></span>
+                <svg class="service-category-group__chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </summary>
+              <div class="service-category-group__body">
+                {% if equipment_categories %}<p class="form-field-note">Select all equipment categories relevant to this service.</p>{% endif %}
+                <div class="service-category-pills">
+                  {% for category in equipment_categories %}
+                    <label class="service-category-pill {% if category._id in selected_equipment_category_ids %}service-category-pill--selected{% endif %}">
+                      <input type="checkbox" name="associated_equipment_category_ids" value="{{ category._id }}" {% if category._id in selected_equipment_category_ids %}checked{% endif %} />
+                      {{ category.name }}
+                    </label>
+                  {% else %}
+                    <p class="form-field-note">No equipment categories have been created yet.</p>
+                  {% endfor %}
+                </div>
+              </div>
+            </details>
           </div>
         </div>
 
@@ -148,9 +172,41 @@
 {% block scripts %}
 <script>
 (function () {
+  var groups = document.querySelectorAll('.service-category-group');
+  var mq = window.matchMedia('(max-width: 768px)');
+
+  function updateCount(group) {
+    var badge = group.querySelector('.service-category-group__count');
+    if (!badge) { return; }
+    var count = group.querySelectorAll('.service-category-pill input[type="checkbox"]:checked').length;
+    badge.textContent = count;
+    badge.style.visibility = count ? 'visible' : 'hidden';
+  }
+
+  function applyMode() {
+    groups.forEach(function (group) {
+      if (mq.matches) {
+        if (group.querySelector('.service-category-pill input[type="checkbox"]:checked')) {
+          group.setAttribute('open', '');
+        } else {
+          group.removeAttribute('open');
+        }
+      } else {
+        group.setAttribute('open', '');
+      }
+      updateCount(group);
+    });
+  }
+
+  applyMode();
+  if (mq.addEventListener) { mq.addEventListener('change', applyMode); }
+  else if (mq.addListener) { mq.addListener(applyMode); }
+
   document.querySelectorAll('.service-category-pill input[type="checkbox"]').forEach(function (checkbox) {
     checkbox.addEventListener('change', function () {
       checkbox.closest('.service-category-pill').classList.toggle('service-category-pill--selected', checkbox.checked);
+      var group = checkbox.closest('.service-category-group');
+      if (group) { updateCount(group); }
     });
   });
 }());

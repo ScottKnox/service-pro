@@ -94,163 +94,194 @@
   border-color: #17643C;
 }
 
-/* Pending */
-.progress-step.step-pending.is-active .progress-step-circle {
-  background-color: #2D2A1C;
-}
-.progress-step.step-pending.is-done .progress-step-circle {
-  background-color: #2D2A1C;
-}
+/* Per-status accent colors.
+   Each state uses a colored pill + circle with light text so labels
+   stay readable. Active = saturated accent, Done = slightly deeper hue. */
+
+/* Pending (amber) */
+.progress-step.step-pending.is-active .progress-step-circle,
 .progress-step.step-pending.is-active .progress-step-label {
-  color: #2D2A1C;
+  background-color: #B45309;
+  border-color: #B45309;
+  color: #ffffff;
 }
+.progress-step.step-pending.is-done .progress-step-circle,
 .progress-step.step-pending.is-done .progress-step-label {
-  color: #2D2A1C;
+  background-color: #92400E;
+  border-color: #92400E;
+  color: #ffffff;
 }
 
-/* Estimating */
-.progress-step.step-estimating.is-active .progress-step-circle {
-  background-color: #2D2A1C;
-}
-.progress-step.step-estimating.is-done .progress-step-circle {
-  background-color: #2D2A1C;
-}
+/* Estimating (amber) */
+.progress-step.step-estimating.is-active .progress-step-circle,
 .progress-step.step-estimating.is-active .progress-step-label {
-  color: #2D2A1C;
+  background-color: #B45309;
+  border-color: #B45309;
+  color: #ffffff;
 }
+.progress-step.step-estimating.is-done .progress-step-circle,
 .progress-step.step-estimating.is-done .progress-step-label {
-  color: #2D2A1C;
+  background-color: #92400E;
+  border-color: #92400E;
+  color: #ffffff;
 }
 
-/* Scheduled */
-.progress-step.step-scheduled.is-active .progress-step-circle {
-  background-color: #1C263A;
-}
-.progress-step.step-scheduled.is-done .progress-step-circle {
-  background-color: #1C263A;
-}
+/* Scheduled (blue) */
+.progress-step.step-scheduled.is-active .progress-step-circle,
 .progress-step.step-scheduled.is-active .progress-step-label {
-  color: #1C263A;
+  background-color: #2563EB;
+  border-color: #2563EB;
+  color: #ffffff;
 }
+.progress-step.step-scheduled.is-done .progress-step-circle,
 .progress-step.step-scheduled.is-done .progress-step-label {
-  color: #1C263A;
+  background-color: #1D4ED8;
+  border-color: #1D4ED8;
+  color: #ffffff;
 }
 
-/* En Route */
-.progress-step.step-en-route.is-active .progress-step-circle {
-  background-color: #2B213B;
-}
-.progress-step.step-en-route.is-done .progress-step-circle {
-  background-color: #2B213B;
-}
+/* En Route (violet) */
+.progress-step.step-en-route.is-active .progress-step-circle,
 .progress-step.step-en-route.is-active .progress-step-label {
-  color: #2B213B;
+  background-color: #7C3AED;
+  border-color: #7C3AED;
+  color: #ffffff;
 }
+.progress-step.step-en-route.is-done .progress-step-circle,
 .progress-step.step-en-route.is-done .progress-step-label {
-  color: #2B213B;
+  background-color: #6D28D9;
+  border-color: #6D28D9;
+  color: #ffffff;
 }
 
-/* Started */
+/* Started (teal) */
 .progress-step.step-started.is-active .progress-step-circle,
-.progress-step.step-started.is-done .progress-step-circle {
-  background-color: #162C32;
-}
 .progress-step.step-started.is-active .progress-step-label {
-  color: #162C32;
+  background-color: #0E7490;
+  border-color: #0E7490;
+  color: #ffffff;
 }
+.progress-step.step-started.is-done .progress-step-circle,
 .progress-step.step-started.is-done .progress-step-label {
-  color: #162C32;
+  background-color: #155E75;
+  border-color: #155E75;
+  color: #ffffff;
 }
 
-/* Completed */
+/* Completed (green) */
 .progress-step.step-completed.is-active .progress-step-circle,
-.progress-step.step-completed.is-done .progress-step-circle {
-  background-color: #132E25;
+.progress-step.step-completed.is-active .progress-step-label {
+  background-color: #1F8045;
+  border-color: #1F8045;
+  color: #ffffff;
 }
-.progress-step.step-completed.is-active .progress-step-label,
+.progress-step.step-completed.is-done .progress-step-circle,
 .progress-step.step-completed.is-done .progress-step-label {
-  color: #132E25;
+  background-color: #1F6B35;
+  border-color: #1F6B35;
+  color: #ffffff;
 }
 
-/* Paid */
+/* Paid (emerald) */
 .progress-step.step-paid.is-active .progress-step-circle,
-.progress-step.step-paid.is-done .progress-step-circle {
-  background-color: #193022;
+.progress-step.step-paid.is-active .progress-step-label {
+  background-color: #15803D;
+  border-color: #15803D;
+  color: #ffffff;
 }
-.progress-step.step-paid.is-active .progress-step-label,
+.progress-step.step-paid.is-done .progress-step-circle,
 .progress-step.step-paid.is-done .progress-step-label {
-  color: #193022;
+  background-color: #166534;
+  border-color: #166534;
+  color: #ffffff;
 }
 
-/* Estimate: Created */
+/* Estimate: Created (green) */
 .progress-step.step-created.is-active .progress-step-circle,
-.progress-step.step-created.is-done .progress-step-circle {
-  background-color: #1F6B35;
+.progress-step.step-created.is-active .progress-step-label {
+  background-color: #1F8045;
+  border-color: #1F8045;
+  color: #ffffff;
 }
-.progress-step.step-created.is-active .progress-step-label,
+.progress-step.step-created.is-done .progress-step-circle,
 .progress-step.step-created.is-done .progress-step-label {
-  color: #1F6B35;
+  background-color: #1F6B35;
+  border-color: #1F6B35;
+  color: #ffffff;
 }
 
-/* Estimate: Sent */
-.progress-step.step-sent.is-active .progress-step-circle {
-  background-color: #F59E0B;
-}
-.progress-step.step-sent.is-done .progress-step-circle {
-  background-color: #1F6B35;
-}
+/* Estimate: Sent (amber when active, green once passed) */
+.progress-step.step-sent.is-active .progress-step-circle,
 .progress-step.step-sent.is-active .progress-step-label {
-  color: #F59E0B;
+  background-color: #D97706;
+  border-color: #D97706;
+  color: #ffffff;
 }
+.progress-step.step-sent.is-done .progress-step-circle,
 .progress-step.step-sent.is-done .progress-step-label {
-  color: #1F6B35;
+  background-color: #1F6B35;
+  border-color: #1F6B35;
+  color: #ffffff;
 }
 
 /* Estimate: Accepted/Declined final step */
 .progress-step.step-final.is-active .progress-step-circle,
-.progress-step.step-final.is-done .progress-step-circle {
-  background-color: #1F6B35;
-}
 .progress-step.step-final.is-active .progress-step-label,
+.progress-step.step-final.is-done .progress-step-circle,
 .progress-step.step-final.is-done .progress-step-label {
-  color: #1F6B35;
+  background-color: #1F8045;
+  border-color: #1F8045;
+  color: #ffffff;
 }
 
 .progress-step.step-final.is-declined-state.is-active .progress-step-circle,
-.progress-step.step-final.is-declined-state.is-done .progress-step-circle {
-  background-color: #B91C1C;
-}
-
 .progress-step.step-final.is-declined-state.is-active .progress-step-label,
+.progress-step.step-final.is-declined-state.is-done .progress-step-circle,
 .progress-step.step-final.is-declined-state.is-done .progress-step-label {
-  color: #B91C1C;
+  background-color: #B91C1C;
+  border-color: #B91C1C;
+  color: #ffffff;
 }
 
-/* Mobile */
+/* Mobile: stack vertically so all statuses fit without horizontal overflow */
 @media (max-width: 520px) {
   .progress-steps {
-    padding: 0.7rem 0.55rem 0.6rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0.85rem 0.9rem;
     border-radius: 12px;
   }
 
+  .progress-step {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.65rem;
+    width: 100%;
+    min-width: 0;
+  }
+
   .progress-step-circle {
-    width: 28px;
-    height: 28px;
-    font-size: 0.72rem;
+    width: 30px;
+    height: 30px;
+    font-size: 0.78rem;
   }
 
   .progress-step-connector {
-    margin-top: 13px;
-    min-width: 8px;
+    flex: none;
+    width: 3px;
+    height: 14px;
+    min-width: 0;
+    margin: 2px 0 2px 13.5px;
   }
 
   .progress-step-label {
-    font-size: 0.58rem;
-    padding: 0.18rem 0.35rem;
-  }
-
-  .progress-step {
-    min-width: 36px;
+    margin-top: 0;
+    text-align: left;
+    white-space: normal;
+    font-size: 0.82rem;
+    padding: 0.2rem 0.5rem;
   }
 }
 
