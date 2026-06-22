@@ -11,14 +11,13 @@ from werkzeug.security import generate_password_hash
 from mongo import ensure_connection_or_500, object_id_or_404, reference_value, serialize_doc
 from utils.csv_export import build_csv_export_response
 from utils import object_storage
+from utils.security import (
+    PASSWORD_REQUIREMENTS_MESSAGE,
+    password_meets_requirements,
+)
 
 bp = Blueprint("employees", __name__)
 
-PASSWORD_REQUIREMENTS_MESSAGE = (
-    "Password must be at least 8 characters and include at least one uppercase letter, "
-    "one number, and one special character from !@#$%^&*."
-)
-PASSWORD_REQUIREMENTS_PATTERN = re.compile(r"^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$")
 EMAIL_VALIDATION_MESSAGE = "Enter a valid email address."
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 ALLOWED_PROFILE_PHOTO_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
@@ -34,10 +33,6 @@ _PROFILE_PHOTO_MIME_TYPES = {
     "jpeg": "image/jpeg",
     "webp": "image/webp",
 }
-
-
-def _password_meets_requirements(password):
-    return bool(PASSWORD_REQUIREMENTS_PATTERN.match(password))
 
 
 def _email_is_valid(email):
@@ -192,7 +187,7 @@ def add_employee():
                 form_data=form_data,
             )
 
-        if not _password_meets_requirements(password):
+        if not password_meets_requirements(password):
             return render_template(
                 "employees/add_employee.html",
                 error=PASSWORD_REQUIREMENTS_MESSAGE,

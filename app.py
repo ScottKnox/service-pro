@@ -129,6 +129,8 @@ def require_login():
     open_endpoints = {
         "auth.login",
         "auth.logout",
+        "auth.forgot_password",
+        "auth.reset_password",
         "static",
         "home",
         "error_page",

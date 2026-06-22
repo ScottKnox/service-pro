@@ -2583,7 +2583,37 @@ body.login-view main {
   color: #ffd8d8;
 }
 
-#login-form {
+.login-notice {
+  padding: 0.85rem 0.9rem;
+  border: 1px solid #2f6b50;
+  border-radius: 8px;
+  background-color: #163025;
+}
+
+.login-notice p {
+  margin: 0;
+  color: #c9f2dd;
+}
+
+.login-forgot-password {
+  margin: 0.9rem 0 0;
+}
+
+.login-forgot-password a {
+  color: #8fe3bd;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.login-forgot-password a:hover {
+  color: #f2f5f3;
+  text-decoration: underline;
+}
+
+#login-form,
+#forgot-password-form,
+#reset-password-form {
   display: grid;
   gap: 1rem;
   padding: 0;
@@ -2592,23 +2622,31 @@ body.login-view main {
   background-color: transparent;
 }
 
-#login-form .add-customer-form-row {
+#login-form .add-customer-form-row,
+#forgot-password-form .add-customer-form-row,
+#reset-password-form .add-customer-form-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
 }
 
-#login-form .add-customer-form-field {
+#login-form .add-customer-form-field,
+#forgot-password-form .add-customer-form-field,
+#reset-password-form .add-customer-form-field {
   display: grid;
   gap: 0.6rem;
 }
 
-#login-form .add-customer-form-field label {
+#login-form .add-customer-form-field label,
+#forgot-password-form .add-customer-form-field label,
+#reset-password-form .add-customer-form-field label {
   color: #F2F5F3;
   font-size: 1.05rem;
   font-weight: 600;
 }
 
-#login-form .add-customer-form-field input {
+#login-form .add-customer-form-field input,
+#forgot-password-form .add-customer-form-field input,
+#reset-password-form .add-customer-form-field input {
   padding: 0.85rem 0.95rem;
   font-size: 1rem;
   border-radius: 8px;

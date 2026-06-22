@@ -254,3 +254,15 @@ def sanitize_string(value):
     value_str = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", value_str)
     
     return value_str
+
+
+PASSWORD_REQUIREMENTS_MESSAGE = (
+    "Password must be at least 8 characters and include at least one uppercase letter, "
+    "one number, and one special character from !@#$%^&*."
+)
+PASSWORD_REQUIREMENTS_PATTERN = re.compile(r"^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$")
+
+
+def password_meets_requirements(password):
+    """Return True if the password satisfies the application's strength rules."""
+    return bool(PASSWORD_REQUIREMENTS_PATTERN.match(password or ""))

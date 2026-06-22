@@ -645,5 +645,10 @@ def ensure_collection_validators(db):
     db.payments.create_index([("customer_id", 1), ("paid_at", -1)])
     db.payments.create_index([("invoice_id", 1), ("paid_at", -1)])
     db.payments.create_index([("status", 1), ("paid_at", -1)])
+    db.password_resets.create_index([("token_hash", 1)])
+    db.password_resets.create_index([("employee_id", 1), ("used", 1)])
+    db.password_resets.create_index([("expires_at", 1)], expireAfterSeconds=0)
+    db.password_reset_attempts.create_index([("ip", 1), ("created_at", -1)])
+    db.password_reset_attempts.create_index([("created_at", 1)], expireAfterSeconds=3600)
 
     _seed_default_price_book_categories(db)

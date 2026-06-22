@@ -8,6 +8,12 @@
         <aside class="login-sidebar" aria-label="Klovent login form">
           <h1>Klovent</h1>
 
+          {% if notice %}
+            <div class="login-notice" role="status">
+              <p>{{ notice }}</p>
+            </div>
+          {% endif %}
+
           {% if error %}
             <div class="login-error" role="alert">
               <p>{{ error }}</p>
@@ -35,6 +41,10 @@
             </div>
           </form>
 
+          <p class="login-forgot-password">
+            <a href="{{ url_for('auth.forgot_password') }}">Forgot password?</a>
+          </p>
+
           <nav class="login-sidebar-legal" aria-label="Legal links">
             <a href="{{ url_for('privacy_policy') }}">Privacy Policy</a>
             <a href="{{ url_for('terms_and_conditions') }}">Terms of Service</a>
@@ -43,11 +53,10 @@
 
         <div class="login-main-panel">
           <h2>Klovent</h2>
-          <p>This app is still under heavy development, but feel free to test with your provided test account credentials.</p>
-          <p>Using the Test HVAC Company, you can see how Klovent aims to improve the HVAC industry.</p>
-          <p>Klovent shows your day at work, front and center. No generic revenue charts and job details. Property details, maintenance history and diagnostics for HVAC systems display automatically for your active jobs. Klovent arms your technicians with the information they need, before they even get to the job.</p>
-          <p>SMS notifications keep customers and techs in sync. The data techs generate via diagnostics is tracked, so you can have a full picture of your customer system health. Proactively reach out to customers with options to generate sales, and prevent their systems from failing when they need them most.</p>
-          <p>Klovent's upcoming maintenance plan and payments system aims to be the best in the industry, helping all HVAC companies move from unpredictable seasonal revenue and difficult cash flow, to a more stable and predictable business model.</p>
+          <p>Klovent is a field service platform built <i>specifically</i> for the HVAC Industry.</p>
+          <p>Our exclusive maintenance plan and marketing features make it easier than ever to transform customers into life-long members.</p>
+          <p>Klovent's data model is designed entirely around managing your customer's HVAC Systems efficiently. Proactively reaching out and maintaining crucial diagnostics across your customerbase has never been easier.</p>
+          <p>Every feature is an opportunity to serve your customers in ways generic field service platforms can never match.</p>
           <p><strong>Welcome to Klovent!</strong></p>
         </div>
       </div>
