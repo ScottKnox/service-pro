@@ -6,13 +6,43 @@ import math
 import re
 
 from bson import ObjectId
-from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 
 from mongo import build_reference_filter, ensure_connection_or_500, reference_value, serialize_doc
 from utils.currency import currency_to_float
 from utils.notifications import send_email
+from utils.security import is_management_position, is_owner_position
 
 bp = Blueprint("admin_bp", __name__)
+
+
+# Admin endpoints any authenticated employee may use: the admin landing page
+# and field reference tools. Everything else in this blueprint (reporting,
+# maintenance-plan management, subscription) is restricted to management roles.
+_ADMIN_OPEN_ENDPOINTS = {
+    "admin",
+    "reference",
+    "diagnostic_assistant",
+    "pt_charts",
+}
+
+
+@bp.before_request
+def _require_management_access():
+    """Role-based authorization for the admin area.
+
+    Authentication is enforced globally in app.before_request; this adds RBAC so
+    non-management employees cannot reach reporting, maintenance-plan, or
+    subscription endpoints by direct request. Field tools and the admin landing
+    page remain available to all authenticated employees.
+    """
+    endpoint = (request.endpoint or "").split(".")[-1]
+    if endpoint in _ADMIN_OPEN_ENDPOINTS:
+        return
+    if not is_management_position(session.get("employee_position")):
+        if request.path.startswith("/api/"):
+            return jsonify({"success": False, "error": "Forbidden"}), 403
+        abort(403)
 
 REPORT_LINKS = [
     {"label": "Dashboard", "slug": "dashboard", "href": "admin_bp.reporting"},
@@ -2852,6 +2882,8 @@ def reporting_customers():
 @bp.route("/admin/subscription")
 def subscription():
     db = ensure_connection_or_500()
+    if not is_owner_position(session.get("employee_position")):
+        abort(403)
     employee = _get_current_employee(db)
     if not employee:
         return redirect(url_for("auth.login"))
@@ -2870,6 +2902,8 @@ def subscription():
 @bp.route("/admin/subscription/manage")
 def manage_subscription():
     db = ensure_connection_or_500()
+    if not is_owner_position(session.get("employee_position")):
+        abort(403)
     employee = _get_current_employee(db)
     if not employee:
         return redirect(url_for("auth.login"))
@@ -2893,6 +2927,8 @@ def manage_subscription():
 @bp.route("/admin/subscription/cancel", methods=["GET", "POST"])
 def cancel_subscription():
     db = ensure_connection_or_500()
+    if not is_owner_position(session.get("employee_position")):
+        abort(403)
     employee = _get_current_employee(db)
     if not employee:
         return redirect(url_for("auth.login"))
@@ -2921,4 +2957,6 @@ def cancel_subscription():
 
 @bp.route("/admin/subscription/reactivate")
 def reactivate_subscription():
+    if not is_owner_position(session.get("employee_position")):
+        abort(403)
     return render_template("admin/reactivate_subscription.html")

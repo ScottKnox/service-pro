@@ -381,8 +381,42 @@ def _send_en_route_sms_notification(db, job_doc):
     )
 
 
+def _twilio_request_signature_valid(expected_url):
+    """Validate the X-Twilio-Signature header against the configured auth token.
+
+    Twilio signs each request with the account auth token and the exact callback
+    URL it was given. Verifying the signature ensures the request genuinely came
+    from Twilio (replacing CSRF protection, which Twilio cannot satisfy). If no
+    auth token is configured, SMS is not set up and there is nothing to verify.
+    """
+    auth_token = str(os.getenv("TWILIO_AUTH_TOKEN") or "").strip()
+    if not auth_token:
+        return True
+
+    try:
+        from twilio.request_validator import RequestValidator
+    except ImportError:
+        current_app.logger.warning(
+            "Twilio library unavailable; cannot validate callback signature"
+        )
+        return False
+
+    signature = request.headers.get("X-Twilio-Signature", "")
+    validator = RequestValidator(auth_token)
+    return validator.validate(expected_url, request.form.to_dict(flat=True), signature)
+
+
 @bp.route("/twilio/sms/status/<jobId>", methods=["POST"])
 def twilio_sms_status_callback(jobId):
+    expected_url = _build_notification_url(
+        "jobs.twilio_sms_status_callback", external=True, jobId=jobId
+    )
+    if not _twilio_request_signature_valid(expected_url):
+        current_app.logger.warning(
+            "Rejected Twilio status callback with invalid signature for job_id=%s", jobId
+        )
+        return "", 403
+
     db = ensure_connection_or_500()
     job = db.jobs.find_one({"_id": object_id_or_404(jobId)}, {"sms_notifications": 1})
     if not job:
@@ -1641,6 +1675,20 @@ def resolve_current_business_id(db):
         if isinstance(business_ref, str) and ObjectId.is_valid(business_ref):
             return ObjectId(business_ref)
     return None
+
+
+def _doc_belongs_to_current_business(db, doc):
+    """Defense-in-depth tenant check for job/estimate documents.
+
+    Returns True when the document's ``business_id`` matches the current
+    employee's business. Enforcement is skipped only when the current business
+    cannot be resolved; documents created by the app always carry
+    ``business_id``, so this blocks cross-tenant access by direct ID.
+    """
+    business_id = resolve_current_business_id(db)
+    if not business_id:
+        return True
+    return str((doc or {}).get("business_id") or "").strip() == str(business_id)
 
 
 def _employee_business_scope(db):
@@ -4884,6 +4932,8 @@ def view_estimate(estimateId):
     token_value = str(request.args.get("token") or "").strip()
     is_staff_view = _is_authenticated_employee()
     has_customer_token = _verify_estimate_access_token(estimate, token_value)
+    if is_staff_view and not has_customer_token and not _doc_belongs_to_current_business(db, estimate):
+        return redirect(url_for("home"))
     if not is_staff_view and not has_customer_token:
         return redirect(url_for("auth.login"))
 
@@ -5014,6 +5064,9 @@ def update_estimate(estimateId):
     db = ensure_connection_or_500()
     estimate = db.estimates.find_one({"_id": object_id_or_404(estimateId)})
     if not estimate:
+        return redirect(url_for("home"))
+
+    if not _doc_belongs_to_current_business(db, estimate):
         return redirect(url_for("home"))
 
     if request.method == "POST":
@@ -5601,6 +5654,8 @@ def view_invoice(jobId, invoiceRef):
     has_customer_token = _verify_invoice_access_token(invoice, token_value)
     session_access_key = f"invoice_access_{jobId}_{invoiceRef}"
     has_customer_session_access = bool(session.get(session_access_key))
+    if is_staff_view and not (has_customer_token or has_customer_session_access) and not _doc_belongs_to_current_business(db, job):
+        return redirect(url_for("jobs.jobs"))
     if not is_staff_view and not (has_customer_token or has_customer_session_access):
         return redirect(url_for("auth.login"))
 
@@ -5940,6 +5995,9 @@ def view_job(jobId):
     synchronized_job = _synchronize_job_payment_fields(db, jobId)
     job = synchronized_job or db.jobs.find_one({"_id": object_id_or_404(jobId)})
     if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    if not _doc_belongs_to_current_business(db, job):
         return redirect(url_for("jobs.jobs"))
 
     payment_schedule_request_state = str(request.args.get("payment_schedule_request") or "").strip().lower()
@@ -6802,6 +6860,9 @@ def update_job(jobId):
     db = ensure_connection_or_500()
     job = db.jobs.find_one({"_id": object_id_or_404(jobId)})
     if not job:
+        return redirect(url_for("jobs.jobs"))
+
+    if not _doc_belongs_to_current_business(db, job):
         return redirect(url_for("jobs.jobs"))
 
     existing_series = None

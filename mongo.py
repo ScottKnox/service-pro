@@ -650,5 +650,7 @@ def ensure_collection_validators(db):
     db.password_resets.create_index([("expires_at", 1)], expireAfterSeconds=0)
     db.password_reset_attempts.create_index([("ip", 1), ("created_at", -1)])
     db.password_reset_attempts.create_index([("created_at", 1)], expireAfterSeconds=3600)
+    db.login_attempts.create_index([("ip", 1), ("created_at", -1)])
+    db.login_attempts.create_index([("created_at", 1)], expireAfterSeconds=3600)
 
     _seed_default_price_book_categories(db)

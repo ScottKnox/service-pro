@@ -365,6 +365,10 @@
   font-size: 1.25rem;
 }
 
+.view-customer-detail-item p.detail-multiline {
+  white-space: pre-line;
+}
+
 .view-customer-jobs-list,
 .view-customer-payments-list,
 .view-customer-estimates-list {

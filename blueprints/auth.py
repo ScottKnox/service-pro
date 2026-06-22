@@ -20,6 +20,9 @@ PASSWORD_RESET_MAX_ATTEMPTS_PER_IP = 5
 PASSWORD_RESET_ATTEMPT_WINDOW_MINUTES = 15
 # Per-account cooldown: skip resending if a fresh token was just issued.
 PASSWORD_RESET_RESEND_COOLDOWN_SECONDS = 60
+# Per-IP login throttle to slow credential brute forcing.
+LOGIN_MAX_FAILED_ATTEMPTS_PER_IP = 10
+LOGIN_ATTEMPT_WINDOW_MINUTES = 15
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 GENERIC_RESET_NOTICE = (
     "If an account with that email exists, a password reset link has been sent."
@@ -41,6 +44,23 @@ def _reset_requests_are_rate_limited(db, ip_address):
     return recent_attempts > PASSWORD_RESET_MAX_ATTEMPTS_PER_IP
 
 
+def _login_is_rate_limited(db, ip_address):
+    """Return True if this IP has too many recent failed login attempts."""
+    window_start = datetime.now(UTC) - timedelta(minutes=LOGIN_ATTEMPT_WINDOW_MINUTES)
+    recent_failures = db.login_attempts.count_documents(
+        {"ip": ip_address, "created_at": {"$gte": window_start}}
+    )
+    return recent_failures >= LOGIN_MAX_FAILED_ATTEMPTS_PER_IP
+
+
+def _record_failed_login(db, ip_address):
+    db.login_attempts.insert_one({"ip": ip_address, "created_at": datetime.now(UTC)})
+
+
+def _clear_login_attempts(db, ip_address):
+    db.login_attempts.delete_many({"ip": ip_address})
+
+
 
 @bp.route("/login", methods=["GET", "POST"])
 def login():
@@ -51,20 +71,26 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
+        client_ip = request.remote_addr or "unknown"
 
-        if not username or not password:
+        if _login_is_rate_limited(db, client_ip):
+            current_app.logger.warning("Login rate limit hit from %s", client_ip)
+            error = "Too many failed login attempts. Please try again later."
+        elif not username or not password:
             error = "Username and password are required."
         else:
             employee = db.employees.find_one({"username": username})
 
             if not employee or not check_password_hash(employee.get("password", ""), password):
-                current_app.logger.warning("Failed login attempt for username=%r from %s", username, request.remote_addr)
+                _record_failed_login(db, client_ip)
+                current_app.logger.warning("Failed login attempt for username=%r from %s", username, client_ip)
                 error = "Invalid username or password."
             else:
+                _clear_login_attempts(db, client_ip)
                 session["employee_id"] = str(employee["_id"])
                 session["employee_name"] = f"{employee.get('first_name', '')} {employee.get('last_name', '')}".strip()
                 session["employee_position"] = (employee.get("position") or "").strip()
-                current_app.logger.info("Login: employee_id=%s username=%r from %s", session["employee_id"], username, request.remote_addr)
+                current_app.logger.info("Login: employee_id=%s username=%r from %s", session["employee_id"], username, client_ip)
                 return redirect(url_for("home"))
 
     return render_template("auth/login.html", error=error, notice=notice)

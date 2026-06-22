@@ -101,7 +101,7 @@
 
                 <div class="view-customer-detail-item">
                   <h4>Warranty Info</h4>
-                  <p>{{ business.get('warranty_info', '')|replace('\n', '<br/>')|safe }}</p>
+                  <p class="detail-multiline">{{ business.get('warranty_info', '') }}</p>
                 </div>
 
                 <div class="view-customer-detail-item">

@@ -266,3 +266,23 @@ PASSWORD_REQUIREMENTS_PATTERN = re.compile(r"^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]
 def password_meets_requirements(password):
     """Return True if the password satisfies the application's strength rules."""
     return bool(PASSWORD_REQUIREMENTS_PATTERN.match(password or ""))
+
+
+MANAGEMENT_POSITIONS = ("owner", "co-owner", "manager")
+OWNER_POSITION = "owner"
+
+
+def normalize_position(position):
+    """Normalize an employee position for comparison."""
+    return str(position or "").strip().lower()
+
+
+def is_management_position(position):
+    """Return True for management roles (owner, co-owner, manager)."""
+    return normalize_position(position) in MANAGEMENT_POSITIONS
+
+
+def is_owner_position(position):
+    """Return True only for the owner role."""
+    return normalize_position(position) == OWNER_POSITION
+

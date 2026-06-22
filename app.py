@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import atexit
 import logging
 import os
@@ -14,6 +14,7 @@ from blueprints import register_blueprints
 from config import (
     APP_ENV,
     get_secret_key,
+    is_production,
     scheduler_enabled_flag,
     scheduler_interval_minutes,
     validate_startup_config,
@@ -29,8 +30,23 @@ app = Flask(__name__)
 _secret_key = get_secret_key()
 app.secret_key = _secret_key
 
+# Harden session cookies. Secure is only enforced in production so local
+# HTTP development still works; HttpOnly and SameSite always apply.
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=is_production(),
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+)
+
 csrf = CSRFProtect(app)
 register_blueprints(app)
+
+# Twilio status callbacks authenticate via the X-Twilio-Signature header
+# (verified in the view), so they cannot supply a CSRF token.
+from blueprints.jobs import twilio_sms_status_callback as _twilio_sms_status_callback
+
+csrf.exempt(_twilio_sms_status_callback)
 
 # Jinja2 template filters
 app.jinja_env.filters['currency'] = lambda val: normalize_currency(val)
@@ -63,10 +79,48 @@ def not_found(e):
     return render_template("error.html", error_message="The page you requested could not be found."), 404
 
 
+@app.errorhandler(403)
+def forbidden(e):
+    return render_template("error.html", error_message="You do not have permission to access this page."), 403
+
+
 @app.errorhandler(500)
 def internal_error(e):
     app.logger.error("Internal server error: %s", e)
     return render_template("error.html", error_message="An internal server error occurred. Please try again later."), 500
+
+
+# Content Security Policy. 'unsafe-inline' is retained for scripts/styles because
+# templates rely on inline event handlers and inline styles; the policy still
+# restricts sources, blocks framing, and locks down object/base/form targets.
+_CSP = "; ".join(
+    [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://maps.gstatic.com https://cdn.jsdelivr.net",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: blob: https:",
+        "connect-src 'self' https://maps.googleapis.com https://*.googleapis.com https://*.gstatic.com",
+        "frame-ancestors 'none'",
+        "base-uri 'self'",
+        "object-src 'none'",
+        "form-action 'self'",
+    ]
+)
+
+
+@app.after_request
+def set_security_headers(response):
+    response.headers.setdefault("Content-Security-Policy", _CSP)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    if is_production():
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
+    return response
 
 
 @app.context_processor
@@ -142,6 +196,7 @@ def require_login():
         "jobs.create_invoice_checkout_session",
         "jobs.accept_estimate",
         "jobs.decline_estimate",
+        "jobs.twilio_sms_status_callback",
         "stripe_webhook",
     }
     endpoint = request.endpoint
@@ -1438,4 +1493,4 @@ _start_invoice_reminder_scheduler()
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=not is_production())

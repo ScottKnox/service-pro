@@ -139,6 +139,15 @@
       });
   }
 
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   function buildHvacOptions(selectedId) {
     const normalizedSelectedId = String(selectedId || "").trim();
     const options = ['<option value="">-- No HVAC System --</option>'];
@@ -148,7 +157,7 @@
         return;
       }
       const title = String(system.title || system.system_type || "HVAC System").trim();
-      options.push('<option value="' + id + '"' + (id === normalizedSelectedId ? " selected" : "") + ">" + title + "</option>");
+      options.push('<option value="' + escapeHtml(id) + '"' + (id === normalizedSelectedId ? " selected" : "") + ">" + escapeHtml(title) + "</option>");
     });
     return options.join("");
   }

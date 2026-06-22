@@ -2,6 +2,8 @@ import base64
 import os
 import re
 
+from config import is_production
+
 
 def sms_features_enabled():
     raw_value = str(os.getenv("SMS_FEATURES_ENABLED", "true") or "").strip().lower()
@@ -53,16 +55,20 @@ def resolve_business_email_identity(business):
 
 def _email_ssl_verify_disabled():
     raw_value = str(os.getenv("SENDGRID_DISABLE_SSL_VERIFY") or "").strip().lower()
+    # Never allow certificate verification to be disabled in production.
+    if is_production():
+        return False
     return raw_value in {"1", "true", "yes", "on"}
 
 
-def _apply_email_ssl_context():
-    """Make the SendGrid SDK's urllib calls use a trusted CA bundle.
+def _build_email_ssl_context():
+    """Return an SSL context for the SendGrid send.
 
     The SendGrid SDK sends through urllib, which on some machines (e.g. behind
     antivirus/corporate SSL inspection) cannot verify the certificate chain.
     Use certifi's bundle when available, and allow disabling verification for
-    local development via SENDGRID_DISABLE_SSL_VERIFY.
+    local development only via SENDGRID_DISABLE_SSL_VERIFY. Returns None to fall
+    back to the interpreter default trust store.
     """
     import ssl
 
@@ -70,17 +76,15 @@ def _apply_email_ssl_context():
         context = ssl.create_default_context()
         context.check_hostname = False
         context.verify_mode = ssl.CERT_NONE
-        ssl._create_default_https_context = lambda *args, **kwargs: context
-        return
+        return context
 
     try:
         import certifi
 
-        context = ssl.create_default_context(cafile=certifi.where())
-        ssl._create_default_https_context = lambda *args, **kwargs: context
+        return ssl.create_default_context(cafile=certifi.where())
     except Exception:
         # Fall back to the interpreter default trust store.
-        pass
+        return None
 
 
 def send_email(
@@ -176,12 +180,22 @@ def send_email(
             )
         )
 
+    import ssl
+
+    # Apply the email SSL context only for the duration of this send, then
+    # restore the previous global context so other HTTPS calls in the process
+    # are unaffected (especially the insecure local-dev context).
+    previous_https_context = ssl._create_default_https_context
+    email_ssl_context = _build_email_ssl_context()
     try:
-        _apply_email_ssl_context()
+        if email_ssl_context is not None:
+            ssl._create_default_https_context = lambda *args, **kwargs: email_ssl_context
         client = SendGridAPIClient(api_key)
         response = client.send(message)
     except Exception as exc:
         raise RuntimeError(f"SendGrid send failed: {exc}")
+    finally:
+        ssl._create_default_https_context = previous_https_context
 
     status_code = getattr(response, "status_code", 0) or 0
     if status_code < 200 or status_code >= 300:
