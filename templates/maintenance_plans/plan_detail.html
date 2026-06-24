@@ -131,7 +131,10 @@
                           {% if visit.has_job %}
                             <a class="mp-btn mp-btn-small mp-btn-secondary" href="{{ url_for('jobs.view_job', jobId=visit.job_id) }}">View Job</a>
                           {% else %}
-                            <a class="mp-btn mp-btn-small mp-btn-primary" href="/jobs/new?maintenance_plan_id={{ plan_id }}&series_id={{ visit.series_id }}">Schedule Now</a>
+                            <form method="post" action="{{ url_for('jobs.schedule_maintenance_visit', planId=plan_id, seriesId=visit.series_id) }}" class="mp-visit-schedule-form">
+                              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                              <button type="submit" class="mp-btn mp-btn-small mp-btn-primary">Schedule Now</button>
+                            </form>
                           {% endif %}
                         </span>
                       </div>
@@ -444,6 +447,7 @@
     .mp-visit-pending { background: rgba(140, 154, 147, 0.16); color: #b2c0b9; }
 
     .mp-visit-action { text-align: right; }
+    .mp-visit-schedule-form { display: inline; margin: 0; }
 
     @media (max-width: 720px) {
       .mp-visit-head { display: none; }

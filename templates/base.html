@@ -59,12 +59,19 @@
       {% block content %}{% endblock %}
     </main>
 
+    {% if session.get('employee_id') and not is_login_view and not is_public_resource_view %}
+    {% include 'partials/quick_service_call_modal.html' %}
+    {% endif %}
+
       {% if not is_login_view and not is_public_resource_view %}
       {% include 'partials/footer.html' %}
       {% endif %}
       <script src="{{ url_for('static', filename='js/header.js') }}" defer></script>
       <script src="{{ url_for('static', filename='js/app_nav_toggle.js') }}" defer></script>
       <script src="{{ url_for('static', filename='js/phone_format.js') }}" defer></script>
+      {% if session.get('employee_id') and not is_login_view and not is_public_resource_view %}
+      <script src="{{ url_for('static', filename='js/quick_service_call.js') }}" defer></script>
+      {% endif %}
       {% block scripts %}{% endblock %}
   </body>
 </html>

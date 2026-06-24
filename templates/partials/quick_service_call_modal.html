@@ -1,0 +1,205 @@
+<div id="quick-service-call-overlay" class="qsc-overlay" hidden>
+  <div
+    id="quick-service-call-modal"
+    class="qsc-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="qsc-title"
+  >
+    <div class="qsc-header">
+      <div class="qsc-header-text">
+        <h2 id="qsc-title" class="qsc-title">New Service Call</h2>
+        <p class="qsc-subtitle">Create a job and we'll handle the rest.</p>
+      </div>
+      <button type="button" class="qsc-close" id="qsc-close" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+          <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+    </div>
+
+    <form id="qsc-form" class="qsc-body" autocomplete="off" novalidate>
+      <!-- Customer search -->
+      <div class="qsc-field" id="qsc-customer-search-wrap">
+        <label class="qsc-label" for="qsc-customer-search">Customer name or phone number</label>
+        <div class="qsc-search-control">
+          <input
+            type="text"
+            id="qsc-customer-search"
+            class="qsc-input"
+            placeholder="Start typing to search…"
+            aria-autocomplete="list"
+            aria-controls="qsc-customer-results"
+          />
+          <div id="qsc-customer-results" class="qsc-results" role="listbox" hidden></div>
+        </div>
+      </div>
+
+      <!-- Selected customer (locked) -->
+      <div class="qsc-field qsc-selected-customer" id="qsc-selected-customer" hidden>
+        <div class="qsc-selected-customer-row">
+          <div>
+            <div class="qsc-selected-customer-name" id="qsc-selected-customer-name"></div>
+            <div class="qsc-selected-customer-phone" id="qsc-selected-customer-phone"></div>
+          </div>
+          <button type="button" class="qsc-link" id="qsc-change-customer">Change</button>
+        </div>
+      </div>
+
+      <!-- New customer inline section -->
+      <div class="qsc-new-customer" id="qsc-new-customer" hidden>
+        <div class="qsc-new-customer-heading">New customer details</div>
+        <div class="qsc-grid-2">
+          <div class="qsc-field">
+            <label class="qsc-label" for="qsc-nc-first">First name <span class="qsc-req">*</span></label>
+            <input type="text" id="qsc-nc-first" class="qsc-input" />
+          </div>
+          <div class="qsc-field">
+            <label class="qsc-label" for="qsc-nc-last">Last name <span class="qsc-req">*</span></label>
+            <input type="text" id="qsc-nc-last" class="qsc-input" />
+          </div>
+          <div class="qsc-field">
+            <label class="qsc-label" for="qsc-nc-phone">Phone <span class="qsc-req">*</span></label>
+            <input type="tel" id="qsc-nc-phone" class="qsc-input" placeholder="555-555-5555" autocomplete="off" />
+            <p class="qsc-field-error" id="qsc-nc-phone-error" aria-live="polite"></p>
+          </div>
+          <div class="qsc-field">
+            <label class="qsc-label" for="qsc-nc-email">Email</label>
+            <input type="email" id="qsc-nc-email" class="qsc-input" placeholder="name@example.com" autocomplete="off" />
+            <p class="qsc-field-error" id="qsc-nc-email-error" aria-live="polite"></p>
+          </div>
+          <div class="qsc-field qsc-col-span-2">
+            <label class="qsc-label" for="qsc-nc-addr1">Address line 1 <span class="qsc-req">*</span></label>
+            <input type="text" id="qsc-nc-addr1" class="qsc-input" />
+          </div>
+          <div class="qsc-field qsc-col-span-2">
+            <label class="qsc-label" for="qsc-nc-addr2">Address line 2</label>
+            <input type="text" id="qsc-nc-addr2" class="qsc-input" />
+          </div>
+          <div class="qsc-field">
+            <label class="qsc-label" for="qsc-nc-city">City <span class="qsc-req">*</span></label>
+            <input type="text" id="qsc-nc-city" class="qsc-input" />
+          </div>
+          <div class="qsc-field">
+            <label class="qsc-label" for="qsc-nc-state">State <span class="qsc-req">*</span></label>
+            <select id="qsc-nc-state" class="qsc-input qsc-select">
+              <option value="">-- Select a state --</option>
+              <option value="AL">AL</option>
+              <option value="AK">AK</option>
+              <option value="AZ">AZ</option>
+              <option value="AR">AR</option>
+              <option value="CA">CA</option>
+              <option value="CO">CO</option>
+              <option value="CT">CT</option>
+              <option value="DE">DE</option>
+              <option value="FL">FL</option>
+              <option value="GA">GA</option>
+              <option value="HI">HI</option>
+              <option value="ID">ID</option>
+              <option value="IL">IL</option>
+              <option value="IN">IN</option>
+              <option value="IA">IA</option>
+              <option value="KS">KS</option>
+              <option value="KY">KY</option>
+              <option value="LA">LA</option>
+              <option value="ME">ME</option>
+              <option value="MD">MD</option>
+              <option value="MA">MA</option>
+              <option value="MI">MI</option>
+              <option value="MN">MN</option>
+              <option value="MS">MS</option>
+              <option value="MO">MO</option>
+              <option value="MT">MT</option>
+              <option value="NE">NE</option>
+              <option value="NV">NV</option>
+              <option value="NH">NH</option>
+              <option value="NJ">NJ</option>
+              <option value="NM">NM</option>
+              <option value="NY">NY</option>
+              <option value="NC">NC</option>
+              <option value="ND">ND</option>
+              <option value="OH">OH</option>
+              <option value="OK">OK</option>
+              <option value="OR">OR</option>
+              <option value="PA">PA</option>
+              <option value="RI">RI</option>
+              <option value="SC">SC</option>
+              <option value="SD">SD</option>
+              <option value="TN">TN</option>
+              <option value="TX">TX</option>
+              <option value="UT">UT</option>
+              <option value="VT">VT</option>
+              <option value="VA">VA</option>
+              <option value="WA">WA</option>
+              <option value="WV">WV</option>
+              <option value="WI">WI</option>
+              <option value="WY">WY</option>
+            </select>
+          </div>
+          <div class="qsc-field">
+            <label class="qsc-label" for="qsc-nc-zip">Zip code <span class="qsc-req">*</span></label>
+            <input type="text" id="qsc-nc-zip" class="qsc-input" />
+          </div>
+        </div>
+        <p class="qsc-note">A Primary Residence property will be created automatically from this address.</p>
+      </div>
+
+      <!-- Property selection -->
+      <div class="qsc-field" id="qsc-property-wrap" hidden>
+        <label class="qsc-label" for="qsc-property-select">Property</label>
+        <select id="qsc-property-select" class="qsc-input qsc-select"></select>
+        <div class="qsc-property-readonly" id="qsc-property-readonly" hidden></div>
+      </div>
+
+      <!-- Maintenance plan banner -->
+      <div class="qsc-plan-banner" id="qsc-plan-banner" hidden>
+        <div class="qsc-plan-banner-title" id="qsc-plan-banner-title"></div>
+        <div class="qsc-plan-banner-benefits" id="qsc-plan-banner-benefits"></div>
+      </div>
+
+      <!-- HVAC system selector -->
+      <div class="qsc-field" id="qsc-hvac-wrap" hidden>
+        <label class="qsc-label" for="qsc-hvac-select">HVAC System (optional)</label>
+        <select id="qsc-hvac-select" class="qsc-input qsc-select">
+          <option value="">Not sure / Multiple systems</option>
+        </select>
+      </div>
+
+      <!-- Internal note -->
+      <div class="qsc-field" id="qsc-note-wrap" hidden>
+        <label class="qsc-label" for="qsc-note">What's the problem?</label>
+        <textarea
+          id="qsc-note"
+          class="qsc-input qsc-textarea"
+          rows="3"
+          placeholder="Describe what the customer reported — e.g. AC not cooling, strange noise from unit, etc."
+        ></textarea>
+      </div>
+
+      <!-- Date / time / tech -->
+      <div class="qsc-field" id="qsc-schedule-wrap" hidden>
+        <div class="qsc-grid-3">
+          <div class="qsc-field">
+            <label class="qsc-label" for="qsc-date">Date</label>
+            <input type="date" id="qsc-date" class="qsc-input" placeholder="Schedule later" />
+          </div>
+          <div class="qsc-field">
+            <label class="qsc-label" for="qsc-time">Time</label>
+            <input type="time" id="qsc-time" class="qsc-input" placeholder="TBD" />
+          </div>
+          <div class="qsc-field">
+            <label class="qsc-label" for="qsc-tech">Assign tech</label>
+            <select id="qsc-tech" class="qsc-input qsc-select">
+              <option value="">Unassigned</option>
+            </select>
+          </div>
+        </div>
+        <p class="qsc-hint">Leave blank to create an unscheduled pending job.</p>
+      </div>
+
+      <div class="qsc-error" id="qsc-error" hidden></div>
+
+      <button type="submit" class="qsc-submit" id="qsc-submit" disabled>Create Service Call</button>
+    </form>
+  </div>
+</div>

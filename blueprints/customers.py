@@ -46,6 +46,14 @@ def _is_authenticated_employee():
     return bool(employee_id and ObjectId.is_valid(employee_id))
 
 
+def _wants_json_response():
+    """True when the caller is an AJAX/fetch request expecting JSON."""
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return True
+    accept_header = str(request.headers.get("Accept") or "")
+    return "application/json" in accept_header and "text/html" not in accept_header
+
+
 def _is_single_business_tenant(db):
     return db.businesses.count_documents({}) <= 1
 
@@ -2502,6 +2510,177 @@ def export_customers_csv():
     return build_csv_export_response(customers_rows, "customers_export.csv")
 
 
+@bp.route("/api/customers/search")
+def api_customers_search():
+    """Search customers by name or phone for the current business (quick-create modal)."""
+    if not _is_authenticated_employee():
+        return jsonify({"success": False, "error": "Authentication required", "data": []}), 401
+
+    db = ensure_connection_or_500()
+    query_term = str(request.args.get("q") or "").strip()
+    if len(query_term) < 2:
+        return jsonify({"success": True, "data": []})
+
+    business_id = _resolve_current_business_id(db)
+    if not business_id:
+        return jsonify({"success": True, "data": []})
+
+    scope_query = _build_customer_scope_query(db, business_id)
+    escaped_term = re.escape(query_term)
+    field_regex = {"$regex": escaped_term, "$options": "i"}
+    search_conditions = [
+        {"first_name": field_regex},
+        {"last_name": field_regex},
+        {"customer_name": field_regex},
+        {"company": field_regex},
+        {"phone": field_regex},
+        {
+            "$expr": {
+                "$regexMatch": {
+                    "input": {
+                        "$concat": [
+                            {"$ifNull": ["$first_name", ""]},
+                            " ",
+                            {"$ifNull": ["$last_name", ""]},
+                        ]
+                    },
+                    "regex": escaped_term,
+                    "options": "i",
+                }
+            }
+        },
+    ]
+
+    final_query = {"$and": [scope_query, {"$or": search_conditions}]}
+    matches = (
+        db.customers.find(final_query)
+        .sort([("last_name", 1), ("first_name", 1)])
+        .limit(10)
+    )
+
+    results = []
+    for customer in matches:
+        serialized = serialize_doc(customer)
+        first_name = str(serialized.get("first_name") or "").strip()
+        last_name = str(serialized.get("last_name") or "").strip()
+        customer_name = str(serialized.get("customer_name") or "").strip() or f"{first_name} {last_name}".strip()
+        results.append(
+            {
+                "_id": str(serialized.get("_id") or "").strip(),
+                "customer_name": customer_name,
+                "first_name": first_name,
+                "last_name": last_name,
+                "company": str(serialized.get("company") or "").strip(),
+                "phone": str(serialized.get("phone") or "").strip(),
+                "properties": _get_customer_properties(customer),
+            }
+        )
+    return jsonify({"success": True, "data": results})
+
+
+@bp.route("/api/properties/<property_id>/systems")
+def api_property_systems(property_id):
+    """Return HVAC systems for a property belonging to the current business."""
+    if not _is_authenticated_employee():
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    normalized_property_id = str(property_id or "").strip()
+    if not business_id or not normalized_property_id:
+        return jsonify({"success": True, "data": []})
+
+    scope_query = _build_customer_scope_query(db, business_id)
+    owner = db.customers.find_one(
+        {"$and": [scope_query, {"properties.property_id": normalized_property_id}]},
+        {"_id": 1},
+    )
+    if not owner:
+        return jsonify({"success": True, "data": []})
+
+    system_query = {
+        "$and": [
+            build_reference_filter("customer_id", owner["_id"]),
+            build_reference_filter("property_id", normalized_property_id),
+        ]
+    }
+    systems = []
+    for doc in db.hvacSystems.find(system_query).sort([("system_nickname", 1), ("_id", -1)]):
+        serialized = serialize_doc(doc)
+        components = serialized.get("components") if isinstance(serialized.get("components"), dict) else {}
+        primary_component = components.get("condensers") if isinstance(components.get("condensers"), dict) else {}
+        if not primary_component:
+            for value in components.values():
+                if isinstance(value, dict):
+                    primary_component = value
+                    break
+        systems.append(
+            {
+                "_id": str(serialized.get("_id") or "").strip(),
+                "system_nickname": str(serialized.get("system_nickname") or "").strip(),
+                "system_type": str(serialized.get("system_type") or "").strip(),
+                "system_tonnage": str(serialized.get("system_tonnage") or serialized.get("cooling_capacity") or "").strip(),
+                "manufacturer": str((primary_component or {}).get("manufacturer") or "").strip(),
+                "manufactured_year": str((primary_component or {}).get("manufactured_year") or "").strip(),
+                "last_serviced_at": serialized.get("last_serviced_at") or None,
+            }
+        )
+
+    return jsonify({"success": True, "data": systems})
+
+
+@bp.route("/api/properties/<property_id>/active-plan")
+def api_property_active_plan(property_id):
+    """Return the active maintenance plan for a property, or null if none exists."""
+    if not _is_authenticated_employee():
+        return jsonify({"success": False, "error": "Authentication required"}), 401
+
+    db = ensure_connection_or_500()
+    business_id = _resolve_current_business_id(db)
+    normalized_property_id = str(property_id or "").strip()
+    if not business_id or not normalized_property_id:
+        return jsonify({"success": True, "data": None})
+
+    scope_query = _build_customer_scope_query(db, business_id)
+    owner = db.customers.find_one(
+        {"$and": [scope_query, {"properties.property_id": normalized_property_id}]},
+        {"_id": 1},
+    )
+    if not owner:
+        return jsonify({"success": True, "data": None})
+
+    plan = db.maintenance_plans.find_one(
+        {
+            "$and": [
+                build_reference_filter("property_id", normalized_property_id),
+                {"status": "active"},
+                build_reference_filter("business_id", business_id),
+            ]
+        }
+    )
+    if not plan:
+        return jsonify({"success": True, "data": None})
+
+    serialized_plan = serialize_doc(plan)
+    snapshot = serialized_plan.get("template_snapshot") if isinstance(serialized_plan.get("template_snapshot"), dict) else {}
+    plan_payload = {
+        "_id": str(serialized_plan.get("_id") or "").strip(),
+        "plan_number": str(serialized_plan.get("plan_number") or "").strip(),
+        "template_snapshot": {
+            "name": str(snapshot.get("name") or "").strip(),
+            "repair_discount_pct": snapshot.get("repair_discount_pct"),
+            "diagnostic_fee_waived": bool(snapshot.get("diagnostic_fee_waived")),
+            "priority_scheduling": bool(snapshot.get("priority_scheduling")),
+            "emergency_service": bool(snapshot.get("emergency_service")),
+            "custom_benefits": snapshot.get("custom_benefits") or [],
+        },
+        "billing_type": str(serialized_plan.get("billing_type") or "").strip(),
+        "billing_amount": serialized_plan.get("billing_amount"),
+        "end_date": serialized_plan.get("end_date") or None,
+    }
+    return jsonify({"success": True, "data": plan_payload})
+
+
 @bp.route("/customers/add", methods=["GET", "POST"])
 def add_customer():
     db = ensure_connection_or_500()
@@ -2523,6 +2702,8 @@ def add_customer():
         tax_exemption_number = request.form.get("tax_exemption_number", "").strip()
 
         if not first_name or not last_name:
+            if _wants_json_response():
+                return jsonify({"success": False, "error": "First name and last name are required."}), 400
             return render_template(
                 "customers/add_customer.html",
                 error="First name and last name are required.",
@@ -2530,12 +2711,13 @@ def add_customer():
             )
 
         if email and not _email_is_valid(email):
+            if _wants_json_response():
+                return jsonify({"success": False, "error": EMAIL_VALIDATION_MESSAGE}), 400
             return render_template(
                 "customers/add_customer.html",
                 error=EMAIL_VALIDATION_MESSAGE,
                 form_data=form_data,
             )
-
         customer_status = "Active" if all((phone, email, address_line_1, city, state)) else "Lead"
 
         customer_count = db.customers.count_documents({}) + 1
@@ -2583,6 +2765,16 @@ def add_customer():
         }
         inserted = db.customers.insert_one(customer)
         current_app.logger.info("Customer created: id=%s by employee_id=%s", str(inserted.inserted_id), session.get("employee_id"))
+        if _wants_json_response():
+            created = serialize_doc(db.customers.find_one({"_id": inserted.inserted_id}) or customer)
+            return jsonify(
+                {
+                    "success": True,
+                    "customer": created,
+                    "customer_id": str(inserted.inserted_id),
+                    "properties": _get_customer_properties(created),
+                }
+            )
         return redirect(url_for("customers.view_customer", customerId=str(inserted.inserted_id)))
 
     return render_template("customers/add_customer.html", error="", form_data={})

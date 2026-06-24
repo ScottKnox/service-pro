@@ -39,6 +39,10 @@
     </nav>
     {% endif %}
     {% if session.get('employee_id') and session.get('employee_name') %}
+      <button type="button" id="quick-service-call-trigger" class="header-service-call-btn">
+        <span class="header-service-call-plus" aria-hidden="true">+</span>
+        <span>Service Call</span>
+      </button>
       <div id="header-user-controls">
         <a href="{{ url_for('employees.view_employee', employeeId=session.get('employee_id')) }}" id="employee-greeting-link">
           <img

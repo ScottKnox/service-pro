@@ -984,6 +984,60 @@
     }, { passive: true });
   }
 
+  function addCreatedJobToBoard(card) {
+    if (!card || typeof card !== "object") {
+      return false;
+    }
+    const jobId = String(card.id || "").trim();
+    if (!jobId) {
+      return false;
+    }
+
+    // Drop any existing copy so re-creation/duplication never stacks.
+    state.pendingJobs = state.pendingJobs.filter((job) => String(job.id || "") !== jobId);
+    const existingScheduledIndex = state.scheduledJobs.findIndex((row) => String(row.id || "") === jobId);
+    if (existingScheduledIndex >= 0) {
+      state.scheduledJobs.splice(existingScheduledIndex, 1);
+    }
+
+    const hasTech = !!String(card.primary_technician_id || "").trim();
+    const hasDate = !!String(card.scheduled_date || card.date_iso || "").trim();
+    const isPending = typeof card.is_pending === "boolean" ? card.is_pending : !(hasTech && hasDate);
+
+    if (isPending) {
+      // Newest unassigned job goes to the top of the queue.
+      state.pendingJobs.unshift({
+        id: jobId,
+        customer_name: String(card.customer_name || "Unknown Customer"),
+        primary_service_name: String(card.primary_service_name || ""),
+        primary_service_category: String(card.primary_service_category || ""),
+        pending_days: Number(card.pending_days || 0),
+        address: String(card.address || ""),
+        status: String(card.status || "Pending"),
+        scheduled_date: String(card.scheduled_date || card.date_iso || ""),
+        scheduled_time: String(card.scheduled_time || ""),
+        primary_technician_id: String(card.primary_technician_id || ""),
+        assigned_employee: String(card.assigned_employee || ""),
+        additional_services: Array.isArray(card.all_service_names) ? card.all_service_names.slice(1) : [],
+        view_url: String(card.view_url || "#"),
+      });
+    } else {
+      upsertScheduledJobFromResponse(card);
+      ensureTechRow(card.primary_technician_id, card.assigned_employee);
+    }
+
+    renderPendingQueue();
+    renderMobileTechPicker();
+    renderSchedule();
+    return true;
+  }
+
+  // Public hook used by the global quick "+ Service Call" modal to refresh the
+  // dispatch board live after a job is created, without a full page reload.
+  window.kloventDispatchHome = {
+    addCreatedJob: addCreatedJobToBoard,
+  };
+
   renderPendingQueue();
   renderTimeAxis();
   renderMobileTechPicker();

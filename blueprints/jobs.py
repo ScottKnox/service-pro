@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import secrets
 
 from bson import ObjectId
@@ -1722,6 +1723,14 @@ def _scoped_employee_filter(db, base_filter=None):
 def _is_authenticated_employee():
     employee_id = session.get("employee_id")
     return bool(employee_id and ObjectId.is_valid(employee_id))
+
+
+def _wants_json_response():
+    """True when the caller is an AJAX/fetch request expecting JSON."""
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return True
+    accept_header = str(request.headers.get("Accept") or "")
+    return "application/json" in accept_header and "text/html" not in accept_header
 
 
 @bp.route("/jobs/<jobId>/dispatch-assign", methods=["POST"])
@@ -4090,6 +4099,59 @@ def api_hvac_systems_for_property():
     return jsonify({"hvac_systems": systems})
 
 
+@bp.route("/api/services")
+def api_services():
+    """Return price-book services for the current business, optionally filtered by type."""
+    if not _is_authenticated_employee():
+        return jsonify({"services": []}), 401
+
+    db = ensure_connection_or_500()
+    business_id = resolve_current_business_id(db)
+    if not business_id:
+        return jsonify({"services": []})
+
+    query = {"business_id": business_id, "is_active": {"$ne": False}}
+    service_type = str(request.args.get("type") or "").strip()
+    if service_type:
+        query["service_type"] = {"$regex": f"^{re.escape(service_type)}$", "$options": "i"}
+
+    try:
+        limit = int(str(request.args.get("limit") or "0").strip())
+    except ValueError:
+        limit = 0
+    limit = max(0, min(limit, 100))
+
+    cursor = db.services.find(query).sort("service_name", 1)
+    if limit:
+        cursor = cursor.limit(limit)
+
+    services = []
+    for doc in cursor:
+        serialized = serialize_doc(doc)
+        labor_hours = serialized.get("labor_hours")
+        if labor_hours is None:
+            labor_hours = serialized.get("estimated_hours")
+        services.append(
+            {
+                "id": str(serialized.get("_id") or "").strip(),
+                "service_name": str(serialized.get("service_name") or "").strip(),
+                "service_type": str(serialized.get("service_type") or "").strip(),
+                "standard_price": normalize_currency(serialized.get("standard_price", 0)),
+                "estimated_hours": str(labor_hours or "").strip(),
+            }
+        )
+    return jsonify({"services": services})
+
+
+@bp.route("/api/employees/active")
+def api_active_employees():
+    """Return active employees for the current business (technician dropdowns)."""
+    if not _is_authenticated_employee():
+        return jsonify({"employees": []}), 401
+    db = ensure_connection_or_500()
+    return jsonify({"employees": build_employee_options(db)})
+
+
 @bp.route("/customers/<customerId>/jobs/plan-discount-preview", methods=["POST"])
 def plan_discount_preview(customerId):
     """Live preview of the maintenance-plan discount that will apply to a draft job.
@@ -4317,6 +4379,76 @@ def export_estimates_csv():
     )
 
 
+def _build_quick_create_dispatch_card(job_id, job_doc, scheduled_date_iso=""):
+    """Build a dispatch-board card payload for a freshly created job.
+
+    Mirrors the shape produced by the home dispatch builder and the
+    /dispatch-assign response so the dispatch view can update live without a
+    full page reload. ``is_pending`` tells the client whether the job belongs
+    in the unassigned queue or on a technician's schedule.
+    """
+    services = [service for service in (job_doc.get("services") or []) if isinstance(service, dict)]
+
+    primary_service_name = ""
+    primary_service_category = ""
+    all_service_names = []
+    for service in services:
+        label = ""
+        for field_name in ("type", "service_name", "name", "service_code", "code", "description"):
+            candidate = str(service.get(field_name) or "").strip()
+            if candidate:
+                label = candidate
+                break
+        if label:
+            all_service_names.append(label)
+        if not primary_service_name and label:
+            primary_service_name = label
+            primary_service_category = str(service.get("category") or service.get("service_category") or "").strip()
+
+    address = ", ".join(
+        part
+        for part in [
+            str(job_doc.get("address_line_1") or "").strip(),
+            str(job_doc.get("city") or "").strip(),
+            str(job_doc.get("state") or "").strip(),
+            str(job_doc.get("zip_code") or "").strip(),
+        ]
+        if part
+    )
+
+    scheduled_time = str(job_doc.get("scheduled_time") or "").strip()
+    start_minutes = 0
+    try:
+        hour_text, minute_text = scheduled_time.split(":", 1)
+        start_minutes = int(hour_text) * 60 + int(minute_text)
+    except (ValueError, IndexError):
+        start_minutes = 0
+
+    primary_technician_id = str(job_doc.get("primary_technician_id") or "").strip()
+    normalized_date_iso = str(scheduled_date_iso or "").strip()
+    is_pending = not primary_technician_id or not normalized_date_iso or not scheduled_time
+
+    return {
+        "id": str(job_id or "").strip(),
+        "customer_name": str(job_doc.get("customer_name") or "Unknown Customer").strip() or "Unknown Customer",
+        "primary_service_name": primary_service_name,
+        "primary_service_category": primary_service_category,
+        "status": str(job_doc.get("status") or "Pending").strip() or "Pending",
+        "address": address,
+        "pending_days": 0,
+        "scheduled_date": normalized_date_iso,
+        "date_iso": normalized_date_iso,
+        "scheduled_time": scheduled_time,
+        "start_minutes": start_minutes,
+        "duration_minutes": 45,
+        "primary_technician_id": primary_technician_id,
+        "assigned_employee": str(job_doc.get("assigned_employee") or "").strip(),
+        "view_url": url_for("jobs.view_job", jobId=str(job_id or "").strip()),
+        "all_service_names": all_service_names,
+        "is_pending": is_pending,
+    }
+
+
 @bp.route("/customers/<customerId>/jobs/create", methods=["GET", "POST"])
 def create_job(customerId):
     db = ensure_connection_or_500()
@@ -4459,6 +4591,17 @@ def create_job(customerId):
 
         recurring_data = _parse_recurrence_request(request, scheduled_date, scheduled_time)
         invoice_notes = request.form.get("invoice_notes", "").strip()
+        initial_internal_notes = []
+        initial_internal_note_text = str(request.form.get("internal_note") or "").strip()
+        if initial_internal_note_text:
+            initial_internal_notes.append(
+                {
+                    "note_id": str(ObjectId()),
+                    "text": initial_internal_note_text,
+                    "date_written": datetime.now().strftime("%m/%d/%Y %H:%M:%S"),
+                    "employee_id": str(session.get("employee_id") or "").strip(),
+                }
+            )
 
         if recurring_data.get("is_recurring"):
             series_doc = _build_recurring_series_document(
@@ -4518,7 +4661,7 @@ def create_job(customerId):
             "invoice_notes": invoice_notes,
             "payment_due_days": payment_due_days,
             "payment_schedule": payment_schedule,
-            "internal_notes": [],
+            "internal_notes": initial_internal_notes,
             "date_created": datetime.now().strftime("%m/%d/%Y"),
             "created_at": datetime.now(UTC),
             "invoices": [],
@@ -4544,6 +4687,20 @@ def create_job(customerId):
         if payment_schedule:
             _ensure_job_invoice_entry(db, str(inserted.inserted_id))
         current_app.logger.info("Job created: id=%s customer_id=%s by employee_id=%s", str(inserted.inserted_id), customerId, session.get("employee_id"))
+        if _wants_json_response():
+            dispatch_card = _build_quick_create_dispatch_card(
+                str(inserted.inserted_id),
+                new_job,
+                scheduled_date_iso=str(request.form.get("job_date") or "").strip(),
+            )
+            return jsonify(
+                {
+                    "success": True,
+                    "job_id": str(inserted.inserted_id),
+                    "redirect_url": url_for("jobs.view_job", jobId=str(inserted.inserted_id)),
+                    "dispatch_card": dispatch_card,
+                }
+            )
         return redirect(url_for("jobs.view_job", jobId=str(inserted.inserted_id)))
 
     business_id = resolve_current_business_id(db)
@@ -6254,6 +6411,37 @@ def cancel_recurring_series(jobId):
 
     current_app.logger.info("Recurring series cancelled: series_id=%s by employee_id=%s", str(series_id), session.get("employee_id"))
     return redirect(url_for("jobs.view_job", jobId=jobId))
+
+
+@bp.route("/maintenance-plans/<planId>/visits/<seriesId>/schedule", methods=["POST"])
+def schedule_maintenance_visit(planId, seriesId):
+    db = ensure_connection_or_500()
+    series_doc = db.recurring_job_series.find_one({"_id": object_id_or_404(seriesId)})
+    if not series_doc:
+        return redirect(url_for("customers.view_maintenance_plan", planId=planId))
+
+    business_id = resolve_current_business_id(db)
+    if business_id and str(series_doc.get("business_id")) != str(business_id):
+        return redirect(url_for("customers.view_maintenance_plan", planId=planId))
+
+    existing_occurrence = db.jobs.find_one({"series_id": series_doc.get("_id")})
+    if existing_occurrence:
+        return redirect(url_for("jobs.view_job", jobId=str(existing_occurrence["_id"])))
+
+    scheduled_date = str(series_doc.get("anchor_date") or "").strip()
+    occurrence_index = int(series_doc.get("last_generated_occurrence_index") or 0) + 1
+    created_occurrence_id = _create_occurrence_from_series(db, series_doc, scheduled_date, occurrence_index)
+    if not created_occurrence_id:
+        return redirect(url_for("customers.view_maintenance_plan", planId=planId))
+
+    current_app.logger.info(
+        "Maintenance visit scheduled: plan_id=%s series_id=%s occurrence_id=%s by employee_id=%s",
+        planId,
+        str(series_doc.get("_id")),
+        created_occurrence_id,
+        session.get("employee_id"),
+    )
+    return redirect(url_for("jobs.view_job", jobId=created_occurrence_id))
 
 
 @bp.route("/jobs/<jobId>/start", methods=["POST"])
